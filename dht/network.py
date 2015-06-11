@@ -107,7 +107,7 @@ class Server(object):
 
         ds = {}
         for addr in addrs:
-            ds[addr] = self.protocol.ping(addr, self.node.id)
+            ds[addr] = self.protocol.ping(addr)
         return deferredDict(ds).addCallback(initTable)
 
     def inetVisibleIP(self):
@@ -122,7 +122,7 @@ class Server(object):
             for result in results:
                 if result[0]:
                     n = kprotocol.Node()
-                    n.ParseFromString(results[1][0])
+                    n.ParseFromString(result[1][0])
                     ips.append((n.ip, n.port))
             self.log.debug("other nodes think our ip is %s" % str(ips))
             return ips

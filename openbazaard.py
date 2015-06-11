@@ -14,11 +14,14 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 
 #kademlia
 kserver = Server()
-kserver.bootstrap([("127.0.0.1", 8467)])
+kserver.bootstrap([("127.0.0.1", 8469)])
 
-server = internet.UDPServer(8469, kserver.protocol)
+server = internet.UDPServer(8468, kserver.protocol)
 server.setServiceParent(application)
 
+def printIP():
+    d = kserver.inetVisibleIP()
+    d.addCallback(printVal)
 
 def store():
     kserver.set("hello", "world")
@@ -30,5 +33,5 @@ def retrieve():
 def printVal(value):
     print "Retrieved value:", value
 
-reactor.callLater(3, store)
-reactor.callLater(5, retrieve)
+reactor.callLater(3, printIP)
+#reactor.callLater(5, retrieve)
