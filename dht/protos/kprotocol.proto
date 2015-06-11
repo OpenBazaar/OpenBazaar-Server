@@ -1,0 +1,31 @@
+/*
+Get the protobuf compiler:
+sudo apt-get install protobuf-compiler
+
+Compile with:
+cd path/to/dht/protos
+protoc --python_out=/path/to/dht/ kprotocol.proto
+*/
+
+message Message {
+	required bytes messageID        = 1;
+	required Node sender            = 2;
+	required Command command        = 3;
+	repeated bytes arguments        = 4;
+}
+
+enum Command {
+	PING        = 1;
+	STUN        = 2;
+	STORE       = 3;
+	PUBLISH     = 4;
+	DELETE      = 5;
+	FIND_NODE   = 6;
+	FIND_VALUE  = 7;
+}
+
+message Node {
+	required bytes guid      = 1;
+	optional string ip       = 2;
+	optional uint32 port     = 3;
+}
