@@ -19,7 +19,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='kprotocol.proto',
   package='',
-  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"f\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12\x17\n\x08merchant\x18\x04 \x01(\x08:\x05\x66\x61lse\x12\x1d\n\ttransport\x18\x05 \x01(\x0e\x32\n.Transport*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06*\x1e\n\tTransport\x12\x07\n\x03TCP\x10\x01\x12\x08\n\x04RUDP\x10\x02')
+  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"f\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12\x17\n\x08merchant\x18\x04 \x01(\x08:\x05\x66\x61lse\x12\x1d\n\ttransport\x18\x05 \x01(\x0e\x32\n.Transport\"3\n\x05Value\x12\x12\n\ncontractID\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedNode\x18\x02 \x02(\x0c*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06*\x1e\n\tTransport\x12\x07\n\x03TCP\x10\x01\x12\x08\n\x04RUDP\x10\x02')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -56,8 +56,8 @@ _COMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=222,
-  serialized_end=305,
+  serialized_start=275,
+  serialized_end=358,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -79,8 +79,8 @@ _TRANSPORT = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=307,
-  serialized_end=337,
+  serialized_start=360,
+  serialized_end=390,
 )
 _sym_db.RegisterEnumDescriptor(_TRANSPORT)
 
@@ -204,11 +204,49 @@ _NODE = _descriptor.Descriptor(
   serialized_end=220,
 )
 
+
+_VALUE = _descriptor.Descriptor(
+  name='Value',
+  full_name='Value',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='contractID', full_name='Value.contractID', index=0,
+      number=1, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='serializedNode', full_name='Value.serializedNode', index=1,
+      number=2, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=222,
+  serialized_end=273,
+)
+
 _MESSAGE.fields_by_name['sender'].message_type = _NODE
 _MESSAGE.fields_by_name['command'].enum_type = _COMMAND
 _NODE.fields_by_name['transport'].enum_type = _TRANSPORT
 DESCRIPTOR.message_types_by_name['Message'] = _MESSAGE
 DESCRIPTOR.message_types_by_name['Node'] = _NODE
+DESCRIPTOR.message_types_by_name['Value'] = _VALUE
 DESCRIPTOR.enum_types_by_name['Command'] = _COMMAND
 DESCRIPTOR.enum_types_by_name['Transport'] = _TRANSPORT
 
@@ -225,6 +263,13 @@ Node = _reflection.GeneratedProtocolMessageType('Node', (_message.Message,), dic
   # @@protoc_insertion_point(class_scope:Node)
   ))
 _sym_db.RegisterMessage(Node)
+
+Value = _reflection.GeneratedProtocolMessageType('Value', (_message.Message,), dict(
+  DESCRIPTOR = _VALUE,
+  __module__ = 'kprotocol_pb2'
+  # @@protoc_insertion_point(class_scope:Value)
+  ))
+_sym_db.RegisterMessage(Value)
 
 
 # @@protoc_insertion_point(module_scope)

@@ -39,10 +39,7 @@ def retrieve():
     d.addCallback(printVal)
 
 def printVal(value):
-    print "Retrieved value:"
-    n = Node()
-    n.ParseFromString(value)
-    print n
+    print "Retrieved value:", value
 
 reactor.callLater(3, store)
 reactor.callLater(5, retrieve)

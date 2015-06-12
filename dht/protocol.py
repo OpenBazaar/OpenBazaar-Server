@@ -41,7 +41,7 @@ class KademliaProtocol(RPCProtocol):
     def rpc_store(self, sender, keyword, key, value):
         self.router.addContact(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        self.storage[keyword] = value
+        self.storage[keyword] = (key, value)
         return ["True"]
 
     def rpc_find_node(self, sender, key):
@@ -65,7 +65,7 @@ class KademliaProtocol(RPCProtocol):
         value = self.storage.get(key, None)
         if value is None:
             return self.rpc_find_node(sender, key)
-        ret.append(value)
+        ret.extend(value)
         return ret
 
     def callFindNode(self, nodeToAsk, nodeToFind):
@@ -102,14 +102,15 @@ class KademliaProtocol(RPCProtocol):
         on the new node (per section 2.5 of the paper)
         """
         ds = []
-        for key, value in self.storage.iteritems():
-            keynode = Node(digest(key))
+        for keyword in self.storage.iterkeys():
+            keynode = Node(keyword)
             neighbors = self.router.findNeighbors(keynode)
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
-                ds.append(self.callStore(node, key, value))
+                for k, v in self.storage.iteritems(keyword):
+                    ds.append(self.callStore(node, keyword, k, v[1]))
         return defer.gatherResults(ds)
 
     def handleCallResponse(self, result, node):

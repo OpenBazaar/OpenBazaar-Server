@@ -40,3 +40,8 @@ enum Transport {
 	TCP   = 1;
 	RUDP  = 2;
 }
+
+message Value {
+	required bytes contractID     = 1;
+	required bytes serializedNode = 2;
+}
