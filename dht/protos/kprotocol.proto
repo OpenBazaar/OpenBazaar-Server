@@ -7,6 +7,7 @@ cd path/to/dht/protos
 protoc --python_out=/path/to/dht/ kprotocol.proto
 */
 
+//This is the message structure for kademlia messages going over the wire
 message Message {
 	required bytes messageID        = 1;
 	required Node sender            = 2;
@@ -14,18 +15,28 @@ message Message {
 	repeated bytes arguments        = 4;
 }
 
+//A list of commands accepted by nodes
 enum Command {
 	PING        = 1;
 	STUN        = 2;
 	STORE       = 3;
-	PUBLISH     = 4;
-	DELETE      = 5;
-	FIND_NODE   = 6;
-	FIND_VALUE  = 7;
+	DELETE      = 4;
+	FIND_NODE   = 5;
+	FIND_VALUE  = 6;
 }
 
+//An object containing information about the node.
+//Some fields are optional as they aren't needed in all situations.
 message Node {
-	required bytes guid      = 1;
-	optional string ip       = 2;
-	optional uint32 port     = 3;
+	required bytes guid           = 1;
+	optional string ip            = 2;
+	optional uint32 port          = 3;
+	optional bool merchant        = 4 [default = false];
+	optional Transport transport  = 5; //Use only if running a merchant server
+}
+
+//The transport protocol used for the merchant server
+enum Transport {
+	TCP   = 1;
+	RUDP  = 2;
 }

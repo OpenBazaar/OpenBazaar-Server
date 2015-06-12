@@ -5,8 +5,11 @@ from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import reactor
 
+from dht.utils import digest
 from dht.network import Server
-from dht import log
+from dht import log, kprotocol
+from dht.kprotocol import Node, Transport
+
 sys.path.append(os.path.dirname(__file__))
 
 application = service.Application("openbazaar")
@@ -24,14 +27,22 @@ def printIP():
     d.addCallback(printVal)
 
 def store():
-    kserver.set("hello", "world")
+    n = Node()
+    n.guid = digest("guid")
+    n.ip = "127.0.0.1"
+    n.port = 1235
+    n.transport = kprotocol.TCP
+    kserver.set("socks", digest("contract"), n.SerializeToString())
 
 def retrieve():
-    d = kserver.get("hello")
+    d = kserver.get("socks")
     d.addCallback(printVal)
 
 def printVal(value):
-    print "Retrieved value:", value
+    print "Retrieved value:"
+    n = Node()
+    n.ParseFromString(value)
+    print n
 
-reactor.callLater(3, printIP)
-#reactor.callLater(5, retrieve)
+reactor.callLater(3, store)
+reactor.callLater(5, retrieve)

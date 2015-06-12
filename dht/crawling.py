@@ -164,15 +164,12 @@ class RPCFindResponse(object):
         return self.response[0]
 
     def hasValue(self):
-        node = kprotocol.Node()
-        try:
-            node.ParseFromString(self.response[1][0])
-        except:
+        if self.response[1][0] == "value":
             return True
         return False
 
     def getValue(self):
-        return self.response[1][0]
+        return self.response[1][1]
 
     def getNodeList(self):
         """

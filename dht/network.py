@@ -132,31 +132,44 @@ class Server(object):
             ds.append(self.protocol.stun(neighbor))
         return defer.gatherResults(ds).addCallback(handle)
 
-    def get(self, key):
+    def get(self, keyword):
         """
         Get a key if the network has it.
 
         Returns:
             :class:`None` if not found, the value otherwise.
         """
-        node = Node(digest(key))
+        node = Node(digest(keyword))
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to get key %s" % key)
+            self.log.warning("There are no known neighbors to get key %s" % keyword)
             return defer.succeed(None)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
 
-    def set(self, key, value):
+    def set(self, keyword, key, value):
         """
-        Set the given key to the given value in the network.
+        Set the given key/value tuple at the hash of the given keyword.
+        All values stored in the DHT are stored as dictionaries of key/value
+        pairs. If a value already exists for a given keyword, the new key/value
+        pair will be appended to the dictionary.
+
+        Args:
+            keyword: a `string` keyword. The SHA1 hash of which will be used as
+                the key when inserting in the DHT.
+            key: the 20 byte hash of the contract.
+            value: a serialized `kprotocol.Node` object with all optional fields
+                provided.
+
+        Return: True if at least one peer responded. False if the store rpc
+            completely failed.
         """
-        self.log.debug("setting '%s' = '%s' on network" % (key, value))
-        dkey = digest(key)
+        self.log.debug("setting '%s' = '%s':'%s' on network" % (keyword, key, value))
+        dkey = digest(keyword)
 
         def store(nodes):
-            self.log.info("setting '%s' on %s" % (key, map(str, nodes)))
-            ds = [self.protocol.callStore(node, dkey, value) for node in nodes]
+            self.log.info("setting '%s' on %s" % (keyword, map(str, nodes)))
+            ds = [self.protocol.callStore(node, dkey, key, value) for node in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
         node = Node(dkey)

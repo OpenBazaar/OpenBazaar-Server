@@ -19,7 +19,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='kprotocol.proto',
   package='',
-  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\".\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r*`\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\x0b\n\x07PUBLISH\x10\x04\x12\n\n\x06\x44\x45LETE\x10\x05\x12\r\n\tFIND_NODE\x10\x06\x12\x0e\n\nFIND_VALUE\x10\x07')
+  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"f\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12\x17\n\x08merchant\x18\x04 \x01(\x08:\x05\x66\x61lse\x12\x1d\n\ttransport\x18\x05 \x01(\x0e\x32\n.Transport*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06*\x1e\n\tTransport\x12\x07\n\x03TCP\x10\x01\x12\x08\n\x04RUDP\x10\x02')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -42,37 +42,57 @@ _COMMAND = _descriptor.EnumDescriptor(
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='PUBLISH', index=3, number=4,
+      name='DELETE', index=3, number=4,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='DELETE', index=4, number=5,
+      name='FIND_NODE', index=4, number=5,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='FIND_NODE', index=5, number=6,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='FIND_VALUE', index=6, number=7,
+      name='FIND_VALUE', index=5, number=6,
       options=None,
       type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=166,
-  serialized_end=262,
+  serialized_start=222,
+  serialized_end=305,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
 Command = enum_type_wrapper.EnumTypeWrapper(_COMMAND)
+_TRANSPORT = _descriptor.EnumDescriptor(
+  name='Transport',
+  full_name='Transport',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='TCP', index=0, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='RUDP', index=1, number=2,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=307,
+  serialized_end=337,
+)
+_sym_db.RegisterEnumDescriptor(_TRANSPORT)
+
+Transport = enum_type_wrapper.EnumTypeWrapper(_TRANSPORT)
 PING = 1
 STUN = 2
 STORE = 3
-PUBLISH = 4
-DELETE = 5
-FIND_NODE = 6
-FIND_VALUE = 7
+DELETE = 4
+FIND_NODE = 5
+FIND_VALUE = 6
+TCP = 1
+RUDP = 2
 
 
 
@@ -155,6 +175,20 @@ _NODE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='merchant', full_name='Node.merchant', index=3,
+      number=4, type=8, cpp_type=7, label=1,
+      has_default_value=True, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='transport', full_name='Node.transport', index=4,
+      number=5, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -167,14 +201,16 @@ _NODE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=118,
-  serialized_end=164,
+  serialized_end=220,
 )
 
 _MESSAGE.fields_by_name['sender'].message_type = _NODE
 _MESSAGE.fields_by_name['command'].enum_type = _COMMAND
+_NODE.fields_by_name['transport'].enum_type = _TRANSPORT
 DESCRIPTOR.message_types_by_name['Message'] = _MESSAGE
 DESCRIPTOR.message_types_by_name['Node'] = _NODE
 DESCRIPTOR.enum_types_by_name['Command'] = _COMMAND
+DESCRIPTOR.enum_types_by_name['Transport'] = _TRANSPORT
 
 Message = _reflection.GeneratedProtocolMessageType('Message', (_message.Message,), dict(
   DESCRIPTOR = _MESSAGE,

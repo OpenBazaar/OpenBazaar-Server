@@ -38,10 +38,10 @@ class KademliaProtocol(RPCProtocol):
         self.router.addContact(sender)
         return [self.sourceNode.id]
 
-    def rpc_store(self, sender, key, value):
+    def rpc_store(self, sender, keyword, key, value):
         self.router.addContact(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        self.storage[key] = value
+        self.storage[keyword] = value
         return ["True"]
 
     def rpc_find_node(self, sender, key):
@@ -55,16 +55,18 @@ class KademliaProtocol(RPCProtocol):
             node.guid = n[0]
             node.ip = n[1]
             node.port = n[2]
-            ser = node.SerializeToString()
-            ret.append(ser)
+            ret.append(node.SerializeToString())
         return ret
 
     def rpc_find_value(self, sender, key):
         self.router.addContact(sender)
+        ret = []
+        ret.append("value")
         value = self.storage.get(key, None)
         if value is None:
             return self.rpc_find_node(sender, key)
-        return [value]
+        ret.append(value)
+        return ret
 
     def callFindNode(self, nodeToAsk, nodeToFind):
         address = (nodeToAsk.ip, nodeToAsk.port)
@@ -81,9 +83,9 @@ class KademliaProtocol(RPCProtocol):
         d = self.ping(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callStore(self, nodeToAsk, key, value):
+    def callStore(self, nodeToAsk, keyword, key, value):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.store(address, key, value)
+        d = self.store(address, keyword, key, value)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def transferKeyValues(self, node):
