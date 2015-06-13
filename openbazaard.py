@@ -19,7 +19,7 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 kserver = Server()
 kserver.bootstrap([("127.0.0.1", 8468)])
 
-server = internet.UDPServer(8470, kserver.protocol)
+server = internet.UDPServer(8471, kserver.protocol)
 server.setServiceParent(application)
 
 def printIP():

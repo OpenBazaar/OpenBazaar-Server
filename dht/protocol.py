@@ -12,6 +12,7 @@ from dht import kprotocol
 class KademliaProtocol(RPCProtocol):
     def __init__(self, sourceNode, storage, ksize):
         RPCProtocol.__init__(self)
+        self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage
         self.sourceNode = sourceNode
@@ -108,7 +109,10 @@ class KademliaProtocol(RPCProtocol):
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
-            if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
+                print newNodeClose, thisNodeClosest
+            if len(neighbors) == 0 \
+                    or (newNodeClose and thisNodeClosest) \
+                    or (thisNodeClosest and len(neighbors) < self.ksize):
                 for k, v in self.storage.iteritems(keyword):
                     ds.append(self.callStore(node, keyword, k, v))
         return defer.gatherResults(ds)
