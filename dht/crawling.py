@@ -1,5 +1,7 @@
 from collections import Counter
 
+from twisted.internet import defer
+
 from dht.log import Logger
 from dht.utils import deferredDict
 from dht.node import Node, NodeHeap
@@ -113,10 +115,14 @@ class ValueSpiderCrawl(SpiderCrawl):
             self.log.warning("Got multiple values for key %i: %s" % args)
         value = valueCounts.most_common(1)[0][0]
 
+        ds = []
         peerToSaveTo = self.nearestWithoutValue.popleft()
         if peerToSaveTo is not None:
-            d = self.protocol.callStore(peerToSaveTo, self.node.id, value)
-            return d.addCallback(lambda _: value)
+            for v in value:
+                val = kprotocol.Value()
+                val.ParseFromString(v)
+                ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.contractID, val.serializedNode))
+            return defer.gatherResults(ds).addCallback(lambda _: value)
         return value
 
 

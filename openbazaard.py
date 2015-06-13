@@ -19,7 +19,7 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 kserver = Server()
 kserver.bootstrap([("127.0.0.1", 8468)])
 
-server = internet.UDPServer(8469, kserver.protocol)
+server = internet.UDPServer(8470, kserver.protocol)
 server.setServiceParent(application)
 
 def printIP():
@@ -49,5 +49,5 @@ def printVal(value):
         node.ParseFromString(val.serializedNode)
         print node
 
-reactor.callLater(3, store)
-reactor.callLater(5, retrieve)
+#reactor.callLater(3, store)
+#reactor.callLater(5, retrieve)

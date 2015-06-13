@@ -6,7 +6,6 @@ from dht.rpcudp import RPCProtocol
 from dht.node import Node
 from dht.routing import RoutingTable
 from dht.log import Logger
-from dht.utils import digest
 from dht import kprotocol
 
 
@@ -28,6 +27,7 @@ class KademliaProtocol(RPCProtocol):
         return ids
 
     def rpc_stun(self, sender):
+        self.addToRouter(sender)
         node = kprotocol.Node()
         node.guid = sender.id
         node.ip = sender.ip
@@ -35,18 +35,18 @@ class KademliaProtocol(RPCProtocol):
         return [node.SerializeToString()]
 
     def rpc_ping(self, sender):
-        self.router.addContact(sender)
+        self.addToRouter(sender)
         return [self.sourceNode.id]
 
     def rpc_store(self, sender, keyword, key, value):
-        self.router.addContact(sender)
+        self.addToRouter(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
         self.storage[keyword] = (key, value)
         return ["True"]
 
     def rpc_find_node(self, sender, key):
         self.log.info("finding neighbors of %i in local table" % long(key.encode('hex'), 16))
-        self.router.addContact(sender)
+        self.addToRouter(sender)
         node = Node(key)
         nodeList = map(tuple, self.router.findNeighbors(node, exclude=sender))
         ret = []
@@ -59,7 +59,7 @@ class KademliaProtocol(RPCProtocol):
         return ret
 
     def rpc_find_value(self, sender, key):
-        self.router.addContact(sender)
+        self.addToRouter(sender)
         ret = []
         ret.append("value")
         value = self.storage.get(key, None)
@@ -104,7 +104,7 @@ class KademliaProtocol(RPCProtocol):
         ds = []
         for keyword in self.storage.iterkeys():
             keynode = Node(keyword)
-            neighbors = self.router.findNeighbors(keynode)
+            neighbors = self.router.findNeighbors(keynode, exclude=node)
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
@@ -119,11 +119,23 @@ class KademliaProtocol(RPCProtocol):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            self.log.info("got response from %s, adding to router" % node)
-            self.router.addContact(node)
             if self.router.isNewNode(node):
                 self.transferKeyValues(node)
+            self.log.info("got response from %s, adding to router" % node)
+            self.router.addContact(node)
         else:
             self.log.debug("no response from %s, removing from router" % node)
             self.router.removeContact(node)
         return result
+
+    def addToRouter(self, node):
+        """
+        Called by rpc_ functions when a node sends them a request.
+        We add the node to our router and transfer our stored values
+        if they are new and within our neighborhood.
+        """
+        if self.router.isNewNode(node):
+            self.log.debug("Found a new node, transferring key/values")
+            self.transferKeyValues(node)
+        self.router.addContact(node)
+

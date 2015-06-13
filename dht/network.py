@@ -170,6 +170,13 @@ class Server(object):
         def store(nodes):
             self.log.info("setting '%s' on %s" % (keyword, map(str, nodes)))
             ds = [self.protocol.callStore(node, dkey, key, value) for node in nodes]
+
+            keynode = Node(keyword)
+            ownBucket = self.protocol.router.buckets[self.protocol.router.getBucketFor(self.node)]
+            if ownBucket.hasInRange(keynode):
+                self.log.debug("got a store request from %s, storing value" % str(self.node))
+                self.storage[keyword] = (key, value)
+
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
         node = Node(dkey)
