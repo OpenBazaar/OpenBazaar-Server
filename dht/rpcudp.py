@@ -45,7 +45,7 @@ class RPCProtocol(protocol.DatagramProtocol):
             return
         sender = node.Node(m.sender.guid, address[0], address[1])
         msgID = m.messageID
-        data = list(m.arguments)
+        data = tuple(m.arguments)
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         else:

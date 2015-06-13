@@ -17,9 +17,9 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 
 #kademlia
 kserver = Server()
-kserver.bootstrap([("127.0.0.1", 8469)])
+kserver.bootstrap([("127.0.0.1", 8468)])
 
-server = internet.UDPServer(8468, kserver.protocol)
+server = internet.UDPServer(8469, kserver.protocol)
 server.setServiceParent(application)
 
 def printIP():
@@ -32,14 +32,22 @@ def store():
     n.ip = "127.0.0.1"
     n.port = 1235
     n.transport = kprotocol.TCP
-    kserver.set("socks", digest("contract"), n.SerializeToString())
+    kserver.set("shoes", digest("contract"), n.SerializeToString())
+    kserver.set("shoes", digest("s"), n.SerializeToString())
 
 def retrieve():
-    d = kserver.get("socks")
+    d = kserver.get("shoes")
     d.addCallback(printVal)
 
 def printVal(value):
-    print "Retrieved value:", value
+    print "Retrieved value:"
+    for v in value:
+        val = kprotocol.Value()
+        val.ParseFromString(v)
+        print val
+        node = kprotocol.Node()
+        node.ParseFromString(val.serializedNode)
+        print node
 
 reactor.callLater(3, store)
 reactor.callLater(5, retrieve)

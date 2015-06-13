@@ -169,7 +169,7 @@ class RPCFindResponse(object):
         return False
 
     def getValue(self):
-        return self.response[1][1]
+        return self.response[1][1:]
 
     def getNodeList(self):
         """
