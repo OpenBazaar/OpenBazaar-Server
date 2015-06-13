@@ -1,14 +1,14 @@
 import time
-from itertools import izip
-from itertools import imap
-from itertools import takewhile
-import operator
+
 from collections import OrderedDict
+from collections import MutableMapping
 
 from zope.interface import implements
 from zope.interface import Interface
 
 from kprotocol import Value
+
+from threading import RLock
 
 
 class IStorage(Interface):
@@ -31,9 +31,9 @@ class IStorage(Interface):
         Get given key.  If not found, return default.
         """
 
-    def iteritemsOlderThan(secondsOld):
+    def cull():
         """
-        Return the an iterator over (key, value) tuples for items older than the given secondsOld.
+        Iterate over all keys and remove expired items
         """
 
     def iterkeys():
@@ -58,66 +58,135 @@ class ForgetfulStorage(object):
         self.ttl = ttl
 
     def __setitem__(self, keyword, values):
-        valueDic = {}
+        valueDic = TTLDict(self.ttl)
         if keyword in self.data:
             valueDic = self.data[keyword]
             if values[0] not in valueDic:
-                valueDic[values[0]] = (time.time(), values[1])
-                del self.data[keyword]
-                self.data[keyword] = valueDic
-            elif valueDic[values[0]][1] == values[1]:
-                valueDic[values[0]] = (time.time(), values[1])
-                del self.data[keyword]
-                self.data[keyword] = valueDic
+                valueDic[values[0]] = values[1]
+            elif valueDic[values[0]] == values[1]:
+                valueDic.set_ttl(values[0], self.ttl)
         else:
-            valueDic[values[0]] = (time.time(), values[1])
+            valueDic[values[0]] = values[1]
             self.data[keyword] = valueDic
-        #self.cull()
+        self.cull()
 
     def cull(self):
-        for k, v in self.iteritemsOlderThan(self.ttl):
-            self.data.popitem(last=False)
+        for key in self.data.iterkeys():
+            self.data[key].cull()
+            if len(self.data[key]) == 0:
+                del self.data[key]
 
     def get(self, keyword, default=None):
-        #self.cull()
+        self.cull()
         if keyword in self.data:
             ret = []
             for k, v in self[keyword].items():
                 value = Value()
                 value.contractID = k
-                value.serializedNode = v[1]
+                value.serializedNode = v
                 ret.append(value.SerializeToString())
             return ret
         return default
 
     def __getitem__(self, keyword):
-        #self.cull()
+        self.cull()
         return self.data[keyword]
 
     def __iter__(self):
-        #self.cull()
+        self.cull()
         return iter(self.data)
 
     def __repr__(self):
-        #self.cull()
+        self.cull()
         return repr(self.data)
 
-    def iteritemsOlderThan(self, secondsOld):
-        minBirthday = time.time() - secondsOld
-        zipped = self._tripleIterable()
-        matches = takewhile(lambda r: minBirthday >= r[1], zipped)
-        return imap(operator.itemgetter(0, 2), matches)
-
-    def _tripleIterable(self):
-        ikeys = self.data.iterkeys()
-        ibirthday = imap(operator.itemgetter(0), self.data.itervalues())
-        ivalues = imap(operator.itemgetter(1), self.data.itervalues())
-        return izip(ikeys, ibirthday, ivalues)
-
     def iterkeys(self):
-        #self.cull()
+        self.cull()
         return self.data.iterkeys()
 
     def iteritems(self, keyword):
-        #self.cull()
+        self.cull()
         return self.data[keyword].iteritems()
+
+class TTLDict(MutableMapping):
+    """
+    Dictionary with TTL
+    Extra args and kwargs are passed to initial .update() call
+    """
+    def __init__(self, default_ttl, *args, **kwargs):
+        self._default_ttl = default_ttl
+        self._values = {}
+        self._lock = RLock()
+        self.update(*args, **kwargs)
+
+    def __repr__(self):
+        return '<TTLDict@%#08x; ttl=%r, v=%r;>' % (id(self), self._default_ttl, self._values)
+
+    def set_ttl(self, key, ttl, now=None):
+        """ Set TTL for the given key """
+        if now is None:
+            now = time.time()
+        with self._lock:
+            _expire, value = self._values[key]
+            self._values[key] = (now + ttl, value)
+
+    def get_ttl(self, key, now=None):
+        """ Return remaining TTL for a key """
+        if now is None:
+            now = time.time()
+        with self._lock:
+            expire, _value = self._values[key]
+            return expire - now
+
+    def expire_at(self, key, timestamp):
+        """ Set the key expire timestamp """
+        with self._lock:
+            _expire, value = self._values[key]
+            self._values[key] = (timestamp, value)
+
+    def is_expired(self, key, now=None, remove=False):
+        """ Check if key has expired """
+        with self._lock:
+            if now is None:
+                now = time.time()
+            expire, _value = self._values[key]
+            if expire is None:
+                return False
+            expired = expire < now
+            if expired and remove:
+                self.__delitem__(key)
+            return expired
+
+    def __len__(self):
+        with self._lock:
+            for key in self._values.keys():
+                self.is_expired(key, remove=True)
+            return len(self._values)
+
+    def __iter__(self):
+        with self._lock:
+            for key in self._values.keys():
+                if not self.is_expired(key, remove=True):
+                    yield key
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            if self._default_ttl is None:
+                expire = None
+            else:
+                expire = time.time() + self._default_ttl
+            self._values[key] = (expire, value)
+
+    def __delitem__(self, key):
+        with self._lock:
+            del self._values[key]
+
+    def __getitem__(self, key):
+        with self._lock:
+            self.is_expired(key, remove=True)
+            return self._values[key][1]
+
+    def cull(self):
+        with self._lock:
+            for key in self._values.keys():
+                self.is_expired(key, remove=True)

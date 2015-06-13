@@ -110,7 +110,7 @@ class KademliaProtocol(RPCProtocol):
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 for k, v in self.storage.iteritems(keyword):
-                    ds.append(self.callStore(node, keyword, k, v[1]))
+                    ds.append(self.callStore(node, keyword, k, v))
         return defer.gatherResults(ds)
 
     def handleCallResponse(self, result, node):
