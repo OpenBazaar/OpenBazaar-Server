@@ -15,10 +15,6 @@ from dht.log import Logger
 
 from twisted.internet import protocol
 
-class Proto(protocol.DatagramProtocol):
-    def send_datagram(self, datagram, addr):
-        self.transport.write(datagram, addr)
-
 class MerchantProtocol(ConnectionMultiplexer):
 
     def __init__(self, public_ip):

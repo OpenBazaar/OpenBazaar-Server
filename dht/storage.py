@@ -65,6 +65,10 @@ class ForgetfulStorage(object):
                 valueDic[values[0]] = (time.time(), values[1])
                 del self.data[keyword]
                 self.data[keyword] = valueDic
+            elif valueDic[values[0]][1] == values[1]:
+                valueDic[values[0]] = (time.time(), values[1])
+                del self.data[keyword]
+                self.data[keyword] = valueDic
         else:
             valueDic[values[0]] = (time.time(), values[1])
             self.data[keyword] = valueDic
