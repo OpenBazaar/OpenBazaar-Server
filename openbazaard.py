@@ -1,6 +1,10 @@
 __author__ = 'chris'
-
+"""
+Just using this class for testing the DHT for now.
+We will fit the actual implementation in where appropriate.
+"""
 import sys, os
+
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import reactor
@@ -8,7 +12,7 @@ from twisted.internet import reactor
 from dht.utils import digest
 from dht.network import Server
 from dht import log, kprotocol
-from dht.kprotocol import Node, Transport
+from dht.kprotocol import Node
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -16,11 +20,11 @@ application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 #kademlia
-kserver = Server()
-kserver.bootstrap([("127.0.0.1", 8468)])
-
-server = internet.UDPServer(8471, kserver.protocol)
-server.setServiceParent(application)
+for i in range(0, 1):
+    kserver = Server()
+    kserver.bootstrap([("127.0.0.1", 8468)])
+    server = internet.UDPServer(8467+i, kserver.protocol)
+    server.setServiceParent(application)
 
 def printIP():
     d = kserver.inetVisibleIP()

@@ -109,7 +109,6 @@ class KademliaProtocol(RPCProtocol):
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
-                print newNodeClose, thisNodeClosest
             if len(neighbors) == 0 \
                     or (newNodeClose and thisNodeClosest) \
                     or (thisNodeClosest and len(neighbors) < self.ksize):
