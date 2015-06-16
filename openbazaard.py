@@ -5,6 +5,7 @@ We will fit the actual implementation in where appropriate.
 """
 import sys, os
 import random
+import pyelliptic
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
@@ -25,13 +26,26 @@ sys.path.append(os.path.dirname(__file__))
 application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
+#key generation for testing
+priv = random_key()
+pub = privkey_to_pubkey(priv)
+pub_compressed = unhexlify(encode_pubkey(pub, "hex_compressed"))
+
+pub_uncompressed = decode_pubkey(hexlify(pub_compressed), formt='hex_compressed')
+pubkey_hex = encode_pubkey(pub_uncompressed, formt="hex")
+pubkey_raw = changebase(pubkey_hex[2:],16,256,minlen=64)
+
+privkey = encode_privkey(priv, "bin")
+pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
+alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
+
 #kademlia
 for i in range(0, 1):
     node = Node(digest(random.getrandbits(255)),
-                pubkey=unhexlify(encode_pubkey(privkey_to_pubkey(random_key()), "hex_compressed")))
+                pubkey=pub_compressed)
     kserver = Server(node)
-    kserver.bootstrap([("127.0.0.1", 8468)])
-    server = internet.UDPServer(8470+i, kserver.protocol)
+    kserver.bootstrap([("127.0.0.1", 8467)])
+    server = internet.UDPServer(8469+i, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():
@@ -44,8 +58,13 @@ def store():
     n.ip = "127.0.0.1"
     n.port = 1235
     n.transport = kprotocol.TCP
+    n.publicKey = pub_compressed
     kserver.set("shoes", digest("contract"), n.SerializeToString())
     kserver.set("shoes", digest("s"), n.SerializeToString())
+
+def delete():
+    signature = alice.sign(digest("contract"))
+    kserver.delete("shoes", digest("contract"), signature)
 
 def retrieve():
     d = kserver.get("shoes")
@@ -61,5 +80,8 @@ def printVal(value):
         node.ParseFromString(val.serializedNode)
         print node
 
-#reactor.callLater(3, store)
-#reactor.callLater(5, retrieve)
+reactor.callLater(3, store)
+reactor.callLater(5, retrieve)
+reactor.callLater(7, delete)
+reactor.callLater(9, retrieve)
+

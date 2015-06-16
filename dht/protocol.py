@@ -1,6 +1,10 @@
 import random
+import pyelliptic
+import bitcoin
 
 from twisted.internet import defer
+
+from binascii import hexlify
 
 from dht.rpcudp import RPCProtocol
 from dht.node import Node
@@ -45,13 +49,33 @@ class KademliaProtocol(RPCProtocol):
         self.storage[keyword] = (key, value)
         return ["True"]
 
+    def rpc_delete(self, sender, keyword, key, signature):
+        self.addToRouter(sender)
+        value = self.storage.getSpecific(keyword, key)
+        if value is not None:
+            try:
+                node = kprotocol.Node()
+                node.ParseFromString(value)
+                pub = bitcoin.decode_pubkey(hexlify(node.publicKey), formt='hex_compressed')
+                pubkey_hex = bitcoin.encode_pubkey(pub, formt="hex")
+                pubkey_raw = bitcoin.changebase(pubkey_hex[2:],16,256,minlen=64)
+                pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
+                if pyelliptic.ECC(pubkey=pubkey).verify(signature, key):
+                    self.storage.delete(keyword, key)
+                    return ["True"]
+            except:
+                pass
+        return ["False"]
+
     def rpc_find_node(self, sender, key):
         self.log.info("finding neighbors of %i in local table" % long(key.encode('hex'), 16))
         self.addToRouter(sender)
         node = Node(key)
         nodeList = self.router.findNeighbors(node, exclude=sender)
         ret = []
+        print nodeList
         for n in nodeList:
+            print n
             ret.append(n.proto.SerializeToString())
         return ret
 
@@ -83,6 +107,11 @@ class KademliaProtocol(RPCProtocol):
     def callStore(self, nodeToAsk, keyword, key, value):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.store(address, keyword, key, value)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callDelete(self, nodeToAsk, keyword, key, signature):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.delete(address, keyword, key, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def transferKeyValues(self, node):

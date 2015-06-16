@@ -14,15 +14,14 @@ class Node:
         self.serverPort = serverPort
         self.transport = transport
         self.long_id = long(id.encode('hex'), 16)
-        if self.pubkey is not None:
-            self.proto = self.createProto()
+        self.proto = self.createProto()
 
     def createProto(self):
         n = kprotocol.Node()
         n.guid = self.id
-        if self.pubkey is not None: n.publicKey = self.pubkey
         if self.ip is not None: n.ip = self.ip
         if self.port is not None: n.port = self.port
+        if self.pubkey is not None: n.publicKey = self.pubkey
         if self.merchant:
             n.merchant = True
             n.serverPort = self.serverPort

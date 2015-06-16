@@ -88,6 +88,13 @@ class ForgetfulStorage(object):
             return ret
         return default
 
+    def getSpecific(self, keyword, key):
+        if keyword in self.data and key in self.data[keyword]:
+            return self.data[keyword][key]
+
+    def delete(self, keyword, key):
+        del self.data[keyword][key]
+
     def __getitem__(self, keyword):
         self.cull()
         return self.data[keyword]

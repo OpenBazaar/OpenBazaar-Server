@@ -188,6 +188,40 @@ class Server(object):
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(store)
 
+    def delete(self, keyword, key, signature):
+        """
+        Delete the given key/value pair from the keyword dictionary on the network.
+        To delete you must provide a signature covering the key that you wish to
+        delete. It will be verified against the public key stored in the value. We
+        use our ksize as alpha to make sure we reach as many nodes storing our value
+        as possible.
+
+        Args:
+            keyword: the `string` keyword where the data being deleted is stored.
+            key: the 20 byte hash of the contract.
+            signature: a signature covering the key.
+
+        """
+        self.log.debug("deleting '%s':'%s' from the network" % (keyword, key))
+        dkey = digest(keyword)
+
+        def delete(nodes):
+            self.log.info("deleting '%s' on %s" % (key, map(str, nodes)))
+            ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
+
+            if keyword in self.storage and key in self.storage[keyword]:
+                self.storage.delete(keyword, key)
+
+            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+
+        node = Node(dkey)
+        nearest = self.protocol.router.findNeighbors(node)
+        if len(nearest) == 0:
+            self.log.warning("There are no known neighbors to delete key %s" % key)
+            return defer.succeed(False)
+        spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.ksize)
+        return spider.find().addCallback(delete)
+
     def _anyRespondSuccess(self, responses):
         """
         Given the result of a DeferredList of calls to peers, ensure that at least
