@@ -31,8 +31,13 @@ message Node {
 	required bytes guid           = 1;
 	optional string ip            = 2;
 	optional uint32 port          = 3;
-	optional bool merchant        = 4 [default = false];
-	optional Transport transport  = 5; //Use only if running a merchant server
+	optional bytes publicKey      = 4;
+
+	//Only use the following if running a merchant server
+	optional bool merchant        = 5 [default = false];
+	optional Transport transport  = 6;
+	optional uint32 serverPort    = 7;
+
 }
 
 //The transport protocol used for the merchant server

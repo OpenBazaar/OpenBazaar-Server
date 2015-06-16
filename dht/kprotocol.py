@@ -19,7 +19,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='kprotocol.proto',
   package='',
-  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"f\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12\x17\n\x08merchant\x18\x04 \x01(\x08:\x05\x66\x61lse\x12\x1d\n\ttransport\x18\x05 \x01(\x0e\x32\n.Transport\"3\n\x05Value\x12\x12\n\ncontractID\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedNode\x18\x02 \x02(\x0c*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06*\x1e\n\tTransport\x12\x07\n\x03TCP\x10\x01\x12\x08\n\x04RUDP\x10\x02')
+  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"\x8d\x01\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12\x11\n\tpublicKey\x18\x04 \x01(\x0c\x12\x17\n\x08merchant\x18\x05 \x01(\x08:\x05\x66\x61lse\x12\x1d\n\ttransport\x18\x06 \x01(\x0e\x32\n.Transport\x12\x12\n\nserverPort\x18\x07 \x01(\r\"3\n\x05Value\x12\x12\n\ncontractID\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedNode\x18\x02 \x02(\x0c*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06*\x1e\n\tTransport\x12\x07\n\x03TCP\x10\x01\x12\x08\n\x04RUDP\x10\x02')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -56,8 +56,8 @@ _COMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=275,
-  serialized_end=358,
+  serialized_start=315,
+  serialized_end=398,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -79,8 +79,8 @@ _TRANSPORT = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=360,
-  serialized_end=390,
+  serialized_start=400,
+  serialized_end=430,
 )
 _sym_db.RegisterEnumDescriptor(_TRANSPORT)
 
@@ -176,16 +176,30 @@ _NODE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='merchant', full_name='Node.merchant', index=3,
-      number=4, type=8, cpp_type=7, label=1,
+      name='publicKey', full_name='Node.publicKey', index=3,
+      number=4, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='merchant', full_name='Node.merchant', index=4,
+      number=5, type=8, cpp_type=7, label=1,
       has_default_value=True, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='transport', full_name='Node.transport', index=4,
-      number=5, type=14, cpp_type=8, label=1,
+      name='transport', full_name='Node.transport', index=5,
+      number=6, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='serverPort', full_name='Node.serverPort', index=6,
+      number=7, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -200,8 +214,8 @@ _NODE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=118,
-  serialized_end=220,
+  serialized_start=119,
+  serialized_end=260,
 )
 
 
@@ -237,8 +251,8 @@ _VALUE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=222,
-  serialized_end=273,
+  serialized_start=262,
+  serialized_end=313,
 )
 
 _MESSAGE.fields_by_name['sender'].message_type = _NODE

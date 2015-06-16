@@ -3,10 +3,16 @@ import heapq
 
 
 class Node:
-    def __init__(self, id, ip=None, port=None):
+    def __init__(self, id, ip=None, port=None,
+                 pubkey=None, merchant=False,
+                 serverPort=None, transport=None):
         self.id = id
         self.ip = ip
         self.port = port
+        self.pubkey = pubkey
+        self.merchant = merchant
+        self.serverPort = serverPort
+        self.transport = transport
         self.long_id = long(id.encode('hex'), 16)
 
     def sameHomeAs(self, node):
