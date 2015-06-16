@@ -31,9 +31,19 @@ class IStorage(Interface):
         Get given key.  If not found, return default.
         """
 
+    def getSpecific(keyword, key):
+        """
+        Return the exact value for a given keyword and key.
+        """
+
     def cull():
         """
         Iterate over all keys and remove expired items
+        """
+
+    def delete(keyword, key):
+        """
+        Delete the value stored at keyword/key.
         """
 
     def iterkeys():
