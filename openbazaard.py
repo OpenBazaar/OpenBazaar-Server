@@ -4,15 +4,21 @@ Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
 import sys, os
+import random
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import reactor
 
+from binascii import unhexlify
+
+from bitcoin import *
+
 from dht.utils import digest
 from dht.network import Server
 from dht import log, kprotocol
-from dht.kprotocol import Node
+from dht import kprotocol
+from dht.node import Node
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -21,9 +27,11 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 
 #kademlia
 for i in range(0, 1):
-    kserver = Server()
+    node = Node(digest(random.getrandbits(255)),
+                pubkey=unhexlify(encode_pubkey(privkey_to_pubkey(random_key()), "hex_compressed")))
+    kserver = Server(node)
     kserver.bootstrap([("127.0.0.1", 8468)])
-    server = internet.UDPServer(8467+i, kserver.protocol)
+    server = internet.UDPServer(8470+i, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():
@@ -31,7 +39,7 @@ def printIP():
     d.addCallback(printVal)
 
 def store():
-    n = Node()
+    n = kprotocol.Node()
     n.guid = digest("guid")
     n.ip = "127.0.0.1"
     n.port = 1235

@@ -49,14 +49,10 @@ class KademliaProtocol(RPCProtocol):
         self.log.info("finding neighbors of %i in local table" % long(key.encode('hex'), 16))
         self.addToRouter(sender)
         node = Node(key)
-        nodeList = map(tuple, self.router.findNeighbors(node, exclude=sender))
+        nodeList = self.router.findNeighbors(node, exclude=sender)
         ret = []
         for n in nodeList:
-            node = kprotocol.Node()
-            node.guid = n[0]
-            node.ip = n[1]
-            node.port = n[2]
-            ret.append(node.SerializeToString())
+            ret.append(n.proto.SerializeToString())
         return ret
 
     def rpc_find_value(self, sender, key):

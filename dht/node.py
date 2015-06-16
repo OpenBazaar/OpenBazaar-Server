@@ -1,11 +1,11 @@
 from operator import itemgetter
 import heapq
+import kprotocol
 
 
 class Node:
-    def __init__(self, id, ip=None, port=None,
-                 pubkey=None, merchant=False,
-                 serverPort=None, transport=None):
+    def __init__(self, id, ip=None, port=None, pubkey=None,
+                 merchant=False, serverPort=None, transport=None):
         self.id = id
         self.ip = ip
         self.port = port
@@ -14,6 +14,20 @@ class Node:
         self.serverPort = serverPort
         self.transport = transport
         self.long_id = long(id.encode('hex'), 16)
+        if self.pubkey is not None:
+            self.proto = self.createProto()
+
+    def createProto(self):
+        n = kprotocol.Node()
+        n.guid = self.id
+        if self.pubkey is not None: n.publicKey = self.pubkey
+        if self.ip is not None: n.ip = self.ip
+        if self.port is not None: n.port = self.port
+        if self.merchant:
+            n.merchant = True
+            n.serverPort = self.serverPort
+            n.transport = self.transport
+        return n
 
     def sameHomeAs(self, node):
         return self.ip == node.ip and self.port == node.port

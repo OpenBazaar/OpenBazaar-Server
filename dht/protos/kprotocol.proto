@@ -29,9 +29,9 @@ enum Command {
 //Some fields are optional as they aren't needed in all situations.
 message Node {
 	required bytes guid           = 1;
-	optional string ip            = 2;
-	optional uint32 port          = 3;
-	optional bytes publicKey      = 4;
+	required bytes publicKey      = 2;
+	optional string ip            = 3;
+	optional uint32 port          = 4;
 
 	//Only use the following if running a merchant server
 	optional bool merchant        = 5 [default = false];

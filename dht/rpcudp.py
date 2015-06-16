@@ -39,11 +39,16 @@ class RPCProtocol(protocol.DatagramProtocol):
         m = Message()
         try:
             m.ParseFromString(datagram)
+            sender = node.Node(m.sender.guid, address[0], address[1], m.sender.publicKey)
+            if m.sender.merchant:
+                sender.merchant = True
+                sender.transport = m.sender.transport
+                sender.serverPort = m.sender.serverPort
         except:
             # If message isn't formatted property then ignore
             self.log.msg("Received unknown message from %s, ignoring" % repr(address))
             return
-        sender = node.Node(m.sender.guid, address[0], address[1])
+
         msgID = m.messageID
         data = tuple(m.arguments)
         if msgID in self._outstanding:
@@ -104,13 +109,9 @@ class RPCProtocol(protocol.DatagramProtocol):
 
         def func(address, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
-
-            node = Node()
-            node.guid = self.sourceNode.id
-
             m = Message()
             m.messageID = msgID
-            m.sender.MergeFrom(node)
+            m.sender.MergeFrom(self.sourceNode.proto)
             m.command = Command.Value(name.upper())
             for arg in args:
                 m.arguments.append(arg)
