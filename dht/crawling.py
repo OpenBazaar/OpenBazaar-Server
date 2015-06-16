@@ -187,7 +187,7 @@ class RPCFindResponse(object):
             try:
                 n = kprotocol.Node()
                 n.ParseFromString(node)
-                newNode = Node(n.guid, n.publicKey, n.ip, n.port)
+                newNode = Node(n.guid, n.ip, n.port, n.publicKey)
                 if n.merchant:
                     newNode.merchant = True
                     newNode.transport = n.transport
