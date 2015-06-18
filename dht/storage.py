@@ -132,15 +132,17 @@ class PersistentStorage(object):
 
     def __init__(self, ttl=604800):
 
+        self.ttl = ttl
         self.db = lite.connect("dhtstore")
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
             cursor.execute('''
-          CREATE TABLE data(keyword BLOB, id BLOB, value BLOB)
+          CREATE TABLE data(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)
         ''')
             cursor.execute('''
           CREATE INDEX idx1 ON data(keyword);
+          CREATE INDEX idx2 ON data(expires);
         ''')
             self.db.commit()
         except:
@@ -150,8 +152,8 @@ class PersistentStorage(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT id, value FROM data WHERE keyword=? AND id=? AND value=?''', (keyword, values[0], values[1]))
         if cursor.fetchone() is None:
-            cursor.execute('''INSERT OR IGNORE INTO data(keyword, id, value)
-                          VALUES (?,?,?)''', (keyword, values[0], values[1])
+            cursor.execute('''INSERT OR IGNORE INTO data(keyword, id, value, birthday)
+                          VALUES (?,?,?,?)''', (keyword, values[0], values[1], time.time())
                           )
             self.db.commit()
         self.cull()
@@ -182,9 +184,10 @@ class PersistentStorage(object):
             return None
 
     def cull(self):
-        """
-        Iterate over all keys and remove expired items
-        """
+        expiration = time.time() - self.ttl
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM data WHERE birthday < ?''', (expiration,))
+        self.db.commit()
 
     def delete(self, keyword, key):
         cursor = self.db.cursor()
