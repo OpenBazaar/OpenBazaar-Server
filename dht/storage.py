@@ -1,4 +1,5 @@
 import time
+import sqlite3 as lite
 
 from collections import OrderedDict
 from collections import MutableMapping
@@ -124,6 +125,82 @@ class ForgetfulStorage(object):
     def iteritems(self, keyword):
         self.cull()
         return self.data[keyword].iteritems()
+
+
+class PersistentStorage(object):
+    implements(IStorage)
+
+    def __init__(self, ttl=604800):
+
+        self.db = lite.connect("dhtstore")
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+          CREATE TABLE data(keyword BLOB, id BLOB, value BLOB)
+        ''')
+            cursor.execute('''
+          CREATE INDEX idx1 ON data(keyword);
+        ''')
+            self.db.commit()
+        except:
+            pass
+
+    def __setitem__(self, keyword, values):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, value FROM data WHERE keyword=? AND id=? AND value=?''', (keyword, values[0], values[1]))
+        if cursor.fetchone() is None:
+            cursor.execute('''INSERT OR IGNORE INTO data(keyword, id, value)
+                          VALUES (?,?,?)''', (keyword, values[0], values[1])
+                          )
+            self.db.commit()
+        self.cull()
+
+    def __getitem__(self, keyword):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
+        return cursor.fetchall()
+
+    def get(self, keyword, default=None):
+        self.cull()
+        if len(self[keyword]) > 0:
+            ret = []
+            for k, v in self[keyword]:
+                value = Value()
+                value.contractID = k
+                value.serializedNode = v
+                ret.append(value.SerializeToString())
+            return ret
+        return default
+
+    def getSpecific(self, keyword, key):
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT value FROM data WHERE keyword=? AND id=?''', (keyword, key))
+            return cursor.fetchone()[0]
+        except:
+            return None
+
+    def cull(self):
+        """
+        Iterate over all keys and remove expired items
+        """
+
+    def delete(self, keyword, key):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
+        self.db.commit()
+
+    def iterkeys(self):
+        """
+        Get the key iterator for this storage, should yield a list of keys
+        """
+
+    def iteritems(self, keyword):
+        """
+        Get the value iterator for the given keyword, should yield a tuple of (key, value)
+        """
+
 
 class TTLDict(MutableMapping):
     """

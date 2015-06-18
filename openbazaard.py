@@ -45,7 +45,7 @@ for i in range(0, 1):
                 pubkey=pub_compressed)
     kserver = Server(node)
     kserver.bootstrap([("127.0.0.1", 8467)])
-    server = internet.UDPServer(8469+i, kserver.protocol)
+    server = internet.UDPServer(8466+i, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():
@@ -59,12 +59,12 @@ def store():
     n.port = 1235
     n.transport = kprotocol.TCP
     n.publicKey = pub_compressed
-    kserver.set("shoes", digest("contract"), n.SerializeToString())
-    kserver.set("shoes", digest("s"), n.SerializeToString())
+    kserver.set("shoes", digest("contract1"), n.SerializeToString())
+    kserver.set("shoes", digest("contract2"), n.SerializeToString())
 
 def delete():
-    signature = alice.sign(digest("contract"))
-    kserver.delete("shoes", digest("contract"), signature)
+    signature = alice.sign(digest("contract1"))
+    kserver.delete("shoes", digest("contract1"), signature)
 
 def retrieve():
     d = kserver.get("shoes")
