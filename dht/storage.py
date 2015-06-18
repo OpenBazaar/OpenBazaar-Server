@@ -1,11 +1,9 @@
 import time
 import sqlite3 as lite
 
-from collections import OrderedDict
-from collections import MutableMapping
+from collections import OrderedDict, MutableMapping
 
-from zope.interface import implements
-from zope.interface import Interface
+from zope.interface import implements, Interface
 
 from kprotocol import Value
 
@@ -100,11 +98,13 @@ class ForgetfulStorage(object):
         return default
 
     def getSpecific(self, keyword, key):
+        self.cull()
         if keyword in self.data and key in self.data[keyword]:
             return self.data[keyword][key]
 
     def delete(self, keyword, key):
         del self.data[keyword][key]
+        self.cull()
 
     def __getitem__(self, keyword):
         self.cull()
@@ -146,7 +146,7 @@ class PersistentStorage(object):
         ''')
             self.db.commit()
         except:
-            pass
+            self.cull()
 
     def __setitem__(self, keyword, values):
         cursor = self.db.cursor()
@@ -159,6 +159,7 @@ class PersistentStorage(object):
         self.cull()
 
     def __getitem__(self, keyword):
+        self.cull()
         cursor = self.db.cursor()
         cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
         return cursor.fetchall()
@@ -193,16 +194,30 @@ class PersistentStorage(object):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
         self.db.commit()
+        self.cull()
 
     def iterkeys(self):
-        """
-        Get the key iterator for this storage, should yield a list of keys
-        """
+        self.cull()
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT keyword FROM data''')
+            keywords = cursor.fetchall()
+            keyword_list = []
+            for k in keywords:
+                if k[0] not in keyword_list:
+                    keyword_list.append(k[0])
+            return keyword_list.__iter__()
+        except:
+            return None
 
     def iteritems(self, keyword):
-        """
-        Get the value iterator for the given keyword, should yield a tuple of (key, value)
-        """
+        self.cull()
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
+            return cursor.fetchall().__iter__()
+        except:
+            return None
 
 
 class TTLDict(MutableMapping):
