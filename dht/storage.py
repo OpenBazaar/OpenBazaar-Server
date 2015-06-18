@@ -130,10 +130,10 @@ class ForgetfulStorage(object):
 class PersistentStorage(object):
     implements(IStorage)
 
-    def __init__(self, ttl=604800):
+    def __init__(self, filename, ttl=604800):
 
         self.ttl = ttl
-        self.db = lite.connect("dhtstore")
+        self.db = lite.connect(filename)
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
@@ -191,9 +191,12 @@ class PersistentStorage(object):
         self.db.commit()
 
     def delete(self, keyword, key):
-        cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
-        self.db.commit()
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
+            self.db.commit()
+        except:
+            pass
         self.cull()
 
     def iterkeys(self):

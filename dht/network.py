@@ -209,7 +209,7 @@ class Server(object):
             self.log.info("deleting '%s' on %s" % (key, map(str, nodes)))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
-            if keyword in self.storage and key in self.storage[keyword]:
+            if self.storage.getSpecific(keyword, key) is not None:
                 self.storage.delete(keyword, key)
 
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
