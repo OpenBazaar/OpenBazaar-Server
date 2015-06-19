@@ -45,7 +45,7 @@ for i in range(0, 1):
                 pubkey=pub_compressed)
     kserver = Server(node, storage=PersistentStorage("store" + str(3)))
     kserver.bootstrap([("127.0.0.1", 8467)])
-    server = internet.UDPServer(8466i, kserver.protocol)
+    server = internet.UDPServer(8466+i, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():

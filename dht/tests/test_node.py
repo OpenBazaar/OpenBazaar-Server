@@ -1,10 +1,14 @@
 import random
 import hashlib
+import bitcoin
+
+from binascii import unhexlify
 
 from twisted.trial import unittest
 
-from kademlia.node import Node, NodeHeap
-from kademlia.tests.utils import mknode
+from dht.node import Node, NodeHeap
+from dht.tests.utils import mknode
+from dht import kprotocol
 
 
 class NodeTest(unittest.TestCase):
@@ -22,6 +26,28 @@ class NodeTest(unittest.TestCase):
         ntwo = Node(ridtwo.digest())
         self.assertEqual(none.distanceTo(ntwo), shouldbe)
 
+    def test_create_proto(self):
+        rid = hashlib.sha1(str(random.getrandbits(255))).digest()
+        ip = "127.0.0.1"
+        port = 12345
+        pubkey = unhexlify(bitcoin.encode_pubkey(bitcoin.privkey_to_pubkey(bitcoin.random_key()), "hex_compressed"))
+        merchant = True
+        serverPort = 3333
+        transport = kprotocol.TCP
+
+        n1 = kprotocol.Node()
+        n1.guid = rid
+        n2 = Node(rid)
+        self.assertEqual(n1, n2.proto)
+
+        n1.ip = ip
+        n1.port = port
+        n1.publicKey = pubkey
+        n1.merchant = True
+        n1.serverPort = serverPort
+        n1.transport = transport
+        n2 = Node(rid, ip, port, pubkey, merchant, serverPort, transport)
+        self.assertEqual(n1, n2.proto)
 
 class NodeHeapTest(unittest.TestCase):
     def test_maxSize(self):

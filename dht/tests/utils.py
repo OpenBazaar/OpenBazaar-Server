@@ -5,8 +5,8 @@ import random
 import hashlib
 from struct import pack
 
-from kademlia.node import Node
-from kademlia.routing import RoutingTable
+from dht.node import Node
+from dht.routing import RoutingTable
 
 
 def mknode(id=None, ip=None, port=None, intid=None):

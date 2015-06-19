@@ -2,7 +2,7 @@ import hashlib
 
 from twisted.trial import unittest
 
-from kademlia.utils import digest, sharedPrefix, OrderedSet
+from dht.utils import digest, sharedPrefix, OrderedSet
 
 
 class UtilsTest(unittest.TestCase):
