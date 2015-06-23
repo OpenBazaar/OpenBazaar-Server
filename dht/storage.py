@@ -72,8 +72,6 @@ class ForgetfulStorage(object):
             valueDic = self.data[keyword]
             if values[0] not in valueDic:
                 valueDic[values[0]] = values[1]
-            elif valueDic[values[0]] == values[1]:
-                valueDic.set_ttl(values[0], self.ttl)
         else:
             valueDic[values[0]] = values[1]
             self.data[keyword] = valueDic

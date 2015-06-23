@@ -9,160 +9,127 @@ from dht.storage import ForgetfulStorage, PersistentStorage, TTLDict
 from dht.kprotocol import Value
 
 class ForgetFulStorageTest(unittest.TestCase):
+
+    def setUp(self):
+        self.keyword1 = digest("shoes")
+        self.keyword2 = digest("socks")
+        self.key1 = digest("contract1")
+        self.key2 = digest("contract2")
+        self.value = digest("node")
+
     def test_setitem(self):
-        keyword1 = digest("shoes")
-        keyword2 = digest("socks")
-        key1 = digest("contract1")
-        key2 = digest("contract2")
-        value = digest("node")
         f = ForgetfulStorage()
         tdict1 = TTLDict(3)
-        tdict1[key1] = value
-        f[keyword1] = (key1, value)
+        tdict1[self.key1] = self.value
+        f[self.keyword1] = (self.key1, self.value)
         tdict2 = TTLDict(3)
-        tdict2[key1] = value
-        tdict2[key2] = value
-        f[keyword2] = (key1, value)
-        f[keyword2] = (key2, value)
-        self.assertEqual(f.data[keyword1], tdict1)
-        self.assertEqual(f.data[keyword2], tdict2)
+        tdict2[self.key1] = self.value
+        tdict2[self.key2] = self.value
+        f[self.keyword2] = (self.key1, self.value)
+        f[self.keyword2] = (self.key2, self.value)
+        self.assertEqual(f.data[self.keyword1], tdict1)
+        self.assertEqual(f.data[self.keyword2], tdict2)
 
     def test_getitem(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         f = ForgetfulStorage()
         tdict = TTLDict(3)
-        tdict[key] = value
-        f[keyword] = (key, value)
-        self.assertEqual(tdict, f[keyword])
+        tdict[self.key1] = self.value
+        f[self.keyword1] = (self.key1, self.value)
+        self.assertEqual(tdict, f[self.keyword1])
 
     def test_get(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         v = Value()
-        v.contractID = key
-        v.serializedNode = value
+        v.contractID = self.key1
+        v.serializedNode = self.value
         testv = [v.SerializeToString()]
         f = ForgetfulStorage()
-        f[keyword] = (key, value)
-        self.assertEqual(testv, f.get(keyword))
+        f[self.keyword1] = (self.key1, self.value)
+        self.assertEqual(testv, f.get(self.keyword1))
 
     def test_getSpecific(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         f = ForgetfulStorage()
-        f[keyword] = (key, value)
-        self.assertEqual(value, f.getSpecific(keyword, key))
+        f[self.keyword1] = (self.key1, self.value)
+        self.assertEqual(self.value, f.getSpecific(self.keyword1, self.key1))
 
     def test_delete(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         f = ForgetfulStorage()
-        f[keyword] = (key, value)
-        f.delete(keyword, key)
-        self.assertEqual(f.get(keyword), None)
+        f[self.keyword1] = (self.key1, self.value)
+        f.delete(self.keyword1, self.key1)
+        self.assertEqual(f.get(self.keyword1), None)
 
     def test_iterkeys(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         f = ForgetfulStorage()
-        f[keyword] = (key, value)
+        f[self.keyword1] = (self.key1, self.value)
         for k in f.iterkeys():
-            self.assertEqual(k, keyword)
+            self.assertEqual(k, self.keyword1)
 
     def test_iteritems(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         f = ForgetfulStorage()
-        f[keyword] = (key, value)
-        for k, v in f.iteritems(keyword):
-            self.assertEqual((key, value), (k, v))
+        f[self.keyword1] = (self.key1, self.value)
+        for k, v in f.iteritems(self.keyword1):
+            self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
         def test_expired():
-            self.assertTrue(keyword not in f)
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
+            self.assertTrue(self.keyword1 not in f)
         f = ForgetfulStorage(ttl=.0001)
-        f[keyword] = (key, value)
+        f[self.keyword1] = (self.key1, self.value)
         return task.deferLater(reactor, .0002, test_expired)
 
 class PersistentStorageTest(unittest.TestCase):
+
+    def setUp(self):
+        self.keyword1 = digest("shoes")
+        self.keyword2 = digest("socks")
+        self.key1 = digest("contract1")
+        self.key2 = digest("contract2")
+        self.value = digest("node")
+
     def test_setitem(self):
-        keyword1 = digest("shoes")
-        keyword2 = digest("socks")
-        key1 = digest("contract1")
-        key2 = digest("contract2")
-        value = digest("node")
         p = PersistentStorage(":memory:")
-        p[keyword1] = (key1, value)
-        p[keyword2] = (key1, value)
-        p[keyword2] = (key2, value)
-        self.assertEqual(p[keyword1], [(key1, value)])
-        self.assertEqual(p[keyword2], [(key1, value), (key2, value)])
+        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword2] = (self.key1, self.value)
+        p[self.keyword2] = (self.key2, self.value)
+        self.assertEqual(p[self.keyword1], [(self.key1, self.value)])
+        self.assertEqual(p[self.keyword2], [(self.key1, self.value), (self.key2, self.value)])
 
     def test_get(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         v = Value()
-        v.contractID = key
-        v.serializedNode = value
+        v.contractID = self.key1
+        v.serializedNode = self.value
         testv = [v.SerializeToString()]
         p = PersistentStorage(":memory:")
-        p[keyword] = (key, value)
-        self.assertEqual(testv, p.get(keyword))
+        p[self.keyword1] = (self.key1, self.value)
+        self.assertEqual(testv, p.get(self.keyword1))
 
     def test_getSpecific(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         p = PersistentStorage(":memory:")
-        p[keyword] = (key, value)
-        self.assertEqual(value, p.getSpecific(keyword, key))
+        p[self.keyword1] = (self.key1, self.value)
+        self.assertEqual(self.value, p.getSpecific(self.keyword1, self.key1))
 
     def test_delete(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         p = PersistentStorage(":memory:")
-        p[keyword] = (key, value)
-        p.delete(keyword, key)
-        self.assertEqual(p.get(keyword), None)
+        p[self.keyword1] = (self.key1, self.value)
+        p.delete(self.keyword1, self.key1)
+        self.assertEqual(p.get(self.keyword1), None)
 
     def test_iterkeys(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         p = PersistentStorage(":memory:")
-        p[keyword] = (key, value)
+        p[self.keyword1] = (self.key1, self.value)
         for k in p.iterkeys():
-            self.assertEqual(k, keyword)
+            self.assertEqual(k, self.keyword1)
 
     def test_iteritems(self):
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
         p = PersistentStorage(":memory:")
-        p[keyword] = (key, value)
-        for k, v in p.iteritems(keyword):
-            self.assertEqual((key, value), (k, v))
+        p[self.keyword1] = (self.key1, self.value)
+        for k, v in p.iteritems(self.keyword1):
+            self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
         def test_expired():
-            self.assertTrue(p.get(keyword) is None)
-        keyword = digest("shoes")
-        key = digest("contract")
-        value = digest("node")
+            self.assertTrue(p.get(self.keyword1) is None)
         p = PersistentStorage(":memory:", ttl=.0001)
-        p[keyword] = (key, value)
+        p[self.keyword1] = (self.key1, self.value)
         return task.deferLater(reactor, .0002, test_expired)
 
 class TTLDictTest(unittest.TestCase):

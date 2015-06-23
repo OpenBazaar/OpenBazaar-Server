@@ -80,12 +80,9 @@ class RPCProtocol(protocol.DatagramProtocol):
         if self.noisy:
             self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
 
-        node = Node()
-        node.guid = self.sourceNode.id
-
         m = Message()
         m.messageID = msgID
-        m.sender.MergeFrom(node)
+        m.sender.MergeFrom(self.sourceNode.proto)
         m.command = Command.Value(funcname.upper())
         for arg in response:
             m.arguments.append(arg)

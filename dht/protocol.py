@@ -37,6 +37,7 @@ class KademliaProtocol(RPCProtocol):
         node.guid = sender.id
         node.ip = sender.ip
         node.port = sender.port
+        node.publicKey = sender.pubkey
         return [node.SerializeToString()]
 
     def rpc_ping(self, sender):
