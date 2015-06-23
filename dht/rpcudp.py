@@ -1,6 +1,5 @@
 __author__ = 'chris'
 
-import umsgpack
 import random
 from hashlib import sha1
 from base64 import b64encode
@@ -10,7 +9,7 @@ from twisted.internet import reactor
 from twisted.internet import defer
 
 from dht.log import Logger
-from dht.kprotocol import Message, Command, Node
+from dht.kprotocol import Message, Command
 from dht import node
 
 class MalformedMessage(Exception):
@@ -34,7 +33,7 @@ class RPCProtocol(protocol.DatagramProtocol):
     def datagramReceived(self, datagram, address):
         if len(datagram) < 22:
             self.log.msg("received datagram too small from %s, ignoring" % repr(address))
-            return
+            return False
 
         m = Message()
         try:
@@ -47,7 +46,7 @@ class RPCProtocol(protocol.DatagramProtocol):
         except:
             # If message isn't formatted property then ignore
             self.log.msg("Received unknown message from %s, ignoring" % repr(address))
-            return
+            return False
 
         msgID = m.messageID
         data = tuple(m.arguments)

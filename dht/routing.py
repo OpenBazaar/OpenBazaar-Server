@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 from dht.utils import OrderedSet, sharedPrefix
 
-
 class KBucket(object):
     def __init__(self, rangeLower, rangeUpper, ksize):
         self.range = (rangeLower, rangeUpper)
