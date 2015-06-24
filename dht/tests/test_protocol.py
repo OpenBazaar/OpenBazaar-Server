@@ -324,12 +324,6 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_transferKeyValues(self):
         self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.proto.SerializeToString())
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
-        self.protocol.router.addContact(node1)
-        self.protocol.router.addContact(node2)
-        self.protocol.router.addContact(node3)
         self.protocol.transferKeyValues(Node(digest("id"), "127.0.0.1", 99999))
         msg, addr = self.transport.written[0]
         x = kprotocol.Message()
