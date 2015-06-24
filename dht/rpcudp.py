@@ -71,7 +71,7 @@ class RPCProtocol(protocol.DatagramProtocol):
         if f is None or not callable(f):
             msgargs = (self.__class__.__name__, funcname)
             self.log.error("%s has no callable method rpc_%s; ignoring request" % msgargs)
-            return
+            return False
         d = defer.maybeDeferred(f, sender, *args)
         d.addCallback(self._sendResponse, funcname, msgID, sender)
 
@@ -112,7 +112,7 @@ class RPCProtocol(protocol.DatagramProtocol):
             for arg in args:
                 m.arguments.append(arg)
             data = m.SerializeToString()
-            if len(data) > 8192:
+            if len(data) > 8192:  # This check can be removed when we switch to rUDP
                 msg = "Total length of function name and arguments cannot exceed 8K"
                 raise MalformedMessage(msg)
             if self.noisy:

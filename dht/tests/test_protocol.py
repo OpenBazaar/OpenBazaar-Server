@@ -1,5 +1,5 @@
 __author__ = 'chris'
-import bitcoin, binascii, pyelliptic
+import bitcoin, binascii, pyelliptic, time
 
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
@@ -9,6 +9,7 @@ from dht import kprotocol
 
 from twisted.trial import unittest
 from twisted.test import proto_helpers
+from twisted.internet import task, reactor
 
 
 class KademliaProtocolTest(unittest.TestCase):
@@ -69,6 +70,7 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_rpc_delete(self):
         self.protocol.startProtocol()
         self.assertTrue(len(self.transport.written) == 0)
+        # Set a keyword to store
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
@@ -78,6 +80,22 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
         data = m.SerializeToString()
         self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        # Test bad signature
+        m = kprotocol.Message()
+        m.messageID = digest("msgid")
+        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.command = kprotocol.Command.Value("DELETE")
+        m.arguments.append("Keyword")
+        m.arguments.append("Key")
+        m.arguments.append("Bad Signature")
+        data = m.SerializeToString()
+        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        for i in range(0, 3):
+            del m.arguments[-1]
+        m.arguments.append("False")
+        msg, addr = self.transport.written[1]
+        self.assertEqual(msg, m.SerializeToString())
+        # Test good signature
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
@@ -90,7 +108,7 @@ class KademliaProtocolTest(unittest.TestCase):
         for i in range(0, 3):
             del m.arguments[-1]
         m.arguments.append("True")
-        msg, addr = self.transport.written[1]
+        msg, addr = self.transport.written[2]
         self.assertEqual(msg, m.SerializeToString())
         self.assertEqual(addr[1], 55555)
         self.assertTrue(self.storage.getSpecific("Keyword", "Key") is None)
@@ -273,3 +291,30 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(addr[1], 55555)
         d, timeout = self.protocol._outstanding[m.messageID]
         timeout.cancel()
+
+    def test_acceptResponse(self):
+        self.protocol.startProtocol()
+        def handle_response(resp):
+            self.assertTrue(resp[0])
+            self.assertEqual(resp[1][0], self.protocol.sourceNode.id)
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        d = self.protocol.callPing(n)
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        m.arguments.append(self.protocol.sourceNode.id)
+        self.protocol.datagramReceived(m.SerializeToString(), ("127.0.0.1", 55555))
+        return d.addCallback(handle_response)
+
+    def test_unknownRPC(self):
+        self.protocol.startProtocol()
+        self.assertFalse(self.protocol._acceptRequest(digest("msgid"), "unknown",
+                                                      [digest("argument")], Node(digest("nodeid"))))
+
+    def test_timeout(self):
+        def test_timeout():
+            self.assertTrue(len(self.protocol._outstanding) == 0)
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        self.protocol.callPing(n)
+        return task.deferLater(reactor, 5.00001, test_timeout)
