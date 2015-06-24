@@ -312,9 +312,50 @@ class KademliaProtocolTest(unittest.TestCase):
                                                       [digest("argument")], Node(digest("nodeid"))))
 
     def test_timeout(self):
-        def test_timeout():
+        def test_remove_outstanding():
             self.assertTrue(len(self.protocol._outstanding) == 0)
+        def test_deffered(d):
+            self.assertFalse(d[0])
         self.protocol.startProtocol()
         n = Node(digest("S"), "127.0.0.1", 55555)
-        self.protocol.callPing(n)
-        return task.deferLater(reactor, 5.00001, test_timeout)
+        d = self.protocol.callPing(n)
+        d.addCallback(test_deffered)
+        return task.deferLater(reactor, 5.00001, test_remove_outstanding)
+
+    def test_transferKeyValues(self):
+        self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.proto.SerializeToString())
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        self.protocol.router.addContact(node1)
+        self.protocol.router.addContact(node2)
+        self.protocol.router.addContact(node3)
+        self.protocol.transferKeyValues(Node(digest("id"), "127.0.0.1", 99999))
+        msg, addr = self.transport.written[0]
+        x = kprotocol.Message()
+        x.ParseFromString(msg)
+        m = kprotocol.Message()
+        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.command = kprotocol.Command.Value("STORE")
+        m.arguments.append(digest("keyword"))
+        m.arguments.append(digest("key"))
+        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        self.assertEqual(x.sender, m.sender)
+        self.assertEqual(x.command, m.command)
+        self.assertEqual(x.arguments[0], m.arguments[0])
+        self.assertEqual(x.arguments[1], m.arguments[1])
+        self.assertEqual(x.arguments[2], m.arguments[2])
+        for d, timeout in self.protocol._outstanding.items():
+            timeout[1].cancel()
+
+    def test_refreshIDs(self):
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        self.protocol.router.addContact(node1)
+        self.protocol.router.addContact(node2)
+        self.protocol.router.addContact(node3)
+        for b in self.protocol.router.buckets:
+            b.lastUpdated = (time.time() - 5000)
+        ids = self.protocol.getRefreshIDs()
+        self.assertTrue(len(ids)==1)
