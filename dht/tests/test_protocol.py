@@ -188,3 +188,88 @@ class KademliaProtocolTest(unittest.TestCase):
         msg, addr = self.transport.written[0]
         self.assertEqual(msg, m.SerializeToString())
         self.assertEqual(addr[1], 55555)
+
+    def test_callPing(self):
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        self.protocol.callPing(n)
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        self.assertTrue(len(m.messageID) == 20)
+        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertTrue(m.command == kprotocol.PING)
+        self.assertEqual(addr[1], 55555)
+        d, timeout = self.protocol._outstanding[m.messageID]
+        timeout.cancel()
+
+    def test_callStore(self):
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.proto.SerializeToString())
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        self.assertTrue(len(m.messageID) == 20)
+        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertTrue(m.command == kprotocol.STORE)
+        self.assertEqual(m.arguments[0], digest("Keyword"))
+        self.assertEqual(m.arguments[1], digest("Key"))
+        self.assertEqual(m.arguments[2], self.protocol.sourceNode.proto.SerializeToString())
+        self.assertEqual(addr[1], 55555)
+        d, timeout = self.protocol._outstanding[m.messageID]
+        timeout.cancel()
+
+    def test_callFindValue(self):
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        keyword = Node(digest("Keyword"))
+        self.protocol.callFindValue(n, keyword)
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        self.assertTrue(len(m.messageID) == 20)
+        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertTrue(m.command == kprotocol.FIND_VALUE)
+        self.assertEqual(m.arguments[0], keyword.id)
+        self.assertEqual(addr[1], 55555)
+        d, timeout = self.protocol._outstanding[m.messageID]
+        timeout.cancel()
+
+    def test_callFindNode(self):
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        keyword = Node(digest("nodetofind"))
+        self.protocol.callFindNode(n, keyword)
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        self.assertTrue(len(m.messageID) == 20)
+        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertTrue(m.command == kprotocol.FIND_NODE)
+        self.assertEqual(m.arguments[0], keyword.id)
+        self.assertEqual(addr[1], 55555)
+        d, timeout = self.protocol._outstanding[m.messageID]
+        timeout.cancel()
+
+    def test_callDelete(self):
+        self.protocol.startProtocol()
+        n = Node(digest("S"), "127.0.0.1", 55555)
+        self.protocol.callDelete(n, digest("Keyword"), digest("Key"), digest("Signature"))
+        msg, addr = self.transport.written[0]
+        m = kprotocol.Message()
+        m.ParseFromString(msg)
+        self.assertTrue(len(m.messageID) == 20)
+        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertTrue(m.command == kprotocol.DELETE)
+        self.assertEqual(m.arguments[0], digest("Keyword"))
+        self.assertEqual(m.arguments[1], digest("Key"))
+        self.assertEqual(m.arguments[2], digest("Signature"))
+        self.assertEqual(addr[1], 55555)
+        d, timeout = self.protocol._outstanding[m.messageID]
+        timeout.cancel()
