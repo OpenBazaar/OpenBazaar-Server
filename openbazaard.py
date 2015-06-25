@@ -18,7 +18,6 @@ from bitcoin import *
 from dht.utils import digest
 from dht.network import Server
 from dht import log, kprotocol
-from dht.storage import PersistentStorage
 from dht.node import Node
 
 sys.path.append(os.path.dirname(__file__))
@@ -40,12 +39,12 @@ pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
 alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 
 #kademlia
-for i in range(0, 1):
+for i in range(0, 10):
     node = Node(digest(random.getrandbits(255)),
                 pubkey=pub_compressed)
     kserver = Server(node)
-    kserver.bootstrap([("127.0.0.1", 8467)])
-    server = internet.UDPServer(8466+i, kserver.protocol)
+    kserver.bootstrap([("127.0.0.1", 8467, pub_compressed)])
+    server = internet.UDPServer(8467+i, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():
@@ -80,8 +79,8 @@ def printVal(value):
         node.ParseFromString(val.serializedNode)
         print node
 
-reactor.callLater(3, store)
-reactor.callLater(5, retrieve)
-reactor.callLater(7, delete)
-reactor.callLater(9, retrieve)
+#reactor.callLater(3, store)
+#reactor.callLater(5, retrieve)
+#reactor.callLater(7, delete)
+#reactor.callLater(9, retrieve)
 
