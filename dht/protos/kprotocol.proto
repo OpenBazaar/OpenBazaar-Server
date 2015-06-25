@@ -29,7 +29,7 @@ enum Command {
 //Some fields are optional as they aren't needed in all situations.
 message Node {
 	required bytes guid           = 1;
-	required bytes publicKey      = 2;
+	optional bytes publicKey      = 2;
 	optional string ip            = 3;
 	optional uint32 port          = 4;
 

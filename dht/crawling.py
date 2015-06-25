@@ -119,9 +119,12 @@ class ValueSpiderCrawl(SpiderCrawl):
         peerToSaveTo = self.nearestWithoutValue.popleft()
         if peerToSaveTo is not None:
             for v in value:
-                val = kprotocol.Value()
-                val.ParseFromString(v)
-                ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.contractID, val.serializedNode))
+                try:
+                    val = kprotocol.Value()
+                    val.ParseFromString(v)
+                    ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.contractID, val.serializedNode))
+                except:
+                    pass
             return defer.gatherResults(ds).addCallback(lambda _: value)
         return value
 
@@ -188,9 +191,9 @@ class RPCFindResponse(object):
                 n = kprotocol.Node()
                 n.ParseFromString(node)
                 if n.merchant:
-                    newNode = Node(n.guid, n.ip, n.port, n.publicKey, merchant=True, serverPort=n.serverPort, transport=n.transport)
+                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey, merchant=True, serverPort=n.serverPort, transport=n.transport)
                 else:
-                    newNode = Node(n.guid, n.ip, n.port, n.publicKey)
+                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey)
                 nodes.append(newNode)
             except:
                 pass

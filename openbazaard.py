@@ -43,7 +43,7 @@ alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 for i in range(0, 1):
     node = Node(digest(random.getrandbits(255)),
                 pubkey=pub_compressed)
-    kserver = Server(node, storage=PersistentStorage("store" + str(3)))
+    kserver = Server(node)
     kserver.bootstrap([("127.0.0.1", 8467)])
     server = internet.UDPServer(8466+i, kserver.protocol)
     server.setServiceParent(application)

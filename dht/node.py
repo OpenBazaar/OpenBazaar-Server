@@ -113,7 +113,7 @@ class NodeHeap(object):
             nodes = [nodes]
 
         for node in nodes:
-	    if node not in self:
+            if node not in self:
                 distance = self.node.distanceTo(node)
                 heapq.heappush(self.heap, (distance, node))
 

@@ -38,11 +38,11 @@ class RPCProtocol(protocol.DatagramProtocol):
         m = Message()
         try:
             m.ParseFromString(datagram)
-            sender = node.Node(m.sender.guid, address[0], address[1], m.sender.publicKey)
             if m.sender.merchant:
-                sender.merchant = True
-                sender.transport = m.sender.transport
-                sender.serverPort = m.sender.serverPort
+                sender = node.Node(m.sender.guid, address[0], address[1], pubkey=m.sender.publicKey,
+                                   merchant=True, serverPort=m.sender.serverPort, transport=m.sender.transport)
+            else:
+                sender = node.Node(m.sender.guid, address[0], address[1], pubkey=m.sender.publicKey)
         except:
             # If message isn't formatted property then ignore
             self.log.msg("Received unknown message from %s, ignoring" % repr(address))
