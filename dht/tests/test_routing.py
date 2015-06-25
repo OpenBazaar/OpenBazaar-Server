@@ -31,6 +31,16 @@ class KBucketTest(unittest.TestCase):
         for index, node in enumerate(bucket.getNodes()):
             self.assertEqual(node, nodes[index])
 
+    def test_removeNode(self):
+        bucket = KBucket(0, 10, 2)
+        self.assertTrue(bucket.addNode(mknode(intid=1)))
+        self.assertTrue(bucket.addNode(mknode(intid=2)))
+        bucket.removeNode(mknode(intid=1))
+        self.assertEqual(len(bucket), 1)
+        bucket.replacementNodes.push(mknode(intid=3))
+        bucket.removeNode(mknode(intid=2))
+        self.assertEqual(len(bucket), 1)
+
     def test_inRange(self):
         bucket = KBucket(0, 10, 10)
         self.assertTrue(bucket.hasInRange(mknode(intid=5)))

@@ -1,8 +1,9 @@
 import hashlib
 
 from twisted.trial import unittest
+from twisted.internet import defer
 
-from dht.utils import digest, sharedPrefix, OrderedSet
+from dht.utils import digest, sharedPrefix, OrderedSet, deferredDict
 
 
 class UtilsTest(unittest.TestCase):
@@ -25,6 +26,24 @@ class UtilsTest(unittest.TestCase):
 
         args = ['hi']
         self.assertEqual(sharedPrefix(args), 'hi')
+
+    def test_defferedDict(self):
+        def checkValues(d):
+            self.assertTrue(type(d) == dict)
+            self.assertTrue(len(d) == 3)
+
+        def checkEmpty(d):
+            self.assertTrue(type(d) == dict)
+            self.assertTrue(len(d) == 0)
+
+        ds = {}
+        ds["key1"] = defer.Deferred()
+        ds["key2"] = defer.Deferred()
+        ds["key3"] = defer.Deferred()
+        d = deferredDict(ds).addCallback(checkValues)
+        for v in ds.itervalues():
+            v.callback("True")
+        d = deferredDict({}).addCallback(checkEmpty)
 
 
 class OrderedSetTest(unittest.TestCase):
