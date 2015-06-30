@@ -53,7 +53,7 @@ def printIP():
 
 def store():
     n = kprotocol.Node()
-    n.guid = digest("guid")
+    n.guid = digest("guidc")
     n.ip = "127.0.0.1"
     n.port = 1235
     n.transport = kprotocol.TCP

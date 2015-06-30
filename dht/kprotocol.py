@@ -155,7 +155,7 @@ _NODE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='guid', full_name='Node.guid', index=0,
+      name='guidc', full_name='Node.guidc', index=0,
       number=1, type=12, cpp_type=9, label=2,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
