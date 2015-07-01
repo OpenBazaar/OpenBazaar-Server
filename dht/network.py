@@ -1,9 +1,7 @@
 """
 Package for interacting on the network at a high level.
 """
-import random
 import pickle
-import requests
 
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
@@ -28,10 +26,11 @@ class Server(object):
         Create a server instance.  This will start listening on the given port.
 
         Args:
+            node: The node instance for this peer. It must contain (at minimum) an ID,
+                public key, ip address, and port.
             ksize (int): The k parameter from the paper
             alpha (int): The alpha parameter from the paper
-            id: The id for this node on the network.
-            storage: An instance that implements :interface:`~kademlia.storage.IStorage`
+            storage: An instance that implements :interface:`~dht.storage.IStorage`
         """
         self.ksize = ksize
         self.alpha = alpha
