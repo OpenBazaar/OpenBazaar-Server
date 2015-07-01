@@ -39,11 +39,13 @@ pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
 alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 
 #kademlia
-for i in range(0, 1):
-    node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=8466+i, pubkey=pub_compressed)
+for i in range(0, 30):
+    port = 18467 + i
+    node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=port, pubkey=pub_compressed)
     kserver = Server(node)
-    kserver.bootstrap([("127.0.0.1", 8467, pub_compressed)])
-    server = internet.UDPServer(8466+i, kserver.protocol)
+    if i != 0:
+        kserver.bootstrap([("127.0.0.1", 18467, pub_compressed)])
+    server = internet.UDPServer(port, kserver.protocol)
     server.setServiceParent(application)
 
 def printIP():

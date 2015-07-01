@@ -1,6 +1,9 @@
 __author__ = 'chris'
 
 import random
+
+from binascii import hexlify, unhexlify
+
 from hashlib import sha1
 from base64 import b64encode
 
@@ -37,7 +40,7 @@ class RPCProtocol(ConnectionMultiplexer):
             self.instance = instance
 
         def receive_message(self, datagram):
-            datagram = datagram.encode('latin-1')
+            datagram = unhexlify(datagram)
             if len(datagram) < 22:
                 self.log.msg("received datagram too small from %s, ignoring" % repr(self.connection.dest_addr))
                 return False
@@ -87,14 +90,13 @@ class RPCProtocol(ConnectionMultiplexer):
         def _sendResponse(self, response, funcname, msgID, sender):
             if self.noisy:
                 self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
-
             m = Message()
             m.messageID = msgID
             m.sender.MergeFrom(self.instance.sourceNode.proto)
             m.command = Command.Value(funcname.upper())
             for arg in response:
                 m.arguments.append(arg)
-            data = m.SerializeToString().decode('latin-1')
+            data = hexlify(m.SerializeToString())
             self.connection.send_message(data)
 
         def handle_shutdown(self):
@@ -141,7 +143,7 @@ class RPCProtocol(ConnectionMultiplexer):
                 con = self.make_new_connection((self.sourceNode.ip, self.sourceNode.port), address)
             else:
                 con = self[address]
-            con.send_message(data.decode('latin-1'))
+            con.send_message(hexlify(data))
             d = defer.Deferred()
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID] = (d, timeout)
