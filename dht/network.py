@@ -3,6 +3,7 @@ Package for interacting on the network at a high level.
 """
 import random
 import pickle
+import requests
 
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
