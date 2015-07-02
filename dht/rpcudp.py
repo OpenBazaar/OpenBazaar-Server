@@ -59,7 +59,6 @@ class RPCProtocol(ConnectionMultiplexer):
                 # If message isn't formatted property then ignore
                 self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))
                 return False
-
             msgID = m.messageID
             data = tuple(m.arguments)
             if msgID in self._outstanding:

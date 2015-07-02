@@ -25,21 +25,21 @@ sys.path.append(os.path.dirname(__file__))
 application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
-#key generation for testing
-priv = random_key()
-pub = privkey_to_pubkey(priv)
-pub_compressed = unhexlify(encode_pubkey(pub, "hex_compressed"))
+for i in range(0, 10):
+    #key generation for testing
+    priv = random_key()
+    pub = privkey_to_pubkey(priv)
+    pub_compressed = unhexlify(encode_pubkey(pub, "hex_compressed"))
 
-pub_uncompressed = decode_pubkey(hexlify(pub_compressed), formt='hex_compressed')
-pubkey_hex = encode_pubkey(pub_uncompressed, formt="hex")
-pubkey_raw = changebase(pubkey_hex[2:],16,256,minlen=64)
+    pub_uncompressed = decode_pubkey(hexlify(pub_compressed), formt='hex_compressed')
+    pubkey_hex = encode_pubkey(pub_uncompressed, formt="hex")
+    pubkey_raw = changebase(pubkey_hex[2:],16,256,minlen=64)
 
-privkey = encode_privkey(priv, "bin")
-pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
-alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
+    privkey = encode_privkey(priv, "bin")
+    pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
+    alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 
-#kademlia
-for i in range(0, 30):
+    #kademlia
     port = 18467 + i
     node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=port, pubkey=pub_compressed)
     kserver = Server(node)
