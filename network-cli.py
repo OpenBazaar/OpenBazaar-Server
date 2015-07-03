@@ -30,6 +30,7 @@ commands:
     get              fetches the given keyword from the dht
     set              sets the given keyword/key in the dht
     delete           deletes the keyword/key from the dht
+    shutdown         closes all outstanding connections.
 ''')
         parser.add_argument('command', help='Execute the given command')
         args = parser.parse_args(sys.argv[1:2])
@@ -86,6 +87,16 @@ commands:
     network-cli getinfo''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getinfo')
+        d.addCallbacks(printValue, printError)
+        reactor.run()
+
+    def shutdown(self):
+        parser = argparse.ArgumentParser(
+            description="Terminates all outstanding connections.",
+            usage='''usage:
+    network-cli shutdown''')
+        args = parser.parse_args(sys.argv[2:])
+        d = proxy.callRemote('shutdown')
         d.addCallbacks(printValue, printError)
         reactor.run()
 

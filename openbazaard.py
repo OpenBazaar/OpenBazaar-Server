@@ -38,10 +38,10 @@ pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
 alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 
 #kademlia
-node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=18469, pubkey=pub_compressed)
+node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=18467, pubkey=pub_compressed)
 kserver = Server(node)
 kserver.bootstrap([("127.0.0.1", 18467, pub_compressed)])
-server = internet.UDPServer(18469, kserver.protocol)
+server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 
 
@@ -82,6 +82,13 @@ class RPCCalls(jsonrpc.JSONRPC):
         d = kserver.delete(str(keyword), digest(key), signature)
         d.addCallback(handle_result)
         return "Sending delete request..."
+
+    def jsonrpc_shutdown(self):
+        for addr in kserver.protocol:
+            connection = kserver.protocol._active_connections.get(addr)
+            if connection is not None:
+                connection.shutdown()
+        return "Closing all connections."
 
 
 factory = jsonrpc.RPCFactory(RPCCalls)

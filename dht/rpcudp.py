@@ -99,7 +99,7 @@ class RPCProtocol(ConnectionMultiplexer):
             self.connection.send_message(data)
 
         def handle_shutdown(self):
-            print "Connection terminated"
+            self.log.msg("Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
 
     class RPCHandlerFactory(HandlerFactory):
 
