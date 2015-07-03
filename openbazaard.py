@@ -5,7 +5,7 @@ We will fit the actual implementation in where appropriate.
 """
 import sys, os
 import random
-import pyelliptic
+import pyelliptic, stun
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
@@ -21,6 +21,11 @@ from dht.utils import digest
 from dht.network import Server
 from dht import log, kprotocol
 from dht.node import Node
+
+
+response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
+ip_address = response[1]
+port = response[2]
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("openbazaar")
@@ -38,9 +43,9 @@ pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
 alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
 
 #kademlia
-node = Node(digest(random.getrandbits(255)), ip="127.0.0.1", port=18467, pubkey=pub_compressed)
+node = Node(digest(random.getrandbits(255)), ip=ip_address, port=port, pubkey=pub_compressed)
 kserver = Server(node)
-kserver.bootstrap([("127.0.0.1", 18467, pub_compressed)])
+kserver.bootstrap([("162.213.253.147", 18467, pub_compressed)])
 server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 
