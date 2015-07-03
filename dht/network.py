@@ -3,6 +3,8 @@ Package for interacting on the network at a high level.
 """
 import pickle
 
+from binascii import hexlify
+
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
 
@@ -165,7 +167,7 @@ class Server(object):
         Return: True if at least one peer responded. False if the store rpc
             completely failed.
         """
-        self.log.debug("setting '%s' = '%s':'%s' on network" % (keyword, key, value))
+        self.log.debug("setting '%s' = '%s':'%s' on network" % (keyword, hexlify(key), hexlify(value)))
         dkey = digest(keyword)
 
         def store(nodes):
@@ -202,7 +204,7 @@ class Server(object):
             signature: a signature covering the key.
 
         """
-        self.log.debug("deleting '%s':'%s' from the network" % (keyword, key))
+        self.log.debug("deleting '%s':'%s' from the network" % (keyword, hexlify(key)))
         dkey = digest(keyword)
 
         def delete(nodes):
