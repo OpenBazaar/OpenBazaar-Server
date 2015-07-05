@@ -5,9 +5,10 @@ from collections import OrderedDict
 
 from dht.utils import OrderedSet, sharedPrefix
 
+
 class KBucket(object):
-    def __init__(self, rangeLower, rangeUpper, ksize):
-        self.range = (rangeLower, rangeUpper)
+    def __init__(self, range_lower, range_upper, ksize):
+        self.range = (range_lower, range_upper)
         self.nodes = OrderedDict()
         self.replacementNodes = OrderedSet()
         self.touchLastUpdated()
@@ -26,7 +27,7 @@ class KBucket(object):
         for node in self.nodes.values():
             bucket = one if node.long_id <= midpoint else two
             bucket.nodes[node.id] = node
-        return (one, two)
+        return one, two
 
     def removeNode(self, node):
         if node.id not in self.nodes:

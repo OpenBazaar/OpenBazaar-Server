@@ -14,7 +14,6 @@ class FileLogObserver(log.FileLogObserver):
         self.level = level
         self.default = default
 
-
     def emit(self, eventDict):
         ll = eventDict.get('loglevel', self.default)
         if eventDict['isError'] or 'failure' in eventDict or self.level >= ll:
@@ -50,6 +49,7 @@ class Logger:
     def critical(self, message, **kw):
         kw['loglevel'] = CRITICAL
         self.msg("[CRITICAL] %s" % message, **kw)
+
 
 try:
     theLogger

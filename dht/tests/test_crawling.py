@@ -1,6 +1,7 @@
 __author__ = 'chris'
-import bitcoin, binascii
+import binascii
 
+import bitcoin
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 
@@ -12,19 +13,23 @@ from dht.storage import ForgetfulStorage
 from dht.protocol import KademliaProtocol
 from dht import kprotocol
 
+
 class ValueSpiderCrawlTest(unittest.TestCase):
     def setUp(self):
         priv = bitcoin.random_key()
         pub = bitcoin.privkey_to_pubkey(priv)
         pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, serverPort=1234,
-                                        transport=kprotocol.TCP), self.storage, 20)
+        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+                                              transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
-        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, serverPort=9999, transport=TCP)
-        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, serverPort=8888, transport=TCP)
-        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, serverPort=0000, transport=TCP)
+        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+                          transport=TCP)
+        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+                          transport=TCP)
+        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, server_port=0000,
+                          transport=TCP)
 
     def test_find(self):
         self.protocol.router.addContact(self.node1)
@@ -45,15 +50,18 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                           self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
         self.assertTrue(len(self.transport.written) == 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                           self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         resp = spider._nodesFound(responses)
         self.assertTrue(resp is None)
-        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                            self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
         self.assertTrue(len(spider.nearest) == 2)
@@ -95,19 +103,23 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         spider._handleFoundValues([("asdfsd",)])
         self.assertTrue(len(self.transport.written) == 0)
 
+
 class NodeSpiderCrawlTest(unittest.TestCase):
     def setUp(self):
         priv = bitcoin.random_key()
         pub = bitcoin.privkey_to_pubkey(priv)
         pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, serverPort=1234,
-                                        transport=kprotocol.TCP), self.storage, 20)
+        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+                                              transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
-        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, serverPort=9999, transport=TCP)
-        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, serverPort=8888, transport=TCP)
-        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, serverPort=0000, transport=TCP)
+        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+                          transport=TCP)
+        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+                          transport=TCP)
+        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, server_port=0000,
+                          transport=TCP)
 
     def test_find(self):
         self.protocol.router.addContact(self.node1)
@@ -128,20 +140,24 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                           self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
         self.assertTrue(len(self.transport.written) == 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                           self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         nodes = spider._nodesFound(responses)
         self.assertTrue(sorted(nodes) == sorted([self.node1, self.node2, self.node3]))
-        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(), self.node3.proto.SerializeToString()))
+        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
+                            self.node3.proto.SerializeToString()))
         responses = {self.node1.id: response}
         nodes = spider._nodesFound(responses)
         self.assertTrue(sorted(nodes) == sorted([self.node2, self.node3]))
         for d, timeout in self.protocol._outstanding.items():
             timeout[1].cancel()
+
 
 class RPCFindResponseTest(unittest.TestCase):
     def test_happened(self):
@@ -156,7 +172,7 @@ class RPCFindResponseTest(unittest.TestCase):
         response = (True, ("value", "some_value"))
         r = RPCFindResponse(response)
         self.assertTrue(r.hasValue())
-        response = (False, ("a node"))
+        response = (False, "a node")
         r = RPCFindResponse(response)
         self.assertFalse(r.hasValue())
 
@@ -166,10 +182,14 @@ class RPCFindResponseTest(unittest.TestCase):
         self.assertEqual(r.getValue(), ("some_value",))
 
     def test_getNodeList(self):
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, serverPort=9999, transport=TCP)
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, serverPort=8888, transport=TCP)
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+                     transport=TCP)
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+                     transport=TCP)
         node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
-        response = (True, (node1.proto.SerializeToString(), node2.proto.SerializeToString(), node3.proto.SerializeToString(), "sdfasdfsd"))
+        response = (True, (
+            node1.proto.SerializeToString(), node2.proto.SerializeToString(), node3.proto.SerializeToString(),
+            "sdfasdfsd"))
         r = RPCFindResponse(response)
         nodes = r.getNodeList()
         self.assertEqual(nodes[0].proto, node1.proto)

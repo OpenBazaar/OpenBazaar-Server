@@ -17,6 +17,7 @@ from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
 from dht import kprotocol
 
+
 class Server(object):
     """
     High level view of a node instance.  This is the object that should be created
@@ -85,7 +86,7 @@ class Server(object):
         back up, the list of nodes can be used to bootstrap.
         """
         neighbors = self.protocol.router.findNeighbors(self.node)
-        return [ tuple(n)[-2:] for n in neighbors ]
+        return [tuple(n)[-2:] for n in neighbors]
 
     def bootstrap(self, addrs):
         """
@@ -120,6 +121,7 @@ class Server(object):
         Returns:
             A `list` of IP's.  If no one can be contacted, then the `list` will be empty.
         """
+
         def handle(results):
             ips = []
             for result in results:
@@ -240,10 +242,10 @@ class Server(object):
         Save the state of this node (the alpha/ksize/id/immediate neighbors)
         to a cache file with the given fname.
         """
-        data = { 'ksize': self.ksize,
-                 'alpha': self.alpha,
-                 'id': self.node.id,
-                 'neighbors': self.bootstrappableNeighbors() }
+        data = {'ksize': self.ksize,
+                'alpha': self.alpha,
+                'id': self.node.id,
+                'neighbors': self.bootstrappableNeighbors()}
         if len(data['neighbors']) == 0:
             self.log.warning("No known neighbors, so not writing to cache.")
             return

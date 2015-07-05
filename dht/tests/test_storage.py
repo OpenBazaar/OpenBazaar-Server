@@ -8,8 +8,8 @@ from dht.utils import digest
 from dht.storage import ForgetfulStorage, PersistentStorage, TTLDict
 from dht.kprotocol import Value
 
-class ForgetFulStorageTest(unittest.TestCase):
 
+class ForgetFulStorageTest(unittest.TestCase):
     def setUp(self):
         self.keyword1 = digest("shoes")
         self.keyword2 = digest("socks")
@@ -72,12 +72,13 @@ class ForgetFulStorageTest(unittest.TestCase):
     def test_ttl(self):
         def test_expired():
             self.assertTrue(self.keyword1 not in f)
+
         f = ForgetfulStorage(ttl=.0001)
         f[self.keyword1] = (self.key1, self.value)
         return task.deferLater(reactor, .0002, test_expired)
 
-class PersistentStorageTest(unittest.TestCase):
 
+class PersistentStorageTest(unittest.TestCase):
     def setUp(self):
         self.keyword1 = digest("shoes")
         self.keyword2 = digest("socks")
@@ -128,12 +129,15 @@ class PersistentStorageTest(unittest.TestCase):
     def test_ttl(self):
         def test_expired():
             self.assertTrue(p.get(self.keyword1) is None)
+
         p = PersistentStorage(":memory:", ttl=.0001)
         p[self.keyword1] = (self.key1, self.value)
         return task.deferLater(reactor, .0002, test_expired)
 
+
 class TTLDictTest(unittest.TestCase):
     """ TTLDict tests """
+
     def test_update_no_ttl(self):
         """ Test update() call """
         ttl_dict = TTLDict(None)
@@ -204,7 +208,7 @@ class TTLDictTest(unittest.TestCase):
         ttl_dict = TTLDict(60, a=1, b=2)
         self.assertFalse(ttl_dict.is_expired('a'))
         self.assertFalse(ttl_dict.is_expired('a', now=now))
-        self.assertTrue(ttl_dict.is_expired('a', now=now+61))
+        self.assertTrue(ttl_dict.is_expired('a', now=now + 61))
 
         # remove=False, so nothing should be gone
         self.assertEqual(len(ttl_dict), 2)

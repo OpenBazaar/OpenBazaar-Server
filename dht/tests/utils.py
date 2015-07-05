@@ -58,7 +58,7 @@ class FakeProtocol(object):
         value = self.storage.get(key, None)
         if value is None:
             return self.rpc_find_node(sender, nodeid, key)
-        return { 'value': value }
+        return {'value': value}
 
     def callFindNode(self, nodeToAsk, nodeToFind):
         address = (nodeToAsk.ip, nodeToAsk.port)

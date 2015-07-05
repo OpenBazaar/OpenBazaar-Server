@@ -49,6 +49,7 @@ class NodeTest(unittest.TestCase):
         n2 = Node(rid, ip, port, pubkey, merchant, serverPort, transport)
         self.assertEqual(n1, n2.proto)
 
+
 class NodeHeapTest(unittest.TestCase):
     def test_maxSize(self):
         n = NodeHeap(mknode(intid=0), 3)

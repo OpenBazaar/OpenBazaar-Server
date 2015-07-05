@@ -5,13 +5,13 @@ import kprotocol
 
 class Node:
     def __init__(self, id, ip=None, port=None, pubkey=None,
-                 merchant=False, serverPort=None, transport=None):
+                 merchant=False, server_port=None, transport=None):
         self.id = id
         self.ip = ip
         self.port = port
         self.pubkey = pubkey
         self.merchant = merchant
-        self.serverPort = serverPort
+        self.serverPort = server_port
         self.transport = transport
         self.long_id = long(id.encode('hex'), 16)
         self.proto = self.createProto()
@@ -54,6 +54,7 @@ class NodeHeap(object):
     """
     A heap of nodes ordered by distance to a given node.
     """
+
     def __init__(self, node, maxsize):
         """
         Constructor.
@@ -128,7 +129,7 @@ class NodeHeap(object):
         for distance, n in self.heap:
             if node.id == n.id:
                 return True
-        return False	
+        return False
 
     def getUncontacted(self):
         return [n for n in self if n.id not in self.contacted]

@@ -17,8 +17,8 @@ from dht import node
 from txrudp.rudp import ConnectionMultiplexer
 from txrudp.connection import HandlerFactory, Handler, ConnectionFactory
 
-class RPCProtocol(ConnectionMultiplexer):
 
+class RPCProtocol(ConnectionMultiplexer):
     def __init__(self, ip_address, waitTimeout=5, noisy=True):
         """
         @param waitTimeout: Consider it a connetion failure if no response
@@ -50,7 +50,7 @@ class RPCProtocol(ConnectionMultiplexer):
                 m.ParseFromString(datagram)
                 if m.sender.merchant:
                     sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
-                                       pubkey=m.sender.publicKey, merchant=True, serverPort=m.sender.serverPort,
+                                       pubkey=m.sender.publicKey, merchant=True, server_port=m.sender.serverPort,
                                        transport=m.sender.transport)
                 else:
                     sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
@@ -99,7 +99,8 @@ class RPCProtocol(ConnectionMultiplexer):
             self.connection.send_message(data)
 
         def handle_shutdown(self):
-            self.log.msg("Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
+            self.log.msg(
+                "Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
 
     class RPCHandlerFactory(HandlerFactory):
 
@@ -147,4 +148,5 @@ class RPCProtocol(ConnectionMultiplexer):
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID] = (d, timeout)
             return d
+
         return func
