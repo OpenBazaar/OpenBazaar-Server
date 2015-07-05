@@ -54,8 +54,7 @@ server.setServiceParent(application)
 class RPCCalls(jsonrpc.JSONRPC):
 
     def jsonrpc_getinfo(self):
-        info = {}
-        info["version"] = "0.1"
+        info = {"version": "0.1"}
         num_peers = 0
         for bucket in kserver.protocol.router.buckets:
             num_peers += bucket.__len__()
