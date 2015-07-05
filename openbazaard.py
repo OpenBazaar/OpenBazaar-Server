@@ -13,7 +13,7 @@ from twisted.internet import reactor
 
 from txjsonrpc.netstring import jsonrpc
 
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from bitcoin import *
 
