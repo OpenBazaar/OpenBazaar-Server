@@ -20,15 +20,15 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         pub = bitcoin.privkey_to_pubkey(priv)
         pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+        self.protocol = KademliaProtocol(Node(digest("s"), signed_pubkey=pub_compressed, merchant=True, server_port=1234,
                                               transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
-        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), merchant=True, server_port=9999,
                           transport=TCP)
-        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), merchant=True, server_port=8888,
                           transport=TCP)
-        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, server_port=0000,
+        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"), merchant=True, server_port=0000,
                           transport=TCP)
 
     def test_find(self):
@@ -110,15 +110,15 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         pub = bitcoin.privkey_to_pubkey(priv)
         pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+        self.protocol = KademliaProtocol(Node(digest("s"), signed_pubkey=pub_compressed, merchant=True, server_port=1234,
                                               transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
-        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+        self.node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), merchant=True, server_port=9999,
                           transport=TCP)
-        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+        self.node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), merchant=True, server_port=8888,
                           transport=TCP)
-        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"), merchant=True, server_port=0000,
+        self.node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"), merchant=True, server_port=0000,
                           transport=TCP)
 
     def test_find(self):
@@ -182,11 +182,11 @@ class RPCFindResponseTest(unittest.TestCase):
         self.assertEqual(r.getValue(), ("some_value",))
 
     def test_getNodeList(self):
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"), merchant=True, server_port=9999,
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), merchant=True, server_port=9999,
                      transport=TCP)
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"), merchant=True, server_port=8888,
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), merchant=True, server_port=8888,
                      transport=TCP)
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
         response = (True, (
             node1.proto.SerializeToString(), node2.proto.SerializeToString(), node3.proto.SerializeToString(),
             "sdfasdfsd"))

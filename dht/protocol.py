@@ -37,7 +37,7 @@ class KademliaProtocol(RPCProtocol):
         node.guid = sender.id
         node.ip = sender.ip
         node.port = sender.port
-        node.publicKey = sender.pubkey
+        node.signedPublicKey = sender.signed_pubkey
         return [node.SerializeToString()]
 
     def rpc_ping(self, sender):
@@ -57,7 +57,7 @@ class KademliaProtocol(RPCProtocol):
             try:
                 node = kprotocol.Node()
                 node.ParseFromString(value)
-                pub = bitcoin.decode_pubkey(hexlify(node.publicKey), formt='hex_compressed')
+                pub = bitcoin.decode_pubkey(hexlify(node.signedPublicKey), formt='hex_compressed')
                 pubkey_hex = bitcoin.encode_pubkey(pub, formt="hex")
                 pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
                 pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]

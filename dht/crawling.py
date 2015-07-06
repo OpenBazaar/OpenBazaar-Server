@@ -191,10 +191,10 @@ class RPCFindResponse(object):
                 n = kprotocol.Node()
                 n.ParseFromString(node)
                 if n.merchant:
-                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey, merchant=True, server_port=n.serverPort,
+                    newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey, merchant=True, server_port=n.server_port,
                                    transport=n.transport)
                 else:
-                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey)
+                    newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey)
                 nodes.append(newNode)
             except:
                 pass

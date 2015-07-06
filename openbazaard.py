@@ -3,15 +3,21 @@ __author__ = 'chris'
 Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
-from binascii import hexlify, unhexlify
-
-import pyelliptic
 import stun
+
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
+
 from bitcoin import *
 
+from binascii import hexlify, unhexlify
+
 from txjsonrpc.netstring import jsonrpc
+
+from guidc import guid
+
+import nacl.signing, nacl.hash, nacl.encoding
+
 from dht.utils import digest
 from dht.network import Server
 from dht import log
@@ -27,26 +33,25 @@ application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # key generation for testing
-priv = random_key()
-pub = privkey_to_pubkey(priv)
-pub_compressed = unhexlify(encode_pubkey(pub, "hex_compressed"))
-pub_uncompressed = decode_pubkey(hexlify(pub_compressed), formt='hex_compressed')
-pubkey_hex = encode_pubkey(pub_uncompressed, formt="hex")
-pubkey_raw = changebase(pubkey_hex[2:], 16, 256, minlen=64)
-privkey = encode_privkey(priv, "bin")
-pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
-alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
+priv = guid.generate()
+signing_key = nacl.signing.SigningKey(priv)
+verify_key = signing_key.verify_key
+signed = signing_key.sign(str(verify_key))
+h = nacl.hash.sha512(signed)
 
 # kademlia
-node = Node(digest(random.getrandbits(255)), ip=ip_address, port=port, pubkey=pub_compressed)
+node = Node(unhexlify(h[:40]), ip=ip_address, port=port, signed_pubkey=signed)
 kserver = Server(node)
-kserver.bootstrap([("162.213.253.147", 18467, pub_compressed)])
+kserver.bootstrap([("162.213.253.147", 18467, signed)])
 server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 
 
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
+    def jsonrpc_getpubkey(self):
+        return verify_key.encode(encoder=nacl.encoding.HexEncoder)
+
     def jsonrpc_getinfo(self):
         info = {"version": "0.1"}
         num_peers = 0
@@ -80,7 +85,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        signature = alice.sign(key)
+        signature = "some sig"
         d = kserver.delete(str(keyword), digest(key), signature)
         d.addCallback(handle_result)
         return "Sending delete request..."

@@ -25,9 +25,9 @@ class KademliaProtocolTest(unittest.TestCase):
         pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
         privkey = bitcoin.encode_privkey(priv, "bin")
         pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
-        self.alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
+        self.alice = pyelliptic.ECC(curve='secp256k1', signed_pubkey=pubkey, raw_privkey=privkey)
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+        self.protocol = KademliaProtocol(Node(digest("s"), signed_pubkey=pub_compressed, merchant=True, server_port=1234,
                                               transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
@@ -130,7 +130,7 @@ class KademliaProtocolTest(unittest.TestCase):
         node.guid = self.protocol.sourceNode.id
         node.ip = "127.0.0.1"
         node.port = 55555
-        node.publicKey = self.protocol.sourceNode.pubkey
+        node.signedPublicKey = self.protocol.sourceNode.signed_pubkey
         m.arguments.append(node.SerializeToString())
         msg, addr = self.transport.written[0]
         self.assertEqual(msg, m.SerializeToString())
@@ -138,9 +138,9 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_rpc_find_node(self):
         self.protocol.startProtocol()
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -190,9 +190,9 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_rpc_find_without_value(self):
         self.protocol.startProtocol()
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -220,7 +220,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(msg)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.PING)
         self.assertEqual(addr[1], 55555)
         d, timeout = self.protocol._outstanding[m.messageID]
@@ -235,7 +235,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(msg)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.STORE)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
@@ -254,7 +254,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(msg)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_VALUE)
         self.assertEqual(m.arguments[0], keyword.id)
         self.assertEqual(addr[1], 55555)
@@ -271,7 +271,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(msg)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_NODE)
         self.assertEqual(m.arguments[0], keyword.id)
         self.assertEqual(addr[1], 55555)
@@ -287,7 +287,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(msg)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.publicKey, m.sender.publicKey)
+        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.DELETE)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
@@ -351,9 +351,9 @@ class KademliaProtocolTest(unittest.TestCase):
             timeout[1].cancel()
 
     def test_refreshIDs(self):
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)

@@ -104,6 +104,16 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def getpubkey(self):
+        parser = argparse.ArgumentParser(
+            description="Returns this node's public key.",
+            usage='''usage:
+    network-cli getpubkey''')
+        args = parser.parse_args(sys.argv[2:])
+        d = proxy.callRemote('getpubkey')
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 
 proxy = Proxy('127.0.0.1', 18465)
 Parser(proxy)

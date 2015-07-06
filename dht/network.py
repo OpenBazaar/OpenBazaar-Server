@@ -105,7 +105,7 @@ class Server(object):
             nodes = []
             for addr, result in results.items():
                 if result[0]:
-                    nodes.append(Node(result[1][0], addr[0], addr[1], pubkey=addr[2]))
+                    nodes.append(Node(result[1][0], addr[0], addr[1], signed_pubkey=addr[2]))
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()
 

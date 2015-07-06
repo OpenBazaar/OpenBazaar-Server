@@ -32,7 +32,7 @@ class NodeTest(unittest.TestCase):
         port = 12345
         pubkey = unhexlify(bitcoin.encode_pubkey(bitcoin.privkey_to_pubkey(bitcoin.random_key()), "hex_compressed"))
         merchant = True
-        serverPort = 3333
+        server_port = 3333
         transport = kprotocol.TCP
 
         n1 = kprotocol.Node()
@@ -42,11 +42,11 @@ class NodeTest(unittest.TestCase):
 
         n1.ip = ip
         n1.port = port
-        n1.publicKey = pubkey
+        n1.signedPublicKey = pubkey
         n1.merchant = True
-        n1.serverPort = serverPort
+        n1.server_port = server_port
         n1.transport = transport
-        n2 = Node(rid, ip, port, pubkey, merchant, serverPort, transport)
+        n2 = Node(rid, ip, port, pubkey, merchant, server_port, transport)
         self.assertEqual(n1, n2.proto)
 
 

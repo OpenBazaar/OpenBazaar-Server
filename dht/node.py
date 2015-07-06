@@ -4,14 +4,14 @@ import kprotocol
 
 
 class Node:
-    def __init__(self, id, ip=None, port=None, pubkey=None,
+    def __init__(self, id, ip=None, port=None, signed_pubkey=None,
                  merchant=False, server_port=None, transport=None):
         self.id = id
         self.ip = ip
         self.port = port
-        self.pubkey = pubkey
+        self.signed_pubkey = signed_pubkey
         self.merchant = merchant
-        self.serverPort = server_port
+        self.server_port = server_port
         self.transport = transport
         self.long_id = long(id.encode('hex'), 16)
         self.proto = self.createProto()
@@ -21,10 +21,10 @@ class Node:
         n.guid = self.id
         if self.ip is not None: n.ip = self.ip
         if self.port is not None: n.port = self.port
-        if self.pubkey is not None: n.publicKey = self.pubkey
+        if self.signed_pubkey is not None: n.signedPublicKey = self.signed_pubkey
         if self.merchant:
             n.merchant = True
-            n.serverPort = self.serverPort
+            n.server_port = self.server_port
             n.transport = self.transport
         return n
 

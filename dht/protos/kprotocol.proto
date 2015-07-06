@@ -28,14 +28,14 @@ enum Command {
 //An object containing information about the node.
 //Some fields are optional as they aren't needed in all situations.
 message Node {
-	required bytes guid           = 1;
-	required bytes publicKey      = 2;
-	optional string ip            = 3;
-	optional uint32 port          = 4;
+	required bytes guid            = 1;
+	required bytes signedPublicKey = 2; //<64 byte signature><32 byte public key>
+	optional string ip             = 3;
+	optional uint32 port           = 4;
 
 	//Only use the following if running a merchant server
-	optional bool merchant        = 5 [default = false];
-	optional Transport transport  = 6;
+	optional bool merchant         = 5 [default = false];
+	optional Transport transport   = 6;
 	optional uint32 server_port    = 7;
 
 }
