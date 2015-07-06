@@ -2,6 +2,8 @@ __author__ = 'chris'
 
 import random
 
+import nacl.signing, nacl.encoding, nacl.hash
+
 from binascii import hexlify, unhexlify
 
 from hashlib import sha1
@@ -59,6 +61,20 @@ class RPCProtocol(ConnectionMultiplexer):
                 # If message isn't formatted property then ignore
                 self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))
                 return False
+
+            if self.instance.router.isNewNode(sender):
+                try:
+                    pubkey = m.sender.signedPublicKey[len(m.sender.signedPublicKey) - 32:]
+                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key.verify(m.sender.signedPublicKey)
+                    h = nacl.hash.sha512(m.sender.signedPublicKey)
+                    pow = h[64:128]
+                    if int(pow[:6], 16) >= 50:
+                        raise Exception('Invalid proof of work')
+                except:
+                    self.log.msg("Received message from sender with invalid GUID, ignoring")
+                    return False
+
             msgID = m.messageID
             data = tuple(m.arguments)
             if msgID in self._outstanding:
