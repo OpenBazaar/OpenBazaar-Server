@@ -59,8 +59,8 @@ class KademliaProtocol(RPCProtocol):
                 node.ParseFromString(value)
                 pub = bitcoin.decode_pubkey(hexlify(node.publicKey), formt='hex_compressed')
                 pubkey_hex = bitcoin.encode_pubkey(pub, formt="hex")
-                pubkey_raw = bitcoin.changebase(pubkey_hex[2:],16,256,minlen=64)
-                pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
+                pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
+                pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
                 if pyelliptic.ECC(pubkey=pubkey).verify(signature, key):
                     self.storage.delete(keyword, key)
                     return ["True"]
@@ -80,8 +80,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_find_value(self, sender, key):
         self.addToRouter(sender)
-        ret = []
-        ret.append("value")
+        ret = ["value"]
         value = self.storage.get(key, None)
         if value is None:
             return self.rpc_find_node(sender, key)

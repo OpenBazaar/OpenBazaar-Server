@@ -12,6 +12,7 @@ class SpiderCrawl(object):
     """
     Crawl the network and look for given 160-bit keys.
     """
+
     def __init__(self, protocol, node, peers, ksize, alpha):
         """
         Create a new C{SpiderCrawl}er.
@@ -32,7 +33,6 @@ class SpiderCrawl(object):
         self.log = Logger(system=self)
         self.log.info("creating spider with peers: %s" % peers)
         self.nearest.push(peers)
-
 
     def _find(self, rpcmethod):
         """
@@ -191,7 +191,8 @@ class RPCFindResponse(object):
                 n = kprotocol.Node()
                 n.ParseFromString(node)
                 if n.merchant:
-                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey, merchant=True, serverPort=n.serverPort, transport=n.transport)
+                    newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey, merchant=True, server_port=n.serverPort,
+                                   transport=n.transport)
                 else:
                     newNode = Node(n.guid, n.ip, n.port, pubkey=n.publicKey)
                 nodes.append(newNode)

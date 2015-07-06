@@ -148,11 +148,11 @@ class PersistentStorage(object):
 
     def __setitem__(self, keyword, values):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT id, value FROM data WHERE keyword=? AND id=? AND value=?''', (keyword, values[0], values[1]))
+        cursor.execute('''SELECT id, value FROM data WHERE keyword=? AND id=? AND value=?''',
+                       (keyword, values[0], values[1]))
         if cursor.fetchone() is None:
             cursor.execute('''INSERT OR IGNORE INTO data(keyword, id, value, birthday)
-                          VALUES (?,?,?,?)''', (keyword, values[0], values[1], time.time())
-                          )
+                          VALUES (?,?,?,?)''', (keyword, values[0], values[1], time.time()))
             self.db.commit()
         self.cull()
 
@@ -226,6 +226,7 @@ class TTLDict(MutableMapping):
     Dictionary with TTL
     Extra args and kwargs are passed to initial .update() call
     """
+
     def __init__(self, default_ttl, *args, **kwargs):
         self._default_ttl = default_ttl
         self._values = {}

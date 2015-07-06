@@ -6,19 +6,22 @@ import json
 from twisted.internet import reactor
 from txjsonrpc.netstring.jsonrpc import Proxy
 
-def doContinue(value):
+
+def do_continue(value):
     pass
 
-def printValue(value):
+
+def print_value(value):
     print json.dumps(value, indent=4)
     reactor.stop()
 
-def printError(error):
+
+def print_error(error):
     print 'error', error
     reactor.stop()
 
-class Parser(object):
 
+class Parser(object):
     def __init__(self, proxy):
         parser = argparse.ArgumentParser(
             description='OpenBazaar Network CLI',
@@ -49,12 +52,13 @@ commands:
         args = parser.parse_args(sys.argv[2:])
         keyword = args.keyword
         d = proxy.callRemote('get', keyword)
-        d.addCallbacks(printValue, printError)
+        d.addCallbacks(print_value, print_error)
         reactor.run()
 
     def set(self):
         parser = argparse.ArgumentParser(
-            description='Set the given keyword/key pair in the dht. The value will be your serialized node information.',
+            description='Set the given keyword/key pair in the dht. The value will be your '
+                        'serialized node information.',
             usage='''usage:
     network-cli.py set [-kw KEYWORD] [-k KEY]''')
         parser.add_argument('-kw', '--keyword', required=True, help="the keyword to set in the dht")
@@ -63,7 +67,7 @@ commands:
         keyword = args.keyword
         key = args.key
         d = proxy.callRemote('set', keyword, key)
-        d.addCallbacks(printValue, printError)
+        d.addCallbacks(print_value, print_error)
         reactor.run()
 
     def delete(self):
@@ -77,7 +81,7 @@ commands:
         keyword = args.keyword
         key = args.key
         d = proxy.callRemote('delete', keyword, key)
-        d.addCallbacks(printValue, printError)
+        d.addCallbacks(print_value, print_error)
         reactor.run()
 
     def getinfo(self):
@@ -87,7 +91,7 @@ commands:
     network-cli getinfo''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getinfo')
-        d.addCallbacks(printValue, printError)
+        d.addCallbacks(print_value, print_error)
         reactor.run()
 
     def shutdown(self):
@@ -97,8 +101,9 @@ commands:
     network-cli shutdown''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('shutdown')
-        d.addCallbacks(printValue, printError)
+        d.addCallbacks(print_value, print_error)
         reactor.run()
+
 
 proxy = Proxy('127.0.0.1', 18465)
 Parser(proxy)

@@ -1,15 +1,18 @@
 __author__ = 'chris'
-import bitcoin, binascii, pyelliptic, time
+import binascii
+import time
+
+import bitcoin
+import pyelliptic
+from twisted.trial import unittest
+from twisted.test import proto_helpers
+from twisted.internet import task, reactor
 
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
 from dht.node import Node
 from dht import kprotocol
-
-from twisted.trial import unittest
-from twisted.test import proto_helpers
-from twisted.internet import task, reactor
 
 
 class KademliaProtocolTest(unittest.TestCase):
@@ -19,13 +22,13 @@ class KademliaProtocolTest(unittest.TestCase):
         pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
         pub_uncompressed = bitcoin.decode_pubkey(binascii.hexlify(pub_compressed), formt='hex_compressed')
         pubkey_hex = bitcoin.encode_pubkey(pub_uncompressed, formt="hex")
-        pubkey_raw = bitcoin.changebase(pubkey_hex[2:],16,256,minlen=64)
+        pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
         privkey = bitcoin.encode_privkey(priv, "bin")
-        pubkey = '\x02\xca\x00 '+pubkey_raw[:32]+'\x00 '+pubkey_raw[32:]
+        pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
         self.alice = pyelliptic.ECC(curve='secp256k1', pubkey=pubkey, raw_privkey=privkey)
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, serverPort=1234,
-                                        transport=kprotocol.TCP), self.storage, 20)
+        self.protocol = KademliaProtocol(Node(digest("s"), pubkey=pub_compressed, merchant=True, server_port=1234,
+                                              transport=kprotocol.TCP), self.storage, 20)
         self.transport = proto_helpers.FakeDatagramTransport()
         self.protocol.transport = self.transport
 
@@ -65,7 +68,8 @@ class KademliaProtocolTest(unittest.TestCase):
         msg, addr = self.transport.written[0]
         self.assertEqual(msg, m.SerializeToString())
         self.assertEqual(addr[1], 55555)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        self.assertTrue(
+            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
 
     def test_rpc_delete(self):
         self.protocol.startProtocol()
@@ -294,9 +298,11 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_acceptResponse(self):
         self.protocol.startProtocol()
+
         def handle_response(resp):
             self.assertTrue(resp[0])
             self.assertEqual(resp[1][0], self.protocol.sourceNode.id)
+
         n = Node(digest("S"), "127.0.0.1", 55555)
         d = self.protocol.callPing(n)
         msg, addr = self.transport.written[0]
@@ -314,8 +320,10 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_timeout(self):
         def test_remove_outstanding():
             self.assertTrue(len(self.protocol._outstanding) == 0)
+
         def test_deffered(d):
             self.assertFalse(d[0])
+
         self.protocol.startProtocol()
         n = Node(digest("S"), "127.0.0.1", 55555)
         d = self.protocol.callPing(n)
@@ -352,4 +360,4 @@ class KademliaProtocolTest(unittest.TestCase):
         for b in self.protocol.router.buckets:
             b.lastUpdated = (time.time() - 5000)
         ids = self.protocol.getRefreshIDs()
-        self.assertTrue(len(ids)==1)
+        self.assertTrue(len(ids) == 1)
