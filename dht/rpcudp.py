@@ -62,6 +62,7 @@ class RPCProtocol(ConnectionMultiplexer):
                 self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))
                 return False
 
+            # Check that the GUID is valid. If not, ignore
             if self.instance.router.isNewNode(sender):
                 try:
                     pubkey = m.sender.signedPublicKey[len(m.sender.signedPublicKey) - 32:]
@@ -70,7 +71,7 @@ class RPCProtocol(ConnectionMultiplexer):
                     h = nacl.hash.sha512(m.sender.signedPublicKey)
                     pow = h[64:128]
                     if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
-                        raise Exception('Invalid proof of work')
+                        raise Exception('Invalid GUID')
 
                 except:
                     self.log.msg("Received message from sender with invalid GUID, ignoring")

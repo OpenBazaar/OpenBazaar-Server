@@ -33,6 +33,7 @@ application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # key generation for testing
+print "Generating GUID, stand by..."
 priv = guid.generate()
 signing_key = nacl.signing.SigningKey(priv)
 verify_key = signing_key.verify_key
@@ -85,8 +86,8 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        signature = "some sig"
-        d = kserver.delete(str(keyword), digest(key), signature)
+        signature = signing_key.sign(digest(key))
+        d = kserver.delete(str(keyword), digest(key), signature[:64])
         d.addCallback(handle_result)
         return "Sending delete request..."
 

@@ -1,10 +1,8 @@
 import random
 import pyelliptic
-import bitcoin
+import nacl.signing
 
 from twisted.internet import defer
-
-from binascii import hexlify
 
 from dht.rpcudp import RPCProtocol
 from dht.node import Node
@@ -57,13 +55,14 @@ class KademliaProtocol(RPCProtocol):
             try:
                 node = kprotocol.Node()
                 node.ParseFromString(value)
-                pub = bitcoin.decode_pubkey(hexlify(node.signedPublicKey), formt='hex_compressed')
-                pubkey_hex = bitcoin.encode_pubkey(pub, formt="hex")
-                pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
-                pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
-                if pyelliptic.ECC(pubkey=pubkey).verify(signature, key):
+                pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
+                try:
+                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key.verify(signature + key)
                     self.storage.delete(keyword, key)
                     return ["True"]
+                except:
+                    return ["False"]
             except:
                 pass
         return ["False"]
