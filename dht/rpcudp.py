@@ -69,8 +69,9 @@ class RPCProtocol(ConnectionMultiplexer):
                     verify_key.verify(m.sender.signedPublicKey)
                     h = nacl.hash.sha512(m.sender.signedPublicKey)
                     pow = h[64:128]
-                    if int(pow[:6], 16) >= 50:
+                    if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
                         raise Exception('Invalid proof of work')
+
                 except:
                     self.log.msg("Received message from sender with invalid GUID, ignoring")
                     return False
