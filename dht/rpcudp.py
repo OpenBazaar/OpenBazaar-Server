@@ -42,7 +42,6 @@ class RPCProtocol(ConnectionMultiplexer):
             self.instance = instance
 
         def receive_message(self, datagram):
-            datagram = unhexlify(datagram)
             if len(datagram) < 22:
                 self.log.msg("received datagram too small from %s, ignoring" % repr(self.connection.dest_addr))
                 return False
@@ -113,7 +112,7 @@ class RPCProtocol(ConnectionMultiplexer):
             m.command = Command.Value(funcname.upper())
             for arg in response:
                 m.arguments.append(arg)
-            data = hexlify(m.SerializeToString())
+            data = m.SerializeToString()
             self.connection.send_message(data)
 
         def handle_shutdown(self):
@@ -161,7 +160,7 @@ class RPCProtocol(ConnectionMultiplexer):
                 con = self.make_new_connection((self.sourceNode.ip, self.sourceNode.port), address)
             else:
                 con = self[address]
-            con.send_message(hexlify(data))
+            con.send_message(data)
             d = defer.Deferred()
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID] = (d, timeout)
