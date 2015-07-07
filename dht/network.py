@@ -116,7 +116,7 @@ class Server(object):
                         pow = h[64:128]
                         if int(pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
-                        nodes.append(Node(n.guid, addr[0], addr[1], signed_pubkey=n.signedPublicKey))
+                        nodes.append(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
                     except:
                         self.log.msg("Bootstrap node returned invalid GUID")
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
@@ -258,6 +258,7 @@ class Server(object):
         data = {'ksize': self.ksize,
                 'alpha': self.alpha,
                 'id': self.node.id,
+                'signed_pubkey': self.node.signed_pubkey,
                 'neighbors': self.bootstrappableNeighbors()}
         if len(data['neighbors']) == 0:
             self.log.warning("No known neighbors, so not writing to cache.")
@@ -266,14 +267,15 @@ class Server(object):
             pickle.dump(data, f)
 
     @classmethod
-    def loadState(self, fname):
+    def loadState(self, fname, ip_address, port, storage=None):
         """
         Load the state of this node (the alpha/ksize/id/immediate neighbors)
         from a cache file with the given fname.
         """
         with open(fname, 'r') as f:
             data = pickle.load(f)
-        s = Server(data['ksize'], data['alpha'], data['id'])
+        n = Node(data['id'], ip_address, port, data['signed_pubkey'])
+        s = Server(n, data['ksize'], data['alpha'], storage=storage)
         if len(data['neighbors']) > 0:
             s.bootstrap(data['neighbors'])
         return s
