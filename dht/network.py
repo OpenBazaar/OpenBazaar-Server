@@ -2,6 +2,7 @@
 Package for interacting on the network at a high level.
 """
 import pickle
+import nacl.signing, nacl.hash
 
 from binascii import hexlify
 
@@ -105,7 +106,19 @@ class Server(object):
             nodes = []
             for addr, result in results.items():
                 if result[0]:
-                    nodes.append(Node(result[1][0], addr[0], addr[1], signed_pubkey=addr[2]))
+                    n = kprotocol.Node()
+                    try:
+                        n.ParseFromString(result[1][0])
+                        pubkey = n.signedPublicKey[len(n.signedPublicKey) - 32:]
+                        verify_key = nacl.signing.VerifyKey(pubkey)
+                        verify_key.verify(n.signedPublicKey)
+                        h = nacl.hash.sha512(n.signedPublicKey)
+                        pow = h[64:128]
+                        if int(pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
+                            raise Exception('Invalid GUID')
+                        nodes.append(Node(n.guid, addr[0], addr[1], signed_pubkey=n.signedPublicKey))
+                    except:
+                        self.log.msg("Bootstrap node returned invalid GUID")
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()
 

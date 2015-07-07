@@ -43,7 +43,7 @@ h = nacl.hash.sha512(signed)
 # kademlia
 node = Node(unhexlify(h[:40]), ip=ip_address, port=port, signed_pubkey=signed)
 kserver = Server(node)
-kserver.bootstrap([("162.213.253.147", 18467, unhexlify("93bbd60cba8a"))])
+kserver.bootstrap([("162.213.253.147", 18467)])
 server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 

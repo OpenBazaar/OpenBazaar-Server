@@ -40,7 +40,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_ping(self, sender):
         self.addToRouter(sender)
-        return [self.sourceNode.id]
+        return [self.sourceNode.proto.SerializeToString()]
 
     def rpc_store(self, sender, keyword, key, value):
         self.addToRouter(sender)
