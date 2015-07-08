@@ -4,12 +4,12 @@ import time
 
 import nacl.signing, nacl.encoding, nacl.hash
 
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
 from txrudp import connection, rudp, packet, constants
 
 from twisted.trial import unittest
-from twisted.internet import task, reactor
+from twisted.internet import task, reactor, address, udp
 
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
@@ -52,6 +52,11 @@ class KademliaProtocolTest(unittest.TestCase):
 
         self.handler = self.protocol.RPCHandler(False, 5, self.protocol._outstanding, self.protocol)
         self.handler.connection = self.con
+
+        transport = mock.Mock(spec_set=udp.Port)
+        ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
+        transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
+        self.protocol.makeConnection(transport)
 
     def tearDown(self):
         self.con.shutdown()
@@ -289,79 +294,107 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(len(m_calls), 2)
 
     def test_callPing(self):
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        self._connecting_to_connected()
+
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         self.protocol.callPing(n)
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
         self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.PING)
-        self.assertEqual(addr[1], 55555)
-        d, timeout = self.protocol._outstanding[m.messageID]
-        timeout.cancel()
+        self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
 
     def test_callStore(self):
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        self._connecting_to_connected()
+
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.proto.SerializeToString())
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
         self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.STORE)
+        self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
         self.assertEqual(m.arguments[2], self.protocol.sourceNode.proto.SerializeToString())
-        self.assertEqual(addr[1], 55555)
-        d, timeout = self.protocol._outstanding[m.messageID]
-        timeout.cancel()
 
     def test_callFindValue(self):
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        self._connecting_to_connected()
+
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         keyword = Node(digest("Keyword"))
         self.protocol.callFindValue(n, keyword)
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
         self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_VALUE)
+        self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
-        self.assertEqual(addr[1], 55555)
-        d, timeout = self.protocol._outstanding[m.messageID]
-        timeout.cancel()
 
     def test_callFindNode(self):
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        self._connecting_to_connected()
+
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         keyword = Node(digest("nodetofind"))
         self.protocol.callFindNode(n, keyword)
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
         self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_NODE)
+        self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
-        self.assertEqual(addr[1], 55555)
-        d, timeout = self.protocol._outstanding[m.messageID]
-        timeout.cancel()
 
     def test_callDelete(self):
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        self._connecting_to_connected()
+
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         self.protocol.callDelete(n, digest("Keyword"), digest("Key"), digest("Signature"))
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
+        self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
         self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
@@ -369,50 +402,65 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
         self.assertEqual(m.arguments[2], digest("Signature"))
-        self.assertEqual(addr[1], 55555)
-        d, timeout = self.protocol._outstanding[m.messageID]
-        timeout.cancel()
 
     def test_acceptResponse(self):
-        self.protocol.startProtocol()
+        self._connecting_to_connected()
 
         def handle_response(resp):
             self.assertTrue(resp[0])
             self.assertEqual(resp[1][0], self.protocol.sourceNode.id)
 
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        self.protocol[self.addr1] = self.con
         d = self.protocol.callPing(n)
-        msg, addr = self.transport.written[0]
+
+        self.clock.advance(1)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
+
         m = kprotocol.Message()
-        m.ParseFromString(msg)
+        m.ParseFromString(sent_message)
+        timeout = reactor.callLater(5, self.protocol._timeout, m.messageID)
+        self.handler._outstanding[m.messageID] = (d, timeout)
         m.arguments.append(self.protocol.sourceNode.id)
-        self.protocol.datagramReceived(m.SerializeToString(), ("127.0.0.1", 55555))
+        self.handler.receive_message(m.SerializeToString())
+
         return d.addCallback(handle_response)
 
     def test_unknownRPC(self):
-        self.protocol.startProtocol()
-        self.assertFalse(self.protocol._acceptRequest(digest("msgid"), "unknown",
-                                                      [digest("argument")], Node(digest("nodeid"))))
+        self.assertFalse(self.handler._acceptRequest(digest("msgid"), "unknown", [digest("argument")], Node(digest("nodeid"))))
 
     def test_timeout(self):
+        self._connecting_to_connected()
+        self.protocol[self.addr1] = self.con
+
         def test_remove_outstanding():
             self.assertTrue(len(self.protocol._outstanding) == 0)
 
         def test_deffered(d):
             self.assertFalse(d[0])
+            test_remove_outstanding()
 
-        self.protocol.startProtocol()
-        n = Node(digest("S"), "127.0.0.1", 55555)
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
         d = self.protocol.callPing(n)
-        d.addCallback(test_deffered)
-        return task.deferLater(reactor, 5.00001, test_remove_outstanding)
+        self.clock.advance(6)
+        return d.addCallback(test_deffered)
 
     def test_transferKeyValues(self):
+        self._connecting_to_connected()
+        self.protocol[self.addr1] = self.con
+
         self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.proto.SerializeToString())
-        self.protocol.transferKeyValues(Node(digest("id"), "127.0.0.1", 99999))
-        msg, addr = self.transport.written[0]
+        self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
+
+        self.clock.advance(1)
+        connection.REACTOR.runUntilCurrent()
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        sent_message = sent_packet.payload
         x = kprotocol.Message()
-        x.ParseFromString(msg)
+        x.ParseFromString(sent_message)
+
         m = kprotocol.Message()
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("STORE")
@@ -424,8 +472,6 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(x.arguments[0], m.arguments[0])
         self.assertEqual(x.arguments[1], m.arguments[1])
         self.assertEqual(x.arguments[2], m.arguments[2])
-        for d, timeout in self.protocol._outstanding.items():
-            timeout[1].cancel()
 
     def test_refreshIDs(self):
         node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
