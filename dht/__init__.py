@@ -6,6 +6,7 @@ Modifications include:
     Protobuf for serializing the wire protocol.
     The 'STORE' rpc call which appends data to stored dictionaries. Useful for keyword searches.
     A 'DELETE' rpc which allows data to be removed from the DHT when a valid signature is presented.
+    RUDP in place of straight UDP.
 
 """
 version_info = (0, 1)

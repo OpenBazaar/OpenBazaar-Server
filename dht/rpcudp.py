@@ -51,11 +51,10 @@ class RPCProtocol(ConnectionMultiplexer):
                 m.ParseFromString(datagram)
                 if m.sender.merchant:
                     sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
-                                       signed_pubkey=m.sender.signedPublicKey, merchant=True, server_port=m.sender.server_port,
-                                       transport=m.sender.transport)
+                                       m.sender.signedPublicKey, True, m.sender.server_port, m.sender.transport)
                 else:
                     sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
-                                       signed_pubkey=m.sender.signedPublicKey)
+                                       m.sender.signedPublicKey)
             except:
                 # If message isn't formatted property then ignore
                 self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))

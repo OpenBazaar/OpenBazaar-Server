@@ -31,12 +31,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_stun(self, sender):
         self.addToRouter(sender)
-        node = kprotocol.Node()
-        node.guid = sender.id
-        node.ip = sender.ip
-        node.port = sender.port
-        node.signedPublicKey = sender.signed_pubkey
-        return [node.SerializeToString()]
+        return [sender.ip, str(sender.port)]
 
     def rpc_ping(self, sender):
         self.addToRouter(sender)

@@ -1,11 +1,14 @@
 __author__ = 'chris'
-import binascii
+import mock
 import time
 
-import bitcoin
-import pyelliptic
+import nacl.signing, nacl.encoding, nacl.hash
+
+from binascii import hexlify, unhexlify
+
+from txrudp import connection, rudp, packet, constants
+
 from twisted.trial import unittest
-from twisted.test import proto_helpers
 from twisted.internet import task, reactor
 
 from dht.protocol import KademliaProtocol
@@ -16,131 +19,177 @@ from dht import kprotocol
 
 
 class KademliaProtocolTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.public_ip = '123.45.67.89'
+        cls.port = 12345
+        cls.own_addr = (cls.public_ip, cls.port)
+        cls.addr1 = ('132.54.76.98', 54321)
+        cls.addr2 = ('231.76.45.89', 15243)
+
     def setUp(self):
-        priv = bitcoin.random_key()
-        pub = bitcoin.privkey_to_pubkey(priv)
-        pub_compressed = binascii.unhexlify(bitcoin.encode_pubkey(pub, "hex_compressed"))
-        pub_uncompressed = bitcoin.decode_pubkey(binascii.hexlify(pub_compressed), formt='hex_compressed')
-        pubkey_hex = bitcoin.encode_pubkey(pub_uncompressed, formt="hex")
-        pubkey_raw = bitcoin.changebase(pubkey_hex[2:], 16, 256, minlen=64)
-        privkey = bitcoin.encode_privkey(priv, "bin")
-        pubkey = '\x02\xca\x00 ' + pubkey_raw[:32] + '\x00 ' + pubkey_raw[32:]
-        self.alice = pyelliptic.ECC(curve='secp256k1', signed_pubkey=pubkey, raw_privkey=privkey)
+        self.clock = task.Clock()
+        connection.REACTOR.callLater = self.clock.callLater
+
+        self.proto_mock = mock.Mock(spec_set=rudp.ConnectionMultiplexer)
+        self.handler_mock = mock.Mock(spec_set=connection.Handler)
+        self.con = connection.Connection(
+            self.proto_mock,
+            self.handler_mock,
+            self.own_addr,
+            self.addr1
+        )
+
+        valid_key = "1a5c8e67edb8d279d1ae32fa2da97e236b95e95c837dc8c3c7c2ff7a7cc29855"
+        self.signing_key = nacl.signing.SigningKey(valid_key, encoder=nacl.encoding.HexEncoder)
+        verify_key = self.signing_key.verify_key
+        signed_pubkey = self.signing_key.sign(str(verify_key))
+        h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
-        self.protocol = KademliaProtocol(Node(digest("s"), signed_pubkey=pub_compressed, merchant=True, server_port=1234,
-                                              transport=kprotocol.TCP), self.storage, 20)
-        self.transport = proto_helpers.FakeDatagramTransport()
-        self.protocol.transport = self.transport
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True, 1234, kprotocol.TCP)
+        self.protocol = KademliaProtocol(self.node, self.storage, 20)
+
+        self.handler = self.protocol.RPCHandler(False, 5, self.protocol._outstanding, self.protocol)
+        self.handler.connection = self.con
+
+    def tearDown(self):
+        self.con.shutdown()
 
     def test_invalid_datagram(self):
-        self.assertFalse(self.protocol.datagramReceived("hi", ("127.0.0.1", 55555)))
-        self.assertFalse(self.protocol.datagramReceived("hihihihihihihihihihihihihihihihi", ("127.0.0.1", 55555)))
+        self.assertFalse(self.handler.receive_message("hi"))
+        self.assertFalse(self.handler.receive_message("hihihihihihihihihihihihihihihihihihihihih"))
 
     def test_rpc_ping(self):
-        self.protocol.startProtocol()
-        self.assertTrue(len(self.transport.written) == 0)
+        self._connecting_to_connected()
+
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("PING")
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
-        m.arguments.append(self.protocol.sourceNode.id)
-        msg, addr = self.transport.written[0]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        expected_message = m.SerializeToString()
+        self.handler.receive_message(data)
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        received_message = sent_packet.payload
+
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 2)
 
     def test_rpc_store(self):
-        self.protocol.startProtocol()
-        self.assertTrue(len(self.transport.written) == 0)
+        self._connecting_to_connected()
+
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.append("Keyword")
-        m.arguments.append("Key")
-        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
         for i in range(0, 3):
             del m.arguments[-1]
         m.arguments.append("True")
-        msg, addr = self.transport.written[0]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
-        self.assertTrue(
-            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        expected_message = m.SerializeToString()
+        self.handler.receive_message(data)
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        received_message = sent_packet.payload
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 2)
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
 
     def test_rpc_delete(self):
-        self.protocol.startProtocol()
-        self.assertTrue(len(self.transport.written) == 0)
+        self._connecting_to_connected()
+
         # Set a keyword to store
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.append("Keyword")
-        m.arguments.append("Key")
-        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        for i in range(0, 3):
+            del m.arguments[-1]
+        m.arguments.append("True")
+        expected_message1 = m.SerializeToString()
+        self.handler.receive_message(data)
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+
         # Test bad signature
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("DELETE")
-        m.arguments.append("Keyword")
-        m.arguments.append("Key")
-        m.arguments.append("Bad Signature")
+        m.arguments.extend(["Keyword", "Key", "Bad Signature"])
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
         for i in range(0, 3):
             del m.arguments[-1]
         m.arguments.append("False")
-        msg, addr = self.transport.written[1]
-        self.assertEqual(msg, m.SerializeToString())
+        expected_message2 = m.SerializeToString()
+        self.handler.receive_message(data)
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        sent_packets = tuple(
+            packet.Packet.from_bytes(call[0][0])
+            for call in self.proto_mock.send_datagram.call_args_list
+        )
+        self.assertEqual(sent_packets[0].payload, expected_message1)
+        self.assertEqual(sent_packets[1].payload, expected_message2)
+        self.proto_mock.send_datagram.call_args_list = []
+
         # Test good signature
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("DELETE")
-        m.arguments.append("Keyword")
-        m.arguments.append("Key")
-        m.arguments.append(self.alice.sign("Key"))
+        m.arguments.extend(["Keyword", "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
         for i in range(0, 3):
             del m.arguments[-1]
         m.arguments.append("True")
-        msg, addr = self.transport.written[2]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        expected_message3 = m.SerializeToString()
+        self.handler.receive_message(data)
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        self.assertEqual(sent_packet.payload, expected_message3)
         self.assertTrue(self.storage.getSpecific("Keyword", "Key") is None)
 
     def test_rpc_stun(self):
-        self.protocol.startProtocol()
-        self.assertTrue(len(self.transport.written) == 0)
+        self._connecting_to_connected()
+
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("STUN")
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
-        node = kprotocol.Node()
-        node.guid = self.protocol.sourceNode.id
-        node.ip = "127.0.0.1"
-        node.port = 55555
-        node.signedPublicKey = self.protocol.sourceNode.signed_pubkey
-        m.arguments.append(node.SerializeToString())
-        msg, addr = self.transport.written[0]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        m.arguments.extend([self.addr1[0], str(self.addr1[1])])
+        expected_message = m.SerializeToString()
+        self.handler.receive_message(data)
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        received_message = sent_packet.payload
+
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 2)
 
     def test_rpc_find_node(self):
-        self.protocol.startProtocol()
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
+        self._connecting_to_connected()
+
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -150,49 +199,68 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = kprotocol.Command.Value("FIND_NODE")
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
         del m.arguments[-1]
-        m.arguments.append(node3.proto.SerializeToString())
-        m.arguments.append(node2.proto.SerializeToString())
-        m.arguments.append(node1.proto.SerializeToString())
-        msg, addr = self.transport.written[0]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        m.arguments.extend([node3.proto.SerializeToString(), node2.proto.SerializeToString(), node1.proto.SerializeToString()])
+        expected_message = m.SerializeToString()
+        self.handler.receive_message(data)
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        received_message = sent_packet.payload
+
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 2)
 
     def test_rpc_find_value(self):
-        self.protocol.startProtocol()
-        self.assertTrue(len(self.transport.written) == 0)
+        self._connecting_to_connected()
+
+        # Set a value to find
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.append("Keyword")
-        m.arguments.append("Key")
-        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        self.handler.receive_message(data)
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+
+        # Send the find_value rpc
         m = kprotocol.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("FIND_VALUE")
         m.arguments.append("Keyword")
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        self.handler.receive_message(data)
+
         del m.arguments[-1]
         value = kprotocol.Value()
         value.contractID = "Key"
         value.serializedNode = self.protocol.sourceNode.proto.SerializeToString()
         m.arguments.append("value")
         m.arguments.append(value.SerializeToString())
-        msg, addr = self.transport.written[1]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        expected_message = m.SerializeToString()
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packets = tuple(
+            packet.Packet.from_bytes(call[0][0])
+            for call in self.proto_mock.send_datagram.call_args_list
+        )
+        received_message = sent_packets[1].payload
+
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 3)
 
     def test_rpc_find_without_value(self):
-        self.protocol.startProtocol()
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
+        self._connecting_to_connected()
+
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -200,16 +268,25 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.proto)
         m.command = kprotocol.Command.Value("FIND_VALUE")
-        m.arguments.append(digest("nodetofind"))
+        m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
-        self.protocol.datagramReceived(data, ("127.0.0.1", 55555))
+        self.handler.receive_message(data)
+
         del m.arguments[-1]
-        m.arguments.append(node3.proto.SerializeToString())
-        m.arguments.append(node2.proto.SerializeToString())
-        m.arguments.append(node1.proto.SerializeToString())
-        msg, addr = self.transport.written[0]
-        self.assertEqual(msg, m.SerializeToString())
-        self.assertEqual(addr[1], 55555)
+        m.arguments.extend([node2.proto.SerializeToString(), node3.proto.SerializeToString(), node1.proto.SerializeToString()])
+        expected_message = m.SerializeToString()
+
+        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        connection.REACTOR.runUntilCurrent()
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
+        received_message = sent_packet.payload
+
+        m = kprotocol.Message()
+        m.ParseFromString(received_message)
+
+        self.assertEqual(received_message, expected_message)
+        self.assertEqual(len(m_calls), 2)
 
     def test_callPing(self):
         self.protocol.startProtocol()
@@ -361,3 +438,27 @@ class KademliaProtocolTest(unittest.TestCase):
             b.lastUpdated = (time.time() - 5000)
         ids = self.protocol.getRefreshIDs()
         self.assertTrue(len(ids) == 1)
+
+    def _connecting_to_connected(self):
+        remote_synack_packet = packet.Packet.from_data(
+            42,
+            self.con.own_addr,
+            self.con.dest_addr,
+            ack=0,
+            syn=True
+        )
+        self.con.receive_packet(remote_synack_packet)
+
+        self.clock.advance(0)
+        connection.REACTOR.runUntilCurrent()
+
+        self.next_remote_seqnum = 43
+
+        m_calls = self.proto_mock.send_datagram.call_args_list
+        sent_syn_packet = packet.Packet.from_bytes(m_calls[0][0][0])
+        seqnum = sent_syn_packet.sequence_number
+
+        self.handler_mock.reset_mock()
+        self.proto_mock.reset_mock()
+
+        self.next_seqnum = seqnum + 1

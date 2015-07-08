@@ -139,9 +139,7 @@ class Server(object):
             ips = []
             for result in results:
                 if result[0]:
-                    n = kprotocol.Node()
-                    n.ParseFromString(result[1][0])
-                    ips.append((n.ip, n.port))
+                    ips.append((result[1][0], int(result[1][1])))
             self.log.debug("other nodes think our ip is %s" % str(ips))
             return ips
 
