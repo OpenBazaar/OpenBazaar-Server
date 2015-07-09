@@ -65,7 +65,7 @@ static char * createGUID()
   return to_hex(sk, 32);
 }
 
-PyDoc_STRVAR(guid__doc__,
+PyDoc_STRVAR(guidc__doc__,
 "OpenBazaar GUID PoW calculator");
 
 PyDoc_STRVAR(generate__doc__,
@@ -76,14 +76,14 @@ generate()
 {
     return Py_BuildValue("s", createGUID());
 }
-static PyMethodDef guid_methods[] = {
+static PyMethodDef guidc_methods[] = {
     {"generate",  generate, METH_VARARGS, generate__doc__},
     {NULL, NULL}      /* sentinel */
 };
 
 PyMODINIT_FUNC
-initguid(void)
+initguidc(void)
 {
-    Py_InitModule3("guid", guid_methods,
-                   guid__doc__);
+    Py_InitModule3("guidc", guidc_methods,
+                   guidc__doc__);
 }

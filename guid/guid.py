@@ -2,7 +2,6 @@ __author__ = 'chris'
 import nacl.signing
 import nacl.hash
 
-
 def generate():
     def testpow(pow):
         return True if int(pow, 16) < 50 else False
