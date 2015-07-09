@@ -18,7 +18,6 @@ from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
 from dht import kprotocol
 
-
 class Server(object):
     """
     High level view of a node instance.  This is the object that should be created

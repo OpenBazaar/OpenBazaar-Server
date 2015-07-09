@@ -1,0 +1,10 @@
+message PeerData {
+    required string ip_address = 1;
+    required uint32 port       = 2;
+    required bool vendor       = 3;
+}
+
+message PeerSeeds {
+    repeated bytes peer_data   = 1;
+    required bytes signature   = 2;
+}
