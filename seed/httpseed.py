@@ -2,7 +2,6 @@ __author__ = 'chris'
 import sys, os
 import gzip
 import pickle
-import guidc
 import stun
 import json
 import random
@@ -22,6 +21,8 @@ from random import shuffle
 
 from seed import peers
 
+from guid import guid
+
 from dht import log
 from dht.node import Node
 from dht.network import Server
@@ -40,7 +41,7 @@ if os.path.isfile('keys.pickle'):
     signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
 else:
     print "Generating GUID, stand by..."
-    privkey = guidc.generate()
+    privkey = hexlify(guid.generate())
     signing_key = nacl.signing.SigningKey.generate()
     keys = {
             'kademlia_key': privkey,
@@ -59,7 +60,7 @@ guid = unhexlify(h[:40])
 # Stun
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
 ip_address = response[1]
-port = response[2]
+port = 18467
 
 # Start the kademlia server
 this_node = Node(guid, ip_address, port, signed_pubkey)
@@ -84,6 +85,7 @@ class WebResource(resource.Resource):
 
     def crawl(self):
         def gather_results(result):
+            self.nodes = []
             for bucket in self.kserver.protocol.router.buckets:
                 self.nodes.extend(bucket.getNodes())
             if this_node not in self.nodes:

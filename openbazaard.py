@@ -14,7 +14,7 @@ from binascii import hexlify, unhexlify
 
 from txjsonrpc.netstring import jsonrpc
 
-from guidc import guid
+from guid import guid
 
 import nacl.signing, nacl.hash, nacl.encoding
 
