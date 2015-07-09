@@ -9,7 +9,6 @@ from txrudp import packet, connection, rudp, constants
 
 from twisted.internet import udp, address, task
 from twisted.trial import unittest
-from twisted.test import proto_helpers
 
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
@@ -21,16 +20,15 @@ from dht import kprotocol
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.public_ip = '123.45.67.89'
-        cls.port = 12345
-        cls.own_addr = (cls.public_ip, cls.port)
-        cls.addr1 = ('132.54.76.98', 54321)
-        cls.addr2 = ('231.76.45.89', 15243)
-        cls.addr3 = ("193.193.111.00", 99999)
 
     def setUp(self):
+        self.public_ip = '123.45.67.89'
+        self.port = 12345
+        self.own_addr = (self.public_ip, self.port)
+        self.addr1 = ('132.54.76.98', 54321)
+        self.addr2 = ('231.76.45.89', 15243)
+        self.addr3 = ("193.193.111.00", 99999)
+
         self.clock = task.Clock()
         connection.REACTOR.callLater = self.clock.callLater
 
@@ -60,6 +58,10 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True, 9999, TCP)
         self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True, 8888, TCP)
         self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), True, 0000, TCP)
+
+    def tearDown(self):
+        self.con.shutdown()
+        self.protocol.shutdown()
 
     def test_find(self):
         self._connecting_to_connected()
@@ -188,16 +190,15 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
 
 class NodeSpiderCrawlTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.public_ip = '123.45.67.89'
-        cls.port = 12345
-        cls.own_addr = (cls.public_ip, cls.port)
-        cls.addr1 = ('132.54.76.98', 54321)
-        cls.addr2 = ('231.76.45.89', 15243)
-        cls.addr3 = ("193.193.111.00", 99999)
 
     def setUp(self):
+        self.public_ip = '123.45.67.89'
+        self.port = 12345
+        self.own_addr = (self.public_ip, self.port)
+        self.addr1 = ('132.54.76.98', 54321)
+        self.addr2 = ('231.76.45.89', 15243)
+        self.addr3 = ("193.193.111.00", 99999)
+
         self.clock = task.Clock()
         connection.REACTOR.callLater = self.clock.callLater
 

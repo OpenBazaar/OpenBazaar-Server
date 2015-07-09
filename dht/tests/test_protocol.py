@@ -20,15 +20,13 @@ from dht import kprotocol
 
 class KademliaProtocolTest(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.public_ip = '123.45.67.89'
-        cls.port = 12345
-        cls.own_addr = (cls.public_ip, cls.port)
-        cls.addr1 = ('132.54.76.98', 54321)
-        cls.addr2 = ('231.76.45.89', 15243)
-
     def setUp(self):
+        self.public_ip = '123.45.67.89'
+        self.port = 12345
+        self.own_addr = (self.public_ip, self.port)
+        self.addr1 = ('132.54.76.98', 54321)
+        self.addr2 = ('231.76.45.89', 15243)
+
         self.clock = task.Clock()
         connection.REACTOR.callLater = self.clock.callLater
 
@@ -60,6 +58,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def tearDown(self):
         self.con.shutdown()
+        self.protocol.shutdown()
 
     def test_invalid_datagram(self):
         self.assertFalse(self.handler.receive_message("hi"))

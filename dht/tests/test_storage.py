@@ -70,12 +70,9 @@ class ForgetFulStorageTest(unittest.TestCase):
             self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
-        def test_expired():
-            self.assertTrue(self.keyword1 not in f)
-
-        f = ForgetfulStorage(ttl=.0001)
+        f = ForgetfulStorage(ttl=.00000000000001)
         f[self.keyword1] = (self.key1, self.value)
-        return task.deferLater(reactor, .0002, test_expired)
+        self.assertTrue(self.keyword1 not in f)
 
 
 class PersistentStorageTest(unittest.TestCase):
@@ -127,12 +124,9 @@ class PersistentStorageTest(unittest.TestCase):
             self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
-        def test_expired():
-            self.assertTrue(p.get(self.keyword1) is None)
-
-        p = PersistentStorage(":memory:", ttl=.0001)
+        p = PersistentStorage(":memory:", ttl=.000000000001)
         p[self.keyword1] = (self.key1, self.value)
-        return task.deferLater(reactor, .0002, test_expired)
+        self.assertTrue(p.get(self.keyword1) is None)
 
 
 class TTLDictTest(unittest.TestCase):
