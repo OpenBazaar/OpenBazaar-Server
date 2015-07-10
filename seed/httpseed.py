@@ -84,14 +84,16 @@ class WebResource(resource.Resource):
         def gather_results(result):
             for proto in result:
                 n = kprotocol.Node()
-                n.ParseFromString(proto)
-                if n.merchant:
-                    node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.merchant, n.server_port, n.transport)
-                else:
-                    node = Node(n.guid, n.ip, n.port, n.signedPublicKey)
-                if node.id not in self.nodes:
-                    self.nodes[node.id] = node
-            shuffle(self.nodes)
+                try:
+                    n.ParseFromString(proto)
+                    if n.merchant:
+                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.merchant, n.server_port, n.transport)
+                    else:
+                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                    if node.id not in self.nodes:
+                        self.nodes[node.id] = node
+                except:
+                    pass
 
         def start_crawl(results):
             for node, result in results.items():
@@ -105,7 +107,7 @@ class WebResource(resource.Resource):
         ds = {}
         for bucket in self.kserver.protocol.router.buckets:
             for node in bucket.getNodes():
-                if node not in self.nodes:
+                if node.id not in self.nodes:
                     self.nodes[node.id] = node
         for node in self.nodes.values():
             if node.id != this_node.id:
@@ -116,14 +118,15 @@ class WebResource(resource.Resource):
         return self
 
     def render_GET(self, request):
-        print request.args
+        nodes = self.nodes.values()
+        shuffle(nodes)
         log.msg("Received a request for nodes, responding...")
         if "format" in request.args:
             if request.args["format"][0] == "json":
                 json_list = []
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     print "getting list of vendors"
-                    for node in self.nodes.values():
+                    for node in nodes:
                         if node.merchant is True:
                             print "found vendor"
                             node_dic = {}
@@ -134,7 +137,7 @@ class WebResource(resource.Resource):
                     resp = {"peers" : json_list, "signature" : hexlify(sig[:64])}
                     request.write(json.dumps(resp, indent=4))
                 else:
-                    for node in self.nodes.values()[:50]:
+                    for node in nodes[:50]:
                         node_dic = {}
                         node_dic["ip"] = node.ip
                         node_dic["port"] = node.port
@@ -144,7 +147,7 @@ class WebResource(resource.Resource):
                     request.write(json.dumps(resp, indent=4))
             elif request.args["format"][0] == "protobuf":
                 proto = peers.PeerSeeds()
-                for node in self.nodes.values()[:50]:
+                for node in nodes[:50]:
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
@@ -165,7 +168,7 @@ class WebResource(resource.Resource):
         else:
             proto = peers.PeerSeeds()
             if "type" in request.args and request.args["type"][0] == "vendors":
-                for node in self.nodes.values():
+                for node in nodes:
                     if node.merchant is True:
                         peer = peers.PeerData()
                         peer.ip_address = node.ip
@@ -185,7 +188,7 @@ class WebResource(resource.Resource):
                 resp = buf.getvalue()
                 request.write(resp)
             else:
-                for node in self.nodes.values()[:50]:
+                for node in nodes[:50]:
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
