@@ -28,6 +28,7 @@ from dht.node import Node
 from dht.network import Server
 from dht.crawling import NodeSpiderCrawl
 from dht.utils import digest, deferredDict
+from dht import kprotocol
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("OpenBazaar_seed_server")
@@ -78,21 +79,30 @@ class WebResource(resource.Resource):
     def __init__(self, kserver):
         resource.Resource.__init__(self)
         self.kserver = kserver
-        self.protobuf = []
         self.nodes = []
+        for bucket in self.kserver.protocol.router.buckets:
+            for node in bucket.getNodes():
+                self.nodes.append(node)
+        self.nodes.append(this_node)
         loopingCall = task.LoopingCall(self.crawl)
         loopingCall.start(60, True)
 
     def crawl(self):
         def gather_results(result):
-            self.nodes = []
-            for bucket in self.kserver.protocol.router.buckets:
-                self.nodes.extend(bucket.getNodes())
-            if this_node not in self.nodes:
-                self.nodes.append(this_node)
+            for proto in result:
+                n = kprotocol.Node()
+                n.ParseFromString(proto)
+                if n.merchant:
+                    node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.merchant, n.server_port, n.transport)
+                else:
+                    node = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                self.nodes.append(node)
             shuffle(self.nodes)
 
         def start_crawl(results):
+            for node, result in results.items():
+                if not result[0]:
+                    self.nodes.remove(node)
             node = Node(digest(random.getrandbits(255)))
             nearest = self.kserver.protocol.router.findNeighbors(node)
             spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
@@ -101,7 +111,11 @@ class WebResource(resource.Resource):
         ds = {}
         for bucket in self.kserver.protocol.router.buckets:
             for node in bucket.getNodes():
-                 ds[node] = self.kserver.protocol.callPing(node)
+                if node not in self.nodes:
+                    self.nodes.append(node)
+        for node in self.nodes:
+            if node is not this_node:
+                ds[node] = self.kserver.protocol.callPing(node)
         deferredDict(ds).addCallback(start_crawl)
 
     def getChild(self, child, request):
