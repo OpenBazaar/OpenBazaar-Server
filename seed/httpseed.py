@@ -79,11 +79,11 @@ class WebResource(resource.Resource):
     def __init__(self, kserver):
         resource.Resource.__init__(self)
         self.kserver = kserver
-        self.nodes = []
+        self.nodes = {}
         for bucket in self.kserver.protocol.router.buckets:
             for node in bucket.getNodes():
-                self.nodes.append(node)
-        self.nodes.append(this_node)
+                self.nodes[node.id] = node
+        self.nodes[this_node.id] = this_node
         loopingCall = task.LoopingCall(self.crawl)
         loopingCall.start(60, True)
 
@@ -96,13 +96,14 @@ class WebResource(resource.Resource):
                     node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.merchant, n.server_port, n.transport)
                 else:
                     node = Node(n.guid, n.ip, n.port, n.signedPublicKey)
-                self.nodes.append(node)
+                if node.id not in self.nodes:
+                    self.nodes[node.id] = node
             shuffle(self.nodes)
 
         def start_crawl(results):
             for node, result in results.items():
                 if not result[0]:
-                    self.nodes.remove(node)
+                    del self.nodes[node.id]
             node = Node(digest(random.getrandbits(255)))
             nearest = self.kserver.protocol.router.findNeighbors(node)
             spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
@@ -112,9 +113,9 @@ class WebResource(resource.Resource):
         for bucket in self.kserver.protocol.router.buckets:
             for node in bucket.getNodes():
                 if node not in self.nodes:
-                    self.nodes.append(node)
-        for node in self.nodes:
-            if node is not this_node:
+                    self.nodes[node.id] = node
+        for node in self.nodes.values():
+            if node.id != this_node.id:
                 ds[node] = self.kserver.protocol.callPing(node)
         deferredDict(ds).addCallback(start_crawl)
 
@@ -129,7 +130,7 @@ class WebResource(resource.Resource):
                 json_list = []
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     print "getting list of vendors"
-                    for node in self.nodes:
+                    for node in self.nodes.values():
                         if node.merchant is True:
                             print "found vendor"
                             node_dic = {}
@@ -140,7 +141,7 @@ class WebResource(resource.Resource):
                     resp = {"peers" : json_list, "signature" : hexlify(sig[:64])}
                     request.write(json.dumps(resp, indent=4))
                 else:
-                    for node in self.nodes[:50]:
+                    for node in self.nodes.values()[:50]:
                         node_dic = {}
                         node_dic["ip"] = node.ip
                         node_dic["port"] = node.port
@@ -150,7 +151,7 @@ class WebResource(resource.Resource):
                     request.write(json.dumps(resp, indent=4))
             elif request.args["format"][0] == "protobuf":
                 proto = peers.PeerSeeds()
-                for node in self.nodes[:50]:
+                for node in self.nodes.values()[:50]:
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
@@ -171,7 +172,7 @@ class WebResource(resource.Resource):
         else:
             proto = peers.PeerSeeds()
             if "type" in request.args and request.args["type"][0] == "vendors":
-                for node in self.nodes:
+                for node in self.nodes.values():
                     if node.merchant is True:
                         peer = peers.PeerData()
                         peer.ip_address = node.ip
@@ -191,7 +192,7 @@ class WebResource(resource.Resource):
                 resp = buf.getvalue()
                 request.write(resp)
             else:
-                for node in self.nodes[:50]:
+                for node in self.nodes.values()[:50]:
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
