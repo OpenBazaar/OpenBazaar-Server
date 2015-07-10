@@ -4,6 +4,7 @@ Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
 import stun
+import pickle
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
@@ -31,13 +32,19 @@ application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # key generation for testing
-print "Generating GUID, stand by..."
-g = GUID()
+if os.path.isfile('keys.pickle'):
+    keys = pickle.load(open("keys.pickle", "r"))
+    g = keys["guid"]
+else:
+    print "Generating GUID, stand by..."
+    g = GUID()
+    keys = {'guid': g}
+    pickle.dump(keys, open("keys.pickle", "wb"))
 
 # kademlia
 node = Node(g.guid, ip=ip_address, port=port, signed_pubkey=g.signed_pubkey)
 kserver = Server(node)
-kserver.bootstrap([("162.213.253.147", 18467)])
+kserver.bootstrap(kserver.querySeed("162.213.253.147:8080"))
 server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 

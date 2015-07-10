@@ -1,14 +1,11 @@
 __author__ = 'chris'
 import sys, os
-import gzip
 import pickle
 import stun
 import json
 import random
 
 import nacl.signing, nacl.hash, nacl.encoding
-
-from cStringIO import StringIO
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
@@ -157,14 +154,7 @@ class WebResource(resource.Resource):
                 sig = signing_key.sign("".join(proto.peer_data))
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
-                buf = StringIO()
-                f = gzip.GzipFile(mode='wb', fileobj=buf)
-                try:
-                    f.write(uncompressed_data)
-                finally:
-                    f.close()
-                resp = buf.getvalue()
-                request.write(resp)
+                request.write(uncompressed_data.encode("zlib"))
         else:
             proto = peers.PeerSeeds()
             if "type" in request.args and request.args["type"][0] == "vendors":
@@ -179,14 +169,7 @@ class WebResource(resource.Resource):
                 sig = signing_key.sign("".join(proto.peer_data))
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
-                buf = StringIO()
-                f = gzip.GzipFile(mode='wb', fileobj=buf)
-                try:
-                    f.write(uncompressed_data)
-                finally:
-                    f.close()
-                resp = buf.getvalue()
-                request.write(resp)
+                request.write(uncompressed_data.encode("zlib"))
             else:
                 for node in nodes[:50]:
                     peer = peers.PeerData()
@@ -198,14 +181,7 @@ class WebResource(resource.Resource):
                 sig = signing_key.sign("".join(proto.peer_data))
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
-                buf = StringIO()
-                f = gzip.GzipFile(mode='wb', fileobj=buf)
-                try:
-                    f.write(uncompressed_data)
-                finally:
-                    f.close()
-                resp = buf.getvalue()
-                request.write(resp)
+                request.write(uncompressed_data.encode("zlib"))
         request.finish()
         return server.NOT_DONE_YET
 

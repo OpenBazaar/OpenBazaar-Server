@@ -2,9 +2,15 @@
 Package for interacting on the network at a high level.
 """
 import pickle
+import httplib
+import gzip
 import nacl.signing, nacl.hash
 
 from binascii import hexlify
+
+from cStringIO import StringIO
+
+from seed import peers
 
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
@@ -74,6 +80,32 @@ class Server(object):
                         ds.append(self.set(keyword, k, v))
 
         return defer.gatherResults(ds).addCallback(republishKeys)
+
+    def querySeed(self, seed):
+        """
+        Query an HTTP seed and return a `list` if (ip, port) `tuple` pairs.
+
+        Args:
+           seed: A `string` consisting of "ip:port" or "hostname:port"
+        """
+        nodes = []
+        c = httplib.HTTPConnection(seed)
+        c.request("GET", "/")
+        response = c.getresponse()
+        self.log.info("Https response from %s: %s, %s" % (seed, response.status, response.reason))
+        data = response.read()
+        reread_data = data.decode("zlib")
+        seeds = peers.PeerSeeds()
+        try:
+            seeds.ParseFromString(reread_data)
+            for peer in seeds.peer_data:
+                p = peers.PeerData()
+                p.ParseFromString(peer)
+                tup = (str(p.ip_address), p.port)
+                nodes.append(tup)
+        except:
+            self.log.error("Error parsing seed response.")
+        return nodes
 
     def bootstrappableNeighbors(self):
         """
