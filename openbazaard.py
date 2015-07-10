@@ -44,7 +44,7 @@ else:
 # kademlia
 node = Node(g.guid, ip=ip_address, port=port, signed_pubkey=g.signed_pubkey)
 kserver = Server(node)
-kserver.bootstrap(kserver.querySeed("162.213.253.147:8080"))
+kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "b715b410f881d05194e7569b04232cf057bfc4b3027fcb0adc6656016adea8a9"))
 server = internet.UDPServer(18467, kserver.protocol)
 server.setServiceParent(application)
 

@@ -13,7 +13,7 @@ from dht import kprotocol
 
 class KademliaProtocol(RPCProtocol):
     def __init__(self, sourceNode, storage, ksize):
-        RPCProtocol.__init__(self, sourceNode.ip, noisy=False)
+        RPCProtocol.__init__(self, sourceNode.ip)
         self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage

@@ -3,12 +3,9 @@ Package for interacting on the network at a high level.
 """
 import pickle
 import httplib
-import gzip
-import nacl.signing, nacl.hash
+import nacl.signing, nacl.hash, nacl.encoding
 
 from binascii import hexlify
-
-from cStringIO import StringIO
 
 from seed import peers
 
@@ -81,12 +78,13 @@ class Server(object):
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 
-    def querySeed(self, seed):
+    def querySeed(self, seed, pubkey):
         """
         Query an HTTP seed and return a `list` if (ip, port) `tuple` pairs.
 
         Args:
            seed: A `string` consisting of "ip:port" or "hostname:port"
+           pubkey: The hex encoded public key to verify the signature on the response
         """
         nodes = []
         c = httplib.HTTPConnection(seed)
@@ -103,6 +101,8 @@ class Server(object):
                 p.ParseFromString(peer)
                 tup = (str(p.ip_address), p.port)
                 nodes.append(tup)
+            verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
+            verify_key.verify(seed.signature + "".join(seeds.peer_data))
         except:
             self.log.error("Error parsing seed response.")
         return nodes
