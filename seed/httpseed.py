@@ -21,7 +21,7 @@ from random import shuffle
 
 from seed import peers
 
-from guid import guid
+from guidutils.guid import GUID
 
 from dht import log
 from dht.node import Node
@@ -37,26 +37,19 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 # Load the keys
 if os.path.isfile('keys.pickle'):
     keys = pickle.load(open("keys.pickle", "r"))
-    privkey = keys["kademlia_key"]
+    g = keys["guid"]
     signing_key_hex = keys["signing_privkey"]
     signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
 else:
     print "Generating GUID, stand by..."
-    privkey = hexlify(guid.generate())
+    g = GUID()
     signing_key = nacl.signing.SigningKey.generate()
     keys = {
-            'kademlia_key': privkey,
+            'guid': g,
             'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
             'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
             }
     pickle.dump(keys, open("keys.pickle", "wb"))
-
-# Create the guid
-privkey = nacl.signing.SigningKey(privkey, encoder=nacl.encoding.HexEncoder)
-pubkey = privkey.verify_key
-signed_pubkey = privkey.sign(str(pubkey))
-h = nacl.hash.sha512(signed_pubkey)
-guid = unhexlify(h[:40])
 
 # Stun
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
@@ -64,7 +57,7 @@ ip_address = response[1]
 port = 18467
 
 # Start the kademlia server
-this_node = Node(guid, ip_address, port, signed_pubkey)
+this_node = Node(g.guid, ip_address, port, g.signed_pubkey)
 
 if os.path.isfile('cache.pickle'):
     kserver = Server.loadState('cache.pickle', ip_address, port)

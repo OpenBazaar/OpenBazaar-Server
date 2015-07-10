@@ -14,9 +14,7 @@ from binascii import hexlify, unhexlify
 
 from txjsonrpc.netstring import jsonrpc
 
-from guid import guid
-
-import nacl.signing, nacl.hash, nacl.encoding
+from guidutils.guid import GUID
 
 from dht.utils import digest
 from dht.network import Server
@@ -34,14 +32,10 @@ application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO)
 
 # key generation for testing
 print "Generating GUID, stand by..."
-priv = guid.generate()
-signing_key = nacl.signing.SigningKey(priv)
-verify_key = signing_key.verify_key
-signed = signing_key.sign(str(verify_key))
-h = nacl.hash.sha512(signed)
+g = GUID()
 
 # kademlia
-node = Node(unhexlify(h[:40]), ip=ip_address, port=port, signed_pubkey=signed)
+node = Node(g.guid, ip=ip_address, port=port, signed_pubkey=g.signed_pubkey)
 kserver = Server(node)
 kserver.bootstrap([("162.213.253.147", 18467)])
 server = internet.UDPServer(18467, kserver.protocol)
@@ -51,7 +45,7 @@ server.setServiceParent(application)
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def jsonrpc_getpubkey(self):
-        return hexlify(signed)
+        return hexlify(g.signed_pubkey)
 
     def jsonrpc_getinfo(self):
         info = {"version": "0.1"}
@@ -86,7 +80,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        signature = signing_key.sign(digest(key))
+        signature = g.signing_key.sign(digest(key))
         d = kserver.delete(str(keyword), digest(key), signature[:64])
         d.addCallback(handle_result)
         return "Sending delete request..."
