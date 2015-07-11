@@ -73,7 +73,7 @@ class Server(object):
             # Republish keys older than one hour
             for keyword in self.storage.iterkeys():
                 for k, v in self.storage.iteritems(keyword):
-                    if self.storage[keyword].get_ttl(k) < 601200:
+                    if self.storage.get_ttl(keyword, k) < 601200:
                         ds.append(self.set(keyword, k, v))
 
         return defer.gatherResults(ds).addCallback(republishKeys)

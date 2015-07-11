@@ -55,6 +55,11 @@ class IStorage(Interface):
         Get the value iterator for the given keyword, should yield a tuple of (key, value)
         """
 
+    def get_ttl(keyword, key):
+        """
+        Get the remaining time for a given key.
+        """
+
 
 class ForgetfulStorage(object):
     implements(IStorage)
@@ -123,6 +128,10 @@ class ForgetfulStorage(object):
     def iteritems(self, keyword):
         self.cull()
         return self.data[keyword].iteritems()
+
+    def get_ttl(self, keyword, key):
+        if keyword in self.data and key in self.data[keyword]:
+            return self.data[keyword].get_ttl(key)
 
 
 class PersistentStorage(object):
@@ -220,6 +229,10 @@ class PersistentStorage(object):
         except:
             return None
 
+    def get_ttl(self, keyword, key):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT birthday FROM data WHERE keyword=? AND id=?''', (keyword, key,))
+        return self.ttl - (time.time() - cursor.fetchall()[0][0])
 
 class TTLDict(MutableMapping):
     """
