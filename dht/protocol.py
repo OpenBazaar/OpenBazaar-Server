@@ -1,5 +1,4 @@
 import random
-import pyelliptic
 import nacl.signing
 
 from twisted.internet import defer

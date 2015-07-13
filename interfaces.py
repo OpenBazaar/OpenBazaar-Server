@@ -9,7 +9,7 @@ class MessageProcessor(Interface):
     then route them to the correct processor.
     """
 
-    def receive_message(self, datagram, connection):
+    def receive_message(datagram, connection):
         """
         Called by OpenBazaarProtocol when it receives a new message intended for this processor.
 
@@ -21,7 +21,7 @@ class MessageProcessor(Interface):
                       connection.send_message()
         """
 
-    def __iter__(self):
+    def __iter__():
         """
         OpenBazaarProtocol will use this to check which message types are handled by this processor.
         :return: iter([list of enums])
