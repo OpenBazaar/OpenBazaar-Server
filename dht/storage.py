@@ -241,7 +241,7 @@ class TTLDict(MutableMapping):
     """
 
     def __init__(self, default_ttl, *args, **kwargs):
-        self._default_ttl = default_ttl222
+        self._default_ttl = default_ttl
         self._values = {}
         self._lock = RLock()
         self.update(*args, **kwargs)

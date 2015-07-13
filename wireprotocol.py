@@ -10,25 +10,17 @@ from dht.kprotocol import Message
 from dht.log import Logger
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
-    def __init__(self, ip_address, processors=None):
+    def __init__(self, ip_address):
         """
         Initialize the new protocol with the connection handler factory.
 
         Args:
-                ip_address: a `tuple` of the (ip address, port) of ths node.
-                processors: a `list` of classes implementing the `MessageProcessor` interface. Classes
-                            can also be added later using the register_processor method.
+                ip_address: a `string` of the (ip address, port) of ths node.
         """
-        self.factory = self.ConnHandlerFactory()
-        self.ip = ip_address[0]
-        self.port = ip_address[1]
+        self.ip_address = ip_address
         self.processors = []
-        if processors is not None:
-                for processor in processors:
-                    if verifyObject(MessageProcessor, processor):
-                        self.processors.append(processors)
         self.factory = self.ConnHandlerFactory(self.processors)
-        ConnectionMultiplexer.__init__(self, ConnectionFactory(self.factory), ip_address)
+        ConnectionMultiplexer.__init__(self, ConnectionFactory(self.factory), self.ip_address[0])
 
     class ConnHandler(Handler):
 
@@ -39,20 +31,21 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def receive_message(self, datagram):
             if len(datagram) < 22:
-                self.log.msg("received datagram too small from %s, ignoring" % repr(self.connection.dest_addr))
+                self.log.msg("received datagram too small from %s, ignoring" % self.connection.dest_addr)
                 return False
-
             m = Message()
             try:
                 m.ParseFromString(datagram)
-                command = m.command
                 for processor in self.processors:
-                    if command in processor:
+                    if m.command in processor:
                         processor.receive_message(datagram, self.connection)
             except:
                 # If message isn't formatted property then ignore
-                self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))
+                self.log.msg("Received unknown message from %s, ignoring" % self.connection.dest_addr)
                 return False
+
+        def handle_shutdown(self):
+            self.log.msg("Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
 
     class ConnHandlerFactory(HandlerFactory):
 
@@ -82,7 +75,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             address: a `tuple` of (ip address, port) of the recipient.
         """
         if address not in self:
-                con = self.make_new_connection((self.ip, self.port), address)
+                con = self.make_new_connection((self.ip_address[0], self.ip_address[1]), address)
         else:
                 con = self[address]
         con.send_message(datagram)

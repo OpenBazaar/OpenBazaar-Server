@@ -4,7 +4,7 @@ import random
 
 import nacl.signing, nacl.encoding, nacl.hash
 
-from binascii import hexlify, unhexlify
+from binascii import hexlify
 
 from hashlib import sha1
 from base64 import b64encode
@@ -16,118 +16,85 @@ from dht.log import Logger
 from dht.kprotocol import Message, Command
 from dht import node
 
-from txrudp.rudp import ConnectionMultiplexer
-from txrudp.connection import HandlerFactory, Handler, ConnectionFactory
-
-
-class RPCProtocol(ConnectionMultiplexer):
-    def __init__(self, ip_address, waitTimeout=5, noisy=True):
+class RPCProtocol():
+    def __init__(self, waitTimeout=5, noisy=True):
         """
         @param waitTimeout: Consider it a connetion failure if no response
         within this time window.
         """
         self._waitTimeout = waitTimeout
         self._outstanding = {}
-        self.factory = self.RPCHandlerFactory(noisy, waitTimeout, self._outstanding, self)
-        ConnectionMultiplexer.__init__(self, ConnectionFactory(self.factory), ip_address)
+        self.noisy = noisy
+        self.log = Logger(system=self)
 
-    class RPCHandler(Handler):
-
-        def __init__(self, noisy, waitTimeout, outstanding, instance):
-            self.connection = None
-            self.log = Logger(system=self)
-            self.noisy = noisy
-            self._waitTimeout = waitTimeout
-            self._outstanding = outstanding
-            self.instance = instance
-
-        def receive_message(self, datagram):
-            if len(datagram) < 22:
-                self.log.msg("received datagram too small from %s, ignoring" % repr(self.connection.dest_addr))
-                return False
-
-            m = Message()
-            try:
-                m.ParseFromString(datagram)
-                if m.sender.merchant:
-                    sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
-                                       m.sender.signedPublicKey, True, m.sender.server_port, m.sender.transport)
-                else:
-                    sender = node.Node(m.sender.guid, self.connection.dest_addr[0], self.connection.dest_addr[1],
-                                       m.sender.signedPublicKey)
-            except:
-                # If message isn't formatted property then ignore
-                self.log.msg("Received unknown message from %s, ignoring" % repr(self.connection.dest_addr))
-                return False
-
-            # Check that the GUID is valid. If not, ignore
-            if self.instance.router.isNewNode(sender):
-                try:
-                    pubkey = m.sender.signedPublicKey[len(m.sender.signedPublicKey) - 32:]
-                    verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(m.sender.signedPublicKey)
-                    h = nacl.hash.sha512(m.sender.signedPublicKey)
-                    pow = h[64:128]
-                    if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
-                        raise Exception('Invalid GUID')
-
-                except:
-                    self.log.msg("Received message from sender with invalid GUID, ignoring")
-                    return False
-
-            msgID = m.messageID
-            data = tuple(m.arguments)
-            if msgID in self._outstanding:
-                self._acceptResponse(msgID, data, sender)
+    def receive_message(self, datagram, connection):
+        m = Message()
+        try:
+            m.ParseFromString(datagram)
+            if m.sender.merchant:
+                sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
+                                    m.sender.signedPublicKey, True, m.sender.server_port, m.sender.transport)
             else:
-                self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender)
+                sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
+                                    m.sender.signedPublicKey)
+        except:
+            # If message isn't formatted property then ignore
+            self.log.msg("Received unknown message from %s, ignoring" % connection.dest_addr)
+            return False
 
-        def _acceptResponse(self, msgID, data, sender):
-            msgargs = (b64encode(msgID), sender)
-            if self.noisy:
-                self.log.msg("Received response for message id %s from %s" % msgargs)
-            d, timeout = self._outstanding[msgID]
-            timeout.cancel()
-            d.callback((True, data))
-            del self._outstanding[msgID]
+        # Check that the GUID is valid. If not, ignore
+        if self.router.isNewNode(sender):
+            try:
+                pubkey = m.sender.signedPublicKey[len(m.sender.signedPublicKey) - 32:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(m.sender.signedPublicKey)
+                h = nacl.hash.sha512(m.sender.signedPublicKey)
+                pow = h[64:128]
+                if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
+                    raise Exception('Invalid GUID')
 
-        def _acceptRequest(self, msgID, funcname, args, sender):
-            if self.noisy:
-                self.log.msg("received request from %s, command %s" % (sender, funcname.upper()))
-            f = getattr(self.instance, "rpc_%s" % funcname, None)
-            if f is None or not callable(f):
-                msgargs = (self.instance.__class__.__name__, funcname)
-                self.log.error("%s has no callable method rpc_%s; ignoring request" % msgargs)
+            except:
+                self.log.msg("Received message from sender with invalid GUID, ignoring")
                 return False
-            d = defer.maybeDeferred(f, sender, *args)
-            d.addCallback(self._sendResponse, funcname, msgID, sender)
 
-        def _sendResponse(self, response, funcname, msgID, sender):
-            if self.noisy:
-                self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
-            m = Message()
-            m.messageID = msgID
-            m.sender.MergeFrom(self.instance.sourceNode.proto)
-            m.command = Command.Value(funcname.upper())
-            for arg in response:
-                m.arguments.append(arg)
-            data = m.SerializeToString()
-            self.connection.send_message(data)
+        msgID = m.messageID
+        data = tuple(m.arguments)
+        if msgID in self._outstanding:
+            self._acceptResponse(msgID, data, sender)
+        else:
+            self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
 
-        def handle_shutdown(self):
-            self.log.msg(
-                "Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
+    def _acceptResponse(self, msgID, data, sender):
+        msgargs = (b64encode(msgID), sender)
+        if self.noisy:
+            self.log.msg("Received response for message id %s from %s" % msgargs)
+        d, timeout = self._outstanding[msgID]
+        timeout.cancel()
+        d.callback((True, data))
+        del self._outstanding[msgID]
 
-    class RPCHandlerFactory(HandlerFactory):
+    def _acceptRequest(self, msgID, funcname, args, sender, connection):
+        if self.noisy:
+            self.log.msg("received request from %s, command %s" % (sender, funcname.upper()))
+        f = getattr(self, "rpc_%s" % funcname, None)
+        if f is None or not callable(f):
+            msgargs = (self.__class__.__name__, funcname)
+            self.log.error("%s has no callable method rpc_%s; ignoring request" % msgargs)
+            return False
+        d = defer.maybeDeferred(f, sender, *args)
+        d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
 
-        def __init__(self, noisy, waitTimeout, outstanding, instance):
-            self.noisy = noisy
-            self._waitTimeout = waitTimeout
-            self._outstanding = outstanding
-            self.instance = instance
-
-        def make_new_handler(self, *args, **kwargs):
-            return RPCProtocol.RPCHandler(self.noisy, self._waitTimeout, self._outstanding, self.instance)
+    def _sendResponse(self, response, funcname, msgID, sender, connection):
+        if self.noisy:
+            self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
+        m = Message()
+        m.messageID = msgID
+        m.sender.MergeFrom(self.sourceNode.proto)
+        m.command = Command.Value(funcname.upper())
+        for arg in response:
+            m.arguments.append(arg)
+        data = m.SerializeToString()
+        connection.send_message(data)
 
     def _timeout(self, msgID):
         args = (b64encode(msgID), self._waitTimeout)
@@ -155,11 +122,7 @@ class RPCProtocol(ConnectionMultiplexer):
             data = m.SerializeToString()
             if self.noisy:
                 self.log.msg("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
-            if address not in self:
-                con = self.make_new_connection((self.sourceNode.ip, self.sourceNode.port), address)
-            else:
-                con = self[address]
-            con.send_message(data)
+            self.multiplexer.send_message(data, address)
             d = defer.Deferred()
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID] = (d, timeout)

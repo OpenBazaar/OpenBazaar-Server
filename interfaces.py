@@ -1,6 +1,6 @@
 __author__ = 'chris'
 
-from zope.interface import Interface
+from zope.interface import Interface, Attribute
 
 class MessageProcessor(Interface):
     """
@@ -8,6 +8,9 @@ class MessageProcessor(Interface):
     passed into 'OpenBazaarProtocol.register_processor' which will parse new messages to determine the message type
     then route them to the correct processor.
     """
+
+    multiplexer = Attribute("""The main `ConnectionMultiplexer` protocol.
+        We pass it in here so we can send datagrams from this class.""")
 
     def receive_message(datagram, connection):
         """
@@ -19,6 +22,11 @@ class MessageProcessor(Interface):
 
             connection: the txrudp connection to the peer who sent the message. To respond directly to the peer call
                       connection.send_message()
+        """
+
+    def connect_multiplexer(multiplexer):
+        """
+        Connect the main ConnectionMultiplexer to this class so we can send outgoing messages.
         """
 
     def __iter__():

@@ -22,6 +22,7 @@ from dht.network import Server
 from dht import log
 from dht.node import Node
 
+from wireprotocol import OpenBazaarProtocol
 
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
 ip_address = response[1]
@@ -41,11 +42,16 @@ else:
     keys = {'guid': g}
     pickle.dump(keys, open("keys.pickle", "wb"))
 
+protocol = OpenBazaarProtocol((ip_address, port))
+
 # kademlia
-node = Node(g.guid, ip=ip_address, port=port, signed_pubkey=g.signed_pubkey)
+node = Node(g.guid, signed_pubkey=g.signed_pubkey)
 kserver = Server(node)
+kserver.protocol.connect_multiplexer(protocol)
 kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "b715b410f881d05194e7569b04232cf057bfc4b3027fcb0adc6656016adea8a9"))
-server = internet.UDPServer(18467, kserver.protocol)
+
+protocol.register_processor(kserver.protocol)
+server = internet.UDPServer(18467, protocol)
 server.setServiceParent(application)
 
 

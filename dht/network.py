@@ -130,7 +130,7 @@ class Server(object):
         """
 
         # if the transport hasn't been initialized yet, wait a second
-        if self.protocol.transport is None:
+        if self.protocol.multiplexer.transport is None:
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
 
         def initTable(results):

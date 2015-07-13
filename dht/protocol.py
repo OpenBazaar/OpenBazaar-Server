@@ -7,17 +7,29 @@ from dht.rpcudp import RPCProtocol
 from dht.node import Node
 from dht.routing import RoutingTable
 from dht.log import Logger
+from dht.kprotocol import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE
 from dht import kprotocol
+
+from zope.interface import implements
+
+from interfaces import MessageProcessor
 
 
 class KademliaProtocol(RPCProtocol):
+    implements(MessageProcessor)
+
     def __init__(self, sourceNode, storage, ksize):
-        RPCProtocol.__init__(self, sourceNode.ip)
+        RPCProtocol.__init__(self)
         self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage
         self.sourceNode = sourceNode
+        self.multiplexer = None
         self.log = Logger(system=self)
+        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE]
+
+    def connect_multiplexer(self, multiplexer):
+        self.multiplexer = multiplexer
 
     def getRefreshIDs(self):
         """
@@ -157,4 +169,7 @@ class KademliaProtocol(RPCProtocol):
             self.log.debug("Found a new node, transferring key/values")
             self.transferKeyValues(node)
         self.router.addContact(node)
+
+    def __iter__(self):
+        return iter(self.handled_commands)
 
