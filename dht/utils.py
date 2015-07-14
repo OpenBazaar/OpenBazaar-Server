@@ -1,5 +1,7 @@
 """
 General catchall for functions that don't make sense as methods.
+
+Copyright (c) 2014 Brian Muller
 """
 import hashlib
 import operator

@@ -1,3 +1,8 @@
+"""
+Copyright (c) 2014 Brian Muller
+Copyright (c) 2015 OpenBazaar
+"""
+
 import time
 import sqlite3 as lite
 
@@ -8,7 +13,6 @@ from zope.interface import implements, Interface
 from kprotocol import Value
 
 from threading import RLock
-
 
 class IStorage(Interface):
     """

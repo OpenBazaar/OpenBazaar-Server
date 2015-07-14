@@ -1,4 +1,7 @@
-__author__ = 'chris'
+"""
+Copyright (c) 2014 Brian Muller
+Copyright (c) 2015 OpenBazaar
+"""
 
 import random
 

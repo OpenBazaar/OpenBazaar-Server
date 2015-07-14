@@ -1,3 +1,7 @@
+"""
+Copyright (c) 2014 Brian Muller
+"""
+
 import heapq
 import time
 import operator

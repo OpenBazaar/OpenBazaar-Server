@@ -1,3 +1,8 @@
+"""
+Copyright (c) 2014 Brian Muller
+Copyright (c) 2015 OpenBazaar
+"""
+
 import random
 import nacl.signing
 

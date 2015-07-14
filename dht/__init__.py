@@ -7,7 +7,7 @@ Modifications include:
     The 'STORE' rpc call which appends data to stored dictionaries. Useful for keyword searches.
     A 'DELETE' rpc which allows data to be removed from the DHT when a valid signature is presented.
     RUDP in place of straight UDP.
-
+    The node ID is generated using a proof of work and validated when a new message is received.
 """
 version_info = (0, 1)
 version = '.'.join(map(str, version_info))

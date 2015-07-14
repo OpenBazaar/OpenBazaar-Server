@@ -1,6 +1,10 @@
 """
 Package for interacting on the network at a high level.
+
+Copyright (c) 2014 Brian Muller
+Copyright (c) 2015 OpenBazaar
 """
+
 import pickle
 import httplib
 import nacl.signing, nacl.hash, nacl.encoding

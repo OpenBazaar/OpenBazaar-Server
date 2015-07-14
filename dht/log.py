@@ -1,3 +1,7 @@
+"""
+Copyright (c) 2014 Brian Muller
+"""
+
 import sys
 from twisted.python import log
 
