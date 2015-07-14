@@ -16,8 +16,6 @@ class Node:
     def getProto(self):
         n = kprotocol.Node()
         n.guid = self.id
-        n.ip = self.ip
-        n.port = self.port
         n.signedPublicKey = self.signed_pubkey
         n.vendor = self.vendor
         return n
