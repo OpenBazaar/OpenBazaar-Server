@@ -67,7 +67,7 @@ else:
 
 protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
-udpserver = internet.UDPServer(18467, kserver.protocol)
+udpserver = internet.UDPServer(18467, protocol)
 udpserver.setServiceParent(application)
 
 class WebResource(resource.Resource):

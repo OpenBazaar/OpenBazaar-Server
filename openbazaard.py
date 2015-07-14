@@ -48,7 +48,7 @@ protocol = OpenBazaarProtocol((ip_address, port))
 node = Node(g.guid, signed_pubkey=g.signed_pubkey)
 kserver = Server(node)
 kserver.protocol.connect_multiplexer(protocol)
-kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "b715b410f881d05194e7569b04232cf057bfc4b3027fcb0adc6656016adea8a9"))
+kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "ab2cee23b1493a962c15c36601ca88f2044da100bacab48a1b2c6bfcbc6db19c"))
 
 protocol.register_processor(kserver.protocol)
 server = internet.UDPServer(18467, protocol)

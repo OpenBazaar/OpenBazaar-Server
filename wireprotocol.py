@@ -1,6 +1,7 @@
 __author__ = 'chris'
 from txrudp.rudp import ConnectionMultiplexer
-from txrudp.connection import HandlerFactory, Handler, ConnectionFactory
+from txrudp.connection import HandlerFactory, Handler
+from txrudp.crypto_connection import CryptoConnectionFactory
 
 from interfaces import MessageProcessor
 
@@ -15,12 +16,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         Initialize the new protocol with the connection handler factory.
 
         Args:
-                ip_address: a `string` of the (ip address, port) of ths node.
+                ip_address: a `tuple` of the (ip address, port) of ths node.
         """
         self.ip_address = ip_address
         self.processors = []
         self.factory = self.ConnHandlerFactory(self.processors)
-        ConnectionMultiplexer.__init__(self, ConnectionFactory(self.factory), self.ip_address[0])
+        ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
 
     class ConnHandler(Handler):
 
