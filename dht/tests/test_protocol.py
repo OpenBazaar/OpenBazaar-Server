@@ -241,8 +241,8 @@ class KademliaProtocolTest(unittest.TestCase):
 
         del m.arguments[-1]
         value = kprotocol.Value()
-        value.contractID = "Key"
-        value.serializedNode = self.protocol.sourceNode.getProto().SerializeToString()
+        value.valueKey = "Key"
+        value.serializedData = self.protocol.sourceNode.getProto().SerializeToString()
         m.arguments.append("value")
         m.arguments.append(value.SerializeToString())
         expected_message = m.SerializeToString()

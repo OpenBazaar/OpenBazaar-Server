@@ -38,6 +38,6 @@ message Node {
 //The value returned by a find_value rpc all
 //Typically a list of these will be returned for any given keyword.
 message Value {
-	required bytes contractID     = 1;
-	required bytes serializedNode = 2;
+	required bytes valueKey     = 1;
+	required bytes serializedData = 2;
 }

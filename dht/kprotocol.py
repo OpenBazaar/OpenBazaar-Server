@@ -19,7 +19,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='kprotocol.proto',
   package='',
-  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"3\n\x05Value\x12\x12\n\ncontractID\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedNode\x18\x02 \x02(\x0c*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06')
+  serialized_pb=_b('\n\x0fkprotocol.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"1\n\x05Value\x12\x10\n\x08valueKey\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedData\x18\x02 \x02(\x0c*S\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -56,8 +56,8 @@ _COMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=267,
-  serialized_end=350,
+  serialized_start=265,
+  serialized_end=348,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -188,14 +188,14 @@ _VALUE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='contractID', full_name='Value.contractID', index=0,
+      name='valueKey', full_name='Value.valueKey', index=0,
       number=1, type=12, cpp_type=9, label=2,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='serializedNode', full_name='Value.serializedNode', index=1,
+      name='serializedData', full_name='Value.serializedData', index=1,
       number=2, type=12, cpp_type=9, label=2,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
@@ -213,7 +213,7 @@ _VALUE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=214,
-  serialized_end=265,
+  serialized_end=263,
 )
 
 _MESSAGE.fields_by_name['sender'].message_type = _NODE

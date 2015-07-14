@@ -39,8 +39,8 @@ class ForgetFulStorageTest(unittest.TestCase):
 
     def test_get(self):
         v = Value()
-        v.contractID = self.key1
-        v.serializedNode = self.value
+        v.valueKey = self.key1
+        v.serializedData = self.value
         testv = [v.SerializeToString()]
         f = ForgetfulStorage()
         f[self.keyword1] = (self.key1, self.value)
@@ -93,8 +93,8 @@ class PersistentStorageTest(unittest.TestCase):
 
     def test_get(self):
         v = Value()
-        v.contractID = self.key1
-        v.serializedNode = self.value
+        v.valueKey = self.key1
+        v.serializedData = self.value
         testv = [v.SerializeToString()]
         p = PersistentStorage(":memory:")
         p[self.keyword1] = (self.key1, self.value)

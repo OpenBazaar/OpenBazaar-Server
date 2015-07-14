@@ -98,8 +98,8 @@ class ForgetfulStorage(object):
             ret = []
             for k, v in self[keyword].items():
                 value = Value()
-                value.contractID = k
-                value.serializedNode = v
+                value.valueKey = k
+                value.serializedData = v
                 ret.append(value.SerializeToString())
             return ret
         return default
@@ -181,8 +181,8 @@ class PersistentStorage(object):
             ret = []
             for k, v in self[keyword]:
                 value = Value()
-                value.contractID = k
-                value.serializedNode = v
+                value.valueKey = k
+                value.serializedData = v
                 ret.append(value.SerializeToString())
             return ret
         return default
