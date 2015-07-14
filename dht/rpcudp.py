@@ -32,10 +32,10 @@ class RPCProtocol():
         try:
             m.ParseFromString(datagram)
             sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
-                               m.sender.signedPublicKey, m.vendor)
+                               m.sender.signedPublicKey, m.sender.vendor)
         except:
             # If message isn't formatted property then ignore
-            self.log.msg("Received unknown message from %s, ignoring" % connection.dest_addr)
+            self.log.msg("Received unknown message from %s, ignoring" % str(connection.dest_addr))
             return False
 
         # Check that the GUID is valid. If not, ignore

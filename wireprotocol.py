@@ -32,7 +32,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def receive_message(self, datagram):
             if len(datagram) < 22:
-                self.log.msg("received datagram too small from %s, ignoring" % self.connection.dest_addr)
+                self.log.msg("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))
                 return False
             m = Message()
             try:
