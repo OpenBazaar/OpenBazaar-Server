@@ -31,23 +31,19 @@ class NodeTest(unittest.TestCase):
         ip = "127.0.0.1"
         port = 12345
         pubkey = unhexlify(bitcoin.encode_pubkey(bitcoin.privkey_to_pubkey(bitcoin.random_key()), "hex_compressed"))
-        merchant = True
-        server_port = 3333
-        transport = kprotocol.TCP
+        vendor = True
 
         n1 = kprotocol.Node()
         n1.guid = rid
         n2 = Node(rid)
-        self.assertEqual(n1, n2.proto)
+        self.assertEqual(n1, n2.getProto())
 
         n1.ip = ip
         n1.port = port
         n1.signedPublicKey = pubkey
-        n1.merchant = True
-        n1.server_port = server_port
-        n1.transport = transport
-        n2 = Node(rid, ip, port, pubkey, merchant, server_port, transport)
-        self.assertEqual(n1, n2.proto)
+        n1.vendor = True
+        n2 = Node(rid, ip, port, pubkey, vendor)
+        self.assertEqual(n1, n2.getProto())
 
 
 class NodeHeapTest(unittest.TestCase):

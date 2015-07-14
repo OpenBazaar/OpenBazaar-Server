@@ -32,18 +32,7 @@ message Node {
 	required bytes signedPublicKey = 2; //<64 byte signature><32 byte public key>
 	optional string ip             = 3;
 	optional uint32 port           = 4;
-
-	//Only use the following if running a merchant server
-	optional bool merchant         = 5 [default = false];
-	optional Transport transport   = 6;
-	optional uint32 server_port    = 7;
-
-}
-
-//The transport protocol used for the merchant server
-enum Transport {
-	TCP   = 1;
-	RUDP  = 2;
+	optional bool vendor           = 5 [default = false];
 }
 
 //The value returned by a find_value rpc all

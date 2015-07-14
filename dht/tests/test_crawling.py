@@ -47,7 +47,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         signed_pubkey = self.signing_key.sign(str(verify_key))
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True, 1234, kprotocol.TCP)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
         self.protocol = KademliaProtocol(self.node, self.storage, 20)
 
         transport = mock.Mock(spec_set=udp.Port)
@@ -55,9 +55,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
         self.protocol.makeConnection(transport)
 
-        self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True, 9999, TCP)
-        self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True, 8888, TCP)
-        self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), True, 0000, TCP)
+        self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True)
+        self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True)
+        self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), True)
 
     def tearDown(self):
         self.con.shutdown()
@@ -96,8 +96,8 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                           self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                           self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -108,16 +108,16 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
         for peer in spider.nearest.getUncontacted():
             spider.nearest.markContacted(peer)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                           self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                           self.node3.getProto().SerializeToString()))
         responses = {self.node2.id: response}
         resp = spider._nodesFound(responses)
         self.assertTrue(resp is None)
 
         # test didn't happen
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                            self.node3.proto.SerializeToString()))
+        response = (False, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
         self.assertTrue(len(spider.nearest) == 2)
@@ -125,7 +125,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         # test got value
         val = kprotocol.Value()
         val.contractID = digest("contractID")
-        val.serializedNode = self.protocol.sourceNode.proto.SerializeToString()
+        val.serializedNode = self.protocol.sourceNode.getProto().SerializeToString()
         response = (True, ("value", val.SerializeToString()))
         responses = {self.node3.id: response}
         spider.nearestWithoutValue = NodeHeap(node, 1)
@@ -145,13 +145,13 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
         val = kprotocol.Value()
         val.contractID = digest("contractID")
-        val.serializedNode = self.node1.proto.SerializeToString()
+        val.serializedNode = self.node1.getProto().SerializeToString()
         val1 = val.SerializeToString()
         value = spider._handleFoundValues([(val1,)])
         self.assertEqual(value[0], val.SerializeToString())
 
         # test handle multiple values
-        val.serializedNode = self.node2.proto.SerializeToString()
+        val.serializedNode = self.node2.getProto().SerializeToString()
         val2 = val.SerializeToString()
         found_values = [(val1,), (val1,), (val2,)]
         self.assertEqual(spider._handleFoundValues(found_values), (val1,))
@@ -225,9 +225,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
         self.protocol.makeConnection(transport)
 
-        self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True, 9999, TCP)
-        self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True, 8888, TCP)
-        self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), True, 0000, TCP)
+        self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True)
+        self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True)
+        self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), True)
 
     def test_find(self):
         self._connecting_to_connected()
@@ -261,8 +261,8 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                           self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                           self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
 
@@ -270,28 +270,28 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         connection.REACTOR.runUntilCurrent()
         self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
-        response = (True, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                           self.node3.proto.SerializeToString()))
+        response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                           self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         nodes = spider._nodesFound(responses)
         node_protos = []
         for n in nodes:
-            node_protos.append(n.proto)
+            node_protos.append(n.getProto())
 
-        self.assertTrue(self.node1.proto in node_protos)
-        self.assertTrue(self.node2.proto in node_protos)
-        self.assertTrue(self.node3.proto in node_protos)
+        self.assertTrue(self.node1.getProto() in node_protos)
+        self.assertTrue(self.node2.getProto() in node_protos)
+        self.assertTrue(self.node3.getProto() in node_protos)
 
-        response = (False, (self.node1.proto.SerializeToString(), self.node2.proto.SerializeToString(),
-                            self.node3.proto.SerializeToString()))
+        response = (False, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
+                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         nodes = spider._nodesFound(responses)
         node_protos = []
         for n in nodes:
-            node_protos.append(n.proto)
+            node_protos.append(n.getProto())
 
-        self.assertTrue(self.node2.proto in node_protos)
-        self.assertTrue(self.node3.proto in node_protos)
+        self.assertTrue(self.node2.getProto() in node_protos)
+        self.assertTrue(self.node3.getProto() in node_protos)
 
     def _connecting_to_connected(self):
         remote_synack_packet = packet.Packet.from_data(
@@ -341,16 +341,13 @@ class RPCFindResponseTest(unittest.TestCase):
         self.assertEqual(r.getValue(), ("some_value",))
 
     def test_getNodeList(self):
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), merchant=True, server_port=9999,
-                     transport=TCP)
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), merchant=True, server_port=8888,
-                     transport=TCP)
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), vendor=True)
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), vendor=True)
         node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
-        response = (True, (
-            node1.proto.SerializeToString(), node2.proto.SerializeToString(), node3.proto.SerializeToString(),
+        response = (True, (node1.getProto().SerializeToString(), node2.getProto().SerializeToString(), node3.getProto().SerializeToString(),
             "sdfasdfsd"))
         r = RPCFindResponse(response)
         nodes = r.getNodeList()
-        self.assertEqual(nodes[0].proto, node1.proto)
-        self.assertEqual(nodes[1].proto, node2.proto)
-        self.assertEqual(nodes[2].proto, node3.proto)
+        self.assertEqual(nodes[0].getProto(), node1.getProto())
+        self.assertEqual(nodes[1].getProto(), node2.getProto())
+        self.assertEqual(nodes[2].getProto(), node3.getProto())

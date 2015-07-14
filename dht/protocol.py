@@ -46,7 +46,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_ping(self, sender):
         self.addToRouter(sender)
-        return [self.sourceNode.proto.SerializeToString()]
+        return [self.sourceNode.getProto().SerializeToString()]
 
     def rpc_store(self, sender, keyword, key, value):
         self.addToRouter(sender)
@@ -80,7 +80,7 @@ class KademliaProtocol(RPCProtocol):
         nodeList = self.router.findNeighbors(node, exclude=sender)
         ret = []
         for n in nodeList:
-            ret.append(n.proto.SerializeToString())
+            ret.append(n.getProto().SerializeToString())
         return ret
 
     def rpc_find_value(self, sender, key):

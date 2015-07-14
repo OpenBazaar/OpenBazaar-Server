@@ -69,10 +69,10 @@ class KademliaProtocolTest(unittest.TestCase):
 
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("PING")
         data = m.SerializeToString()
-        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -90,9 +90,9 @@ class KademliaProtocolTest(unittest.TestCase):
 
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         for i in range(0, 3):
             del m.arguments[-1]
@@ -107,7 +107,7 @@ class KademliaProtocolTest(unittest.TestCase):
         received_message = sent_packet.payload
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
     def test_rpc_delete(self):
         self._connecting_to_connected()
@@ -115,21 +115,21 @@ class KademliaProtocolTest(unittest.TestCase):
         # Set a keyword to store
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         for i in range(0, 3):
             del m.arguments[-1]
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         # Test bad signature
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("DELETE")
         m.arguments.extend(["Keyword", "Key", "Bad Signature"])
         data = m.SerializeToString()
@@ -138,7 +138,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append("False")
         expected_message2 = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -153,7 +153,7 @@ class KademliaProtocolTest(unittest.TestCase):
         # Test good signature
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("DELETE")
         m.arguments.extend(["Keyword", "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
@@ -172,7 +172,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("STUN")
         data = m.SerializeToString()
         m.arguments.extend([self.addr1[0], str(self.addr1[1])])
@@ -199,12 +199,12 @@ class KademliaProtocolTest(unittest.TestCase):
         self.protocol.router.addContact(node3)
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("FIND_NODE")
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
         del m.arguments[-1]
-        m.arguments.extend([node3.proto.SerializeToString(), node2.proto.SerializeToString(), node1.proto.SerializeToString()])
+        m.arguments.extend([node3.getProto().SerializeToString(), node2.getProto().SerializeToString(), node1.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -223,17 +223,17 @@ class KademliaProtocolTest(unittest.TestCase):
         # Set a value to find
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.proto.SerializeToString()])
+        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.proto.SerializeToString())
+        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         # Send the find_value rpc
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("FIND_VALUE")
         m.arguments.append("Keyword")
         data = m.SerializeToString()
@@ -242,7 +242,7 @@ class KademliaProtocolTest(unittest.TestCase):
         del m.arguments[-1]
         value = kprotocol.Value()
         value.contractID = "Key"
-        value.serializedNode = self.protocol.sourceNode.proto.SerializeToString()
+        value.serializedNode = self.protocol.sourceNode.getProto().SerializeToString()
         m.arguments.append("value")
         m.arguments.append(value.SerializeToString())
         expected_message = m.SerializeToString()
@@ -270,14 +270,14 @@ class KademliaProtocolTest(unittest.TestCase):
         self.protocol.router.addContact(node3)
         m = kprotocol.Message()
         m.messageID = digest("msgid")
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("FIND_VALUE")
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
         self.handler.receive_message(data)
 
         del m.arguments[-1]
-        m.arguments.extend([node2.proto.SerializeToString(), node3.proto.SerializeToString(), node1.proto.SerializeToString()])
+        m.arguments.extend([node2.getProto().SerializeToString(), node3.getProto().SerializeToString(), node1.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -307,8 +307,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m = kprotocol.Message()
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
-        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.PING)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
 
@@ -317,7 +317,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         self.protocol[self.addr1] = self.con
-        self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.proto.SerializeToString())
+        self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -327,13 +327,13 @@ class KademliaProtocolTest(unittest.TestCase):
         m = kprotocol.Message()
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
-        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.STORE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
-        self.assertEqual(m.arguments[2], self.protocol.sourceNode.proto.SerializeToString())
+        self.assertEqual(m.arguments[2], self.protocol.sourceNode.getProto().SerializeToString())
 
     def test_callFindValue(self):
         self._connecting_to_connected()
@@ -351,8 +351,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m = kprotocol.Message()
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
-        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_VALUE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
@@ -373,8 +373,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m = kprotocol.Message()
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
-        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.FIND_NODE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
@@ -395,8 +395,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(sent_message)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertTrue(len(m.messageID) == 20)
-        self.assertEqual(self.protocol.sourceNode.proto.guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.proto.signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
+        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
         self.assertTrue(m.command == kprotocol.DELETE)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
@@ -450,7 +450,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
         self.protocol[self.addr1] = self.con
 
-        self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.proto.SerializeToString())
+        self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
 
         self.clock.advance(1)
@@ -461,11 +461,11 @@ class KademliaProtocolTest(unittest.TestCase):
         x.ParseFromString(sent_message)
 
         m = kprotocol.Message()
-        m.sender.MergeFrom(self.protocol.sourceNode.proto)
+        m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = kprotocol.Command.Value("STORE")
         m.arguments.append(digest("keyword"))
         m.arguments.append(digest("key"))
-        m.arguments.append(self.protocol.sourceNode.proto.SerializeToString())
+        m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
         self.assertEqual(x.sender, m.sender)
         self.assertEqual(x.command, m.command)
         self.assertEqual(x.arguments[0], m.arguments[0])

@@ -5,27 +5,21 @@ import kprotocol
 
 class Node:
     def __init__(self, id, ip=None, port=None, signed_pubkey=None,
-                 merchant=False, server_port=None, transport=None):
+                 vendor=False):
         self.id = id
         self.ip = ip
         self.port = port
         self.signed_pubkey = signed_pubkey
-        self.merchant = merchant
-        self.server_port = server_port
-        self.transport = transport
+        self.vendor = vendor
         self.long_id = long(id.encode('hex'), 16)
-        self.proto = self.createProto()
 
-    def createProto(self):
+    def getProto(self):
         n = kprotocol.Node()
         n.guid = self.id
-        if self.ip is not None: n.ip = self.ip
-        if self.port is not None: n.port = self.port
-        if self.signed_pubkey is not None: n.signedPublicKey = self.signed_pubkey
-        if self.merchant:
-            n.merchant = True
-            n.server_port = self.server_port
-            n.transport = self.transport
+        n.ip = self.ip
+        n.port = self.port
+        n.signedPublicKey = self.signed_pubkey
+        n.vendor = self.vendor
         return n
 
     def sameHomeAs(self, node):

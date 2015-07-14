@@ -31,12 +31,8 @@ class RPCProtocol():
         m = Message()
         try:
             m.ParseFromString(datagram)
-            if m.sender.merchant:
-                sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
-                                    m.sender.signedPublicKey, True, m.sender.server_port, m.sender.transport)
-            else:
-                sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
-                                    m.sender.signedPublicKey)
+            sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
+                               m.sender.signedPublicKey, m.vendor)
         except:
             # If message isn't formatted property then ignore
             self.log.msg("Received unknown message from %s, ignoring" % connection.dest_addr)
@@ -89,7 +85,7 @@ class RPCProtocol():
             self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
-        m.sender.MergeFrom(self.sourceNode.proto)
+        m.sender.MergeFrom(self.sourceNode.getProto())
         m.command = Command.Value(funcname.upper())
         for arg in response:
             m.arguments.append(arg)
@@ -115,7 +111,7 @@ class RPCProtocol():
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
-            m.sender.MergeFrom(self.sourceNode.proto)
+            m.sender.MergeFrom(self.sourceNode.getProto())
             m.command = Command.Value(name.upper())
             for arg in args:
                 m.arguments.append(arg)

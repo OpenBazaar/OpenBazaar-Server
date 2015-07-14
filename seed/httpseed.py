@@ -12,7 +12,7 @@ from twisted.python.log import ILogObserver
 from twisted.internet import task
 from twisted.web import resource, server
 
-from binascii import unhexlify, hexlify
+from binascii import hexlify
 
 from random import shuffle
 
@@ -88,10 +88,7 @@ class WebResource(resource.Resource):
                 n = kprotocol.Node()
                 try:
                     n.ParseFromString(proto)
-                    if n.merchant:
-                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.merchant, n.server_port, n.transport)
-                    else:
-                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                    node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
                     if node.id not in self.nodes:
                         self.nodes[node.id] = node
                 except:
@@ -129,7 +126,7 @@ class WebResource(resource.Resource):
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     print "getting list of vendors"
                     for node in nodes:
-                        if node.merchant is True:
+                        if node.vendor is True:
                             print "found vendor"
                             node_dic = {}
                             node_dic["ip"] = node.ip
@@ -153,7 +150,7 @@ class WebResource(resource.Resource):
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
-                    peer.vendor = node.merchant
+                    peer.vendor = node.vendor
                     proto.peer_data.append(peer.SerializeToString())
 
                 sig = signing_key.sign("".join(proto.peer_data))
@@ -164,11 +161,11 @@ class WebResource(resource.Resource):
             proto = peers.PeerSeeds()
             if "type" in request.args and request.args["type"][0] == "vendors":
                 for node in nodes:
-                    if node.merchant is True:
+                    if node.vendor is True:
                         peer = peers.PeerData()
                         peer.ip_address = node.ip
                         peer.port = node.port
-                        peer.vendor = node.merchant
+                        peer.vendor = node.vendor
                         proto.peer_data.append(peer.SerializeToString())
 
                 sig = signing_key.sign("".join(proto.peer_data))
@@ -180,7 +177,7 @@ class WebResource(resource.Resource):
                     peer = peers.PeerData()
                     peer.ip_address = node.ip
                     peer.port = node.port
-                    peer.vendor = node.merchant
+                    peer.vendor = node.vendor
                     proto.peer_data.append(peer.SerializeToString())
 
                 sig = signing_key.sign("".join(proto.peer_data))
