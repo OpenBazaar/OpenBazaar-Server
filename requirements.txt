@@ -1,7 +1,7 @@
 protobuf==2.6.1
 Twisted==14.0.2
 txJSON-RPC==0.3.1
-txrudp==0.3.0
+txrudp==0.4.0
 pyelliptic==1.5.5
 pystun==0.1.0
 bitcoin==1.1.25

@@ -27,6 +27,8 @@ from dht.crawling import NodeSpiderCrawl
 from dht.utils import digest, deferredDict
 from dht import kprotocol
 
+from wireprotocol import OpenBazaarProtocol
+
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("OpenBazaar_seed_server")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
@@ -55,12 +57,15 @@ port = 18467
 
 # Start the kademlia server
 this_node = Node(g.guid, ip_address, port, g.signed_pubkey)
+protocol = OpenBazaarProtocol((ip_address, port))
 
 if os.path.isfile('cache.pickle'):
-    kserver = Server.loadState('cache.pickle', ip_address, port)
+    kserver = Server.loadState('cache.pickle', ip_address, port, protocol)
 else:
     kserver = Server(this_node)
+    kserver.protocol.connect_multiplexer(protocol)
 
+protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
 udpserver = internet.UDPServer(18467, kserver.protocol)
 udpserver.setServiceParent(application)
