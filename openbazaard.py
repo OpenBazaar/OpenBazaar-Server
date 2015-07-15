@@ -24,9 +24,10 @@ from dht.node import Node
 
 from wireprotocol import OpenBazaarProtocol
 
-response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
+response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=18467, stun_port=19302)
 ip_address = response[1]
 port = response[2]
+print port
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("openbazaar")

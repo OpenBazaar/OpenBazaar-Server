@@ -1,6 +1,5 @@
 import random
 import hashlib
-import bitcoin
 
 from binascii import unhexlify
 
@@ -9,6 +8,7 @@ from twisted.trial import unittest
 from dht.node import Node, NodeHeap
 from dht.tests.utils import mknode
 from dht import kprotocol
+from dht.utils import digest
 
 
 class NodeTest(unittest.TestCase):
@@ -28,21 +28,18 @@ class NodeTest(unittest.TestCase):
 
     def test_create_proto(self):
         rid = hashlib.sha1(str(random.getrandbits(255))).digest()
-        ip = "127.0.0.1"
-        port = 12345
-        pubkey = unhexlify(bitcoin.encode_pubkey(bitcoin.privkey_to_pubkey(bitcoin.random_key()), "hex_compressed"))
+        pubkey = digest("pubkey")
         vendor = True
 
         n1 = kprotocol.Node()
         n1.guid = rid
-        n2 = Node(rid)
+        n1.signedPublicKey = pubkey
+        n1.vendor = False
+        n2 = Node(rid, signed_pubkey=digest("pubkey"))
         self.assertEqual(n1, n2.getProto())
 
-        n1.ip = ip
-        n1.port = port
-        n1.signedPublicKey = pubkey
         n1.vendor = True
-        n2 = Node(rid, ip, port, pubkey, vendor)
+        n2 = Node(rid, signed_pubkey=pubkey, vendor=vendor)
         self.assertEqual(n1, n2.getProto())
 
 

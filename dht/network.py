@@ -190,7 +190,10 @@ class Server(object):
         Returns:
             :class:`None` if not found, the value otherwise.
         """
-        node = Node(digest(keyword))
+        dkey = digest(keyword)
+        if self.storage.get(dkey) is not None:
+            return defer.succeed(self.storage.get(dkey))
+        node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to get key %s" % keyword)
@@ -222,11 +225,10 @@ class Server(object):
             self.log.info("setting '%s' on %s" % (keyword, map(str, nodes)))
             ds = [self.protocol.callStore(node, dkey, key, value) for node in nodes]
 
-            keynode = Node(keyword)
-            ownBucket = self.protocol.router.buckets[self.protocol.router.getBucketFor(self.node)]
-            if ownBucket.hasInRange(keynode):
+            keynode = Node(dkey)
+            if self.node.distanceTo(keynode) < max([n.distanceTo(keynode) for n in nodes]):
+                self.storage[dkey] = (key, value)
                 self.log.debug("got a store request from %s, storing value" % str(self.node))
-                self.storage[keyword] = (key, value)
 
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
