@@ -20,11 +20,19 @@ from dht.kprotocol import Message, Command
 from dht import node
 
 class RPCProtocol():
-    def __init__(self, waitTimeout=5, noisy=True):
+    def __init__(self, proto, router, waitTimeout=5, noisy=True):
         """
-        @param waitTimeout: Consider it a connetion failure if no response
-        within this time window.
+        Args:
+            proto: A protobuf `Node` object containing info about this node.
+            router: A `RoutingTable` object from dht.routing. Implies a `network.Server` object
+                    must be started first.
+            waitTimeout: Consider it a connetion failure if no response
+                    within this time window.
+            noisy: Whether or not to log the output for this class.
+
         """
+        self.proto = proto
+        self.router = router
         self._waitTimeout = waitTimeout
         self._outstanding = {}
         self.noisy = noisy
@@ -88,7 +96,7 @@ class RPCProtocol():
             self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
-        m.sender.MergeFrom(self.sourceNode.getProto())
+        m.sender.MergeFrom(self.proto)
         m.command = Command.Value(funcname.upper())
         for arg in response:
             m.arguments.append(arg)
@@ -114,7 +122,7 @@ class RPCProtocol():
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
-            m.sender.MergeFrom(self.sourceNode.getProto())
+            m.sender.MergeFrom(self.proto)
             m.command = Command.Value(name.upper())
             for arg in args:
                 m.arguments.append(arg)

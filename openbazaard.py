@@ -24,33 +24,42 @@ from dht.node import Node
 
 from wireprotocol import OpenBazaarProtocol
 
-response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=18467, stun_port=19302)
+from os.path import expanduser
+
+datafolder = expanduser("~") + "/OpenBazaar/"
+if not os.path.exists(datafolder):
+    os.makedirs(datafolder)
+
+response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
 ip_address = response[1]
 port = response[2]
-print port
 
-sys.path.append(os.path.dirname(__file__))
 application = service.Application("openbazaar")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # key generation for testing
-if os.path.isfile('keys.pickle'):
-    keys = pickle.load(open("keys.pickle", "r"))
+if os.path.isfile(datafolder + 'keys.pickle'):
+    keys = pickle.load(open(datafolder + "keys.pickle", "r"))
     g = keys["guid"]
 else:
     print "Generating GUID, stand by..."
     g = GUID()
     keys = {'guid': g}
-    pickle.dump(keys, open("keys.pickle", "wb"))
+    pickle.dump(keys, open(datafolder + "keys.pickle", "wb"))
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
 # kademlia
 node = Node(g.guid, signed_pubkey=g.signed_pubkey)
-kserver = Server(node)
-kserver.protocol.connect_multiplexer(protocol)
-kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "909b4f614ec4fc8c63aab83b91bc620d7a238600bf256472e968fdafce200128"))
 
+if os.path.isfile(datafolder + 'cache.pickle'):
+    kserver = Server.loadState(datafolder + 'cache.pickle', ip_address, port, protocol)
+else :
+    kserver = Server(node)
+    kserver.protocol.connect_multiplexer(protocol)
+    kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "909b4f614ec4fc8c63aab83b91bc620d7a238600bf256472e968fdafce200128"))
+
+kserver.saveStateRegularly(datafolder + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
 server = internet.UDPServer(18467, protocol)
 server.setServiceParent(application)

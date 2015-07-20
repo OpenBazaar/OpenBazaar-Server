@@ -4,19 +4,17 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
+from twisted.internet import defer
+from zope.interface import implements
+
 import nacl.signing
 
-from twisted.internet import defer
-
-from dht.rpcudp import RPCProtocol
+from rpcudp import RPCProtocol
 from dht.node import Node
 from dht.routing import RoutingTable
 from dht.log import Logger
 from dht.kprotocol import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE
 from dht import kprotocol
-
-from zope.interface import implements
-
 from interfaces import MessageProcessor
 
 
@@ -24,7 +22,6 @@ class KademliaProtocol(RPCProtocol):
     implements(MessageProcessor)
 
     def __init__(self, sourceNode, storage, ksize):
-        RPCProtocol.__init__(self)
         self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage
@@ -32,6 +29,7 @@ class KademliaProtocol(RPCProtocol):
         self.multiplexer = None
         self.log = Logger(system=self)
         self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE]
+        RPCProtocol.__init__(self, sourceNode.getProto(), self.router)
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
