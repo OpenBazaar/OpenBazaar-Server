@@ -33,6 +33,7 @@ commands:
     get              fetches the given keyword from the dht
     set              sets the given keyword/key in the dht
     delete           deletes the keyword/key from the dht
+    getcontract      fetchs a contract from a node given its hash and guid
     shutdown         closes all outstanding connections.
 ''')
         parser.add_argument('command', help='Execute the given command')
@@ -114,6 +115,19 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def getcontract(self):
+        parser = argparse.ArgumentParser(
+            description="Fetch a contract given its hash and guid.",
+            usage='''usage:
+    network-cli.py getcontract [-h HASH] [-g GUID]''')
+        parser.add_argument('-h', '--hash', required=True, help="the keyword to fetch")
+        parser.add_argument('-g', '--guid', required=True, help="the keyword to fetch")
+        args = parser.parse_args(sys.argv[2:])
+        hash = args.hash
+        guid = args.guid
+        d = proxy.callRemote('getcontract', hash, guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
 
 proxy = Proxy('127.0.0.1', 18465)
 Parser(proxy)

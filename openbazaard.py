@@ -4,21 +4,19 @@ Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
 import pickle
+import stun
+import log
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
-from binascii import hexlify
 from os.path import expanduser
-
-import stun
 from bitcoin import *
 from txjsonrpc.netstring import jsonrpc
-
 from guidutils.guid import GUID
 from dht.utils import digest
 from dht.network import Server
-import log
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
+from market.protocol import MarketProtocol
 
 datafolder = expanduser("~") + "/OpenBazaar/"
 if not os.path.exists(datafolder):
@@ -58,6 +56,13 @@ else :
 
 kserver.saveStateRegularly(datafolder + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
+
+# market
+"""
+market_protocol = MarketProtocol(node.getProto(), kserver.protocol.router)
+market_protocol.connect_multiplexer(protocol)
+protocol.register_processor(market_protocol)
+"""
 server = internet.UDPServer(18467, protocol)
 server.setServiceParent(application)
 
@@ -111,7 +116,6 @@ class RPCCalls(jsonrpc.JSONRPC):
             if connection is not None:
                 connection.shutdown()
         return "Closing all connections."
-
 
 factory = jsonrpc.RPCFactory(RPCCalls)
 factory.addIntrospection()

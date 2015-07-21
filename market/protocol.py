@@ -13,6 +13,8 @@ from log import Logger
 
 from openbazaard import get_data_folder
 
+from protos.message import GET_CONTRACT
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 

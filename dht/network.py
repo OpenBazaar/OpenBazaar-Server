@@ -276,6 +276,25 @@ class Server(object):
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.ksize)
         return spider.find().addCallback(delete)
 
+    def get_node(self, guid):
+        node_to_find = Node(guid)
+
+        def check_for_node(nodes):
+            for node in nodes:
+                if node.id == node_to_find.id:
+                    return node
+            return None
+        index = self.protocol.router.getBucketFor(node_to_find)
+        nodes = self.protocol.router.buckets[index].getNodes()
+        if node_to_find.id in nodes:
+            return nodes[node_to_find.id]
+        nearest = self.protocol.router.findNeighbors(node_to_find)
+        if len(nearest) == 0:
+            self.log.warning("There are no known neighbors to find node %" % str(node_to_find))
+            return None
+        spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
+        return spider.find().addCallback(check_for_node)
+
     def _anyRespondSuccess(self, responses):
         """
         Given the result of a DeferredList of calls to peers, ensure that at least
