@@ -6,7 +6,8 @@ from twisted.internet import reactor, task
 
 from dht.utils import digest
 from dht.storage import ForgetfulStorage, PersistentStorage, TTLDict
-from dht.kprotocol import Value
+
+from protos.objects import Value
 
 
 class ForgetFulStorageTest(unittest.TestCase):

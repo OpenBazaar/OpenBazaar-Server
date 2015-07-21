@@ -4,13 +4,14 @@ Copyright (c) 2015 OpenBazaar
 """
 
 from collections import Counter
-
 from twisted.internet import defer
 
-from dht.log import Logger
+from log import Logger
+
 from dht.utils import deferredDict
 from dht.node import Node, NodeHeap
-from dht import kprotocol
+
+from protos import objects
 
 
 class SpiderCrawl(object):
@@ -125,7 +126,7 @@ class ValueSpiderCrawl(SpiderCrawl):
         if peerToSaveTo is not None:
             for v in value:
                 try:
-                    val = kprotocol.Value()
+                    val = objects.Value()
                     val.ParseFromString(v)
                     ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey, val.serializedData))
                 except:
@@ -193,7 +194,7 @@ class RPCFindResponse(object):
         nodes = []
         for node in self.response[1]:
             try:
-                n = kprotocol.Node()
+                n = objects.Node()
                 n.ParseFromString(node)
                 newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey, vendor=n.vendor)
                 nodes.append(newNode)

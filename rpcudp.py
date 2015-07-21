@@ -4,22 +4,30 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-
-import nacl.signing, nacl.encoding, nacl.hash
-
+import abc
 from binascii import hexlify
-
 from hashlib import sha1
 from base64 import b64encode
-
 from twisted.internet import reactor
 from twisted.internet import defer
 
-from dht.log import Logger
-from dht.kprotocol import Message, Command
+import nacl.signing
+import nacl.encoding
+import nacl.hash
+
+from log import Logger
+from protos.message import Message, Command
 from dht import node
 
+
 class RPCProtocol():
+    """
+    This is an abstract class for processing and sending rpc messages.
+    A class that implements the `MessageProcessor` interface probably should
+    extend this as it does most of the work of keeping track of messages.
+    """
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, proto, router, waitTimeout=5, noisy=True):
         """
         Args:

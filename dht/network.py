@@ -7,23 +7,25 @@ Copyright (c) 2015 OpenBazaar
 
 import pickle
 import httplib
-import nacl.signing, nacl.hash, nacl.encoding
-
 from binascii import hexlify
-
-from seed import peers
-
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
 
-from dht.log import Logger
+import nacl.signing
+import nacl.hash
+import nacl.encoding
+
+from seed import peers
+from log import Logger
 from dht.protocol import KademliaProtocol
 from dht.utils import deferredDict, digest
 from dht.storage import ForgetfulStorage
 from dht.node import Node
 from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
-from dht import kprotocol
+
+from protos import objects
+
 
 class Server(object):
     """
@@ -141,7 +143,7 @@ class Server(object):
             nodes = []
             for addr, result in results.items():
                 if result[0]:
-                    n = kprotocol.Node()
+                    n = objects.Node()
                     try:
                         n.ParseFromString(result[1][0])
                         pubkey = n.signedPublicKey[len(n.signedPublicKey) - 32:]
@@ -211,9 +213,9 @@ class Server(object):
         Args:
             keyword: a `string` keyword. The SHA1 hash of which will be used as
                 the key when inserting in the DHT.
-            key: the 20 byte hash of the contract.
-            value: a serialized `kprotocol.Node` object with all optional fields
-                provided.
+            key: the 20 byte hash of the data.
+            value: a serialized `protos.objects.Node` object which serves as a
+                pointer to the node storing the data.
 
         Return: True if at least one peer responded. False if the store rpc
             completely failed.
@@ -250,7 +252,7 @@ class Server(object):
 
         Args:
             keyword: the `string` keyword where the data being deleted is stored.
-            key: the 20 byte hash of the contract.
+            key: the 20 byte hash of the data.
             signature: a signature covering the key.
 
         """

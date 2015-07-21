@@ -3,32 +3,29 @@ __author__ = 'chris'
 Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
-import stun
 import pickle
-
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
+from binascii import hexlify
+from os.path import expanduser
 
+import stun
 from bitcoin import *
-
-from binascii import hexlify, unhexlify
-
 from txjsonrpc.netstring import jsonrpc
 
 from guidutils.guid import GUID
-
 from dht.utils import digest
 from dht.network import Server
-from dht import log
+import log
 from dht.node import Node
-
 from wireprotocol import OpenBazaarProtocol
-
-from os.path import expanduser
 
 datafolder = expanduser("~") + "/OpenBazaar/"
 if not os.path.exists(datafolder):
     os.makedirs(datafolder)
+
+def get_data_folder():
+    return datafolder
 
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
 ip_address = response[1]

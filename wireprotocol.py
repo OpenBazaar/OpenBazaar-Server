@@ -1,14 +1,14 @@
 __author__ = 'chris'
+from zope.interface.verify import verifyObject
+
 from txrudp.rudp import ConnectionMultiplexer
 from txrudp.connection import HandlerFactory, Handler
 from txrudp.crypto_connection import CryptoConnectionFactory
 
 from interfaces import MessageProcessor
+from protos.message import Message
+from log import Logger
 
-from zope.interface.verify import verifyObject
-
-from dht.kprotocol import Message
-from dht.log import Logger
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
     def __init__(self, ip_address):

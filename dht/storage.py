@@ -10,7 +10,7 @@ from collections import OrderedDict, MutableMapping
 
 from zope.interface import implements, Interface
 
-from kprotocol import Value
+from protos.objects import Value
 
 from threading import RLock
 

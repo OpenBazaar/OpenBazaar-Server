@@ -2,10 +2,11 @@
 Copyright (c) 2014 Brian Muller
 Copyright (c) 2015 OpenBazaar
 """
+import heapq
 
 from operator import itemgetter
-import heapq
-import kprotocol
+from protos import objects
+
 
 
 class Node:
@@ -19,7 +20,7 @@ class Node:
         self.long_id = long(id.encode('hex'), 16)
 
     def getProto(self):
-        n = kprotocol.Node()
+        n = objects.Node()
         n.guid = self.id
         n.signedPublicKey = self.signed_pubkey
         n.vendor = self.vendor

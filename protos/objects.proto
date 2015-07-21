@@ -1,4 +1,11 @@
-__author__ = 'chris'
+/*
+Get the protobuf compiler:
+sudo apt-get install protobuf-compiler
+
+Compile with:
+cd path/to/protos/
+protoc --python_out=./ objects.proto
+*/
 
 //An object containing information about the node.
 //Some fields are optional as they aren't needed in all situations.

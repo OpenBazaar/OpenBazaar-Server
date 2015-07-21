@@ -13,10 +13,10 @@ from twisted.trial import unittest
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
 from dht.utils import digest
-from dht.kprotocol import TCP
 from dht.storage import ForgetfulStorage
 from dht.protocol import KademliaProtocol
-from dht import kprotocol
+
+from protos.objects import Value
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
@@ -123,7 +123,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.assertTrue(len(spider.nearest) == 2)
 
         # test got value
-        val = kprotocol.Value()
+        val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.protocol.sourceNode.getProto().SerializeToString()
         response = (True, ("value", val.SerializeToString()))
@@ -143,7 +143,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
-        val = kprotocol.Value()
+        val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.node1.getProto().SerializeToString()
         val1 = val.SerializeToString()
@@ -217,7 +217,7 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         signed_pubkey = self.signing_key.sign(str(verify_key))
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True, 1234, kprotocol.TCP)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
         self.protocol = KademliaProtocol(self.node, self.storage, 20)
 
         transport = mock.Mock(spec_set=udp.Port)

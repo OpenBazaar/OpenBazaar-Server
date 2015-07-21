@@ -7,8 +7,9 @@ from twisted.trial import unittest
 
 from dht.node import Node, NodeHeap
 from dht.tests.utils import mknode
-from dht import kprotocol
 from dht.utils import digest
+
+from protos import objects
 
 
 class NodeTest(unittest.TestCase):
@@ -31,7 +32,7 @@ class NodeTest(unittest.TestCase):
         pubkey = digest("pubkey")
         vendor = True
 
-        n1 = kprotocol.Node()
+        n1 = objects.Node()
         n1.guid = rid
         n1.signedPublicKey = pubkey
         n1.vendor = False

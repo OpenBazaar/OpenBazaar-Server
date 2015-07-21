@@ -1,32 +1,30 @@
 __author__ = 'chris'
-import sys, os
+import sys
+import os
 import pickle
-import stun
 import json
 import random
-
-import nacl.signing, nacl.hash, nacl.encoding
-
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import task
 from twisted.web import resource, server
-
 from binascii import hexlify
-
 from random import shuffle
 
+import stun
+import nacl.signing
+import nacl.hash
+import nacl.encoding
+
 from seed import peers
-
 from guidutils.guid import GUID
-
-from dht import log
+import log
 from dht.node import Node
 from dht.network import Server
 from dht.crawling import NodeSpiderCrawl
 from dht.utils import digest, deferredDict
-from dht import kprotocol
 
+from protos import objects
 from wireprotocol import OpenBazaarProtocol
 
 sys.path.append(os.path.dirname(__file__))
@@ -85,7 +83,7 @@ class WebResource(resource.Resource):
     def crawl(self):
         def gather_results(result):
             for proto in result:
-                n = kprotocol.Node()
+                n = objects.Node()
                 try:
                     n.ParseFromString(proto)
                     node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)

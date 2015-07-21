@@ -4,18 +4,23 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
+
 from twisted.internet import defer
+
 from zope.interface import implements
 
 import nacl.signing
 
 from rpcudp import RPCProtocol
+
 from dht.node import Node
 from dht.routing import RoutingTable
-from dht.log import Logger
-from dht.kprotocol import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE
-from dht import kprotocol
+from log import Logger
+
 from interfaces import MessageProcessor
+
+from protos import objects
+from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE
 
 
 class KademliaProtocol(RPCProtocol):
@@ -62,7 +67,7 @@ class KademliaProtocol(RPCProtocol):
         value = self.storage.getSpecific(keyword, key)
         if value is not None:
             try:
-                node = kprotocol.Node()
+                node = objects.Node()
                 node.ParseFromString(value)
                 pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
                 try:
