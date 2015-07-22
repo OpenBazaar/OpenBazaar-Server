@@ -15,7 +15,7 @@ class Server(object):
     def __init__(self, kserver):
         self.kserver = kserver
         self.router = kserver.protocol.router
-        self.protocol = MarketProtocol(kserver.node, self.router)
+        self.protocol = MarketProtocol(kserver.node.getProto(), self.router)
 
     def get_contract(self, guid, contract_hash):
         def get_result(result):
@@ -26,5 +26,5 @@ class Server(object):
         node_to_ask = self.kserver.get_node(guid)
         if node_to_ask is None:
             return None
-        d = self.protocol.call_get_contract(guid, contract_hash)
-        d.addCallback(get_result)
+        d = self.protocol.call_get_contract(node_to_ask, contract_hash)
+        return d.addCallback(get_result)

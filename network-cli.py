@@ -121,8 +121,8 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch a contract given its hash and guid.",
             usage='''usage:
-    network-cli.py getcontract [-h HASH] [-g GUID]''')
-        parser.add_argument('-h', '--hash', required=True, help="the keyword to fetch")
+    network-cli.py getcontract [-c HASH] [-g GUID]''')
+        parser.add_argument('-c', '--hash', required=True, help="the keyword to fetch")
         parser.add_argument('-g', '--guid', required=True, help="the keyword to fetch")
         args = parser.parse_args(sys.argv[2:])
         hash = args.hash

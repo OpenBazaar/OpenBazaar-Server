@@ -117,6 +117,10 @@ class RPCCalls(jsonrpc.JSONRPC):
         n = kserver.get_node(unhexlify(guid))
         return n
 
+    def jsonrpc_getcontract(self, contract_hash, guid):
+        print mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
+        return "getting contract..."
+
 factory = jsonrpc.RPCFactory(RPCCalls)
 factory.addIntrospection()
 reactor.listenTCP(18465, factory, interface="127.0.0.1")

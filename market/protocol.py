@@ -15,6 +15,8 @@ from protos.message import GET_CONTRACT
 
 from constants import DATA_FOLDER
 
+from binascii import hexlify
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
@@ -31,7 +33,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up contract ID" % long(contract_hash.encode('hex'), 16))
         self.router.addContact(sender)
         try:
-            with open (DATA_FOLDER + "/store/listings/contracts/" + contract_hash + ".json", "r") as file:
+            with open (DATA_FOLDER + "store/listings/contracts/" + hexlify(contract_hash) + ".json", "r") as file:
                 contract = file.read()
             return contract
         except:
