@@ -199,7 +199,7 @@ class Server(object):
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to get key %s" % keyword)
-            return defer.succeed(None)
+            return None
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
 
@@ -286,14 +286,15 @@ class Server(object):
             return None
         index = self.protocol.router.getBucketFor(node_to_find)
         nodes = self.protocol.router.buckets[index].getNodes()
-        if node_to_find.id in nodes:
-            return nodes[node_to_find.id]
+        for node in nodes:
+            if node.id == node_to_find.id:
+                return node
         nearest = self.protocol.router.findNeighbors(node_to_find)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to find node %" % str(node_to_find))
-            return None
+            self.log.warning("There are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
+            return defer.succeed(None)
         spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
-        return spider.find().addCallback(check_for_node)
+        spider.find().addCallback(check_for_node)
 
     def _anyRespondSuccess(self, responses):
         """

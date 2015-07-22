@@ -24,6 +24,8 @@ class Node:
         n.guid = self.id
         n.signedPublicKey = self.signed_pubkey
         n.vendor = self.vendor
+        if self.ip is not None: n.ip = self.ip
+        if self.port is not None: n.port = self.port
         return n
 
     def sameHomeAs(self, node):

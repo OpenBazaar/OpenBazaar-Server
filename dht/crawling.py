@@ -196,6 +196,9 @@ class RPCFindResponse(object):
             try:
                 n = objects.Node()
                 n.ParseFromString(node)
+                print
+                print n
+                print
                 newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey, vendor=n.vendor)
                 nodes.append(newNode)
             except:

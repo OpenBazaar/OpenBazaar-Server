@@ -5,9 +5,8 @@ We will fit the actual implementation in where appropriate.
 """
 import pickle
 import stun
-import log
-from twisted.application import service, internet
-from twisted.python.log import ILogObserver
+from twisted.internet import reactor
+from twisted.python import log
 from os.path import expanduser
 from bitcoin import *
 from txjsonrpc.netstring import jsonrpc
@@ -16,7 +15,9 @@ from dht.utils import digest
 from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
-from market.protocol import MarketProtocol
+from binascii import unhexlify
+
+log.startLogging(sys.stdout)
 
 datafolder = expanduser("~") + "/OpenBazaar/"
 if not os.path.exists(datafolder):
@@ -28,9 +29,6 @@ def get_data_folder():
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
 ip_address = response[1]
 port = response[2]
-
-application = service.Application("openbazaar")
-application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # key generation for testing
 if os.path.isfile(datafolder + 'keys.pickle'):
@@ -56,16 +54,7 @@ else :
 
 kserver.saveStateRegularly(datafolder + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
-
-# market
-"""
-market_protocol = MarketProtocol(node.getProto(), kserver.protocol.router)
-market_protocol.connect_multiplexer(protocol)
-protocol.register_processor(market_protocol)
-"""
-server = internet.UDPServer(18467, protocol)
-server.setServiceParent(application)
-
+reactor.listenUDP(18467, protocol)
 
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
@@ -117,7 +106,19 @@ class RPCCalls(jsonrpc.JSONRPC):
                 connection.shutdown()
         return "Closing all connections."
 
+    def jsonrpc_getpeers(self):
+        peers = []
+        for bucket in kserver.protocol.router.buckets:
+            for node in bucket.getNodes():
+                peers.append(node.id.encode("hex"))
+        return peers
+
+    def jsonrpc_getnode(self, guid):
+        n = kserver.get_node(unhexlify(guid))
+        return n
+
 factory = jsonrpc.RPCFactory(RPCCalls)
 factory.addIntrospection()
-jsonrpcServer = internet.TCPServer(18465, factory, interface="127.0.0.1")
-jsonrpcServer.setServiceParent(application)
+reactor.listenTCP(18465, factory, interface="127.0.0.1")
+
+reactor.run()

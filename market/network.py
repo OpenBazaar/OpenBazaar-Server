@@ -10,7 +10,7 @@ class Server(object):
 
     def get_contract(self, guid, contract_hash):
         def get_result(result):
-            return result;
+            return result
         node_to_ask = self.kserver.get_node(guid)
         if node_to_ask is None:
             return None

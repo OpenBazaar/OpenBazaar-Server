@@ -30,9 +30,11 @@ class Parser(object):
 
 commands:
     getinfo          returns an object containing various state info
+    getpeers         returns the id of all the peers in the routing table
     get              fetches the given keyword from the dht
     set              sets the given keyword/key in the dht
     delete           deletes the keyword/key from the dht
+    getnode          returns a node's ip address given its guid.
     getcontract      fetchs a contract from a node given its hash and guid
     shutdown         closes all outstanding connections.
 ''')
@@ -126,6 +128,28 @@ commands:
         hash = args.hash
         guid = args.guid
         d = proxy.callRemote('getcontract', hash, guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def getpeers(self):
+        parser = argparse.ArgumentParser(
+            description="Returns id of all peers in the routing table",
+            usage='''usage:
+    network-cli getpeers''')
+        args = parser.parse_args(sys.argv[2:])
+        d = proxy.callRemote('getpeers')
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def getnode(self):
+        parser = argparse.ArgumentParser(
+            description="Fetch the ip address for a node given its guid.",
+            usage='''usage:
+    network-cli.py getnode [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the keyword to fetch")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getnode', guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
