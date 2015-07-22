@@ -16,6 +16,7 @@ from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
 from binascii import unhexlify
 from constants import DATA_FOLDER
+from market import network
 
 log.startLogging(sys.stdout)
 
@@ -47,6 +48,12 @@ else :
 
 kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
+
+# market
+mserver = network.Server(kserver)
+mserver.protocol.connect_multiplexer(protocol)
+protocol.register_processor(mserver.protocol)
+
 reactor.listenUDP(18467, protocol)
 
 # RPC-Server

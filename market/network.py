@@ -14,16 +14,8 @@ class Server(object):
 
     def __init__(self, kserver):
         self.kserver = kserver
-        self.router = kserver.router
+        self.router = kserver.protocol.router
         self.protocol = MarketProtocol(kserver.node, self.router)
-
-    def rpc_get_contract(self, contract_hash):
-        try:
-            with open (DATA_FOLDER + "/store/listings/contracts/" + contract_hash + ".json", "r") as file:
-                contract = file.read()
-            return contract
-        except:
-            return None
 
     def get_contract(self, guid, contract_hash):
         def get_result(result):

@@ -11,9 +11,9 @@ from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 
-from openbazaard import get_data_folder
-
 from protos.message import GET_CONTRACT
+
+from constants import DATA_FOLDER
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -31,11 +31,11 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up contract ID" % long(contract_hash.encode('hex'), 16))
         self.router.addContact(sender)
         try:
-            with open(get_data_folder() + "/Store/Listings/Contracts/" + str(long(contract_hash.encode('hex'), 16)) + '.json') as contract_file:
-                data = json.load(contract_file)
-                return str(data)
+            with open (DATA_FOLDER + "/store/listings/contracts/" + contract_hash + ".json", "r") as file:
+                contract = file.read()
+            return contract
         except:
-            return "None"
+            return None
 
     def call_get_contract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
