@@ -9,7 +9,7 @@ from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 
-from protos.message import GET_CONTRACT
+from protos.message import GET_CONTRACT, GET_IMAGE
 
 from constants import DATA_FOLDER
 
@@ -22,7 +22,7 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT]
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE]
         self.multiplexer = None
 
     def connect_multiplexer(self, multiplexer):
@@ -34,13 +34,28 @@ class MarketProtocol(RPCProtocol):
         try:
             with open(DATA_FOLDER + "store/listings/contracts/" + hexlify(contract_hash) + ".json", "r") as file:
                 contract = file.read()
-            return hexlify(contract)
+            return [contract]
         except:
-            return "None"
+            return ["None"]
+
+    def rpc_get_image(self, sender, image_hash):
+        self.log.info("Looking up image with hash %s" % image_hash.encode('hex'))
+        self.router.addContact(sender)
+        try:
+            with open(DATA_FOLDER + "store/media/" + hexlify(image_hash), "r") as file:
+                image = file.read()
+            return [image]
+        except:
+            return ["None"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetImage(self, nodeToAsk, image_hash):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_image(address, image_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

@@ -26,4 +26,11 @@ enum Command {
 	FIND_NODE      = 5;
 	FIND_VALUE     = 6;
 	GET_CONTRACT   = 7;
+	GET_IMAGE      = 8;
+
+	// Error responses
+	BAD_REQUEST   = 400;
+	NOT_FOUND     = 404;
+	CALM_DOWN     = 420;
+	UNKNOWN_ERROR = 520;
 }

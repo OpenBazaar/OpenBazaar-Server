@@ -114,15 +114,25 @@ class RPCCalls(jsonrpc.JSONRPC):
         return peers
 
     def jsonrpc_getnode(self, guid):
-        n = kserver.get_node(unhexlify(guid))
-        return n
+        def print_node(node):
+            print node.ip, node.port
+        d = kserver.get_node(unhexlify(guid))
+        d.addCallback(print_node)
+        return "finding node..."
 
     def jsonrpc_getcontract(self, contract_hash, guid):
         def print_resp(resp):
             print resp
         d = mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
         d.addCallback(print_resp)
-        return "True"
+        return "getting contract..."
+
+    def jsonrpc_getimage(self, image_hash, guid):
+        def print_resp(resp):
+            print resp
+        d = mserver.get_image(unhexlify(guid), unhexlify(image_hash))
+        d.addCallback(print_resp)
+        return "getting image..."
 
 
 factory = jsonrpc.RPCFactory(RPCCalls)

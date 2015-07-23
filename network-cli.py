@@ -36,6 +36,7 @@ commands:
     delete           deletes the keyword/key from the dht
     getnode          returns a node's ip address given its guid.
     getcontract      fetchs a contract from a node given its hash and guid
+    getimage         fetches an image from a node given its hash and guid
     shutdown         closes all outstanding connections.
 ''')
         parser.add_argument('command', help='Execute the given command')
@@ -122,12 +123,26 @@ commands:
             description="Fetch a contract given its hash and guid.",
             usage='''usage:
     network-cli.py getcontract [-c HASH] [-g GUID]''')
-        parser.add_argument('-c', '--hash', required=True, help="the keyword to fetch")
-        parser.add_argument('-g', '--guid', required=True, help="the keyword to fetch")
+        parser.add_argument('-c', '--hash', required=True, help="the hash of the contract")
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
         hash = args.hash
         guid = args.guid
         d = proxy.callRemote('getcontract', hash, guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def getimage(self):
+        parser = argparse.ArgumentParser(
+            description="Fetch an image given its hash and guid.",
+            usage='''usage:
+    network-cli.py getcontract [-i HASH] [-g GUID]''')
+        parser.add_argument('-i', '--hash', required=True, help="the hash of the image")
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        hash = args.hash
+        guid = args.guid
+        d = proxy.callRemote('getimage', hash, guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -136,7 +151,6 @@ commands:
             description="Returns id of all peers in the routing table",
             usage='''usage:
     network-cli getpeers''')
-        args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpeers')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -146,7 +160,7 @@ commands:
             description="Fetch the ip address for a node given its guid.",
             usage='''usage:
     network-cli.py getnode [-g GUID]''')
-        parser.add_argument('-g', '--guid', required=True, help="the keyword to fetch")
+        parser.add_argument('-g', '--guid', required=True, help="the guid to find")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
         d = proxy.callRemote('getnode', guid)

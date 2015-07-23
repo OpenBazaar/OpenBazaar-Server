@@ -20,7 +20,7 @@ import objects
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
   package='',
-  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c*e\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06\x12\x10\n\x0cGET_CONTRACT\x10\x07')
+  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c*\xba\x01\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\t\n\x05STORE\x10\x03\x12\n\n\x06\x44\x45LETE\x10\x04\x12\r\n\tFIND_NODE\x10\x05\x12\x0e\n\nFIND_VALUE\x10\x06\x12\x10\n\x0cGET_CONTRACT\x10\x07\x12\r\n\tGET_IMAGE\x10\x08\x12\x10\n\x0b\x42\x41\x44_REQUEST\x10\x90\x03\x12\x0e\n\tNOT_FOUND\x10\x94\x03\x12\x0e\n\tCALM_DOWN\x10\xa4\x03\x12\x12\n\rUNKNOWN_ERROR\x10\x88\x04')
   ,
   dependencies=[objects.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -59,11 +59,31 @@ _COMMAND = _descriptor.EnumDescriptor(
       name='GET_CONTRACT', index=6, number=7,
       options=None,
       type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GET_IMAGE', index=7, number=8,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BAD_REQUEST', index=8, number=400,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NOT_FOUND', index=9, number=404,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CALM_DOWN', index=10, number=420,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNKNOWN_ERROR', index=11, number=520,
+      options=None,
+      type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=131,
-  serialized_end=232,
+  serialized_start=132,
+  serialized_end=318,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -75,6 +95,11 @@ DELETE = 4
 FIND_NODE = 5
 FIND_VALUE = 6
 GET_CONTRACT = 7
+GET_IMAGE = 8
+BAD_REQUEST = 400
+NOT_FOUND = 404
+CALM_DOWN = 420
+UNKNOWN_ERROR = 520
 
 
 
