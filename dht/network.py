@@ -277,6 +277,13 @@ class Server(object):
         return spider.find().addCallback(delete)
 
     def get_node(self, guid):
+        """
+        Given a guid return a `Node` object containing its ip and port or none if it's
+        not found.
+
+        Args:
+            guid: the 20 raw bytes representing the guid.
+        """
         node_to_find = Node(guid)
 
         def check_for_node(nodes):
@@ -288,13 +295,13 @@ class Server(object):
         nodes = self.protocol.router.buckets[index].getNodes()
         for node in nodes:
             if node.id == node_to_find.id:
-                return node
+                return defer.succeed(node)
         nearest = self.protocol.router.findNeighbors(node_to_find)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
             return defer.succeed(None)
         spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
-        spider.find().addCallback(check_for_node)
+        return spider.find().addCallback(check_for_node)
 
     def _anyRespondSuccess(self, responses):
         """
