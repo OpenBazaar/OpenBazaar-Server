@@ -6,6 +6,11 @@ import json
 from twisted.internet import reactor
 from txjsonrpc.netstring.jsonrpc import Proxy
 
+from binascii import hexlify, unhexlify
+
+from dht.utils import digest
+
+from txjsonrpc.netstring import jsonrpc
 
 def do_continue(value):
     pass
@@ -167,5 +172,88 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-proxy = Proxy('127.0.0.1', 18465)
-Parser(proxy)
+# RPC-Server
+class RPCCalls(jsonrpc.JSONRPC):
+    def __init__(self, kserver, mserver):
+        self.kserver = kserver
+        self.mserver = mserver
+
+    def jsonrpc_getpubkey(self):
+        return hexlify(g.signed_pubkey)
+
+    def jsonrpc_getinfo(self):
+        info = {"version": "0.1"}
+        num_peers = 0
+        for bucket in self.kserver.protocol.router.buckets:
+            num_peers += bucket.__len__()
+        info["known peers"] = num_peers
+        info["stored messages"] = len(self.kserver.storage.data)
+        size = sys.getsizeof(self.kserver.storage.data)
+        size += sum(map(sys.getsizeof, self.kserver.storage.data.itervalues())) + sum(
+            map(sys.getsizeof, self.kserver.storage.data.iterkeys()))
+        info["db size"] = size
+        return info
+
+    def jsonrpc_set(self, keyword, key):
+        def handle_result(result):
+            print "JSONRPC result:", result
+
+        d = self.kserver.set(str(keyword), digest(key), self.kserver.node.getProto().SerializeToString())
+        d.addCallback(handle_result)
+        return "Sending store request..."
+
+    def jsonrpc_get(self, keyword):
+        def handle_result(result):
+            print "JSONRPC result:", result
+
+        d = self.kserver.get(keyword)
+        d.addCallback(handle_result)
+        return "Sent get request. Check log output for result"
+
+    def jsonrpc_delete(self, keyword, key):
+        def handle_result(result):
+            print "JSONRPC result:", result
+
+        signature = g.signing_key.sign(digest(key))
+        d = self.kserver.delete(str(keyword), digest(key), signature[:64])
+        d.addCallback(handle_result)
+        return "Sending delete request..."
+
+    def jsonrpc_shutdown(self):
+        for addr in self.kserver.protocol:
+            connection = self.kserver.protocol._active_connections.get(addr)
+            if connection is not None:
+                connection.shutdown()
+        return "Closing all connections."
+
+    def jsonrpc_getpeers(self):
+        peers = []
+        for bucket in self.kserver.protocol.router.buckets:
+            for node in bucket.getNodes():
+                peers.append(node.id.encode("hex"))
+        return peers
+
+    def jsonrpc_getnode(self, guid):
+        def print_node(node):
+            print node.ip, node.port
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(print_node)
+        return "finding node..."
+
+    def jsonrpc_getcontract(self, contract_hash, guid):
+        def print_resp(resp):
+            print resp
+        d = self.mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
+        d.addCallback(print_resp)
+        return "getting contract..."
+
+    def jsonrpc_getimage(self, image_hash, guid):
+        def print_resp(resp):
+            print resp
+        d = self.mserver.get_image(unhexlify(guid), unhexlify(image_hash))
+        d.addCallback(print_resp)
+        return "getting image..."
+
+if __name__ == "__main__":
+    proxy = Proxy('127.0.0.1', 18465)
+    Parser(proxy)
