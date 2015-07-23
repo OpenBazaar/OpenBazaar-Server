@@ -11,15 +11,53 @@ protoc --python_out=./ objects.proto
 //Some fields are optional as they aren't needed in all situations.
 message Node {
 	required bytes guid            = 1;
-	required bytes signedPublicKey = 2; //<64 byte signature><32 byte public key>
+	required bytes signedPublicKey = 2; // <64 byte signature><32 byte public key>
 	optional string ip             = 3;
 	optional uint32 port           = 4;
 	optional bool vendor           = 5 [default = false];
 }
 
-//The value returned by a find_value rpc all
+//The value returned by a find_value rpc call
 //Typically a list of these will be returned for any given keyword.
 message Value {
-	required bytes valueKey     = 1;
+	required bytes valueKey       = 1;
 	required bytes serializedData = 2;
 }
+
+//The object returned by the GET_INFO rpc call
+message Info {
+        required bool store               = 1;
+        required string name              = 2;
+        optional string handle            = 3;
+        required string about             = 4;
+        optional string website           = 5;
+        optional string email             = 6;
+        repeated SocialAccount social     = 7;
+        required uint32 primary_color     = 8;
+        required uint32 secondary_color   = 9;
+        required uint32 background_color  = 10;
+        required uint32 text_color        = 11;
+        required uint32 follower_count    = 12;
+        required unit32 following_count   = 13;
+        optional PGPKey pgp_key           = 14;
+        optional bytes avatar_hash        = 15;
+        optional bytes header_hash        = 16;
+    }
+
+	// Social media account for the profile
+    message SocialAccount {
+    	required SocialType type  = 1;
+    	required string username  = 2;
+    	required string proof_url = 3;
+    }
+
+    enum SocialType {
+		FACEBOOK  = 1;
+		TWITTER   = 2;
+		INSTAGRAM = 3;
+    }
+
+    message PGPKey {
+    	required bytes publicKey = 1;
+    	required bytes signature = 2; // signature must cover GUID
+    }
