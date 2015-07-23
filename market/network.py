@@ -4,11 +4,11 @@ import json
 
 from market.protocol import MarketProtocol
 
-from constants import DATA_FOLDER
-
 from dht.utils import digest
 
 from collections import OrderedDict
+
+from binascii import unhexlify
 
 class Server(object):
 
@@ -19,12 +19,12 @@ class Server(object):
 
     def get_contract(self, guid, contract_hash):
         def get_result(result):
-            if digest(result) == contract_hash:
-                return json.loads(result, object_pairs_hook=OrderedDict)
+            if digest(result[1][0]) == contract_hash:
+                return json.loads(result[1][0], object_pairs_hook=OrderedDict)
             else:
                 return None
         node_to_ask = self.kserver.get_node(guid)
         if node_to_ask is None:
             return None
-        d = self.protocol.call_get_contract(node_to_ask, contract_hash)
+        d = self.protocol.callGetContract(node_to_ask, contract_hash)
         return d.addCallback(get_result)

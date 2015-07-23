@@ -3,8 +3,6 @@ __author__ = 'chris'
 This protocol class handles all direct (non-kademlia) messages between nodes.
 All of the messages between a buyer and a vendor's store can be found here.
 """
-import json
-
 from zope.interface import implements
 
 from rpcudp import RPCProtocol
@@ -25,21 +23,22 @@ class MarketProtocol(RPCProtocol):
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
         self.handled_commands = [GET_CONTRACT]
+        self.multiplexer = None
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
 
     def rpc_get_contract(self, sender, contract_hash):
-        self.log.info("Looking up contract ID" % long(contract_hash.encode('hex'), 16))
+        self.log.info("Looking up contract ID %s" % contract_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open (DATA_FOLDER + "store/listings/contracts/" + hexlify(contract_hash) + ".json", "r") as file:
+            with open(DATA_FOLDER + "store/listings/contracts/" + hexlify(contract_hash) + ".json", "r") as file:
                 contract = file.read()
-            return contract
+            return hexlify(contract)
         except:
-            return None
+            return "None"
 
-    def call_get_contract(self, nodeToAsk, contract_hash):
+    def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)

@@ -26,6 +26,7 @@ from dht.utils import digest, deferredDict
 
 from protos import objects
 from wireprotocol import OpenBazaarProtocol
+from market import network
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("OpenBazaar_seed_server")
@@ -65,6 +66,12 @@ else:
 
 protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
+
+# start the market server
+mserver = network.Server(kserver)
+mserver.protocol.connect_multiplexer(protocol)
+protocol.register_processor(mserver.protocol)
+
 udpserver = internet.UDPServer(18467, protocol)
 udpserver.setServiceParent(application)
 

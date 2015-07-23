@@ -118,7 +118,10 @@ class RPCCalls(jsonrpc.JSONRPC):
         return n
 
     def jsonrpc_getcontract(self, contract_hash, guid):
-        print mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
+        def print_contract(contract):
+            print contract
+        d = mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
+        d.addCallback(print_contract)
         return "getting contract..."
 
 factory = jsonrpc.RPCFactory(RPCCalls)
