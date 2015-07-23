@@ -6,7 +6,7 @@ We will fit the actual implementation in where appropriate.
 import pickle
 import stun
 from twisted.internet import reactor
-from twisted.python import log
+from twisted.python import log, logfile
 from bitcoin import *
 from txjsonrpc.netstring import jsonrpc
 from guidutils.guid import GUID
@@ -18,6 +18,8 @@ from binascii import unhexlify
 from constants import DATA_FOLDER
 from market import network
 
+logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
+log.addObserver(log.FileLogObserver(logFile).emit)
 log.startLogging(sys.stdout)
 
 response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
