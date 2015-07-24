@@ -18,7 +18,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='objects.proto',
   package='',
-  serialized_pb=_b('\n\robjects.proto\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"1\n\x05Value\x12\x10\n\x08valueKey\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedData\x18\x02 \x02(\x0c\"\xbc\x04\n\x08UserInfo\x12\r\n\x05store\x18\x01 \x02(\x08\x12\x0c\n\x04name\x18\x02 \x02(\t\x12\x0e\n\x06handle\x18\x03 \x01(\t\x12\r\n\x05\x61\x62out\x18\x04 \x02(\t\x12\x0f\n\x07website\x18\x05 \x01(\t\x12\r\n\x05\x65mail\x18\x06 \x01(\t\x12\'\n\x06social\x18\x07 \x03(\x0b\x32\x17.UserInfo.SocialAccount\x12\x15\n\rprimary_color\x18\x08 \x02(\r\x12\x17\n\x0fsecondary_color\x18\t \x02(\r\x12\x18\n\x10\x62\x61\x63kground_color\x18\n \x02(\r\x12\x12\n\ntext_color\x18\x0b \x02(\r\x12\x16\n\x0e\x66ollower_count\x18\x0c \x02(\r\x12\x17\n\x0f\x66ollowing_count\x18\r \x02(\r\x12!\n\x07pgp_key\x18\x0e \x01(\x0b\x32\x10.UserInfo.PGPKey\x12\x13\n\x0b\x61vatar_hash\x18\x0f \x01(\x0c\x12\x13\n\x0bheader_hash\x18\x10 \x01(\x0c\x1a\x9e\x01\n\rSocialAccount\x12\x30\n\x04type\x18\x01 \x02(\x0e\x32\".UserInfo.SocialAccount.SocialType\x12\x10\n\x08username\x18\x02 \x02(\t\x12\x11\n\tproof_url\x18\x03 \x02(\t\"6\n\nSocialType\x12\x0c\n\x08\x46\x41\x43\x45\x42OOK\x10\x01\x12\x0b\n\x07TWITTER\x10\x02\x12\r\n\tINSTAGRAM\x10\x03\x1a.\n\x06PGPKey\x12\x11\n\tpublicKey\x18\x01 \x02(\x0c\x12\x11\n\tsignature\x18\x02 \x02(\x0c')
+  serialized_pb=_b('\n\robjects.proto\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"1\n\x05Value\x12\x10\n\x08valueKey\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedData\x18\x02 \x02(\x0c\"\xef\x04\n\x08UserInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x15\n\x06vendor\x18\x02 \x01(\x08:\x05\x66\x61lse\x12\x0e\n\x06handle\x18\x03 \x01(\t\x12\r\n\x05\x61\x62out\x18\x04 \x01(\t\x12\x0f\n\x07website\x18\x05 \x01(\t\x12\r\n\x05\x65mail\x18\x06 \x01(\t\x12\'\n\x06social\x18\x07 \x03(\x0b\x32\x17.UserInfo.SocialAccount\x12\x1e\n\rprimary_color\x18\x08 \x01(\r:\x07\x34\x38\x36\x38\x31\x36\x38\x12 \n\x0fsecondary_color\x18\t \x01(\r:\x07\x35\x37\x32\x33\x37\x33\x34\x12!\n\x10\x62\x61\x63kground_color\x18\n \x01(\r:\x07\x32\x37\x36\x33\x33\x30\x36\x12\x1c\n\ntext_color\x18\x0b \x01(\r:\x08\x31\x36\x37\x37\x37\x32\x31\x35\x12\x19\n\x0e\x66ollower_count\x18\x0c \x01(\r:\x01\x30\x12\x1a\n\x0f\x66ollowing_count\x18\r \x01(\r:\x01\x30\x12!\n\x07pgp_key\x18\x0e \x01(\x0b\x32\x10.UserInfo.PGPKey\x12\x13\n\x0b\x61vatar_hash\x18\x0f \x01(\x0c\x12\x13\n\x0bheader_hash\x18\x10 \x01(\x0c\x1a\x9e\x01\n\rSocialAccount\x12\x30\n\x04type\x18\x01 \x02(\x0e\x32\".UserInfo.SocialAccount.SocialType\x12\x10\n\x08username\x18\x02 \x02(\t\x12\x11\n\tproof_url\x18\x03 \x02(\t\"6\n\nSocialType\x12\x0c\n\x08\x46\x41\x43\x45\x42OOK\x10\x01\x12\x0b\n\x07TWITTER\x10\x02\x12\r\n\tINSTAGRAM\x10\x03\x1a.\n\x06PGPKey\x12\x11\n\tpublicKey\x18\x01 \x02(\x0c\x12\x11\n\tsignature\x18\x02 \x02(\x0c')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -45,8 +45,8 @@ _USERINFO_SOCIALACCOUNT_SOCIALTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=635,
-  serialized_end=689,
+  serialized_start=686,
+  serialized_end=740,
 )
 _sym_db.RegisterEnumDescriptor(_USERINFO_SOCIALACCOUNT_SOCIALTYPE)
 
@@ -186,8 +186,8 @@ _USERINFO_SOCIALACCOUNT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=531,
-  serialized_end=689,
+  serialized_start=582,
+  serialized_end=740,
 )
 
 _USERINFO_PGPKEY = _descriptor.Descriptor(
@@ -222,8 +222,8 @@ _USERINFO_PGPKEY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=691,
-  serialized_end=737,
+  serialized_start=742,
+  serialized_end=788,
 )
 
 _USERINFO = _descriptor.Descriptor(
@@ -234,16 +234,16 @@ _USERINFO = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='store', full_name='UserInfo.store', index=0,
-      number=1, type=8, cpp_type=7, label=2,
-      has_default_value=False, default_value=False,
+      name='name', full_name='UserInfo.name', index=0,
+      number=1, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='name', full_name='UserInfo.name', index=1,
-      number=2, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      name='vendor', full_name='UserInfo.vendor', index=1,
+      number=2, type=8, cpp_type=7, label=1,
+      has_default_value=True, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -256,7 +256,7 @@ _USERINFO = _descriptor.Descriptor(
       options=None),
     _descriptor.FieldDescriptor(
       name='about', full_name='UserInfo.about', index=3,
-      number=4, type=9, cpp_type=9, label=2,
+      number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -284,43 +284,43 @@ _USERINFO = _descriptor.Descriptor(
       options=None),
     _descriptor.FieldDescriptor(
       name='primary_color', full_name='UserInfo.primary_color', index=7,
-      number=8, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=8, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=4868168,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
       name='secondary_color', full_name='UserInfo.secondary_color', index=8,
-      number=9, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=9, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=5723734,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
       name='background_color', full_name='UserInfo.background_color', index=9,
-      number=10, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=10, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=2763306,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
       name='text_color', full_name='UserInfo.text_color', index=10,
-      number=11, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=11, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=16777215,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
       name='follower_count', full_name='UserInfo.follower_count', index=11,
-      number=12, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=12, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
       name='following_count', full_name='UserInfo.following_count', index=12,
-      number=13, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
+      number=13, type=13, cpp_type=3, label=1,
+      has_default_value=True, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -357,7 +357,7 @@ _USERINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=165,
-  serialized_end=737,
+  serialized_end=788,
 )
 
 _USERINFO_SOCIALACCOUNT.fields_by_name['type'].enum_type = _USERINFO_SOCIALACCOUNT_SOCIALTYPE

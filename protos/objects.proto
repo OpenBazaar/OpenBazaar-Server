@@ -26,19 +26,19 @@ message Value {
 
 //The object returned by the GET_INFO rpc call
 message UserInfo {
-        required bool store               = 1;
-        required string name              = 2;
+        required string name              = 1;
+        optional bool vendor              = 2 [default = false];
         optional string handle            = 3;
-        required string about             = 4;
+        optional string about             = 4;
         optional string website           = 5;
         optional string email             = 6;
         repeated SocialAccount social     = 7;
-        required uint32 primary_color     = 8;
-        required uint32 secondary_color   = 9;
-        required uint32 background_color  = 10;
-        required uint32 text_color        = 11;
-        required uint32 follower_count    = 12;
-        required uint32 following_count   = 13;
+        optional uint32 primary_color     = 8 [default = 4868168];
+        optional uint32 secondary_color   = 9 [default = 5723734];
+        optional uint32 background_color  = 10 [default = 2763306];
+        optional uint32 text_color        = 11 [default = 16777215];
+        optional uint32 follower_count    = 12 [default = 0];
+        optional uint32 following_count   = 13 [default = 0];
         optional PGPKey pgp_key           = 14;
         optional bytes avatar_hash        = 15;
         optional bytes header_hash        = 16;

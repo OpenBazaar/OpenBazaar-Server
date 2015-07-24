@@ -28,9 +28,45 @@ class HashMap(object):
     def get_file(self, hash):
         cursor = self.db.cursor()
         cursor.execute('''SELECT filepath FROM hashmap WHERE hash=?''', (hash,))
-        return cursor.fetchone()[0]
+        ret = cursor.fetchone()
+        if ret is None:
+            return None
+        return ret[0]
 
     def delete(self, hash):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash,))
         self.db.commit()
+
+class UserInfoStore(object):
+    """
+    Stores the user's profile data in the db. The profile is stored as a serialized
+    UserInfo protobuf object. It's done this way because because protobuf is more
+    flexible and allows for storing custom repeated fields (like the SocialAccount
+    object). Also we will just serve this over the wire so we don't have to manually
+    rebuild it every startup. To interact with the profile you should use the
+    `market.profile` module and not this class directly.
+    """
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE profile(id INTEGER primary key, serializedUserInfo BLOB)''')
+            self.db.commit()
+        except:
+            pass
+
+    def set_proto(self, proto):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO profile(id, serializedUserInfo)
+                      VALUES (?,?)''', (1, proto))
+        self.db.commit()
+
+    def get_proto(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT serializedUserInfo FROM profile WHERE id = 1''')
+        ret = cursor.fetchone()
+        if ret is None:
+            return None
+        return ret[0]
