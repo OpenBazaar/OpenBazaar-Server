@@ -3,11 +3,13 @@ __author__ = 'chris'
 Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
+import os
+import sys
 import pickle
+
 import stun
 from twisted.internet import reactor
 from twisted.python import log, logfile
-from bitcoin import *
 from guidutils.guid import GUID
 from dht.network import Server
 from dht.node import Node
