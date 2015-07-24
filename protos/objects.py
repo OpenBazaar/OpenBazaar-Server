@@ -18,11 +18,37 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='objects.proto',
   package='',
-  serialized_pb=_b('\n\robjects.proto\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"1\n\x05Value\x12\x10\n\x08valueKey\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedData\x18\x02 \x02(\x0c')
+  serialized_pb=_b('\n\robjects.proto\"^\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x02(\x0c\x12\x17\n\x0fsignedPublicKey\x18\x02 \x02(\x0c\x12\n\n\x02ip\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\r\x12\x15\n\x06vendor\x18\x05 \x01(\x08:\x05\x66\x61lse\"1\n\x05Value\x12\x10\n\x08valueKey\x18\x01 \x02(\x0c\x12\x16\n\x0eserializedData\x18\x02 \x02(\x0c\"\xbc\x04\n\x08UserInfo\x12\r\n\x05store\x18\x01 \x02(\x08\x12\x0c\n\x04name\x18\x02 \x02(\t\x12\x0e\n\x06handle\x18\x03 \x01(\t\x12\r\n\x05\x61\x62out\x18\x04 \x02(\t\x12\x0f\n\x07website\x18\x05 \x01(\t\x12\r\n\x05\x65mail\x18\x06 \x01(\t\x12\'\n\x06social\x18\x07 \x03(\x0b\x32\x17.UserInfo.SocialAccount\x12\x15\n\rprimary_color\x18\x08 \x02(\r\x12\x17\n\x0fsecondary_color\x18\t \x02(\r\x12\x18\n\x10\x62\x61\x63kground_color\x18\n \x02(\r\x12\x12\n\ntext_color\x18\x0b \x02(\r\x12\x16\n\x0e\x66ollower_count\x18\x0c \x02(\r\x12\x17\n\x0f\x66ollowing_count\x18\r \x02(\r\x12!\n\x07pgp_key\x18\x0e \x01(\x0b\x32\x10.UserInfo.PGPKey\x12\x13\n\x0b\x61vatar_hash\x18\x0f \x01(\x0c\x12\x13\n\x0bheader_hash\x18\x10 \x01(\x0c\x1a\x9e\x01\n\rSocialAccount\x12\x30\n\x04type\x18\x01 \x02(\x0e\x32\".UserInfo.SocialAccount.SocialType\x12\x10\n\x08username\x18\x02 \x02(\t\x12\x11\n\tproof_url\x18\x03 \x02(\t\"6\n\nSocialType\x12\x0c\n\x08\x46\x41\x43\x45\x42OOK\x10\x01\x12\x0b\n\x07TWITTER\x10\x02\x12\r\n\tINSTAGRAM\x10\x03\x1a.\n\x06PGPKey\x12\x11\n\tpublicKey\x18\x01 \x02(\x0c\x12\x11\n\tsignature\x18\x02 \x02(\x0c')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
+
+_USERINFO_SOCIALACCOUNT_SOCIALTYPE = _descriptor.EnumDescriptor(
+  name='SocialType',
+  full_name='UserInfo.SocialAccount.SocialType',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='FACEBOOK', index=0, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TWITTER', index=1, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='INSTAGRAM', index=2, number=3,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=635,
+  serialized_end=689,
+)
+_sym_db.RegisterEnumDescriptor(_USERINFO_SOCIALACCOUNT_SOCIALTYPE)
 
 
 _NODE = _descriptor.Descriptor(
@@ -119,8 +145,230 @@ _VALUE = _descriptor.Descriptor(
   serialized_end=162,
 )
 
+
+_USERINFO_SOCIALACCOUNT = _descriptor.Descriptor(
+  name='SocialAccount',
+  full_name='UserInfo.SocialAccount',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='type', full_name='UserInfo.SocialAccount.type', index=0,
+      number=1, type=14, cpp_type=8, label=2,
+      has_default_value=False, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='username', full_name='UserInfo.SocialAccount.username', index=1,
+      number=2, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='proof_url', full_name='UserInfo.SocialAccount.proof_url', index=2,
+      number=3, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+    _USERINFO_SOCIALACCOUNT_SOCIALTYPE,
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=531,
+  serialized_end=689,
+)
+
+_USERINFO_PGPKEY = _descriptor.Descriptor(
+  name='PGPKey',
+  full_name='UserInfo.PGPKey',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='publicKey', full_name='UserInfo.PGPKey.publicKey', index=0,
+      number=1, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='signature', full_name='UserInfo.PGPKey.signature', index=1,
+      number=2, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=691,
+  serialized_end=737,
+)
+
+_USERINFO = _descriptor.Descriptor(
+  name='UserInfo',
+  full_name='UserInfo',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='store', full_name='UserInfo.store', index=0,
+      number=1, type=8, cpp_type=7, label=2,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='name', full_name='UserInfo.name', index=1,
+      number=2, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='handle', full_name='UserInfo.handle', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='about', full_name='UserInfo.about', index=3,
+      number=4, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='website', full_name='UserInfo.website', index=4,
+      number=5, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='email', full_name='UserInfo.email', index=5,
+      number=6, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='social', full_name='UserInfo.social', index=6,
+      number=7, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='primary_color', full_name='UserInfo.primary_color', index=7,
+      number=8, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='secondary_color', full_name='UserInfo.secondary_color', index=8,
+      number=9, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='background_color', full_name='UserInfo.background_color', index=9,
+      number=10, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='text_color', full_name='UserInfo.text_color', index=10,
+      number=11, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='follower_count', full_name='UserInfo.follower_count', index=11,
+      number=12, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='following_count', full_name='UserInfo.following_count', index=12,
+      number=13, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='pgp_key', full_name='UserInfo.pgp_key', index=13,
+      number=14, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='avatar_hash', full_name='UserInfo.avatar_hash', index=14,
+      number=15, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='header_hash', full_name='UserInfo.header_hash', index=15,
+      number=16, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[_USERINFO_SOCIALACCOUNT, _USERINFO_PGPKEY, ],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=165,
+  serialized_end=737,
+)
+
+_USERINFO_SOCIALACCOUNT.fields_by_name['type'].enum_type = _USERINFO_SOCIALACCOUNT_SOCIALTYPE
+_USERINFO_SOCIALACCOUNT.containing_type = _USERINFO
+_USERINFO_SOCIALACCOUNT_SOCIALTYPE.containing_type = _USERINFO_SOCIALACCOUNT
+_USERINFO_PGPKEY.containing_type = _USERINFO
+_USERINFO.fields_by_name['social'].message_type = _USERINFO_SOCIALACCOUNT
+_USERINFO.fields_by_name['pgp_key'].message_type = _USERINFO_PGPKEY
 DESCRIPTOR.message_types_by_name['Node'] = _NODE
 DESCRIPTOR.message_types_by_name['Value'] = _VALUE
+DESCRIPTOR.message_types_by_name['UserInfo'] = _USERINFO
 
 Node = _reflection.GeneratedProtocolMessageType('Node', (_message.Message,), dict(
   DESCRIPTOR = _NODE,
@@ -135,6 +383,29 @@ Value = _reflection.GeneratedProtocolMessageType('Value', (_message.Message,), d
   # @@protoc_insertion_point(class_scope:Value)
   ))
 _sym_db.RegisterMessage(Value)
+
+UserInfo = _reflection.GeneratedProtocolMessageType('UserInfo', (_message.Message,), dict(
+
+  SocialAccount = _reflection.GeneratedProtocolMessageType('SocialAccount', (_message.Message,), dict(
+    DESCRIPTOR = _USERINFO_SOCIALACCOUNT,
+    __module__ = 'objects_pb2'
+    # @@protoc_insertion_point(class_scope:UserInfo.SocialAccount)
+    ))
+  ,
+
+  PGPKey = _reflection.GeneratedProtocolMessageType('PGPKey', (_message.Message,), dict(
+    DESCRIPTOR = _USERINFO_PGPKEY,
+    __module__ = 'objects_pb2'
+    # @@protoc_insertion_point(class_scope:UserInfo.PGPKey)
+    ))
+  ,
+  DESCRIPTOR = _USERINFO,
+  __module__ = 'objects_pb2'
+  # @@protoc_insertion_point(class_scope:UserInfo)
+  ))
+_sym_db.RegisterMessage(UserInfo)
+_sym_db.RegisterMessage(UserInfo.SocialAccount)
+_sym_db.RegisterMessage(UserInfo.PGPKey)
 
 
 # @@protoc_insertion_point(module_scope)

@@ -15,6 +15,8 @@ from constants import DATA_FOLDER
 
 from binascii import hexlify
 
+from db.datastore import HashMap
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
@@ -24,6 +26,7 @@ class MarketProtocol(RPCProtocol):
         self.log = Logger(system=self)
         self.handled_commands = [GET_CONTRACT, GET_IMAGE]
         self.multiplexer = None
+        self.hashmap = HashMap()
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -32,7 +35,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up contract ID %s" % contract_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(DATA_FOLDER + "store/listings/contracts/" + hexlify(contract_hash) + ".json", "r") as file:
+            with open(self.hashmap.get_file(contract_hash), "r") as file:
                 contract = file.read()
             return [contract]
         except:
@@ -42,7 +45,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up image with hash %s" % image_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(DATA_FOLDER + "store/media/" + hexlify(image_hash), "r") as file:
+            with open(self.hashmap.get_file(image_hash), "r") as file:
                 image = file.read()
             return [image]
         except:

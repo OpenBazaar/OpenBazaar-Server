@@ -148,13 +148,8 @@ class PersistentStorage(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''
-          CREATE TABLE data(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)
-        ''')
-            cursor.execute('''
-          CREATE INDEX idx1 ON data(keyword);
-          CREATE INDEX idx2 ON data(expires);
-        ''')
+            cursor.execute('''CREATE TABLE data(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)''')
+            cursor.execute('''CREATE INDEX idx1 ON data(keyword);CREATE INDEX idx2 ON data(birthday);''')
             self.db.commit()
         except:
             self.cull()

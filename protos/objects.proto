@@ -17,7 +17,7 @@ message Node {
 	optional bool vendor           = 5 [default = false];
 }
 
-//The value returned by a find_value rpc call
+//The value returned by a FIND_VALUE rpc call
 //Typically a list of these will be returned for any given keyword.
 message Value {
 	required bytes valueKey       = 1;
@@ -25,7 +25,7 @@ message Value {
 }
 
 //The object returned by the GET_INFO rpc call
-message Info {
+message UserInfo {
         required bool store               = 1;
         required string name              = 2;
         optional string handle            = 3;
@@ -38,26 +38,27 @@ message Info {
         required uint32 background_color  = 10;
         required uint32 text_color        = 11;
         required uint32 follower_count    = 12;
-        required unit32 following_count   = 13;
+        required uint32 following_count   = 13;
         optional PGPKey pgp_key           = 14;
         optional bytes avatar_hash        = 15;
         optional bytes header_hash        = 16;
-    }
 
 	// Social media account for the profile
     message SocialAccount {
     	required SocialType type  = 1;
     	required string username  = 2;
     	required string proof_url = 3;
-    }
 
-    enum SocialType {
-		FACEBOOK  = 1;
-		TWITTER   = 2;
-		INSTAGRAM = 3;
+    	enum SocialType {
+			FACEBOOK  = 1;
+			TWITTER   = 2;
+			INSTAGRAM = 3;
+    	}
     }
 
     message PGPKey {
     	required bytes publicKey = 1;
     	required bytes signature = 2; // signature must cover GUID
     }
+
+}
