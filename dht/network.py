@@ -331,7 +331,7 @@ class Server(object):
             pickle.dump(data, f)
 
     @classmethod
-    def loadState(self, fname, ip_address, port, multiplexer, storage=None):
+    def loadState(cls, fname, ip_address, port, multiplexer, storage=None):
         """
         Load the state of this node (the alpha/ksize/id/immediate neighbors)
         from a cache file with the given fname.
