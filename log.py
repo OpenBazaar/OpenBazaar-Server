@@ -24,7 +24,7 @@ class FileLogObserver(log.FileLogObserver):
             log.FileLogObserver.emit(self, eventDict)
 
 
-class Logger:
+class Logger(object):
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 

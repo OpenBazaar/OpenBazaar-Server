@@ -9,7 +9,7 @@ from protos import objects
 
 
 
-class Node:
+class Node(object):
     def __init__(self, id, ip=None, port=None, signed_pubkey=None,
                  vendor=False):
         self.id = id
