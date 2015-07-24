@@ -25,9 +25,9 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
     class ConnHandler(Handler):
 
-        def __init__(self, procssors):
+        def __init__(self, processors):
             self.log = Logger(system=self)
-            self.processors = procssors
+            self.processors = processors
             self.connection = None
 
         def receive_message(self, datagram):
