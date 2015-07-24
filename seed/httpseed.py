@@ -96,7 +96,7 @@ class WebResource(resource.Resource):
                     node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
                     if node.id not in self.nodes:
                         self.nodes[node.id] = node
-                except:
+                except Exception:
                     pass
 
         def start_crawl(results):

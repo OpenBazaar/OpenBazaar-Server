@@ -38,7 +38,7 @@ class MarketProtocol(RPCProtocol):
             with open(self.hashmap.get_file(contract_hash), "r") as file:
                 contract = file.read()
             return [contract]
-        except:
+        except Exception:
             return ["None"]
 
     def rpc_get_image(self, sender, image_hash):
@@ -48,7 +48,7 @@ class MarketProtocol(RPCProtocol):
             with open(self.hashmap.get_file(image_hash), "r") as file:
                 image = file.read()
             return [image]
-        except:
+        except Exception:
             return ["None"]
 
     def callGetContract(self, nodeToAsk, contract_hash):

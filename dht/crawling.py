@@ -129,7 +129,7 @@ class ValueSpiderCrawl(SpiderCrawl):
                     val = objects.Value()
                     val.ParseFromString(v)
                     ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey, val.serializedData))
-                except:
+                except Exception:
                     pass
             return defer.gatherResults(ds).addCallback(lambda _: value)
         return value
@@ -201,6 +201,6 @@ class RPCFindResponse(object):
                 print
                 newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey, vendor=n.vendor)
                 nodes.append(newNode)
-            except:
+            except Exception:
                 pass
         return nodes

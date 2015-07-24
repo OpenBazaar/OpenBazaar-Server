@@ -109,7 +109,7 @@ class Server(object):
                 nodes.append(tup)
             verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
             verify_key.verify(seed.signature + "".join(seeds.peer_data))
-        except:
+        except Exception:
             self.log.error("Error parsing seed response.")
         return nodes
 
@@ -154,7 +154,7 @@ class Server(object):
                         if int(pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
                         nodes.append(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
-                    except:
+                    except Exception:
                         self.log.msg("Bootstrap node returned invalid GUID")
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()

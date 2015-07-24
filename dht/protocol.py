@@ -75,9 +75,9 @@ class KademliaProtocol(RPCProtocol):
                     verify_key.verify(signature + key)
                     self.storage.delete(keyword, key)
                     return ["True"]
-                except:
+                except Exception:
                     return ["False"]
-            except:
+            except Exception:
                 pass
         return ["False"]
 
