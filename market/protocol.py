@@ -17,6 +17,7 @@ from binascii import hexlify
 
 from db.datastore import HashMap
 
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 

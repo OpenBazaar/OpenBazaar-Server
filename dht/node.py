@@ -8,7 +8,6 @@ from operator import itemgetter
 from protos import objects
 
 
-
 class Node(object):
     def __init__(self, id, ip=None, port=None, signed_pubkey=None,
                  vendor=False):

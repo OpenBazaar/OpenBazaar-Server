@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 from constants import DATA_FOLDER
 
+
 class Server(object):
 
     def __init__(self, kserver):

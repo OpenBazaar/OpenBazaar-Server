@@ -14,6 +14,7 @@ from protos.objects import Value
 
 from threading import RLock
 
+
 class IStorage(Interface):
     """
     Local storage for this node.
@@ -232,6 +233,7 @@ class PersistentStorage(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT birthday FROM data WHERE keyword=? AND id=?''', (keyword, key,))
         return self.ttl - (time.time() - cursor.fetchall()[0][0])
+
 
 class TTLDict(MutableMapping):
     """

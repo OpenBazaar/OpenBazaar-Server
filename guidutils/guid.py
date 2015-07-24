@@ -5,6 +5,7 @@ import guidc
 
 from binascii import hexlify, unhexlify
 
+
 class GUID(object):
     def __init__(self, use_C_lib=False):
         if use_C_lib:
