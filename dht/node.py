@@ -16,7 +16,7 @@ class Node(object):
         self.port = port
         self.signed_pubkey = signed_pubkey
         self.vendor = vendor
-        self.long_id = long(id.encode('hex'), 16)
+        self.long_id = int(id.encode('hex'), 16)
 
     def getProto(self):
         n = objects.Node()
