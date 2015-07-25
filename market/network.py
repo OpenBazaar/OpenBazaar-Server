@@ -70,7 +70,7 @@ class Server(object):
     def get_profile(self, node_to_ask):
         """
         Downloads the profile from the given node. If the images do not already
-        exit in cache, it will download and cache them before returning the profile.
+        exist in cache, it will download and cache them before returning the profile.
         """
         dl = []
 

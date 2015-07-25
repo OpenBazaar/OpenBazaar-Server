@@ -27,6 +27,8 @@ enum Command {
 	FIND_VALUE     = 6;
 	GET_CONTRACT   = 7;
 	GET_IMAGE      = 8;
+	GET_PROFILE    = 9;
+	GET_LISTINGS   = 10;
 
 	// Error responses
 	BAD_REQUEST   = 400;
