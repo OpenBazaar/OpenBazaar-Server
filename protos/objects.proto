@@ -24,8 +24,8 @@ message Value {
 	required bytes serializedData = 2;
 }
 
-//The object returned by the GET_INFO rpc call
-message UserInfo {
+//The object returned by the GET_PROFILE rpc call
+message Profile {
         required string name              = 1;
         optional bool vendor              = 2 [default = false];
         optional string handle            = 3;

@@ -7,11 +7,13 @@ from twisted.internet import defer
 
 from market.protocol import MarketProtocol
 
-from dht.utils import digest
+from dht.utils import digest, deferredDict
 
 from collections import OrderedDict
 
 from constants import DATA_FOLDER
+
+from protos import objects
 
 class Server(object):
 
@@ -25,13 +27,14 @@ class Server(object):
         self.router = kserver.protocol.router
         self.protocol = MarketProtocol(kserver.node.getProto(), self.router)
 
-    def get_contract(self, guid, contract_hash):
+    def get_contract(self, node_to_ask, contract_hash):
         """
         Will query the given node to fetch a contract given its hash.
-        If it doesn't know the ip for the guid, it will issue find_node rpcs
-        on the network to find it. If the returned contract doesn't have the
-        same hash, it will return None. Both the guid and contract_hash should
-        be in raw byte format.
+        If the returned contract doesn't have the same hash, it will return None.
+
+        Args:
+            node_to_ask: a `dht.node.Node` object containing an ip and port
+            contract_hash: a 20 byte hash in raw byte format
         """
         def get_result(result):
             if digest(result[1][0]) == contract_hash:
@@ -39,23 +42,19 @@ class Server(object):
                 return json.loads(result[1][0], object_pairs_hook=OrderedDict)
             else:
                 return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetContract(node_to_ask, contract_hash)
+        return d.addCallback(get_result)
 
-        def get_node(node_to_ask):
-            if node_to_ask is None:
-                return defer.succeed(None)
-            d = self.protocol.callGetContract(node_to_ask, contract_hash)
-            return d.addCallback(get_result)
-
-        d = self.kserver.get_node(guid)
-        return d.addCallback(get_node)
-
-    def get_image(self, guid, image_hash):
+    def get_image(self, node_to_ask, image_hash):
         """
         Will query the given node to fetch an image given its hash.
-        If it doesn't know the ip for the guid, it will issue find_node rpcs
-        on the network to find it. If the returned image doesn't have the
-        same hash, it will return None. Both the guid and image_hash should
-        be in raw byte format.
+        If the returned image doesn't have the same hash, it will return None.
+
+        Args:
+            node_to_ask: a `dht.node.Node` object containing an ip and port
+            image_hash: a 20 byte hash in raw byte format
         """
         def get_result(result):
             if digest(result[1][0]) == image_hash:
@@ -63,15 +62,35 @@ class Server(object):
                 return result[1][0]
             else:
                 return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetImage(node_to_ask, image_hash)
+        return d.addCallback(get_result)
 
-        def get_node(node_to_ask):
-            if node_to_ask is None:
-                return defer.succeed(None)
-            d = self.protocol.callGetImage(node_to_ask, image_hash)
-            return d.addCallback(get_result)
+    def get_profile(self, node_to_ask):
+        """
+        Downloads the profile from the given node. If the images do not already
+        exit in cache, it will download and cache them before returning the profile.
+        """
+        dl = []
 
-        d = self.kserver.get_node(guid)
-        return d.addCallback(get_node)
+        def get_result(result):
+            def ret(result, profile):
+                return profile
+            try:
+                p = objects.Profile()
+                p.ParseFromString(result[1][0])
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.avatar_hash):
+                    dl.append(self.get_image(node_to_ask, p.avatar_hash))
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash):
+                    dl.append(self.get_image(node_to_ask, p.header_hash))
+                return defer.gatherResults(dl).addCallback(ret, p)
+            except:
+                return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetProfile(node_to_ask)
+        return d.addCallback(get_result)
 
     def cache(self, file):
         """

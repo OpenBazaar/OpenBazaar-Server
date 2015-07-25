@@ -12,6 +12,12 @@ from dht.utils import digest
 
 from txjsonrpc.netstring import jsonrpc
 
+from market.profile import Profile
+
+from protos import objects
+
+from db.datastore import HashMap
+
 def do_continue(value):
     pass
 
@@ -42,6 +48,8 @@ commands:
     getnode          returns a node's ip address given its guid.
     getcontract      fetchs a contract from a node given its hash and guid
     getimage         fetches an image from a node given its hash and guid
+    getprofile       fetches the profile from the given node.
+    setprofile       sets the given profile data in the database
     shutdown         closes all outstanding connections.
 ''')
         parser.add_argument('command', help='Execute the given command')
@@ -172,6 +180,50 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def setprofile(self):
+        parser = argparse.ArgumentParser(
+            description="Sets a profile in the database.",
+            usage='''usage:
+    network-cli.py setprofile [options]''')
+        parser.add_argument('-n', '--name', help="the name of the user/store")
+        parser.add_argument('-o', '--onename', help="the onename id")
+        parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
+        parser.add_argument('-hd', '--header', help="the file path to the header image")
+        # we could add all the fields here but this is good enough to test.
+        args = parser.parse_args(sys.argv[2:])
+        p = Profile()
+        u = objects.Profile()
+        h = HashMap()
+        if args.name is not None:
+            u.name = args.name
+        if args.onename is not None:
+            u.name = args.onename
+        if args.avatar is not None:
+            with open(args.avatar, "r") as file:
+                image = file.read()
+            hash = digest(image)
+            u.avatar_hash = hash
+            h.insert(hash, args.avatar)
+        if args.header is not None:
+            with open(args.header, "r") as file:
+                image = file.read()
+            hash = digest(image)
+            u.header_hash = hash
+            h.insert(hash, args.header)
+        p.update(u)
+
+    def getprofile(self):
+        parser = argparse.ArgumentParser(
+            description="Fetch the profile from the given node. Images will be saved in cache.",
+            usage='''usage:
+    network-cli.py getprofile [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getprofile', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver):
@@ -241,18 +293,37 @@ class RPCCalls(jsonrpc.JSONRPC):
         return "finding node..."
 
     def jsonrpc_getcontract(self, contract_hash, guid):
-        def print_resp(resp):
-            print resp
-        d = self.mserver.get_contract(unhexlify(guid), unhexlify(contract_hash))
-        d.addCallback(print_resp)
+        def get_node(node):
+            def print_resp(resp):
+                print resp
+            if node is not None:
+                d = self.mserver.get_contract(node, unhexlify(contract_hash))
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
         return "getting contract..."
 
     def jsonrpc_getimage(self, image_hash, guid):
-        def print_resp(resp):
-            print resp
-        d = self.mserver.get_image(unhexlify(guid), unhexlify(image_hash))
-        d.addCallback(print_resp)
+        def get_node(node):
+            def print_resp(resp):
+                print resp
+            if node is not None:
+                d = self.mserver.get_image(node, unhexlify(image_hash))
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
         return "getting image..."
+
+    def jsonrpc_getprofile(self, guid):
+        def get_node(node):
+            def print_resp(resp):
+                print resp
+            if node is not None:
+                d = self.mserver.get_profile(node)
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting profile..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)

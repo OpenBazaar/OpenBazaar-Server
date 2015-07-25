@@ -11,11 +11,9 @@ from log import Logger
 
 from protos.message import GET_CONTRACT, GET_IMAGE
 
-from constants import DATA_FOLDER
-
-from binascii import hexlify
-
 from db.datastore import HashMap
+
+from market.profile import Profile
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -27,6 +25,7 @@ class MarketProtocol(RPCProtocol):
         self.handled_commands = [GET_CONTRACT, GET_IMAGE]
         self.multiplexer = None
         self.hashmap = HashMap()
+        self.profile = Profile()
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -51,6 +50,14 @@ class MarketProtocol(RPCProtocol):
         except:
             return ["None"]
 
+    def rpc_get_profile(self, sender):
+        self.log.info("Fetching profile")
+        self.router.addContact(sender)
+        try:
+            return [self.profile.get(True)]
+        except Exception:
+            return ["None"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -59,6 +66,11 @@ class MarketProtocol(RPCProtocol):
     def callGetImage(self, nodeToAsk, image_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_image(address, image_hash)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetProfile(self, nodeToAsk):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_profile(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

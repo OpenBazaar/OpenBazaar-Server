@@ -38,10 +38,10 @@ class HashMap(object):
         cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash,))
         self.db.commit()
 
-class UserInfoStore(object):
+class ProfileStore(object):
     """
     Stores the user's profile data in the db. The profile is stored as a serialized
-    UserInfo protobuf object. It's done this way because because protobuf is more
+    Profile protobuf object. It's done this way because because protobuf is more
     flexible and allows for storing custom repeated fields (like the SocialAccount
     object). Also we will just serve this over the wire so we don't have to manually
     rebuild it every startup. To interact with the profile you should use the

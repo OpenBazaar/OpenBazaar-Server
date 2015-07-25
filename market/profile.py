@@ -1,7 +1,7 @@
 __author__ = 'chris'
 import gnupg
-from db.datastore import UserInfoStore
-from protos.objects import UserInfo
+from db.datastore import ProfileStore
+from protos import objects
 
 class Profile(object):
     """
@@ -11,8 +11,8 @@ class Profile(object):
     need to send it to our peers, we can just call get().
     """
     def __init__(self):
-        self.profile = UserInfo()
-        self.db = UserInfoStore()
+        self.profile = objects.Profile()
+        self.db = ProfileStore()
         if self.db.get_proto() is not None:
             self.profile.ParseFromString(self.db.get_proto())
 
@@ -29,11 +29,11 @@ class Profile(object):
 
     def update(self, user_info):
         """
-        To update the profile, create a new protobuf UserInfo object and add the
+        To update the profile, create a new protobuf Profile object and add the
         field you want to update.
 
         Example:
-            u = UserInfo()
+            u = objects.Profile()
             u.about = "hello world"
             update(u)
         """
@@ -76,7 +76,8 @@ class Profile(object):
         else:
             return False
 
-    def remove_pgp_key(self):
-        self.profile.ClearField("pgp_key")
-        self.db.set_proto(self.profile.SerializeToString())
+    def remove_field(self, field):
+        if field is not "name":
+            self.profile.ClearField(field)
+            self.db.set_proto(self.profile.SerializeToString())
 
