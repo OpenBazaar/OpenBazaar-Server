@@ -15,6 +15,8 @@ from constants import DATA_FOLDER
 
 from protos import objects
 
+from binascii import hexlify
+
 class Server(object):
 
     def __init__(self, kserver):
@@ -80,9 +82,9 @@ class Server(object):
             try:
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.avatar_hash):
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.avatar_hash)):
                     dl.append(self.get_image(node_to_ask, p.avatar_hash))
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash):
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.header_hash)):
                     dl.append(self.get_image(node_to_ask, p.header_hash))
                 return defer.gatherResults(dl).addCallback(ret, p)
             except:

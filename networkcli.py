@@ -197,7 +197,7 @@ commands:
         if args.name is not None:
             u.name = args.name
         if args.onename is not None:
-            u.name = args.onename
+            u.handle = args.onename
         if args.avatar is not None:
             with open(args.avatar, "r") as file:
                 image = file.read()

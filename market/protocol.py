@@ -9,7 +9,7 @@ from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 
-from protos.message import GET_CONTRACT, GET_IMAGE
+from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS
 
 from db.datastore import HashMap
 
@@ -22,7 +22,7 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT, GET_IMAGE]
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS]
         self.multiplexer = None
         self.hashmap = HashMap()
         self.profile = Profile()
