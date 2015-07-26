@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import json
 import os.path
+import nacl.signing
 
 from twisted.internet import defer
 
@@ -19,7 +20,7 @@ from binascii import hexlify
 
 class Server(object):
 
-    def __init__(self, kserver):
+    def __init__(self, kserver, signing_key):
         """
         A high level class for sending direct, market messages to other nodes.
         A node will need one of these to participate in buying and selling.
@@ -27,7 +28,7 @@ class Server(object):
         """
         self.kserver = kserver
         self.router = kserver.protocol.router
-        self.protocol = MarketProtocol(kserver.node.getProto(), self.router)
+        self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key)
 
     def get_contract(self, node_to_ask, contract_hash):
         """
@@ -80,6 +81,9 @@ class Server(object):
             def ret(result, profile):
                 return profile
             try:
+                pubkey = node_to_ask.signedPublicKey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(result[1][1] + result[1][0])
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.avatar_hash)):

@@ -2,6 +2,7 @@ __author__ = 'chris'
 import sys
 import argparse
 import json
+import time
 
 from twisted.internet import reactor
 from txjsonrpc.netstring.jsonrpc import Proxy
@@ -315,8 +316,11 @@ class RPCCalls(jsonrpc.JSONRPC):
         return "getting image..."
 
     def jsonrpc_getprofile(self, guid):
+        start = time.time()
+
         def get_node(node):
             def print_resp(resp):
+                print time.time() - start
                 print resp
             if node is not None:
                 d = self.mserver.get_profile(node)

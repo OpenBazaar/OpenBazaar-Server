@@ -3,6 +3,8 @@ __author__ = 'chris'
 This protocol class handles all direct (non-kademlia) messages between nodes.
 All of the messages between a buyer and a vendor's store can be found here.
 """
+import nacl.signing
+
 from zope.interface import implements
 
 from rpcudp import RPCProtocol
@@ -18,14 +20,14 @@ from market.profile import Profile
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, node_proto, router):
+    def __init__(self, node_proto, router, signing_key):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS]
         self.multiplexer = None
         self.hashmap = HashMap()
-        self.profile = Profile()
+        self.signing_key = signing_key
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -54,7 +56,8 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching profile")
         self.router.addContact(sender)
         try:
-            return [self.profile.get(True)]
+            proto = Profile().get(True)
+            return [proto, self.signing_key.sign(proto)[:64]]
         except Exception:
             return ["None"]
 

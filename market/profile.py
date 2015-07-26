@@ -10,6 +10,7 @@ class Profile(object):
     will update automatically when changes are made to the profile. When we
     need to send it to our peers, we can just call get().
     """
+
     def __init__(self):
         self.profile = objects.Profile()
         self.db = ProfileStore()

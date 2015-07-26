@@ -53,7 +53,7 @@ kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
 
 # market
-mserver = network.Server(kserver)
+mserver = network.Server(kserver, g.signing_key)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 
