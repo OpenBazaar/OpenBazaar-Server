@@ -68,7 +68,7 @@ protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
 
 # start the market server
-mserver = network.Server(kserver)
+mserver = network.Server(kserver, g.signing_key)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 

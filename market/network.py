@@ -81,7 +81,7 @@ class Server(object):
             def ret(result, profile):
                 return profile
             try:
-                pubkey = node_to_ask.signedPublicKey[64:]
+                pubkey = node_to_ask.signed_pubkey[64:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
                 verify_key.verify(result[1][1] + result[1][0])
                 p = objects.Profile()
