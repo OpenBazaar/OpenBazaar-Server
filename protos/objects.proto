@@ -60,5 +60,10 @@ message Profile {
     	required bytes publicKey = 1;
     	required bytes signature = 2; // signature must cover GUID
     }
+}
 
+message Metadata {
+    required string name       = 1;
+    required string handle      = 2;
+    required bytes avatar_hash = 3;
 }

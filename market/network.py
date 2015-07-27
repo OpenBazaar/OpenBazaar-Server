@@ -98,6 +98,32 @@ class Server(object):
         d = self.protocol.callGetProfile(node_to_ask)
         return d.addCallback(get_result)
 
+    def get_metadata(self, node_to_ask):
+        """
+        Downloads just a small portion of the profile (containing the name, handle,
+        and avatar hash). We need this for some parts of the UI where we list stores.
+        Since we need fast loading we shouldn't download the full profile here.
+        It will download the avatar if it isn't already in cache.
+        """
+        def get_result(result):
+            def ret(result, metadata):
+                return metadata
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(result[1][1] + result[1][0])
+                m = objects.Metadata()
+                m.ParseFromString(result[1][0])
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(m.avatar_hash)):
+                    d = self.get_image(node_to_ask, m.avatar_hash)
+                return d.addCallback(ret, m)
+            except:
+                return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetMetadata(node_to_ask)
+        return d.addCallback(get_result)
+
     def cache(self, file):
         """
         Saves the file to a cache folder if it doesn't already exist.

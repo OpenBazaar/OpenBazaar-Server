@@ -11,11 +11,13 @@ from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 
-from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS
+from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_METADATA
 
 from db.datastore import HashMap
 
 from market.profile import Profile
+
+from protos.objects import Metadata
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -24,7 +26,7 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS]
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_METADATA]
         self.multiplexer = None
         self.hashmap = HashMap()
         self.signing_key = signing_key
@@ -61,6 +63,19 @@ class MarketProtocol(RPCProtocol):
         except Exception:
             return ["None"]
 
+    def rpc_get_metadata(self, sender):
+        self.log.info("Fetching metadata")
+        self.router.addContact(sender)
+        try:
+            proto = Profile().get(False)
+            m = Metadata()
+            m.name = proto.name
+            m.handle = proto.handle
+            m.avatar_hash = proto.avatar_hash
+            return [m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
+        except Exception:
+            return ["None"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -74,6 +89,11 @@ class MarketProtocol(RPCProtocol):
     def callGetProfile(self, nodeToAsk):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_profile(address)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetMetadata(self, nodeToAsk):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_metadata(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

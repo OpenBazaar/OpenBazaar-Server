@@ -29,6 +29,7 @@ enum Command {
 	GET_IMAGE      = 8;
 	GET_PROFILE    = 9;
 	GET_LISTINGS   = 10;
+	GET_METADATA   = 11;
 
 	// Error responses
 	BAD_REQUEST   = 400;

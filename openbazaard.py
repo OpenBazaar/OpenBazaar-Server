@@ -60,7 +60,7 @@ protocol.register_processor(mserver.protocol)
 reactor.listenUDP(18467, protocol)
 
 # json-rpc server
-factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver))
+factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver, g))
 reactor.listenTCP(18465, factory, interface="127.0.0.1")
 
 reactor.run()

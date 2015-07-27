@@ -225,14 +225,27 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def getmetadata(self):
+        parser = argparse.ArgumentParser(
+            description="Fetches the metadata (small profile) from a given node. The images will be saved in cache.",
+            usage='''usage:
+    network-cli.py getmetadata [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getmetadata', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
-    def __init__(self, kserver, mserver):
+    def __init__(self, kserver, mserver, guid):
         self.kserver = kserver
         self.mserver = mserver
+        self.guid = guid
 
     def jsonrpc_getpubkey(self):
-        return hexlify(g.signed_pubkey)
+        return hexlify(self.guid.signed_pubkey)
 
     def jsonrpc_getinfo(self):
         info = {"version": "0.1"}
@@ -267,7 +280,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        signature = g.signing_key.sign(digest(key))
+        signature = self.guid.signing_key.sign(digest(key))
         d = self.kserver.delete(str(keyword), digest(key), signature[:64])
         d.addCallback(handle_result)
         return "Sending delete request..."
@@ -324,6 +337,20 @@ class RPCCalls(jsonrpc.JSONRPC):
                 print resp
             if node is not None:
                 d = self.mserver.get_profile(node)
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting profile..."
+
+    def jsonrpc_getmetadata(self, guid):
+        start = time.time()
+
+        def get_node(node):
+            def print_resp(resp):
+                print time.time() - start
+                print resp
+            if node is not None:
+                d = self.mserver.get_metadata(node)
                 d.addCallback(print_resp)
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)
