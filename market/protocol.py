@@ -12,7 +12,7 @@ from log import Logger
 
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_METADATA
 
-from db.datastore import HashMap
+from db.datastore import HashMap, ListingsStore
 
 from market.profile import Profile
 
@@ -75,6 +75,15 @@ class MarketProtocol(RPCProtocol):
         except Exception:
             return ["None"]
 
+    def rpc_get_listings(self, sender):
+        self.log.info("Fetching listings")
+        self.router.addContact(sender)
+        try:
+            proto = ListingsStore().get_proto()
+            return [proto, self.signing_key.sign(proto)[:64]]
+        except Exception:
+            return ["None"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -93,6 +102,11 @@ class MarketProtocol(RPCProtocol):
     def callGetMetadata(self, nodeToAsk):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_metadata(address)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetListings(self, nodeToAsk):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_listings(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

@@ -125,6 +125,27 @@ class Server(object):
         d = self.protocol.callGetMetadata(node_to_ask)
         return d.addCallback(get_result)
 
+    def get_listings(self, node_to_ask):
+        """
+        Queries a store for it's list of contracts. A `objects.Listings` protobuf
+        is returned containing some metadata for each contract. The individual contracts
+        should be fetched with a get_contract call.
+        """
+        def get_result(result):
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(result[1][1] + result[1][0])
+                l = objects.Listings()
+                l.ParseFromString(result[1][0])
+                return l
+            except:
+                return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetListings(node_to_ask)
+        return d.addCallback(get_result)
+
     def cache(self, file):
         """
         Saves the file to a cache folder if it doesn't already exist.

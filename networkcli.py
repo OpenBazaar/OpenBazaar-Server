@@ -19,6 +19,10 @@ from protos import objects
 
 from db.datastore import HashMap
 
+from market.contracts import store_contract
+
+from collections import OrderedDict
+
 def do_continue(value):
     pass
 
@@ -38,7 +42,7 @@ class Parser(object):
         parser = argparse.ArgumentParser(
             description='OpenBazaar Network CLI',
             usage='''
-    python network-cli.py command [<arguments>]
+    python networkcli.py command [<arguments>]
 
 commands:
     getinfo          returns an object containing various state info
@@ -50,6 +54,9 @@ commands:
     getcontract      fetchs a contract from a node given its hash and guid
     getimage         fetches an image from a node given its hash and guid
     getprofile       fetches the profile from the given node.
+    getmetadata      fetches the metadata (shortened profile) for the node
+    setcontract      sets a contract in the filesystem and db
+    setimage         maps an image hash to a filepath in the db
     setprofile       sets the given profile data in the database
     shutdown         closes all outstanding connections.
 ''')
@@ -65,7 +72,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch the given keyword from the dht and return all the entries",
             usage='''usage:
-    network-cli.py get [-kw KEYWORD]''')
+    networkcli.py get [-kw KEYWORD]''')
         parser.add_argument('-kw', '--keyword', required=True, help="the keyword to fetch")
         args = parser.parse_args(sys.argv[2:])
         keyword = args.keyword
@@ -78,7 +85,7 @@ commands:
             description='Set the given keyword/key pair in the dht. The value will be your '
                         'serialized node information.',
             usage='''usage:
-    network-cli.py set [-kw KEYWORD] [-k KEY]''')
+    networkcli.py set [-kw KEYWORD] [-k KEY]''')
         parser.add_argument('-kw', '--keyword', required=True, help="the keyword to set in the dht")
         parser.add_argument('-k', '--key', required=True, help="the key to set at the keyword")
         args = parser.parse_args(sys.argv[2:])
@@ -92,7 +99,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Deletes the given keyword/key from the dht. Signature will be automatically generated.",
             usage='''usage:
-    network-cli.py delete [-kw KEYWORD] [-k KEY]''')
+    networkcli.py delete [-kw KEYWORD] [-k KEY]''')
         parser.add_argument('-kw', '--keyword', required=True, help="where to find the key")
         parser.add_argument('-k', '--key', required=True, help="the key to delete")
         args = parser.parse_args(sys.argv[2:])
@@ -106,7 +113,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Returns an object containing various state info",
             usage='''usage:
-    network-cli getinfo''')
+    networkcli getinfo''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getinfo')
         d.addCallbacks(print_value, print_error)
@@ -116,7 +123,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Terminates all outstanding connections.",
             usage='''usage:
-    network-cli shutdown''')
+    networkcli shutdown''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('shutdown')
         d.addCallbacks(print_value, print_error)
@@ -126,7 +133,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Returns this node's public key.",
             usage='''usage:
-    network-cli getpubkey''')
+    networkcli getpubkey''')
         args = parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpubkey')
         d.addCallbacks(print_value, print_error)
@@ -136,7 +143,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch a contract given its hash and guid.",
             usage='''usage:
-    network-cli.py getcontract [-c HASH] [-g GUID]''')
+    networkcli.py getcontract [-c HASH] [-g GUID]''')
         parser.add_argument('-c', '--hash', required=True, help="the hash of the contract")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
@@ -150,7 +157,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch an image given its hash and guid.",
             usage='''usage:
-    network-cli.py getcontract [-i HASH] [-g GUID]''')
+    networkcli.py getcontract [-i HASH] [-g GUID]''')
         parser.add_argument('-i', '--hash', required=True, help="the hash of the image")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
@@ -164,7 +171,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Returns id of all peers in the routing table",
             usage='''usage:
-    network-cli getpeers''')
+    networkcli getpeers''')
         d = proxy.callRemote('getpeers')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -173,7 +180,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch the ip address for a node given its guid.",
             usage='''usage:
-    network-cli.py getnode [-g GUID]''')
+    networkcli.py getnode [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to find")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
@@ -185,7 +192,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Sets a profile in the database.",
             usage='''usage:
-    network-cli.py setprofile [options]''')
+    networkcli.py setprofile [options]''')
         parser.add_argument('-n', '--name', help="the name of the user/store")
         parser.add_argument('-o', '--onename', help="the onename id")
         parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
@@ -217,7 +224,7 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetch the profile from the given node. Images will be saved in cache.",
             usage='''usage:
-    network-cli.py getprofile [-g GUID]''')
+    networkcli.py getprofile [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
@@ -229,13 +236,38 @@ commands:
         parser = argparse.ArgumentParser(
             description="Fetches the metadata (small profile) from a given node. The images will be saved in cache.",
             usage='''usage:
-    network-cli.py getmetadata [-g GUID]''')
+    networkcli.py getmetadata [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
         d = proxy.callRemote('getmetadata', guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
+
+    def setcontract(self, ):
+        parser = argparse.ArgumentParser(
+            description="Sets a new contract in the database and filesystem.",
+            usage='''usage:
+    networkcli.py setcontract [-f FILEPATH]''')
+        parser.add_argument('-f', '--filepath', help="a path to a completed json contract")
+        args = parser.parse_args(sys.argv[2:])
+        with open(args.filepath) as data_file:
+            contract = json.load(data_file, object_pairs_hook=OrderedDict)
+        store_contract(contract)
+
+    def setimage(self, ):
+        parser = argparse.ArgumentParser(
+            description="Maps a image hash to a file path in the database",
+            usage='''usage:
+    networkcli.py setimage [-f FILEPATH]''')
+        parser.add_argument('-f', '--filepath', help="a path to the image")
+        args = parser.parse_args(sys.argv[2:])
+        with open(args.filepath, "r") as file:
+            image = file.read()
+        d = digest(image)
+        h = HashMap()
+        h.insert(d, args.filepath)
+        print h.get_file(d)
 
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
