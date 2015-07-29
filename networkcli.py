@@ -354,7 +354,7 @@ class RPCCalls(jsonrpc.JSONRPC):
                 d.addCallback(print_resp)
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)
-        return "getting profile..."
+        return "getting metadata..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)

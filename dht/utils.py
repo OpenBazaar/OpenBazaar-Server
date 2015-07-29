@@ -12,7 +12,9 @@ from twisted.internet import defer
 def digest(s):
     if not isinstance(s, str):
         s = str(s)
-    return hashlib.sha1(s).digest()
+    intermed = hashlib.sha256(s).digest()
+    digest = hashlib.new('ripemd160', intermed).digest()
+    return digest
 
 
 def deferredDict(d):

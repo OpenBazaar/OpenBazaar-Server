@@ -5,9 +5,10 @@ We will fit the actual implementation in where appropriate.
 """
 import pickle
 import stun
+import os
+import sys
 from twisted.internet import reactor
 from twisted.python import log, logfile
-from bitcoin import *
 from guidutils.guid import GUID
 from dht.network import Server
 from dht.node import Node

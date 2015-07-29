@@ -116,7 +116,8 @@ class Server(object):
                 m.ParseFromString(result[1][0])
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(m.avatar_hash)):
                     d = self.get_image(node_to_ask, m.avatar_hash)
-                return d.addCallback(ret, m)
+                    return d.addCallback(ret, m)
+                return m
             except:
                 return None
         if node_to_ask.ip is None:
@@ -128,9 +129,6 @@ class Server(object):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
-        if not os.path.exists(DATA_FOLDER + "cache"):
-            os.makedirs(DATA_FOLDER + "cache")
-
         if not os.path.isfile(DATA_FOLDER + "cache/" + digest(file).encode("hex")):
             with open(DATA_FOLDER + "cache/" + digest(file).encode("hex"), 'w') as outfile:
                 outfile.write(file)

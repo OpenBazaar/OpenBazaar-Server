@@ -1,6 +1,7 @@
 __author__ = 'chris'
 import sqlite3 as lite
 from constants import DATABASE
+from protos.objects import Listings
 
 class HashMap(object):
     """
@@ -66,6 +67,55 @@ class ProfileStore(object):
     def get_proto(self):
         cursor = self.db.cursor()
         cursor.execute('''SELECT serializedUserInfo FROM profile WHERE id = 1''')
+        ret = cursor.fetchone()
+        if ret is None:
+            return None
+        return ret[0]
+
+class ListingsStore(object):
+    """
+    Stores a serialized `Listings` protobuf object. It contains metadata for all the
+    contracts hosted by this store. We will send this in response to a GET_LISTING
+    query. This should be updated each time a new contract is created.
+    """
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE listings(id INTEGER primary key, serializedListings BLOB)''')
+            self.db.commit()
+        except:
+            pass
+
+    def add_listing(self, proto):
+        cursor = self.db.cursor()
+        l = Listings()
+        ser = self.get_proto()
+        if ser is not None:
+            l.ParseFromString(ser)
+        l.listing.extend([proto])
+        cursor.execute('''INSERT OR REPLACE INTO listings(id, serializedListings)
+                      VALUES (?,?)''', (1, l.SerializeToString()))
+        self.db.commit()
+
+    def delete_listing(self, hash):
+        cursor = self.db.cursor()
+        ser = self.get_proto()
+        if ser is None:
+            return
+        l = Listings()
+        l.ParseFromString(ser)
+        for listing in l.listing:
+            if listing.contract_hash == hash:
+                l.listing.remove(listing)
+        cursor.execute('''INSERT OR REPLACE INTO listings(id, serializedListings)
+                      VALUES (?,?)''', (1, l.SerializeToString()))
+        self.db.commit()
+
+    def get_proto(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT serializedListings FROM listings WHERE id = 1''')
         ret = cursor.fetchone()
         if ret is None:
             return None
