@@ -55,6 +55,7 @@ commands:
     getimage         fetches an image from a node given its hash and guid
     getprofile       fetches the profile from the given node.
     getmetadata      fetches the metadata (shortened profile) for the node
+    getlistings      fetches metadata about the store's listings
     setcontract      sets a contract in the filesystem and db
     setimage         maps an image hash to a filepath in the db
     setprofile       sets the given profile data in the database
@@ -269,6 +270,18 @@ commands:
         h.insert(d, args.filepath)
         print h.get_file(d)
 
+    def getlistings(self):
+        parser = argparse.ArgumentParser(
+            description="Fetches metadata about the store's listings",
+            usage='''usage:
+    networkcli.py getmetadata [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getlistings', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, guid):
@@ -387,6 +400,25 @@ class RPCCalls(jsonrpc.JSONRPC):
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)
         return "getting metadata..."
+
+    def jsonrpc_getlistings(self, guid):
+        start = time.time()
+
+        def get_node(node):
+            def print_resp(resp):
+                print time.time() - start
+                for l in resp.listing:
+                    resp.listing.remove(l)
+                    h = l.contract_hash
+                    l.contract_hash = hexlify(h)
+                    resp.listing.extend([l])
+                print resp
+            if node is not None:
+                d = self.mserver.get_listings(node)
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting listing metadata..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)

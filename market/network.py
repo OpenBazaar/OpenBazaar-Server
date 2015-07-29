@@ -16,7 +16,7 @@ from constants import DATA_FOLDER
 
 from protos import objects
 
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 
 class Server(object):
 
@@ -35,14 +35,33 @@ class Server(object):
         Will query the given node to fetch a contract given its hash.
         If the returned contract doesn't have the same hash, it will return None.
 
+        After acquiring the contract it will download all the associated images if it
+        does not already have them in cache.
+
         Args:
             node_to_ask: a `dht.node.Node` object containing an ip and port
             contract_hash: a 20 byte hash in raw byte format
         """
+        dl = []
+
         def get_result(result):
             if digest(result[1][0]) == contract_hash:
+                def ret(result, contract):
+                    return contract
+                contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
+                try:
+                    signature = contract["vendor"]["signatures"]["guid"]
+                    pubkey = node_to_ask.signed_pubkey[64:]
+                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key.verify(unhexlify(signature) + unhexlify(json.dumps(contract["vendor"]["listing"], indent=4).encode("hex")))
+                except Exception:
+                    return None
                 self.cache(result[1][0])
-                return json.loads(result[1][0], object_pairs_hook=OrderedDict)
+                if "images" in contract["vendor"]["listing"]["item"]:
+                    for image_hash in contract["vendor"]["listing"]["item"]["images"]["image_hashes"]:
+                        dl.append(self.get_image(node_to_ask, unhexlify(image_hash)))
+                    return defer.gatherResults(dl).addCallback(ret, contract)
+                return contract
             else:
                 return None
         if node_to_ask.ip is None:
