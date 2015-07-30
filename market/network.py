@@ -5,17 +5,11 @@ import os.path
 import nacl.signing
 
 from twisted.internet import defer
-
 from market.protocol import MarketProtocol
-
 from dht.utils import digest, deferredDict
-
 from collections import OrderedDict
-
 from constants import DATA_FOLDER
-
 from protos import objects
-
 from binascii import hexlify, unhexlify
 
 class Server(object):
@@ -163,6 +157,32 @@ class Server(object):
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetListings(node_to_ask)
+        return d.addCallback(get_result)
+
+    def get_contract_metadata(self, node_to_ask, contract_hash):
+        """
+        Downloads just the metadata for the contract. Useful for displaying
+        search results in a list view without downloading the entire contract.
+        It will download the thumbnail image if it isn't already in cache.
+        """
+        def get_result(result):
+            def ret(result, listing):
+                return listing
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(result[1][1] + result[1][0])
+                l = objects.Listings().ListingMetadata()
+                l.ParseFromString(result[1][0])
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
+                    d = self.get_image(node_to_ask, l.thumbnail_hash)
+                    return d.addCallback(ret, l)
+                return l
+            except:
+                return None
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        d = self.protocol.callGetContractMetadata(node_to_ask, contract_hash)
         return d.addCallback(get_result)
 
     def cache(self, file):

@@ -6,7 +6,8 @@ from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA, GET_CONTRACT_METADATA
 from db.datastore import HashMap, ListingsStore
 from market.profile import Profile
-from protos.objects import Metadata
+from protos.objects import Metadata, Listings
+from binascii import hexlify
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -74,6 +75,20 @@ class MarketProtocol(RPCProtocol):
         except Exception:
             return ["None"]
 
+    def rpc_get_contract_metadata(self, sender, contract_hash):
+        self.log.info("Fetching metadata for contract %s" % hexlify(contract_hash))
+        self.router.addContact(sender)
+        try:
+            proto = ListingsStore().get_proto()
+            l = Listings()
+            l.ParseFromString(proto)
+            for listing in l.listing:
+                if listing.contract_hash == contract_hash:
+                    ser = listing.SerializeToString()
+            return [ser, self.signing_key.sign(ser)[:64]]
+        except Exception:
+            return ["None"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -97,6 +112,11 @@ class MarketProtocol(RPCProtocol):
     def callGetListings(self, nodeToAsk):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_listings(address)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetContractMetadata(self, nodeToAsk, contract_hash):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_contract_metadata(address, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

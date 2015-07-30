@@ -45,21 +45,22 @@ class Parser(object):
     python networkcli.py command [<arguments>]
 
 commands:
-    getinfo          returns an object containing various state info
-    getpeers         returns the id of all the peers in the routing table
-    get              fetches the given keyword from the dht
-    set              sets the given keyword/key in the dht
-    delete           deletes the keyword/key from the dht
-    getnode          returns a node's ip address given its guid.
-    getcontract      fetchs a contract from a node given its hash and guid
-    getimage         fetches an image from a node given its hash and guid
-    getprofile       fetches the profile from the given node.
-    getusermetadata  fetches the metadata (shortened profile) for the node
-    getlistings      fetches metadata about the store's listings
-    setcontract      sets a contract in the filesystem and db
-    setimage         maps an image hash to a filepath in the db
-    setprofile       sets the given profile data in the database
-    shutdown         closes all outstanding connections.
+    getinfo             returns an object containing various state info
+    getpeers            returns the id of all the peers in the routing table
+    get                 fetches the given keyword from the dht
+    set                 sets the given keyword/key in the dht
+    delete              deletes the keyword/key from the dht
+    getnode             returns a node's ip address given its guid.
+    getcontract         fetchs a contract from a node given its hash and guid
+    getcontractmetadata fetches the metadata (including thumbnail image) for the contract
+    getimage            fetches an image from a node given its hash and guid
+    getprofile          fetches the profile from the given node.
+    getusermetadata     fetches the metadata (shortened profile) for the node
+    getlistings         fetches metadata about the store's listings
+    setcontract         sets a contract in the filesystem and db
+    setimage            maps an image hash to a filepath in the db
+    setprofile          sets the given profile data in the database
+    shutdown            closes all outstanding connections.
 ''')
         parser.add_argument('command', help='Execute the given command')
         args = parser.parse_args(sys.argv[1:2])
@@ -282,6 +283,20 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def getcontractmetadata(self):
+        parser = argparse.ArgumentParser(
+            description="Fetches the metadata for the given contract. The thumbnail images will be saved in cache.",
+            usage='''usage:
+    networkcli.py getcontractmetadata [-g GUID] [-c CONTRACT]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        parser.add_argument('-c', '--contract', required=True, help="the contract hash")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        contract = args.contract
+        d = proxy.callRemote('getcontractmetadata', guid, contract)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, guid):
@@ -399,7 +414,7 @@ class RPCCalls(jsonrpc.JSONRPC):
                 d.addCallback(print_resp)
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)
-        return "getting metadata..."
+        return "getting user metadata..."
 
     def jsonrpc_getlistings(self, guid):
         start = time.time()
@@ -419,6 +434,20 @@ class RPCCalls(jsonrpc.JSONRPC):
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)
         return "getting listing metadata..."
+
+    def jsonrpc_getcontractmetadata(self, guid, contract_hash):
+        start = time.time()
+
+        def get_node(node):
+            def print_resp(resp):
+                print time.time() - start
+                print resp
+            if node is not None:
+                d = self.mserver.get_contract_metadata(node, contract_hash)
+                d.addCallback(print_resp)
+        d = self.kserver.get_node(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting contract metadata..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
