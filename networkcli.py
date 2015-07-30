@@ -54,7 +54,7 @@ commands:
     getcontract      fetchs a contract from a node given its hash and guid
     getimage         fetches an image from a node given its hash and guid
     getprofile       fetches the profile from the given node.
-    getmetadata      fetches the metadata (shortened profile) for the node
+    getusermetadata  fetches the metadata (shortened profile) for the node
     getlistings      fetches metadata about the store's listings
     setcontract      sets a contract in the filesystem and db
     setimage         maps an image hash to a filepath in the db
@@ -233,15 +233,15 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getmetadata(self):
+    def getusermetadata(self):
         parser = argparse.ArgumentParser(
             description="Fetches the metadata (small profile) from a given node. The images will be saved in cache.",
             usage='''usage:
-    networkcli.py getmetadata [-g GUID]''')
+    networkcli.py getusermetadata [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
-        d = proxy.callRemote('getmetadata', guid)
+        d = proxy.callRemote('getusermetadata', guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -387,7 +387,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         d.addCallback(get_node)
         return "getting profile..."
 
-    def jsonrpc_getmetadata(self, guid):
+    def jsonrpc_getusermetadata(self, guid):
         start = time.time()
 
         def get_node(node):
@@ -395,7 +395,7 @@ class RPCCalls(jsonrpc.JSONRPC):
                 print time.time() - start
                 print resp
             if node is not None:
-                d = self.mserver.get_metadata(node)
+                d = self.mserver.get_user_metadata(node)
                 d.addCallback(print_resp)
         d = self.kserver.get_node(unhexlify(guid))
         d.addCallback(get_node)

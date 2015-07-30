@@ -1,21 +1,11 @@
 __author__ = 'chris'
-"""
-This protocol class handles all direct (non-kademlia) messages between nodes.
-All of the messages between a buyer and a vendor's store can be found here.
-"""
-
 from zope.interface import implements
-
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
-
-from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_METADATA
-
+from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA, GET_CONTRACT_METADATA
 from db.datastore import HashMap, ListingsStore
-
 from market.profile import Profile
-
 from protos.objects import Metadata
 
 class MarketProtocol(RPCProtocol):
@@ -25,7 +15,7 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_METADATA]
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA, GET_CONTRACT_METADATA]
         self.multiplexer = None
         self.hashmap = HashMap()
         self.signing_key = signing_key
@@ -62,7 +52,7 @@ class MarketProtocol(RPCProtocol):
         except Exception:
             return ["None"]
 
-    def rpc_get_metadata(self, sender):
+    def rpc_get_user_metadata(self, sender):
         self.log.info("Fetching metadata")
         self.router.addContact(sender)
         try:
@@ -99,9 +89,9 @@ class MarketProtocol(RPCProtocol):
         d = self.get_profile(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callGetMetadata(self, nodeToAsk):
+    def callGetUserMetadata(self, nodeToAsk):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_metadata(address)
+        d = self.get_user_metadata(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetListings(self, nodeToAsk):

@@ -117,7 +117,7 @@ class Server(object):
         d = self.protocol.callGetProfile(node_to_ask)
         return d.addCallback(get_result)
 
-    def get_metadata(self, node_to_ask):
+    def get_user_metadata(self, node_to_ask):
         """
         Downloads just a small portion of the profile (containing the name, handle,
         and avatar hash). We need this for some parts of the UI where we list stores.
@@ -141,7 +141,7 @@ class Server(object):
                 return None
         if node_to_ask.ip is None:
             return defer.succeed(None)
-        d = self.protocol.callGetMetadata(node_to_ask)
+        d = self.protocol.callGetUserMetadata(node_to_ask)
         return d.addCallback(get_result)
 
     def get_listings(self, node_to_ask):
