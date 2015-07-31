@@ -199,6 +199,7 @@ commands:
         parser.add_argument('-o', '--onename', help="the onename id")
         parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
         parser.add_argument('-hd', '--header', help="the file path to the header image")
+        parser.add_argument('-c', '--country', help="the country the user is located in")
         # we could add all the fields here but this is good enough to test.
         args = parser.parse_args(sys.argv[2:])
         p = Profile()
@@ -206,6 +207,8 @@ commands:
         h = HashMap()
         if args.name is not None:
             u.name = args.name
+        if args.country is not None:
+            u.country = args.country
         if args.onename is not None:
             u.handle = args.onename
         if args.avatar is not None:
@@ -362,7 +365,7 @@ class RPCCalls(jsonrpc.JSONRPC):
     def jsonrpc_getnode(self, guid):
         def print_node(node):
             print node.ip, node.port
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(print_node)
         return "finding node..."
 
@@ -373,7 +376,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             if node is not None:
                 d = self.mserver.get_contract(node, unhexlify(contract_hash))
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting contract..."
 
@@ -384,7 +387,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             if node is not None:
                 d = self.mserver.get_image(node, unhexlify(image_hash))
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting image..."
 
@@ -398,7 +401,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             if node is not None:
                 d = self.mserver.get_profile(node)
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting profile..."
 
@@ -412,7 +415,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             if node is not None:
                 d = self.mserver.get_user_metadata(node)
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting user metadata..."
 
@@ -431,7 +434,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             if node is not None:
                 d = self.mserver.get_listings(node)
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting listing metadata..."
 
@@ -443,9 +446,9 @@ class RPCCalls(jsonrpc.JSONRPC):
                 print time.time() - start
                 print resp
             if node is not None:
-                d = self.mserver.get_contract_metadata(node, contract_hash)
+                d = self.mserver.get_contract_metadata(node, unhexlify(contract_hash))
                 d.addCallback(print_resp)
-        d = self.kserver.get_node(unhexlify(guid))
+        d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting contract metadata..."
 

@@ -54,7 +54,7 @@ class RPCProtocol():
                                m.sender.signedPublicKey, m.sender.vendor)
         except:
             # If message isn't formatted property then ignore
-            self.log.msg("Received unknown message from %s, ignoring" % str(connection.dest_addr))
+            self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
             return False
 
         # Check that the GUID is valid. If not, ignore
@@ -69,7 +69,7 @@ class RPCProtocol():
                     raise Exception('Invalid GUID')
 
             except:
-                self.log.msg("Received message from sender with invalid GUID, ignoring")
+                self.log.warning("Received message from sender with invalid GUID, ignoring")
                 return False
 
         msgID = m.messageID
@@ -82,7 +82,7 @@ class RPCProtocol():
     def _acceptResponse(self, msgID, data, sender):
         msgargs = (b64encode(msgID), sender)
         if self.noisy:
-            self.log.msg("Received response for message id %s from %s" % msgargs)
+            self.log.debug("Received response for message id %s from %s" % msgargs)
         d, timeout = self._outstanding[msgID]
         timeout.cancel()
         d.callback((True, data))
@@ -90,7 +90,7 @@ class RPCProtocol():
 
     def _acceptRequest(self, msgID, funcname, args, sender, connection):
         if self.noisy:
-            self.log.msg("received request from %s, command %s" % (sender, funcname.upper()))
+            self.log.debug("received request from %s, command %s" % (sender, funcname.upper()))
         f = getattr(self, "rpc_%s" % funcname, None)
         if f is None or not callable(f):
             msgargs = (self.__class__.__name__, funcname)
@@ -101,7 +101,7 @@ class RPCProtocol():
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
         if self.noisy:
-            self.log.msg("sending response for msg id %s to %s" % (b64encode(msgID), sender))
+            self.log.debug("sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
@@ -113,7 +113,7 @@ class RPCProtocol():
 
     def _timeout(self, msgID):
         args = (b64encode(msgID), self._waitTimeout)
-        self.log.error("Did not received reply for msg id %s within %i seconds" % args)
+        self.log.warning("Did not received reply for msg id %s within %i seconds" % args)
         self._outstanding[msgID][0].callback((False, None))
         del self._outstanding[msgID]
 
@@ -136,7 +136,7 @@ class RPCProtocol():
                 m.arguments.append(arg)
             data = m.SerializeToString()
             if self.noisy:
-                self.log.msg("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+                self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             self.multiplexer.send_message(data, address)
             d = defer.Deferred()
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)

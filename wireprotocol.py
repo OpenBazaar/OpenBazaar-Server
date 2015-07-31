@@ -31,8 +31,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.connection = None
 
         def receive_message(self, datagram):
-            if len(datagram) < 22:
-                self.log.msg("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))
+            if len(datagram) < 166:
+                self.log.warning("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))
                 return False
             m = Message()
             try:
@@ -42,11 +42,11 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                         processor.receive_message(datagram, self.connection)
             except:
                 # If message isn't formatted property then ignore
-                self.log.msg("Received unknown message from %s, ignoring" % self.connection.dest_addr)
+                self.log.warning("Received unknown message from %s, ignoring" % self.connection.dest_addr)
                 return False
 
         def handle_shutdown(self):
-            self.log.msg("Connection terminated with (%s, %s)" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
+            self.log.info("Connection with (%s, %s) terminated" % (self.connection.dest_addr[0], self.connection.dest_addr[1]))
 
     class ConnHandlerFactory(HandlerFactory):
 

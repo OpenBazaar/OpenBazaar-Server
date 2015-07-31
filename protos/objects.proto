@@ -27,21 +27,23 @@ message Value {
 //The object returned by the GET_PROFILE rpc call
 message Profile {
         required string name              = 1;
-        optional bool vendor              = 2 [default = false];
-        optional string handle            = 3;
-        optional string about             = 4;
-        optional string website           = 5;
-        optional string email             = 6;
-        repeated SocialAccount social     = 7;
-        optional uint32 primary_color     = 8 [default = 4868168];
-        optional uint32 secondary_color   = 9 [default = 5723734];
-        optional uint32 background_color  = 10 [default = 2763306];
-        optional uint32 text_color        = 11 [default = 16777215];
-        optional uint32 follower_count    = 12 [default = 0];
-        optional uint32 following_count   = 13 [default = 0];
-        optional PGPKey pgp_key           = 14;
-        optional bytes avatar_hash        = 15;
-        optional bytes header_hash        = 16;
+        required string country_code      = 2;
+        optional bool nsfw                = 3 [default = false];
+        optional bool vendor              = 4 [default = false];
+        optional string handle            = 5;
+        optional string about             = 6;
+        optional string website           = 7;
+        optional string email             = 8;
+        repeated SocialAccount social     = 9;
+        optional uint32 primary_color     = 10 [default = 4868168];
+        optional uint32 secondary_color   = 11 [default = 5723734];
+        optional uint32 background_color  = 12 [default = 2763306];
+        optional uint32 text_color        = 13 [default = 16777215];
+        optional uint32 follower_count    = 14 [default = 0];
+        optional uint32 following_count   = 15 [default = 0];
+        optional PGPKey pgp_key           = 16;
+        optional bytes avatar_hash        = 17;
+        optional bytes header_hash        = 18;
 
 	// Social media account for the profile
     message SocialAccount {
@@ -66,6 +68,7 @@ message Metadata {
     required string name       = 1;
     required string handle     = 2;
     required bytes avatar_hash = 3;
+    required bool nsfw         = 4;
 }
 
 message Listings {
@@ -75,8 +78,10 @@ message Listings {
         required bytes contract_hash  = 1;
         required string title         = 2;
         required bytes thumbnail_hash = 3;
-        required string category      = 4;
+        optional string category      = 4;
         required float price          = 5;
         required string currency_code = 6;
+        required bool nsfw            = 7;
+        optional string country_code  = 8;
     }
 }

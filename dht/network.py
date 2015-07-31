@@ -276,7 +276,7 @@ class Server(object):
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.ksize)
         return spider.find().addCallback(delete)
 
-    def get_node(self, guid):
+    def resolve(self, guid):
         """
         Given a guid return a `Node` object containing its ip and port or none if it's
         not found.

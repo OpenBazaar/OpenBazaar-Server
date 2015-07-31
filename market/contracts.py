@@ -54,6 +54,7 @@ def store_contract(contract):
     else:
         data.price = float(contract["vendor"]["listing"]["item"]["price"]["bitcoin"])
         data.currency_code = "btc"
+    data.nsfw = contract["vendor"]["listing"]["item"]["nsfw"]
 
     # save the mapping of the contract file path and contract hash in the database
     h = HashMap()

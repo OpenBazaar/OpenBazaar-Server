@@ -32,6 +32,7 @@ class MarketProtocol(RPCProtocol):
                 contract = file.read()
             return [contract]
         except:
+            self.log.warning("Could not find contract %s" % contract_hash.encode('hex'))
             return ["None"]
 
     def rpc_get_image(self, sender, image_hash):
@@ -42,6 +43,7 @@ class MarketProtocol(RPCProtocol):
                 image = file.read()
             return [image]
         except:
+            self.log.warning("Could not find image %s" % image_hash.encode('hex'))
             return ["None"]
 
     def rpc_get_profile(self, sender):
@@ -51,6 +53,7 @@ class MarketProtocol(RPCProtocol):
             proto = Profile().get(True)
             return [proto, self.signing_key.sign(proto)[:64]]
         except Exception:
+            self.log.error("Unable to load the profile")
             return ["None"]
 
     def rpc_get_user_metadata(self, sender):
@@ -64,6 +67,7 @@ class MarketProtocol(RPCProtocol):
             m.avatar_hash = proto.avatar_hash
             return [m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
+            self.log.error("Unable to get the profile metadata")
             return ["None"]
 
     def rpc_get_listings(self, sender):
@@ -73,6 +77,7 @@ class MarketProtocol(RPCProtocol):
             proto = ListingsStore().get_proto()
             return [proto, self.signing_key.sign(proto)[:64]]
         except Exception:
+            self.log.warning("Could not find any listings in the database")
             return ["None"]
 
     def rpc_get_contract_metadata(self, sender, contract_hash):
@@ -84,9 +89,12 @@ class MarketProtocol(RPCProtocol):
             l.ParseFromString(proto)
             for listing in l.listing:
                 if listing.contract_hash == contract_hash:
+                    country_code = Profile().get().country_code
+                    listing.country_code = country_code
                     ser = listing.SerializeToString()
             return [ser, self.signing_key.sign(ser)[:64]]
         except Exception:
+            self.log.warning("Could not find metadata for contract %s" % hexlify(contract_hash))
             return ["None"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
