@@ -50,8 +50,7 @@ class RPCProtocol():
         m = Message()
         try:
             m.ParseFromString(datagram)
-            sender = node.Node(m.sender.guid, connection.dest_addr[0], connection.dest_addr[1],
-                               m.sender.signedPublicKey, m.sender.vendor)
+            sender = node.Node(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey, m.sender.vendor)
         except:
             # If message isn't formatted property then ignore
             self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
@@ -90,7 +89,7 @@ class RPCProtocol():
 
     def _acceptRequest(self, msgID, funcname, args, sender, connection):
         if self.noisy:
-            self.log.debug("received request from %s, command %s" % (sender, funcname.upper()))
+            self.log.debug("Received request from %s, command %s" % (sender, funcname.upper()))
         f = getattr(self, "rpc_%s" % funcname, None)
         if f is None or not callable(f):
             msgargs = (self.__class__.__name__, funcname)
@@ -101,7 +100,7 @@ class RPCProtocol():
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
         if self.noisy:
-            self.log.debug("sending response for msg id %s to %s" % (b64encode(msgID), sender))
+            self.log.debug("Sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
@@ -113,7 +112,7 @@ class RPCProtocol():
 
     def _timeout(self, msgID):
         args = (b64encode(msgID), self._waitTimeout)
-        self.log.warning("Did not received reply for msg id %s within %i seconds" % args)
+        self.log.warning("Did not receive reply for msg id %s within %i seconds" % args)
         self._outstanding[msgID][0].callback((False, None))
         del self._outstanding[msgID]
 

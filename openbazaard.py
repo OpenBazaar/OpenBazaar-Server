@@ -41,7 +41,7 @@ else:
 protocol = OpenBazaarProtocol((ip_address, port))
 
 # kademlia
-node = Node(g.guid, signed_pubkey=g.signed_pubkey)
+node = Node(g.guid, ip_address, port, signed_pubkey=g.signed_pubkey)
 
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
     kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol)
