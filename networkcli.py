@@ -208,7 +208,7 @@ commands:
         if args.name is not None:
             u.name = args.name
         if args.country is not None:
-            u.country = args.country
+            u.country_code = args.country
         if args.onename is not None:
             u.handle = args.onename
         if args.avatar is not None:

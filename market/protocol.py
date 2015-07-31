@@ -65,6 +65,7 @@ class MarketProtocol(RPCProtocol):
             m.name = proto.name
             m.handle = proto.handle
             m.avatar_hash = proto.avatar_hash
+            m.nsfw = proto.nsfw
             return [m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.error("Unable to get the profile metadata")
