@@ -6,3 +6,4 @@ pyelliptic==1.5.5
 pystun==0.1.0
 bitcoin==1.1.25
 gnupg==2.0.2
+pynacl==0.3.0
