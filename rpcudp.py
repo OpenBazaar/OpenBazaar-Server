@@ -114,29 +114,18 @@ class RPCProtocol():
         If a message times out we are first going to try hole punching because
         the node may be behind a restricted NAT. If it is successful, the original
         should get through. This timeout will only fire if the hole punching
-        fails or the resend attempt times out.
+        fails.
         """
         if address is not None:
-            self._holePunch(msgID, address)
+            self.log.warning("Did not receive reply for msg id %s, trying hole punching")
+            self.hole_punch(SEED_NODE, address[0], address[1], "True")
+            timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
+            self._outstanding[msgID][1] = timeout
         else:
             args = (b64encode(msgID), self._waitTimeout)
             self.log.warning("Did not receive reply for msg id %s within %i seconds" % args)
             self._outstanding[msgID][0].callback((False, None))
             del self._outstanding[msgID]
-
-    def _holePunch(self, msgID, address):
-        """
-        Send a HOLE_PUNCH command to one of our seed nodes and tell it to relay the
-        HOLE_PUNCH message to the node we are trying to reach. That node should then
-        send us a single datagram which will allow us to get through their NAT.
-        """
-        def reset_timeout(resp):
-            if resp[0] and resp[1][0] == "True":
-                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
-                self._outstanding[msgID][1] = timeout
-            else:
-                self._timeout(msgID)
-        self.hole_punch(SEED_NODE, address[0], address[1], "True", timeout=3).addCallback(reset_timeout)
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
@@ -145,16 +134,10 @@ class RPCProtocol():
         the other node to punch through our NAT.
         """
         if relay == "True":
-            def respond(resp):
-                if resp[0] and resp[1][0] == "True":
-                    return ["True"]
-                else:
-                    return ["False"]
-            return self.hole_punch((ip, int(port)), sender.ip, sender.port).addCallback(respond)
+            self.hole_punch((ip, int(port)), sender.ip, sender.port)
         else:
             self.log.debug("Punching through NAT for %s:%s" % (ip, port))
             self.multiplexer.send_message(" ", (ip, int(port)))
-            return ["True"]
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
@@ -165,7 +148,7 @@ class RPCProtocol():
         except AttributeError:
             pass
 
-        def func(address, *args, **kwargs):
+        def func(address, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
@@ -178,11 +161,9 @@ class RPCProtocol():
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             self.multiplexer.send_message(data, address)
             d = defer.Deferred()
-            if name == "hole_punch":
-                timeout = reactor.callLater(self._waitTimeout + kwargs.get('timeout', 0), self._timeout, msgID)
-            else:
+            if name is not "hole_punch":
                 timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address)
-            self._outstanding[msgID] = [d, timeout]
+                self._outstanding[msgID] = [d, timeout]
             return d
 
         return func
