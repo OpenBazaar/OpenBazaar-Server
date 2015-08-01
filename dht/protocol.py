@@ -20,7 +20,7 @@ from log import Logger
 from interfaces import MessageProcessor
 
 from protos import objects
-from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE
+from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH
 
 
 class KademliaProtocol(RPCProtocol):
@@ -33,7 +33,7 @@ class KademliaProtocol(RPCProtocol):
         self.sourceNode = sourceNode
         self.multiplexer = None
         self.log = Logger(system=self)
-        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE]
+        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH]
         RPCProtocol.__init__(self, sourceNode.getProto(), self.router)
 
     def connect_multiplexer(self, multiplexer):

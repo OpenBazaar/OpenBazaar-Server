@@ -24,7 +24,8 @@ log.addObserver(log.FileLogObserver(logFile).emit)
 log.startLogging(sys.stdout)
 
 # stun
-response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
+response = stun.get_ip_info(source_port=0)
+print response
 ip_address = response[1]
 port = response[2]
 
@@ -58,7 +59,7 @@ mserver = network.Server(kserver, g.signing_key)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 
-reactor.listenUDP(18467, protocol)
+reactor.listenUDP(port, protocol)
 
 # json-rpc server
 factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver, g))
