@@ -5,19 +5,18 @@ Copyright (c) 2015 OpenBazaar
 
 import random
 import abc
+import nacl.signing
+import nacl.encoding
+import nacl.hash
 from binascii import hexlify
 from hashlib import sha1
 from base64 import b64encode
 from twisted.internet import reactor
 from twisted.internet import defer
-
-import nacl.signing
-import nacl.encoding
-import nacl.hash
-
 from log import Logger
 from protos.message import Message, Command
 from dht import node
+from constants import SEED_NODE
 
 
 class RPCProtocol():
@@ -110,11 +109,36 @@ class RPCProtocol():
         data = m.SerializeToString()
         connection.send_message(data)
 
-    def _timeout(self, msgID):
-        args = (b64encode(msgID), self._waitTimeout)
-        self.log.warning("Did not receive reply for msg id %s within %i seconds" % args)
-        self._outstanding[msgID][0].callback((False, None))
-        del self._outstanding[msgID]
+    def _timeout(self, msgID, data=None, address=None):
+        if data is not None:
+            self._holePunch(msgID, data, address)
+        else:
+            args = (b64encode(msgID), self._waitTimeout)
+            self.log.warning("Did not receive reply for msg id %s within %i seconds" % args)
+            self._outstanding[msgID][0].callback((False, None))
+            del self._outstanding[msgID]
+
+    def _holePunch(self, msgID, data, address):
+        def retry_send(resp):
+            if resp[0] and resp[1][0] == "True":
+                self.multiplexer.send_message(data, address)
+                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
+                self._outstanding[msgID][1] = timeout
+            else:
+                self._timeout(msgID)
+        self.hole_punch(SEED_NODE, address[0], address[1], "True").addCallback(retry_send)
+
+    def rpc_hole_punch(self, sender, ip, port, relay="False"):
+        if relay == "True":
+            def respond(resp):
+                if resp[0] and resp[1][0] == "True":
+                    return ["True"]
+                else:
+                    return ["False"]
+            self.hole_punch((ip, port), sender.ip, sender.port).addCallback(respond)
+        else:
+            self.multiplexer.send_message("", (ip, port))
+            return ["True"]
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
@@ -138,7 +162,10 @@ class RPCProtocol():
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             self.multiplexer.send_message(data, address)
             d = defer.Deferred()
-            timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
+            if name == "hole_punch":
+                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
+            else:
+                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, data, address)
             self._outstanding[msgID] = (d, timeout)
             return d
 

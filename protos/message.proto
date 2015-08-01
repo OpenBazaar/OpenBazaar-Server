@@ -21,16 +21,17 @@ message Message {
 enum Command {
 	PING                    = 1;
 	STUN                    = 2;
-	STORE                   = 3;
-	DELETE                  = 4;
-	FIND_NODE               = 5;
-	FIND_VALUE              = 6;
-	GET_CONTRACT            = 7;
-	GET_IMAGE               = 8;
-	GET_PROFILE             = 9;
-	GET_LISTINGS            = 10;
-	GET_USER_METADATA       = 11;
-	GET_CONTRACT_METADATA   = 12;
+	HOLE_PUNCH              = 3;
+	STORE                   = 4;
+	DELETE                  = 5;
+	FIND_NODE               = 6;
+	FIND_VALUE              = 7;
+	GET_CONTRACT            = 8;
+	GET_IMAGE               = 9;
+	GET_PROFILE             = 10;
+	GET_LISTINGS            = 11;
+	GET_USER_METADATA       = 12;
+	GET_CONTRACT_METADATA   = 13;
 
 	// Error responses
 	BAD_REQUEST   = 400;
