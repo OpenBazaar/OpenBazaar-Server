@@ -110,6 +110,12 @@ class RPCProtocol():
         connection.send_message(data)
 
     def _timeout(self, msgID, data=None, address=None):
+        """
+        If a message times out we are first going to try hole punching because
+        the node may be behind a restricted NAT. If it is successful, the original
+        message will be resent. This timeout will only fire if the hole punching
+        fails or the resend attempt times out.
+        """
         if data is not None:
             self._holePunch(msgID, data, address)
         else:
@@ -119,6 +125,10 @@ class RPCProtocol():
             del self._outstanding[msgID]
 
     def _holePunch(self, msgID, data, address):
+        """
+        Send a HOLE_PUNCH command to one of our seed nodes and tell it to relay the
+        HOLE_PUNCH message to our
+        """
         def retry_send(resp):
             if resp[0] and resp[1][0] == "True":
                 self.multiplexer.send_message(data, address)
