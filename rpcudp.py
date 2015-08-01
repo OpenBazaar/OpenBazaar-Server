@@ -136,7 +136,7 @@ class RPCProtocol():
                 self._outstanding[msgID][1] = timeout
             else:
                 self._timeout(msgID)
-        self.hole_punch(SEED_NODE, address[0], address[1], "True").addCallback(reset_timeout)
+        self.hole_punch(SEED_NODE, address[0], address[1], "True", timeout=3).addCallback(reset_timeout)
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
@@ -165,7 +165,7 @@ class RPCProtocol():
         except AttributeError:
             pass
 
-        def func(address, *args):
+        def func(address, *args, **kwargs):
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
@@ -179,7 +179,7 @@ class RPCProtocol():
             self.multiplexer.send_message(data, address)
             d = defer.Deferred()
             if name == "hole_punch":
-                timeout = reactor.callLater(self._waitTimeout+3, self._timeout, msgID)
+                timeout = reactor.callLater(self._waitTimeout + kwargs.get('timeout', 0), self._timeout, msgID)
             else:
                 timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address)
             self._outstanding[msgID] = [d, timeout]
