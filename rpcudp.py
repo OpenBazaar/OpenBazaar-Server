@@ -94,8 +94,11 @@ class RPCProtocol():
             msgargs = (self.__class__.__name__, funcname)
             self.log.error("%s has no callable method rpc_%s; ignoring request" % msgargs)
             return False
-        d = defer.maybeDeferred(f, sender, *args)
-        d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
+        if funcname == "hole_punch":
+            f(sender, *args)
+        else:
+            d = defer.maybeDeferred(f, sender, *args)
+            d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
         if self.noisy:
