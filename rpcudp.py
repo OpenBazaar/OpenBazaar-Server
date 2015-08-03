@@ -108,7 +108,7 @@ class RPCProtocol():
         m.sender.MergeFrom(self.proto)
         m.command = Command.Value(funcname.upper())
         for arg in response:
-            m.arguments.append(arg)
+            m.arguments.append(str(arg))
         data = m.SerializeToString()
         connection.send_message(data)
 
@@ -120,7 +120,7 @@ class RPCProtocol():
         fails.
         """
         if address is not None:
-            self.log.warning("Did not receive reply for msg id %s, trying hole punching")
+            self.log.warning("Did not receive reply for msg id %s, trying hole punching" % (b64encode(msgID)))
             self.hole_punch(SEED_NODE, address[0], address[1], "True")
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID][1] = timeout
@@ -163,10 +163,10 @@ class RPCProtocol():
             if self.noisy:
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             self.multiplexer.send_message(data, address)
-            d = defer.Deferred()
             if name is not "hole_punch":
+                d = defer.Deferred()
                 timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address)
                 self._outstanding[msgID] = [d, timeout]
-            return d
+                return d
 
         return func

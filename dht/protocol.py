@@ -4,21 +4,14 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-
 from twisted.internet import defer
-
 from zope.interface import implements
-
 import nacl.signing
-
-from rpcudp import RPCProtocol
-
 from dht.node import Node
 from dht.routing import RoutingTable
 from log import Logger
-
+from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
-
 from protos import objects
 from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH
 

@@ -42,7 +42,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                         processor.receive_message(datagram, self.connection)
             except:
                 # If message isn't formatted property then ignore
-                self.log.warning("Received unknown message from %s, ignoring" % self.connection.dest_addr)
+                self.log.warning("Received unknown message from %s, ignoring" % str(self.connection.dest_addr))
                 return False
 
         def handle_shutdown(self):

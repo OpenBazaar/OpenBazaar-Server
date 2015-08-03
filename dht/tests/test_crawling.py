@@ -1,22 +1,17 @@
 __author__ = 'chris'
-import binascii
-import nacl.signing, nacl.hash
 import mock
-
+import nacl.signing, nacl.hash
 from binascii import unhexlify
-
 from txrudp import packet, connection, rudp, constants
-
 from twisted.internet import udp, address, task
 from twisted.trial import unittest
-
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
 from dht.protocol import KademliaProtocol
-
 from protos.objects import Value
+from wireprotocol import OpenBazaarProtocol
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
@@ -50,10 +45,16 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
         self.protocol = KademliaProtocol(self.node, self.storage, 20)
 
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr)
+        self.wire_protocol.register_processor(self.protocol)
+
+        self.protocol.connect_multiplexer(self.wire_protocol)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol])
+
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
         transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
-        self.protocol.makeConnection(transport)
+        self.wire_protocol.makeConnection(transport)
 
         self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True)
         self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True)
@@ -61,13 +62,13 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
     def tearDown(self):
         self.con.shutdown()
-        self.protocol.shutdown()
+        self.wire_protocol.shutdown()
 
     def test_find(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
-        self.protocol[self.addr2] = self.con
-        self.protocol[self.addr3] = self.con
+        self.wire_protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr2] = self.con
+        self.wire_protocol[self.addr3] = self.con
 
         self.protocol.router.addContact(self.node1)
         self.protocol.router.addContact(self.node2)
@@ -84,9 +85,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
     def test_nodesFound(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
-        self.protocol[self.addr2] = self.con
-        self.protocol[self.addr3] = self.con
+        self.wire_protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr2] = self.con
+        self.wire_protocol[self.addr3] = self.con
 
         self.protocol.router.addContact(self.node1)
         self.protocol.router.addContact(self.node2)
@@ -134,7 +135,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
     def test_handleFoundValues(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
 
         self.protocol.router.addContact(self.node1)
         self.protocol.router.addContact(self.node2)
@@ -220,10 +221,16 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
         self.protocol = KademliaProtocol(self.node, self.storage, 20)
 
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr)
+        self.wire_protocol.register_processor(self.protocol)
+
+        self.protocol.connect_multiplexer(self.wire_protocol)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol])
+
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
         transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
-        self.protocol.makeConnection(transport)
+        self.wire_protocol.makeConnection(transport)
 
         self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), True)
         self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), True)
@@ -231,9 +238,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
 
     def test_find(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
-        self.protocol[self.addr2] = self.con
-        self.protocol[self.addr3] = self.con
+        self.wire_protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr2] = self.con
+        self.wire_protocol[self.addr3] = self.con
 
         self.protocol.router.addContact(self.node1)
         self.protocol.router.addContact(self.node2)
@@ -250,9 +257,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
 
     def test_nodesFound(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
-        self.protocol[self.addr2] = self.con
-        self.protocol[self.addr3] = self.con
+        self.wire_protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr2] = self.con
+        self.wire_protocol[self.addr3] = self.con
 
         self.protocol.router.addContact(self.node1)
         self.protocol.router.addContact(self.node2)

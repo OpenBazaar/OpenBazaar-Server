@@ -1,22 +1,18 @@
 __author__ = 'chris'
 import mock
 import time
-
+import random
 import nacl.signing, nacl.encoding, nacl.hash
-
 from binascii import unhexlify
-
 from txrudp import connection, rudp, packet, constants
-
 from twisted.trial import unittest
 from twisted.internet import task, reactor, address, udp
-
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
 from dht.node import Node
-
-from protos import message
+from protos import message, objects
+from wireprotocol import OpenBazaarProtocol
 
 
 class KademliaProtocolTest(unittest.TestCase):
@@ -49,17 +45,21 @@ class KademliaProtocolTest(unittest.TestCase):
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
         self.protocol = KademliaProtocol(self.node, self.storage, 20)
 
-        self.handler = self.protocol.RPCHandler(False, 5, self.protocol._outstanding, self.protocol)
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr)
+        self.wire_protocol.register_processor(self.protocol)
+
+        self.protocol.connect_multiplexer(self.wire_protocol)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol])
         self.handler.connection = self.con
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
         transport.attach_mock(mock.Mock(return_value=ret_val), 'getHost')
-        self.protocol.makeConnection(transport)
+        self.wire_protocol.makeConnection(transport)
 
     def tearDown(self):
         self.con.shutdown()
-        self.protocol.shutdown()
+        self.wire_protocol.shutdown()
 
     def test_invalid_datagram(self):
         self.assertFalse(self.handler.receive_message("hi"))
@@ -176,7 +176,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STUN")
         data = m.SerializeToString()
-        m.arguments.extend([self.addr1[0], str(self.addr1[1])])
+        m.arguments.extend([self.public_ip, str(self.port)])
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -185,7 +185,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
-
+        a = message.Message()
+        a.ParseFromString(received_message)
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
 
@@ -205,7 +206,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
         del m.arguments[-1]
-        m.arguments.extend([node3.getProto().SerializeToString(), node2.getProto().SerializeToString(), node1.getProto().SerializeToString()])
+        m.arguments.extend([node2.getProto().SerializeToString(), node1.getProto().SerializeToString(), node3.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -214,7 +215,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
-
+        a = message.Message()
+        a.ParseFromString(received_message)
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
 
@@ -241,7 +243,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.handler.receive_message(data)
 
         del m.arguments[-1]
-        value = message.Value()
+        value = objects.Value()
         value.valueKey = "Key"
         value.serializedData = self.protocol.sourceNode.getProto().SerializeToString()
         m.arguments.append("value")
@@ -278,7 +280,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.handler.receive_message(data)
 
         del m.arguments[-1]
-        m.arguments.extend([node2.getProto().SerializeToString(), node3.getProto().SerializeToString(), node1.getProto().SerializeToString()])
+        m.arguments.extend([node3.getProto().SerializeToString(), node1.getProto().SerializeToString(), node2.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -286,7 +288,6 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
-
         m = message.Message()
         m.ParseFromString(received_message)
 
@@ -297,7 +298,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         self.protocol.callPing(n)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -317,7 +318,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -340,7 +341,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         keyword = Node(digest("Keyword"))
         self.protocol.callFindValue(n, keyword)
 
@@ -362,7 +363,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         keyword = Node(digest("nodetofind"))
         self.protocol.callFindNode(n, keyword)
 
@@ -384,7 +385,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         self.protocol.callDelete(n, digest("Keyword"), digest("Key"), digest("Signature"))
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -411,7 +412,7 @@ class KademliaProtocolTest(unittest.TestCase):
             self.assertEqual(resp[1][0], self.protocol.sourceNode.id)
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
         d = self.protocol.callPing(n)
 
         self.clock.advance(1)
@@ -422,18 +423,18 @@ class KademliaProtocolTest(unittest.TestCase):
         m = message.Message()
         m.ParseFromString(sent_message)
         timeout = reactor.callLater(5, self.protocol._timeout, m.messageID)
-        self.handler._outstanding[m.messageID] = (d, timeout)
+        self.protocol._outstanding[m.messageID] = (d, timeout)
         m.arguments.append(self.protocol.sourceNode.id)
         self.handler.receive_message(m.SerializeToString())
 
         return d.addCallback(handle_response)
 
     def test_unknownRPC(self):
-        self.assertFalse(self.handler._acceptRequest(digest("msgid"), "unknown", [digest("argument")], Node(digest("nodeid"))))
+        self.assertFalse(self.handler.receive_message(str(random.getrandbits(1400))))
 
     def test_timeout(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
 
         def test_remove_outstanding():
             self.assertTrue(len(self.protocol._outstanding) == 0)
@@ -445,11 +446,13 @@ class KademliaProtocolTest(unittest.TestCase):
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         d = self.protocol.callPing(n)
         self.clock.advance(6)
+        connection.REACTOR.runUntilCurrent()
+        self.clock.advance(6)
         return d.addCallback(test_deffered)
 
     def test_transferKeyValues(self):
         self._connecting_to_connected()
-        self.protocol[self.addr1] = self.con
+        self.wire_protocol[self.addr1] = self.con
 
         self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))

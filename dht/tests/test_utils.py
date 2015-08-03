@@ -8,10 +8,12 @@ from dht.utils import digest, sharedPrefix, OrderedSet, deferredDict
 
 class UtilsTest(unittest.TestCase):
     def test_digest(self):
-        d = hashlib.sha1('1').digest()
+        intermed = hashlib.sha256("1").digest()
+        d = hashlib.new('ripemd160', intermed).digest()
         self.assertEqual(d, digest(1))
 
-        d = hashlib.sha1('another').digest()
+        intermed = hashlib.sha256("another").digest()
+        d = hashlib.new('ripemd160', intermed).digest()
         self.assertEqual(d, digest('another'))
 
     def test_sharedPrefix(self):

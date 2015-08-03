@@ -1,8 +1,4 @@
 __author__ = 'chris'
-"""
-Just using this class for testing the DHT for now.
-We will fit the actual implementation in where appropriate.
-"""
 import pickle
 import stun
 import os
@@ -24,8 +20,9 @@ log.addObserver(log.FileLogObserver(logFile).emit)
 log.startLogging(sys.stdout)
 
 # stun
-response = stun.get_ip_info(source_port=0)
-print response
+print "Finding NAT Type.."
+response = stun.get_ip_info(stun_host='stun.l.google.com', stun_port=19302, source_port=0)
+print "%s on %s:%s" % (response[0], response[1], response[2])
 ip_address = response[1]
 port = response[2]
 
