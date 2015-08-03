@@ -21,7 +21,7 @@ log.startLogging(sys.stdout)
 
 # stun
 print "Finding NAT Type.."
-response = stun.get_ip_info(stun_host='stun.l.google.com', stun_port=19302, source_port=0)
+response = stun.get_ip_info(stun_host='seed.openbazaar.org', stun_port=3478, source_port=0)
 print "%s on %s:%s" % (response[0], response[1], response[2])
 ip_address = response[1]
 port = response[2]

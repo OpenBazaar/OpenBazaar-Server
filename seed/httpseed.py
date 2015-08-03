@@ -158,7 +158,7 @@ class WebResource(resource.Resource):
                     peer.vendor = node.vendor
                     proto.peer_data.append(peer.SerializeToString())
 
-                sig = signing_key.sign("".join(proto.peer_data))
+                sig = signing_key.sign("".join(proto.peer_data))[:64]
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
                 request.write(uncompressed_data.encode("zlib"))
@@ -173,7 +173,7 @@ class WebResource(resource.Resource):
                         peer.vendor = node.vendor
                         proto.peer_data.append(peer.SerializeToString())
 
-                sig = signing_key.sign("".join(proto.peer_data))
+                sig = signing_key.sign("".join(proto.peer_data))[:64]
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
                 request.write(uncompressed_data.encode("zlib"))
@@ -185,7 +185,7 @@ class WebResource(resource.Resource):
                     peer.vendor = node.vendor
                     proto.peer_data.append(peer.SerializeToString())
 
-                sig = signing_key.sign("".join(proto.peer_data))
+                sig = signing_key.sign("".join(proto.peer_data))[:64]
                 proto.signature = sig
                 uncompressed_data = proto.SerializeToString()
                 request.write(uncompressed_data.encode("zlib"))

@@ -99,16 +99,17 @@ class Server(object):
         self.log.info("Https response from %s: %s, %s" % (seed, response.status, response.reason))
         data = response.read()
         reread_data = data.decode("zlib")
-        seeds = peers.PeerSeeds()
+        proto = peers.PeerSeeds()
         try:
-            seeds.ParseFromString(reread_data)
-            for peer in seeds.peer_data:
+            proto.ParseFromString(reread_data)
+            for peer in proto.peer_data:
                 p = peers.PeerData()
                 p.ParseFromString(peer)
                 tup = (str(p.ip_address), p.port)
                 nodes.append(tup)
             verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-            verify_key.verify(seed.signature + "".join(seeds.peer_data))
+            verify_key.verify(proto.signature + "".join(proto.peer_data))
+            return nodes
         except:
             self.log.error("Error parsing seed response.")
         return nodes
