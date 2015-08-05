@@ -3,24 +3,15 @@ import sys
 import argparse
 import json
 import time
-
 from twisted.internet import reactor
 from txjsonrpc.netstring.jsonrpc import Proxy
-
 from binascii import hexlify, unhexlify
-
 from dht.utils import digest
-
 from txjsonrpc.netstring import jsonrpc
-
 from market.profile import Profile
-
-from protos import objects
-
+from protos import objects, countries
 from db.datastore import HashMap
-
-from market.contracts import store_contract
-
+from market.contracts import Contract
 from collections import OrderedDict
 
 def do_continue(value):
@@ -199,7 +190,7 @@ commands:
         parser.add_argument('-o', '--onename', help="the onename id")
         parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
         parser.add_argument('-hd', '--header', help="the file path to the header image")
-        parser.add_argument('-c', '--country', help="the country the user is located in")
+        parser.add_argument('-c', '--country', help="a string consisting of country from protos.countries.CountryCode")
         # we could add all the fields here but this is good enough to test.
         args = parser.parse_args(sys.argv[2:])
         p = Profile()
@@ -208,7 +199,7 @@ commands:
         if args.name is not None:
             u.name = args.name
         if args.country is not None:
-            u.country_code = args.country
+            u.location = countries.CountryCode.Value(args.country.upper())
         if args.onename is not None:
             u.handle = args.onename
         if args.avatar is not None:
@@ -258,7 +249,7 @@ commands:
         args = parser.parse_args(sys.argv[2:])
         with open(args.filepath) as data_file:
             contract = json.load(data_file, object_pairs_hook=OrderedDict)
-        store_contract(contract)
+        Contract(contract).save()
 
     def setimage(self, ):
         parser = argparse.ArgumentParser(

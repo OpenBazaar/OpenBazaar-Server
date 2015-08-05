@@ -1,0 +1,29 @@
+/*
+Get the protobuf compiler:
+sudo apt-get install protobuf-compiler
+
+Compile with:
+cd path/to/protos/
+protoc --python_out=./ countries.proto
+*/
+
+enum CountryCode {
+    ALL                        = 0;
+    NORTH_AMERICA              = 1;
+    SOUTH_AMERICA              = 2;
+    EUROPE                     = 3;
+    AFRICA                     = 4;
+    ASIA                       = 5;
+    AUSTRALIA                  = 6;
+    UNITED_STATES              = 7;
+    CHINA                      = 8;
+    JAPAN                      = 9;
+    GERMANY                    = 10;
+    UNITED_KINGDOM             = 11;
+    FRANCE                     = 12;
+    BRAZIL                     = 13;
+    ITALY                      = 14;
+    INDIA                      = 15;
+
+    // have to continue building this out
+}

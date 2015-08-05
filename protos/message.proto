@@ -34,8 +34,8 @@ enum Command {
 	GET_CONTRACT_METADATA   = 13;
 
 	// Error responses
-	BAD_REQUEST   = 400;
-	NOT_FOUND     = 404;
-	CALM_DOWN     = 420;
-	UNKNOWN_ERROR = 520;
+	BAD_REQUEST             = 400;
+	NOT_FOUND               = 404;
+	CALM_DOWN               = 420;
+	UNKNOWN_ERROR           = 520;
 }

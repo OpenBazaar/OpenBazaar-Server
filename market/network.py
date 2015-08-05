@@ -174,9 +174,10 @@ class Server(object):
                 verify_key.verify(result[1][1] + result[1][0])
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
-                    d = self.get_image(node_to_ask, l.thumbnail_hash)
-                    return d.addCallback(ret, l)
+                if l.HasField("thumbnail_hash"):
+                    if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
+                        d = self.get_image(node_to_ask, l.thumbnail_hash)
+                        return d.addCallback(ret, l)
                 return l
             except:
                 return None

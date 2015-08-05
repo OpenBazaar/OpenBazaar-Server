@@ -34,6 +34,14 @@ class HashMap(object):
             return None
         return ret[0]
 
+    def get_all(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT * FROM hashmap ''')
+        ret = cursor.fetchall()
+        if ret is None:
+            return None
+        return ret
+
     def delete(self, hash):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash,))
@@ -89,11 +97,17 @@ class ListingsStore(object):
             pass
 
     def add_listing(self, proto):
+        """
+        Will also update an existing listing if the contract hash is the same.
+        """
         cursor = self.db.cursor()
         l = Listings()
         ser = self.get_proto()
         if ser is not None:
             l.ParseFromString(ser)
+            for listing in l.listing:
+                if listing.contract_hash == proto.contract_hash:
+                    l.listing.remove(listing)
         l.listing.extend([proto])
         cursor.execute('''INSERT OR REPLACE INTO listings(id, serializedListings)
                       VALUES (?,?)''', (1, l.SerializeToString()))

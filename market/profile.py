@@ -17,8 +17,9 @@ class Profile(object):
         if self.db.get_proto() is not None:
             self.profile.ParseFromString(self.db.get_proto())
 
-    def create(self, name, handle=None):
+    def create(self, name, location, handle=None):
         self.profile.name = name
+        self.profile.location = location
         if handle is not None:
             self.profile.handle = handle
         self.db.set_proto(self.profile.SerializeToString())
