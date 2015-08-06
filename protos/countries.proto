@@ -8,22 +8,23 @@ protoc --python_out=./ countries.proto
 */
 
 enum CountryCode {
-    ALL                        = 0;
-    NORTH_AMERICA              = 1;
-    SOUTH_AMERICA              = 2;
-    EUROPE                     = 3;
-    AFRICA                     = 4;
-    ASIA                       = 5;
-    AUSTRALIA                  = 6;
-    UNITED_STATES              = 7;
-    CHINA                      = 8;
-    JAPAN                      = 9;
-    GERMANY                    = 10;
-    UNITED_KINGDOM             = 11;
-    FRANCE                     = 12;
-    BRAZIL                     = 13;
-    ITALY                      = 14;
-    INDIA                      = 15;
+    NA                         = 0; // Use this for digital goods or services
+    ALL                        = 1;
+    NORTH_AMERICA              = 2;
+    SOUTH_AMERICA              = 3;
+    EUROPE                     = 4;
+    AFRICA                     = 5;
+    ASIA                       = 6;
+    AUSTRALIA                  = 7;
+    UNITED_STATES              = 8;
+    CHINA                      = 9;
+    JAPAN                      = 10;
+    GERMANY                    = 11;
+    UNITED_KINGDOM             = 12;
+    FRANCE                     = 13;
+    BRAZIL                     = 14;
+    ITALY                      = 15;
+    INDIA                      = 16;
 
     // have to continue building this out
 }

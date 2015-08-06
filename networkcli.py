@@ -50,6 +50,7 @@ commands:
     getlistings         fetches metadata about the store's listings
     setcontract         sets a contract in the filesystem and db
     setimage            maps an image hash to a filepath in the db
+    setasmoderator      sets a node as a moderator
     setprofile          sets the given profile data in the database
     shutdown            closes all outstanding connections.
 ''')
@@ -291,6 +292,18 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def setasmoderator(self):
+        parser = argparse.ArgumentParser(
+            description="Sets the given node as a moderator.",
+            usage='''usage:
+    networkcli.py setasmoderator [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to set")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('setasmoderator', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, guid):
@@ -325,6 +338,16 @@ class RPCCalls(jsonrpc.JSONRPC):
     def jsonrpc_get(self, keyword):
         def handle_result(result):
             print "JSONRPC result:", result
+            for mod in result:
+                try:
+                    val = objects.Value()
+                    val.ParseFromString(mod)
+
+                    node = objects.Node()
+                    node.ParseFromString(val.serializedData)
+                    print node
+                except Exception as e:
+                    print 'malformed protobuf', e.message
 
         d = self.kserver.get(keyword)
         d.addCallback(handle_result)
@@ -442,6 +465,14 @@ class RPCCalls(jsonrpc.JSONRPC):
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "getting contract metadata..."
+
+    def jsonrpc_setasmoderator(self, node_id):
+        def get_node(node):
+            proto = node.getProto().SerializeToString()
+            if node is not None:
+                self.kserver.set("moderators", digest(proto), proto)
+        d = self.kserver.resolve(unhexlify(node_id))
+        d.addCallback(get_node)
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
