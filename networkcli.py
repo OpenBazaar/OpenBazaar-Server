@@ -46,6 +46,7 @@ commands:
     getcontractmetadata fetches the metadata (including thumbnail image) for the contract
     getimage            fetches an image from a node given its hash and guid
     getprofile          fetches the profile from the given node.
+    getmoderators       fetches a list of moderators
     getusermetadata     fetches the metadata (shortened profile) for the node
     getlistings         fetches metadata about the store's listings
     setcontract         sets a contract in the filesystem and db
@@ -304,6 +305,15 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def getmoderators(self):
+        parser = argparse.ArgumentParser(
+            description="Fetches a list of moderators",
+            usage='''usage:
+    networkcli.py getmoderators ''')
+        d = proxy.callRemote('getmoderators')
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, guid):
@@ -473,6 +483,13 @@ class RPCCalls(jsonrpc.JSONRPC):
                 self.kserver.set("moderators", digest(proto), proto)
         d = self.kserver.resolve(unhexlify(node_id))
         d.addCallback(get_node)
+
+    def jsonrpc_getmoderators(self):
+        def print_mods(mods):
+            print mods
+
+        self.mserver.get_moderators().addCallback(print_mods)
+        return "finding moderators in dht..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
