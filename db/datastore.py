@@ -144,6 +144,7 @@ class ListingsStore(object):
             return ret
         return ret[0]
 
+
 class KeyStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
@@ -165,7 +166,12 @@ class KeyStore(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (type,))
         ret = cursor.fetchone()
-        if ret == []:
+        if not ret:
             return None
         else:
             return ret
+
+    def delete_all_keys(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM keystore''')
+        self.db.commit()

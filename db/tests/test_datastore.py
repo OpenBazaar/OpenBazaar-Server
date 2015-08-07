@@ -80,6 +80,10 @@ class DatastoreTest(unittest.TestCase):
         val.ParseFromString(l)
         self.assertEqual(0, len(val.listing))
 
+        # Try to delete when table is already empty
+        self.ls.delete_all_listings()
+        self.assertEqual(None, self.ls.delete_listing(self.test_hash))
+
     def test_setGUIDKey(self):
         self.ks.set_key("guid", "privkey", "signed_privkey")
         key = self.ks.get_key("guid")
@@ -89,3 +93,7 @@ class DatastoreTest(unittest.TestCase):
         self.ks.set_key("bitcoin", "privkey", "signed_privkey")
         key = self.ks.get_key("bitcoin")
         self.assertEqual(("privkey", "signed_privkey"), key)
+
+    def test_getKeyFromEmptyTable(self):
+        self.ks.delete_all_keys()
+        self.assertEqual(None, self.ks.get_key("guid"))
