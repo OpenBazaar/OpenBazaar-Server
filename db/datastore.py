@@ -3,6 +3,7 @@ import sqlite3 as lite
 from constants import DATABASE
 from protos.objects import Listings
 
+
 class HashMap(object):
     """
     Creates a table in the database for mapping file hashes (which are sent
@@ -38,13 +39,16 @@ class HashMap(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT * FROM hashmap ''')
         ret = cursor.fetchall()
-        if ret is None:
-            return None
         return ret
 
     def delete(self, hash):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash,))
+        self.db.commit()
+
+    def delete_all(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM hashmap''')
         self.db.commit()
 
 class ProfileStore(object):
@@ -127,13 +131,19 @@ class ListingsStore(object):
                       VALUES (?,?)''', (1, l.SerializeToString()))
         self.db.commit()
 
+    def delete_all_listings(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM listings''')
+        self.db.commit()
+
     def get_proto(self):
         cursor = self.db.cursor()
         cursor.execute('''SELECT serializedListings FROM listings WHERE id = 1''')
         ret = cursor.fetchone()
         if ret is None:
-            return None
+            return ret
         return ret[0]
+
 
 class KeyStore(object):
     def __init__(self):
@@ -156,7 +166,12 @@ class KeyStore(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (type,))
         ret = cursor.fetchone()
-        if ret == []:
+        if not ret:
             return None
         else:
             return ret
+
+    def delete_all_keys(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM keystore''')
+        self.db.commit()
