@@ -61,5 +61,15 @@ class DatastoreTest(unittest.TestCase):
         self.ls.delete_all_listings()
         self.ls.add_listing(self.lm)
         l = self.ls.get_proto()
-        s = self.lm.SerializeToString()
-        self.assertEqual(s, l)
+        val = Listings()
+        val.ParseFromString(l)
+        self.assertEqual(self.lm, val.listing[0])
+
+    def test_deleteListing(self):
+        self.ls.delete_all_listings()
+        self.ls.add_listing(self.lm)
+        self.ls.delete_listing(self.test_hash)
+        l = self.ls.get_proto()
+        val = Listings()
+        val.ParseFromString(l)
+        self.assertEqual(0, len(val.listing))
