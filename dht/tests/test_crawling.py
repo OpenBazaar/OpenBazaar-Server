@@ -3,7 +3,7 @@ import mock
 import nacl.signing, nacl.hash
 from binascii import unhexlify
 from txrudp import packet, connection, rudp, constants
-from twisted.internet import udp, address, task
+from twisted.internet import udp, address, task, base
 from twisted.trial import unittest
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
