@@ -22,6 +22,7 @@ class Server(object):
         Should be initialized after the Kademlia server.
         """
         self.kserver = kserver
+        self.signing_key = signing_key
         self.router = kserver.protocol.router
         self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key)
 
@@ -37,12 +38,8 @@ class Server(object):
             node_to_ask: a `dht.node.Node` object containing an ip and port
             contract_hash: a 20 byte hash in raw byte format
         """
-        dl = []
-
         def get_result(result):
             if digest(result[1][0]) == contract_hash:
-                def ret(result, contract):
-                    return contract
                 contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
                 try:
                     signature = contract["vendor"]["signatures"]["guid"]
@@ -54,8 +51,7 @@ class Server(object):
                 self.cache(result[1][0])
                 if "images" in contract["vendor"]["listing"]["item"]:
                     for image_hash in contract["vendor"]["listing"]["item"]["images"]["image_hashes"]:
-                        dl.append(self.get_image(node_to_ask, unhexlify(image_hash)))
-                    return defer.gatherResults(dl).addCallback(ret, contract)
+                        self.get_image(node_to_ask, unhexlify(image_hash))
                 return contract
             else:
                 return None
@@ -89,8 +85,6 @@ class Server(object):
         Downloads the profile from the given node. If the images do not already
         exist in cache, it will download and cache them before returning the profile.
         """
-        dl = []
-
         def get_result(result):
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
@@ -205,6 +199,15 @@ class Server(object):
                     pass
             return deferredDict(ds).addCallback(parse_profiles)
         return self.kserver.get("moderators").addCallback(parse_response)
+
+    def make_moderator(self):
+        proto = self.kserver.node.getProto().SerializeToString()
+        self.kserver.set("moderators", digest(proto), proto)
+
+    def unmake_moderator(self):
+        key = digest(self.kserver.node.getProto().SerializeToString())
+        signature = self.signing_key.Sign(key)[:64]
+        self.kserver.delete("moderators", key, signature)
 
     def cache(self, file):
         """

@@ -297,11 +297,8 @@ commands:
         parser = argparse.ArgumentParser(
             description="Sets the given node as a moderator.",
             usage='''usage:
-    networkcli.py setasmoderator [-g GUID]''')
-        parser.add_argument('-g', '--guid', required=True, help="the guid to set")
-        args = parser.parse_args(sys.argv[2:])
-        guid = args.guid
-        d = proxy.callRemote('setasmoderator', guid)
+    networkcli.py setasmoderator''')
+        d = proxy.callRemote('setasmoderator')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -476,13 +473,8 @@ class RPCCalls(jsonrpc.JSONRPC):
         d.addCallback(get_node)
         return "getting contract metadata..."
 
-    def jsonrpc_setasmoderator(self, node_id):
-        def get_node(node):
-            proto = node.getProto().SerializeToString()
-            if node is not None:
-                self.kserver.set("moderators", digest(proto), proto)
-        d = self.kserver.resolve(unhexlify(node_id))
-        d.addCallback(get_node)
+    def jsonrpc_setasmoderator(self):
+        self.mserver.make_moderator()
 
     def jsonrpc_getmoderators(self):
         def print_mods(mods):
