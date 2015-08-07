@@ -316,13 +316,13 @@ commands:
 
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
-    def __init__(self, kserver, mserver, guid):
+    def __init__(self, kserver, mserver, keys):
         self.kserver = kserver
         self.mserver = mserver
-        self.guid = guid
+        self.keys = keys
 
     def jsonrpc_getpubkey(self):
-        return hexlify(self.guid.signed_pubkey)
+        return hexlify(self.keys.guid_signed_pubkey)
 
     def jsonrpc_getinfo(self):
         info = {"version": "0.1"}
@@ -367,7 +367,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        signature = self.guid.signing_key.sign(digest(key))
+        signature = self.keys.signing_key.sign(digest(key))
         d = self.kserver.delete(str(keyword), digest(key), signature[:64])
         d.addCallback(handle_result)
         return "Sending delete request..."

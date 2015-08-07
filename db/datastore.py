@@ -134,3 +134,29 @@ class ListingsStore(object):
         if ret is None:
             return None
         return ret[0]
+
+class KeyStore(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE keystore(type TEXT primary key, privkey BLOB, pubkey BLOB)''')
+            self.db.commit()
+        except:
+            pass
+
+    def set_key(self, type, privkey, pubkey):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO keystore(type, privkey, pubkey)
+                      VALUES (?,?,?)''', (type, privkey, pubkey))
+        self.db.commit()
+
+    def get_key(self, type):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (type,))
+        ret = cursor.fetchone()
+        if ret == []:
+            return None
+        else:
+            return ret

@@ -11,6 +11,7 @@ from constants import DATA_FOLDER
 from db.datastore import HashMap, ListingsStore
 from collections import OrderedDict
 from market.profile import Profile
+from keyutils.keys import KeyChain
 
 class Contract(object):
     """
@@ -79,7 +80,7 @@ class Contract(object):
 
         # TODO: import keys into the contract, import moderator information from db, sign contract.
         profile = Profile().get()
-
+        keychain = KeyChain()
         self.contract = OrderedDict(
             {
                 "vendor_offer": {
@@ -91,10 +92,10 @@ class Contract(object):
                             "category_sub": "fixed price"
                         },
                         "id": {
-                            "guid": "72553255c43f46dbfada66c6b108a991102f4bb9",
+                            "guid": keychain.guid.encode("hex"),
                             "pubkeys": {
-                                "guid": "5bf3efa2ba168c3e627884349fff1a94723bdfa9f17cc471dff5b628165f60ce",
-                                "bitcoin": "16bed6368b8b1542cd6eb87f5bc20dc830b41a2258dde40438a75fa701d24e9a"
+                                "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
+                                "bitcoin": keychain.bitcoin_master_pubkey
                             }
                         },
                         "item": {

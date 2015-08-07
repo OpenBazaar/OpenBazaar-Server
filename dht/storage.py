@@ -5,13 +5,9 @@ Copyright (c) 2015 OpenBazaar
 
 import time
 import sqlite3 as lite
-
 from collections import OrderedDict, MutableMapping
-
 from zope.interface import implements, Interface
-
 from protos.objects import Value
-
 from threading import RLock
 
 class IStorage(Interface):
