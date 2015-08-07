@@ -131,6 +131,11 @@ class ListingsStore(object):
                       VALUES (?,?)''', (1, l.SerializeToString()))
         self.db.commit()
 
+    def delete_all_listings(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM listings''')
+        self.db.commit()
+
     def get_proto(self):
         cursor = self.db.cursor()
         cursor.execute('''SELECT serializedListings FROM listings WHERE id = 1''')
