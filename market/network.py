@@ -92,8 +92,6 @@ class Server(object):
         dl = []
 
         def get_result(result):
-            def ret(result, profile):
-                return profile
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
@@ -101,10 +99,10 @@ class Server(object):
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.avatar_hash)):
-                    dl.append(self.get_image(node_to_ask, p.avatar_hash))
+                    self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.header_hash)):
-                    dl.append(self.get_image(node_to_ask, p.header_hash))
-                return defer.gatherResults(dl).addCallback(ret, p)
+                    self.get_image(node_to_ask, p.header_hash)
+                return p
             except:
                 return None
         if node_to_ask.ip is None:
@@ -120,8 +118,6 @@ class Server(object):
         It will download the avatar if it isn't already in cache.
         """
         def get_result(result):
-            def ret(result, metadata):
-                return metadata
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
@@ -129,8 +125,7 @@ class Server(object):
                 m = objects.Metadata()
                 m.ParseFromString(result[1][0])
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(m.avatar_hash)):
-                    d = self.get_image(node_to_ask, m.avatar_hash)
-                    return d.addCallback(ret, m)
+                    self.get_image(node_to_ask, m.avatar_hash)
                 return m
             except:
                 return None
@@ -167,8 +162,6 @@ class Server(object):
         It will download the thumbnail image if it isn't already in cache.
         """
         def get_result(result):
-            def ret(result, listing):
-                return listing
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
@@ -177,8 +170,7 @@ class Server(object):
                 l.ParseFromString(result[1][0])
                 if l.HasField("thumbnail_hash"):
                     if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
-                        d = self.get_image(node_to_ask, l.thumbnail_hash)
-                        return d.addCallback(ret, l)
+                        self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
             except:
                 return None
@@ -208,10 +200,10 @@ class Server(object):
                     val.ParseFromString(mod)
                     n = objects.Node()
                     n.ParseFromString(val.serializedData)
-                    ds[n] = self.get_profile(node.Node(n.guid, n.ip, n.port, n.signedPublicKey))
+                    ds[val.serializedData] = self.get_profile(node.Node(n.guid, n.ip, n.port, n.signedPublicKey))
                 except:
                     pass
-            deferredDict(ds).addCallback(parse_profiles)
+            return deferredDict(ds).addCallback(parse_profiles)
         return self.kserver.get("moderators").addCallback(parse_response)
 
     def cache(self, file):
