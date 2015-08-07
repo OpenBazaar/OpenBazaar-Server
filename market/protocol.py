@@ -9,6 +9,7 @@ from market.profile import Profile
 from protos.objects import Metadata, Listings
 from binascii import hexlify
 
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
@@ -16,7 +17,8 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA, GET_CONTRACT_METADATA]
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
+                                 GET_CONTRACT_METADATA]
         self.multiplexer = None
         self.hashmap = HashMap()
         self.signing_key = signing_key
