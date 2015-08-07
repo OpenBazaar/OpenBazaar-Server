@@ -11,7 +11,10 @@ class DatastoreTest(unittest.TestCase):
         self.test_hash2 = "97e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_file = "Contents of test.txt"
         self.test_file2 = "Contents of test2.txt"
-        self.serialized_profile = Profile()
+
+        self.sp = Profile()
+        self.sp.name = "Test User"
+        self.sp.location = CountryCode.Value('UNITED_STATES')
 
         self.serialized_listings = Listings()
         self.lm = self.serialized_listings.ListingMetadata()
@@ -27,6 +30,7 @@ class DatastoreTest(unittest.TestCase):
 
         self.ps = datastore.ProfileStore()
         self.ls = datastore.ListingsStore()
+        self.ks = datastore.KeyStore()
 
     def test_hashmapInsert(self):
         self.hm.insert(self.test_hash, self.test_file)
@@ -53,9 +57,11 @@ class DatastoreTest(unittest.TestCase):
         self.assertIn((self.test_hash2, self.test_file2), f)
 
     def test_setProto(self):
-        self.ps.set_proto(self.serialized_profile)
+        self.ps.set_proto(self.sp.SerializeToString())
         sp = self.ps.get_proto()
-        self.assertEqual(self.serialized_profile, sp)
+        val = Profile()
+        val.ParseFromString(sp)
+        self.assertEqual(self.sp, val)
 
     def test_addListing(self):
         self.ls.delete_all_listings()
@@ -73,3 +79,13 @@ class DatastoreTest(unittest.TestCase):
         val = Listings()
         val.ParseFromString(l)
         self.assertEqual(0, len(val.listing))
+
+    def test_setGUIDKey(self):
+        self.ks.set_key("guid", "privkey", "signed_privkey")
+        key = self.ks.get_key("guid")
+        self.assertEqual(("privkey", "signed_privkey"), key)
+
+    def test_setBitcoinKey(self):
+        self.ks.set_key("bitcoin", "privkey", "signed_privkey")
+        key = self.ks.get_key("bitcoin")
+        self.assertEqual(("privkey", "signed_privkey"), key)
