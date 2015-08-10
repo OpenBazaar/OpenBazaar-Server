@@ -10,6 +10,7 @@ from zope.interface import implements, Interface
 from protos.objects import Value
 from threading import RLock
 
+
 class IStorage(Interface):
     """
     Local storage for this node.
@@ -147,7 +148,7 @@ class PersistentStorage(object):
             cursor.execute('''CREATE TABLE data(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)''')
             cursor.execute('''CREATE INDEX idx1 ON data(keyword);CREATE INDEX idx2 ON data(birthday);''')
             self.db.commit()
-        except:
+        except Exception:
             self.cull()
 
     def __setitem__(self, keyword, values):
@@ -183,7 +184,7 @@ class PersistentStorage(object):
             cursor = self.db.cursor()
             cursor.execute('''SELECT value FROM data WHERE keyword=? AND id=?''', (keyword, key))
             return cursor.fetchone()[0]
-        except:
+        except Exception:
             return None
 
     def cull(self):
@@ -197,7 +198,7 @@ class PersistentStorage(object):
             cursor = self.db.cursor()
             cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
             self.db.commit()
-        except:
+        except Exception:
             pass
         self.cull()
 
@@ -212,7 +213,7 @@ class PersistentStorage(object):
                 if k[0] not in keyword_list:
                     keyword_list.append(k[0])
             return keyword_list.__iter__()
-        except:
+        except Exception:
             return None
 
     def iteritems(self, keyword):
@@ -221,13 +222,14 @@ class PersistentStorage(object):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
             return cursor.fetchall().__iter__()
-        except:
+        except Exception:
             return None
 
     def get_ttl(self, keyword, key):
         cursor = self.db.cursor()
         cursor.execute('''SELECT birthday FROM data WHERE keyword=? AND id=?''', (keyword, key,))
         return self.ttl - (time.time() - cursor.fetchall()[0][0])
+
 
 class TTLDict(MutableMapping):
     """

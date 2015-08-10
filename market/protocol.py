@@ -11,6 +11,7 @@ from protos.objects import Metadata, Listings, Followers
 from binascii import hexlify
 
 
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
@@ -34,7 +35,7 @@ class MarketProtocol(RPCProtocol):
             with open(self.hashmap.get_file(contract_hash), "r") as file:
                 contract = file.read()
             return [contract]
-        except:
+        except Exception:
             self.log.warning("Could not find contract %s" % contract_hash.encode('hex'))
             return ["None"]
 
@@ -45,7 +46,7 @@ class MarketProtocol(RPCProtocol):
             with open(self.hashmap.get_file(image_hash), "r") as file:
                 image = file.read()
             return [image]
-        except:
+        except Exception:
             self.log.warning("Could not find image %s" % image_hash.encode('hex'))
             return ["None"]
 

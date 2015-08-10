@@ -96,7 +96,7 @@ class WebResource(resource.Resource):
                     node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
                     if node.id not in self.nodes:
                         self.nodes[node.id] = node
-                except:
+                except Exception:
                     pass
 
         def start_crawl(results):
@@ -106,7 +106,7 @@ class WebResource(resource.Resource):
             node = Node(digest(random.getrandbits(255)))
             nearest = self.kserver.protocol.router.findNeighbors(node)
             spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
-            d = spider.find().addCallback(gather_results)
+            spider.find().addCallback(gather_results)
 
         ds = {}
         for bucket in self.kserver.protocol.router.buckets:

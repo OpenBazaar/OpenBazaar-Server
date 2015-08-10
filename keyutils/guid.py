@@ -4,7 +4,7 @@ import nacl.hash
 import guidc
 from binascii import hexlify, unhexlify
 
-class GUID:
+class GUID(object):
     def __init__(self, privkey=None, use_C_lib=False):
         if privkey is None:
             if use_C_lib:

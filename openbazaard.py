@@ -1,4 +1,8 @@
 __author__ = 'chris'
+"""
+Just using this class for testing the DHT for now.
+We will fit the actual implementation in where appropriate.
+"""
 import stun
 import os
 import sys
@@ -35,7 +39,7 @@ node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
     kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol)
-else :
+else:
     kserver = Server(node)
     kserver.protocol.connect_multiplexer(protocol)
     kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "909b4f614ec4fc8c63aab83b91bc620d7a238600bf256472e968fdafce200128"))
