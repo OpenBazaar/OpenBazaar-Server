@@ -10,9 +10,11 @@ from twisted.internet import task, reactor, address, udp
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
+from dht.tests.utils import mknode
 from dht.node import Node
 from protos import message, objects
 from wireprotocol import OpenBazaarProtocol
+
 
 
 class KademliaProtocolTest(unittest.TestCase):
@@ -454,6 +456,8 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
         self.wire_protocol[self.addr1] = self.con
 
+        self.protocol.addToRouter(mknode())
+
         self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
 
@@ -513,7 +517,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.next_seqnum = seqnum + 1
 
     def test_badRPCDelete(self):
-        n = Node('127.0.0.1', 0, 'testkey')
+        n = mknode()
         val = self.protocol.rpc_delete(n, 'testkeyword', 'key', 'testsig')
         self.assertEqual(val, ["False"])
         val = self.protocol.rpc_delete(n, '', '', '')
