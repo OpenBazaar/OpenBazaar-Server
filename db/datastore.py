@@ -175,3 +175,66 @@ class KeyStore(object):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM keystore''')
         self.db.commit()
+
+
+class FollowData(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE followers(guid BLOB primary key, signature BLOB)''')
+            cursor.execute('''CREATE TABLE following(guid BLOB primary key)''')
+            self.db.commit()
+        except:
+            pass
+
+    def follow(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO following(guid) VALUES (?)''', (guid,))
+        self.db.commit()
+
+    def unfollow(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM following WHERE guid = ?''', (guid,))
+        self.db.commit()
+
+    def get_following(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid FROM following''')
+        guids = cursor.fetchall()
+        if not guids:
+            return None
+        else:
+            ret = []
+            for g in guids:
+                ret.append(g[0])
+            return ret
+
+    def is_following(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid FROM following WHERE guid = ?''', (guid,))
+        guids = cursor.fetchone()
+        if not guids:
+            return False
+        else:
+            return True
+
+    def set_follower(self, guid, signature):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO followers(guid, signature) VALUES (?,?)''', (guid, signature))
+        self.db.commit()
+
+    def delete_follower(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM followers WHERE guid = ?''', (guid,))
+        self.db.commit()
+
+    def get_followers(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid, signature FROM followers''')
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret

@@ -257,15 +257,15 @@ class Server(object):
             signature: a signature covering the key.
 
         """
-        self.log.debug("deleting '%s':'%s' from the network" % (keyword, hexlify(key)))
+        self.log.info("deleting '%s':'%s' from the network" % (keyword, hexlify(key)))
         dkey = digest(keyword)
 
         def delete(nodes):
-            self.log.info("deleting '%s' on %s" % (key, map(str, nodes)))
+            self.log.debug("deleting '%s' on %s" % (key, map(str, nodes)))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
-            if self.storage.getSpecific(keyword, key) is not None:
-                self.storage.delete(keyword, key)
+            if self.storage.getSpecific(dkey, key) is not None:
+                self.storage.delete(dkey, key)
 
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 

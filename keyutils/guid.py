@@ -2,7 +2,6 @@ __author__ = 'chris'
 import nacl.signing
 import nacl.hash
 import guidc
-
 from binascii import hexlify, unhexlify
 
 class GUID:
