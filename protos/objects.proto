@@ -90,8 +90,12 @@ message Listings {
     }
 }
 
-message Follower {
-    required bytes follower_guid   = 1;
-    required bytes following_guid  = 2;
-    required bytes signature       = 3;
+message Followers {
+    repeated Follower followers = 1;
+
+    message Follower {
+        required bytes follower_guid   = 1;
+        required bytes following_guid  = 2;
+        required bytes signature       = 3;
+    }
 }

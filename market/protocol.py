@@ -7,7 +7,7 @@ from log import Logger
 from protos.message import *
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
-from protos.objects import Metadata, Listings, Follower
+from protos.objects import Metadata, Listings, Followers
 from binascii import hexlify
 
 
@@ -107,12 +107,11 @@ class MarketProtocol(RPCProtocol):
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
             verify_key.verify(signature)
-            f = Follower()
+            f = Followers.Follower()
             f.follower_guid = sender.id
             f.following_guid = self.proto.guid
             f.signature = signature
-            db = FollowData()
-            db.set_follower(sender.id, f.SerializeToString())
+            FollowData().set_follower(f)
             return ["True"]
         except Exception:
             self.log.warning("Failed to validate follower signature")
@@ -134,9 +133,11 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_followers(self, sender):
         self.log.info("Fetching follower list from db")
         self.router.addContact(sender)
-        f = FollowData()
-        followers = f.get_followers()
-        return followers if followers is not None else ["None"]
+        ser = FollowData().get_followers()
+        if ser is None:
+            return ["None"]
+        else:
+            return [ser, self.signing_key.sign(ser)[:64]]
 
     def rpc_get_following(self, sender):
         self.log.info("Fetching following list from db")

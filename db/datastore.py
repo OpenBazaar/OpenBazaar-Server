@@ -1,7 +1,7 @@
 __author__ = 'chris'
 import sqlite3 as lite
 from constants import DATABASE
-from protos.objects import Listings
+from protos.objects import Listings, Followers
 
 
 class HashMap(object):
@@ -183,7 +183,7 @@ class FollowData(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE followers(guid BLOB primary key, proto BLOB)''')
+            cursor.execute('''CREATE TABLE followers(id INTEGER primary key, serializedFollowers BLOB)''')
             cursor.execute('''CREATE TABLE following(guid BLOB primary key)''')
             self.db.commit()
         except:
@@ -220,24 +220,36 @@ class FollowData(object):
         else:
             return True
 
-    def set_follower(self, guid, proto):
+    def set_follower(self, proto):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO followers(guid, proto) VALUES (?,?)''', (guid, proto))
+        f = Followers()
+        ser = self.get_followers()
+        if ser is not None:
+            f.ParseFromString(ser)
+            for follower in f.followers:
+                if follower.follower_guid == proto.follower_guid:
+                    f.follower.remove(follower)
+        f.follower.extend([proto])
+        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
     def delete_follower(self, guid):
         cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM followers WHERE guid = ?''', (guid,))
+        f = Followers()
+        ser = self.get_followers()
+        if ser is not None:
+            f.ParseFromString(ser)
+            for follower in f.followers:
+                if follower.follower_guid == guid:
+                    f.follower.remove(follower)
+        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
     def get_followers(self):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT proto FROM followers''')
-        protos = cursor.fetchall()
-        if not protos:
+        cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
+        proto = cursor.fetchone()
+        if not proto:
             return None
         else:
-            ret = []
-            for p in protos:
-                ret.append(p[0])
-            return ret
+            return proto[0]
