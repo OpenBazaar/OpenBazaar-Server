@@ -1,4 +1,4 @@
-TESTPATH=./dht/tests ./db/tests
+TESTPATH=./dht/tests ./db/tests ./market/tests
 
 .PHONY: all unittest
 
