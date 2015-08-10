@@ -1,12 +1,13 @@
 __author__ = 'chris'
+import nacl.signing
 from zope.interface import implements
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
-from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA, GET_CONTRACT_METADATA
-from db.datastore import HashMap, ListingsStore
+from protos.message import *
+from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
-from protos.objects import Metadata, Listings
+from protos.objects import Metadata, Listings, Follower
 from binascii import hexlify
 
 
@@ -17,11 +18,11 @@ class MarketProtocol(RPCProtocol):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
-        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
-                                 GET_CONTRACT_METADATA]
         self.multiplexer = None
         self.hashmap = HashMap()
         self.signing_key = signing_key
+        self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
+                                 GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -100,6 +101,50 @@ class MarketProtocol(RPCProtocol):
             self.log.warning("Could not find metadata for contract %s" % hexlify(contract_hash))
             return ["None"]
 
+    def rpc_follow(self, sender, signature):
+        self.log.info("Follow request from %s" % sender.id.encode("hex"))
+        self.router.addContact(sender)
+        try:
+            verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+            verify_key.verify(signature)
+            f = Follower()
+            f.follower_guid = sender.id
+            f.following_guid = self.proto.guid
+            f.signature = signature
+            db = FollowData()
+            db.set_follower(sender.id, f.SerializeToString())
+            return ["True"]
+        except Exception:
+            self.log.warning("Failed to validate follower signature")
+            return ["False"]
+
+    def rpc_unfollow(self, sender, signature):
+        self.log.info("Unfollow request from %s" % sender.id.encode("hex"))
+        self.router.addContact(sender)
+        try:
+            verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+            verify_key.verify(signature)
+            f = FollowData()
+            f.delete_follower(sender.id)
+            return ["True"]
+        except Exception:
+            self.log.warning("Failed to validate follower signature")
+            return ["False"]
+
+    def rpc_get_followers(self, sender):
+        self.log.info("Fetching follower list from db")
+        self.router.addContact(sender)
+        f = FollowData()
+        followers = f.get_followers()
+        return followers if followers is not None else ["None"]
+
+    def rpc_get_following(self, sender):
+        self.log.info("Fetching following list from db")
+        self.router.addContact(sender)
+        f = FollowData()
+        following = f.get_followers()
+        return following if following is not None else ["None"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -128,6 +173,26 @@ class MarketProtocol(RPCProtocol):
     def callGetContractMetadata(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract_metadata(address, contract_hash)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callFollow(self, nodeToAsk, signature):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.follow(address, signature)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callUnfollow(self, nodeToAsk, signature):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.unfollow(address, signature)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetFollowers(self, nodeToAsk):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_followers(address)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetFollowing(self, nodeToAsk):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.get_following(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

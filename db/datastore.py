@@ -183,7 +183,7 @@ class FollowData(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE followers(guid BLOB primary key, signature BLOB)''')
+            cursor.execute('''CREATE TABLE followers(guid BLOB primary key, proto BLOB)''')
             cursor.execute('''CREATE TABLE following(guid BLOB primary key)''')
             self.db.commit()
         except:
@@ -220,9 +220,9 @@ class FollowData(object):
         else:
             return True
 
-    def set_follower(self, guid, signature):
+    def set_follower(self, guid, proto):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO followers(guid, signature) VALUES (?,?)''', (guid, signature))
+        cursor.execute('''INSERT OR REPLACE INTO followers(guid, proto) VALUES (?,?)''', (guid, proto))
         self.db.commit()
 
     def delete_follower(self, guid):
@@ -232,9 +232,12 @@ class FollowData(object):
 
     def get_followers(self):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT guid, signature FROM followers''')
-        ret = cursor.fetchall()
-        if not ret:
+        cursor.execute('''SELECT proto FROM followers''')
+        protos = cursor.fetchall()
+        if not protos:
             return None
         else:
+            ret = []
+            for p in protos:
+                ret.append(p[0])
             return ret

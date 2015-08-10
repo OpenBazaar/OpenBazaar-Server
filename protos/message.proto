@@ -32,6 +32,10 @@ enum Command {
 	GET_LISTINGS            = 11;
 	GET_USER_METADATA       = 12;
 	GET_CONTRACT_METADATA   = 13;
+	FOLLOW                  = 14;
+	UNFOLLOW                = 15;
+	GET_FOLLOWING           = 16;
+	GET_FOLLOWERS           = 17;
 
 	// Error responses
 	BAD_REQUEST             = 400;

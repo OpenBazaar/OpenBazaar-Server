@@ -20,7 +20,7 @@ import objects
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
   package='',
-  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c*\x9f\x02\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\x0e\n\nHOLE_PUNCH\x10\x03\x12\t\n\x05STORE\x10\x04\x12\n\n\x06\x44\x45LETE\x10\x05\x12\r\n\tFIND_NODE\x10\x06\x12\x0e\n\nFIND_VALUE\x10\x07\x12\x10\n\x0cGET_CONTRACT\x10\x08\x12\r\n\tGET_IMAGE\x10\t\x12\x0f\n\x0bGET_PROFILE\x10\n\x12\x10\n\x0cGET_LISTINGS\x10\x0b\x12\x15\n\x11GET_USER_METADATA\x10\x0c\x12\x19\n\x15GET_CONTRACT_METADATA\x10\r\x12\x10\n\x0b\x42\x41\x44_REQUEST\x10\x90\x03\x12\x0e\n\tNOT_FOUND\x10\x94\x03\x12\x0e\n\tCALM_DOWN\x10\xa4\x03\x12\x12\n\rUNKNOWN_ERROR\x10\x88\x04')
+  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"a\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c*\xdf\x02\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\x0e\n\nHOLE_PUNCH\x10\x03\x12\t\n\x05STORE\x10\x04\x12\n\n\x06\x44\x45LETE\x10\x05\x12\r\n\tFIND_NODE\x10\x06\x12\x0e\n\nFIND_VALUE\x10\x07\x12\x10\n\x0cGET_CONTRACT\x10\x08\x12\r\n\tGET_IMAGE\x10\t\x12\x0f\n\x0bGET_PROFILE\x10\n\x12\x10\n\x0cGET_LISTINGS\x10\x0b\x12\x15\n\x11GET_USER_METADATA\x10\x0c\x12\x19\n\x15GET_CONTRACT_METADATA\x10\r\x12\n\n\x06\x46OLLOW\x10\x0e\x12\x0c\n\x08UNFOLLOW\x10\x0f\x12\x11\n\rGET_FOLLOWING\x10\x10\x12\x11\n\rGET_FOLLOWERS\x10\x11\x12\x10\n\x0b\x42\x41\x44_REQUEST\x10\x90\x03\x12\x0e\n\tNOT_FOUND\x10\x94\x03\x12\x0e\n\tCALM_DOWN\x10\xa4\x03\x12\x12\n\rUNKNOWN_ERROR\x10\x88\x04')
   ,
   dependencies=[objects.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -84,26 +84,42 @@ _COMMAND = _descriptor.EnumDescriptor(
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='BAD_REQUEST', index=13, number=400,
+      name='FOLLOW', index=13, number=14,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='NOT_FOUND', index=14, number=404,
+      name='UNFOLLOW', index=14, number=15,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='CALM_DOWN', index=15, number=420,
+      name='GET_FOLLOWING', index=15, number=16,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='UNKNOWN_ERROR', index=16, number=520,
+      name='GET_FOLLOWERS', index=16, number=17,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BAD_REQUEST', index=17, number=400,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NOT_FOUND', index=18, number=404,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CALM_DOWN', index=19, number=420,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNKNOWN_ERROR', index=20, number=520,
       options=None,
       type=None),
   ],
   containing_type=None,
   options=None,
   serialized_start=132,
-  serialized_end=419,
+  serialized_end=483,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -121,6 +137,10 @@ GET_PROFILE = 10
 GET_LISTINGS = 11
 GET_USER_METADATA = 12
 GET_CONTRACT_METADATA = 13
+FOLLOW = 14
+UNFOLLOW = 15
+GET_FOLLOWING = 16
+GET_FOLLOWERS = 17
 BAD_REQUEST = 400
 NOT_FOUND = 404
 CALM_DOWN = 420
