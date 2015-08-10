@@ -1,8 +1,6 @@
 import random
 import hashlib
 
-from binascii import unhexlify
-
 from twisted.trial import unittest
 
 from dht.node import Node, NodeHeap
@@ -43,6 +41,13 @@ class NodeTest(unittest.TestCase):
         n2 = Node(rid, signed_pubkey=pubkey, vendor=vendor)
         self.assertEqual(n1, n2.getProto())
 
+    def test_tuple(self):
+        n = Node('127.0.0.1', 0, 'testkey')
+        i = n.__iter__()
+        self.assertIn('127.0.0.1', i)
+        self.assertIn(0, i)
+        self.assertIn('testkey', i)
+
 
 class NodeHeapTest(unittest.TestCase):
     def test_maxSize(self):
@@ -75,3 +80,9 @@ class NodeHeapTest(unittest.TestCase):
         for index, node in enumerate(heap):
             self.assertEqual(index + 2, node.long_id)
             self.assertTrue(index < 5)
+
+    def test_getNoneNodeById(self):
+        n = Node('127.0.0.1', 0, 'testkey')
+        nh = NodeHeap(n, 5)
+        val = nh.getNodeById('')
+        self.assertIsNone(val)

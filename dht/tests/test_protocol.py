@@ -511,3 +511,9 @@ class KademliaProtocolTest(unittest.TestCase):
         self.proto_mock.reset_mock()
 
         self.next_seqnum = seqnum + 1
+
+    def test_badRPCDelete(self):
+        n = Node('127.0.0.1', 0, 'testkey')
+        val = self.protocol.rpc_delete(n, 'testkeyword', 'key', 'testsig')
+        self.assertEqual(val, ["False"])
+        val = self.protocol.rpc_delete(n, '', '', '')
