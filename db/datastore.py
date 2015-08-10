@@ -4,6 +4,7 @@ from constants import DATABASE
 from protos.objects import Listings, Followers, Following
 
 
+
 class HashMap(object):
     """
     Creates a table in the database for mapping file hashes (which are sent
@@ -141,9 +142,8 @@ class ListingsStore(object):
         cursor.execute('''SELECT serializedListings FROM listings WHERE id = 1''')
         ret = cursor.fetchone()
         if ret is None:
-            return ret
+            return None
         return ret[0]
-
 
 class KeyStore(object):
     def __init__(self):
@@ -166,7 +166,7 @@ class KeyStore(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (type,))
         ret = cursor.fetchone()
-        if not ret:
+        if ret == []:
             return None
         else:
             return ret
