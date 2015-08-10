@@ -6,6 +6,7 @@ from protos.objects import Listings, Followers, Following
 
 
 
+
 class HashMap(object):
     """
     Creates a table in the database for mapping file hashes (which are sent
