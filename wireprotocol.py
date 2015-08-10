@@ -25,9 +25,9 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
     class ConnHandler(Handler):
 
-        def __init__(self, procssors):
+        def __init__(self, processors):
             self.log = Logger(system=self)
-            self.processors = procssors
+            self.processors = processors
             self.connection = None
 
         def receive_message(self, datagram):
@@ -40,7 +40,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 for processor in self.processors:
                     if m.command in processor:
                         processor.receive_message(datagram, self.connection)
-            except:
+            except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("Received unknown message from %s, ignoring" % str(self.connection.dest_addr))
                 return False
@@ -76,7 +76,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             address: a `tuple` of (ip address, port) of the recipient.
         """
         if address not in self:
-                con = self.make_new_connection((self.ip_address[0], self.ip_address[1]), address)
+            con = self.make_new_connection((self.ip_address[0], self.ip_address[1]), address)
         else:
-                con = self[address]
+            con = self[address]
         con.send_message(datagram)

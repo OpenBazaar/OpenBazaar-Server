@@ -50,7 +50,7 @@ class RPCProtocol():
         try:
             m.ParseFromString(datagram)
             sender = node.Node(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey, m.sender.vendor)
-        except:
+        except Exception:
             # If message isn't formatted property then ignore
             self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
             return False
@@ -65,8 +65,7 @@ class RPCProtocol():
                 pow = h[64:128]
                 if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
                     raise Exception('Invalid GUID')
-
-            except:
+            except Exception:
                 self.log.warning("Received message from sender with invalid GUID, ignoring")
                 return False
 

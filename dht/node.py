@@ -8,8 +8,7 @@ from operator import itemgetter
 from protos import objects
 
 
-
-class Node:
+class Node(object):
     def __init__(self, id, ip=None, port=None, signed_pubkey=None,
                  vendor=False):
         self.id = id
@@ -24,8 +23,10 @@ class Node:
         n.guid = self.id
         n.signedPublicKey = self.signed_pubkey
         n.vendor = self.vendor
-        if self.ip is not None: n.ip = self.ip
-        if self.port is not None: n.port = self.port
+        if self.ip is not None:
+            n.ip = self.ip
+        if self.port is not None:
+            n.port = self.port
         return n
 
     def sameHomeAs(self, node):

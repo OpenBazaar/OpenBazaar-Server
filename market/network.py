@@ -13,6 +13,7 @@ from constants import DATA_FOLDER
 from protos import objects
 from binascii import hexlify, unhexlify
 
+
 class Server(object):
 
     def __init__(self, kserver, signing_key):
