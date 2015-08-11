@@ -262,11 +262,15 @@ class Server(object):
             for follower in f.followers:
                 try:
                     v_key = nacl.signing.VerifyKey(follower.signed_pubkey[64:])
-                    v_key.verify("follow:" + node_to_ask.id, follower.signature)
+                    signature = follower.signature
+                    follower.ClearField("signature")
+                    v_key.verify(follower.SerializeToString(), signature)
                     h = nacl.hash.sha512(follower.signed_pubkey)
                     pow = h[64:128]
                     if int(pow[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
                         raise Exception('Invalid GUID')
+                    if follower.following != node_to_ask.id:
+                        raise Exception('Invalid follower')
                 except:
                     f.followers.remove(follower)
             return f
