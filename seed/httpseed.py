@@ -4,46 +4,40 @@ import os
 import pickle
 import json
 import random
+import stun
+import nacl.signing
+import nacl.hash
+import nacl.encoding
+import log
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import task
 from twisted.web import resource, server
 from binascii import hexlify
 from random import shuffle
-
-import stun
-import nacl.signing
-import nacl.hash
-import nacl.encoding
-
 from seed import peers
-from guidutils.guid import GUID
-import log
 from dht.node import Node
 from dht.network import Server
 from dht.crawling import NodeSpiderCrawl
 from dht.utils import digest, deferredDict
-
 from protos import objects
 from wireprotocol import OpenBazaarProtocol
 from market import network
+from keyutils.keys import KeyChain
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("OpenBazaar_seed_server")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # Load the keys
+keys = KeyChain()
 if os.path.isfile('keys.pickle'):
     keys = pickle.load(open("keys.pickle", "r"))
-    g = keys["guid"]
     signing_key_hex = keys["signing_privkey"]
     signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
 else:
-    print "Generating GUID, stand by..."
-    g = GUID()
     signing_key = nacl.signing.SigningKey.generate()
     keys = {
-            'guid': g,
             'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
             'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
             }
