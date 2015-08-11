@@ -30,7 +30,7 @@ application = service.Application("OpenBazaar_seed_server")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
 # Load the keys
-keys = KeyChain()
+keychain = KeyChain()
 if os.path.isfile('keys.pickle'):
     keys = pickle.load(open("keys.pickle", "r"))
     signing_key_hex = keys["signing_privkey"]
@@ -49,7 +49,7 @@ ip_address = response[1]
 port = 18467
 
 # Start the kademlia server
-this_node = Node(g.guid, ip_address, port, g.signed_pubkey)
+this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey)
 protocol = OpenBazaarProtocol((ip_address, port))
 
 if os.path.isfile('cache.pickle'):
@@ -62,7 +62,7 @@ protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
 
 # start the market server
-mserver = network.Server(kserver, g.signing_key)
+mserver = network.Server(kserver, keychain.signing_key)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 

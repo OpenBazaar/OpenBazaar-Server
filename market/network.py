@@ -209,7 +209,7 @@ class Server(object):
 
     def unmake_moderator(self):
         key = digest(self.kserver.node.getProto().SerializeToString())
-        signature = self.signing_key.Sign(key)[:64]
+        signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
 
     def follow(self, node_to_follow):
@@ -220,7 +220,7 @@ class Server(object):
             else:
                 return False
 
-        signature = self.signing_key.Sign("follow:" + node_to_follow.id)[:64]
+        signature = self.signing_key.sign("follow:" + node_to_follow.id)[:64]
         d = self.protocol.callFollow(node_to_follow, signature)
         return d.addCallback(save_to_db)
 
@@ -232,7 +232,7 @@ class Server(object):
             else:
                 return False
 
-        signature = self.signing_key.Sign("unfollow:" + node_to_unfollow.id)[:64]
+        signature = self.signing_key.sign("unfollow:" + node_to_unfollow.id)[:64]
         d = self.protocol.callUnfollow(node_to_unfollow, signature)
         return d.addCallback(save_to_db)
 

@@ -193,8 +193,11 @@ class FollowData(object):
         cursor = self.db.cursor()
         f = Following()
         ser = self.get_following()
-        f.ParseFromString(ser)
-        if guid_to_follow not in f.guids:
+        if ser is not None:
+            f.ParseFromString(ser)
+            if guid_to_follow not in f.guids:
+                f.guids.append(guid_to_follow)
+        else:
             f.guids.append(guid_to_follow)
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
@@ -203,9 +206,10 @@ class FollowData(object):
         cursor = self.db.cursor()
         f = Following()
         ser = self.get_following()
-        f.ParseFromString(ser)
-        if guid_to_unfollow in f.guids:
-            f.guids.remove(guid_to_unfollow)
+        if ser is not None:
+            f.ParseFromString(ser)
+            if guid_to_unfollow in f.guids:
+                f.guids.remove(guid_to_unfollow)
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
@@ -216,18 +220,17 @@ class FollowData(object):
         if not ret:
             return None
         else:
-            return ret[0]
+            return ret[0][0]
 
     def set_follower(self, proto):
         cursor = self.db.cursor()
         f = Followers()
         ser = self.get_followers()
         if ser is not None:
-            f.ParseFromString(ser)
             for follower in f.followers:
-                if follower.follower_guid == proto.follower_guid:
-                    f.follower.remove(follower)
-        f.follower.extend([proto])
+                if follower.guid == proto.guid:
+                    f.followers.remove(follower)
+        f.followers.extend([proto])
         cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 

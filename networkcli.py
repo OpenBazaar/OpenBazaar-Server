@@ -498,14 +498,14 @@ class RPCCalls(jsonrpc.JSONRPC):
 
     def jsonrpc_follow(self, guid):
         def get_node(node):
-            def print_resp(resp):
-                print resp
             if node is not None:
-                d = self.mserver.protocol.callFollow(node)
+                def print_resp(resp):
+                    print resp
+                d = self.mserver.follow(node)
                 d.addCallback(print_resp)
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
-        return "getting contract metadata..."
+        return "following node..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
