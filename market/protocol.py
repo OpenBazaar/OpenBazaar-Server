@@ -102,20 +102,23 @@ class MarketProtocol(RPCProtocol):
             self.log.warning("Could not find metadata for contract %s" % hexlify(contract_hash))
             return ["None"]
 
-    def rpc_follow(self, sender, signature):
+    def rpc_follow(self, sender, proto, signature):
         self.log.info("Follow request from %s" % sender.id.encode("hex"))
         self.router.addContact(sender)
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
-            verify_key.verify("follow:" + self.proto.guid, signature)
+            verify_key.verify(proto, signature)
             f = Followers.Follower()
-            f.guid = sender.id
-            f.signed_pubkey = sender.signed_pubkey
+            f.ParseFromString(proto)
+            if f.guid != sender.id:
+                raise Exception('GUID does not match sending node')
+            if f.following != self.proto.guid:
+                raise Exception('Following wrong node')
             f.signature = signature
             FollowData().set_follower(f)
             return ["True"]
         except Exception:
-            self.log.warning("Failed to validate follower signature")
+            self.log.warning("Failed to validate follower")
             return ["False"]
 
     def rpc_unfollow(self, sender, signature):
@@ -179,9 +182,9 @@ class MarketProtocol(RPCProtocol):
         d = self.get_contract_metadata(address, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callFollow(self, nodeToAsk, signature):
+    def callFollow(self, nodeToAsk, proto, signature):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.follow(address, signature)
+        d = self.follow(address, proto, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callUnfollow(self, nodeToAsk, signature):

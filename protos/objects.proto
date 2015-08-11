@@ -95,8 +95,10 @@ message Followers {
 
     message Follower {
         required bytes guid          = 1;
-        required bytes signed_pubkey = 2;
-        required bytes signature     = 3;
+        required bytes following     = 2;
+        required bytes signed_pubkey = 3;
+        required Metadata metadata   = 4;
+        optional bytes signature     = 5;
     }
 }
 

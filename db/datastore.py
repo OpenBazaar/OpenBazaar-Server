@@ -241,8 +241,8 @@ class FollowData(object):
         if ser is not None:
             f.ParseFromString(ser)
             for follower in f.followers:
-                if follower.follower_guid == guid:
-                    f.follower.remove(follower)
+                if follower.guid == guid:
+                    f.followers.remove(follower)
         cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 

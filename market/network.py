@@ -14,6 +14,7 @@ from constants import DATA_FOLDER
 from protos import objects
 from binascii import hexlify, unhexlify
 from db.datastore import FollowData
+from market.profile import Profile
 
 
 class Server(object):
@@ -219,9 +220,19 @@ class Server(object):
                 return True
             else:
                 return False
-
-        signature = self.signing_key.sign("follow:" + node_to_follow.id)[:64]
-        d = self.protocol.callFollow(node_to_follow, signature)
+        proto = Profile().get(False)
+        m = objects.Metadata()
+        m.name = proto.name
+        m.handle = proto.handle
+        m.avatar_hash = proto.avatar_hash
+        m.nsfw = proto.nsfw
+        f = objects.Followers.Follower()
+        f.guid = self.kserver.node.id
+        f.following = node_to_follow.id
+        f.signed_pubkey = self.kserver.node.signed_pubkey
+        f.metadata.MergeFrom(m)
+        signature = self.signing_key.sign(f.SerializeToString())[:64]
+        d = self.protocol.callFollow(node_to_follow, f.SerializeToString(), signature)
         return d.addCallback(save_to_db)
 
     def unfollow(self, node_to_unfollow):
@@ -247,12 +258,11 @@ class Server(object):
                 f.ParseFromString(response[1][0])
             except Exception:
                 return None
-
             # Verify the signature and guid of each follower.
             for follower in f.followers:
                 try:
                     v_key = nacl.signing.VerifyKey(follower.signed_pubkey[64:])
-                    v_key.verify("follow:" + node_to_ask.id, f.signature)
+                    v_key.verify("follow:" + node_to_ask.id, follower.signature)
                     h = nacl.hash.sha512(follower.signed_pubkey)
                     pow = h[64:128]
                     if int(pow[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
@@ -260,7 +270,6 @@ class Server(object):
                 except:
                     f.followers.remove(follower)
             return f
-
         d = self.protocol.callGetFollowers(node_to_ask)
         return d.addCallback(get_response)
 

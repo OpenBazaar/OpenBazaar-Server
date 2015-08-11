@@ -37,6 +37,7 @@ class Parser(object):
 
 commands:
     follow              follow a user
+    unfollow            unfollow a user
     getinfo             returns an object containing various state info
     getpeers            returns the id of all the peers in the routing table
     get                 fetches the given keyword from the dht
@@ -50,6 +51,8 @@ commands:
     getmoderators       fetches a list of moderators
     getusermetadata     fetches the metadata (shortened profile) for the node
     getlistings         fetches metadata about the store's listings
+    getfollowers        fetches a list of followers of a node
+    getfollowing        fetches a list of users a node is following
     setcontract         sets a contract in the filesystem and db
     setimage            maps an image hash to a filepath in the db
     setasmoderator      sets a node as a moderator
@@ -317,10 +320,46 @@ commands:
             description="Follow a user",
             usage='''usage:
     networkcli.py follow [-g GUID]''')
-        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        parser.add_argument('-g', '--guid', required=True, help="the guid to follow")
         args = parser.parse_args(sys.argv[2:])
         guid = args.guid
         d = proxy.callRemote('follow', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def unfollow(self):
+        parser = argparse.ArgumentParser(
+            description="Unfollow a user",
+            usage='''usage:
+    networkcli.py unfollow [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to unfollow")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('unfollow', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def getfollowers(self):
+        parser = argparse.ArgumentParser(
+            description="Get a list of followers of a node",
+            usage='''usage:
+    networkcli.py getfollowers [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getfollowers', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    def getfollowing(self):
+        parser = argparse.ArgumentParser(
+            description="Get a list users a node is following",
+            usage='''usage:
+    networkcli.py getfollowing [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('getfollowing', guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -506,6 +545,39 @@ class RPCCalls(jsonrpc.JSONRPC):
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "following node..."
+
+    def jsonrpc_unfollow(self, guid):
+        def get_node(node):
+            if node is not None:
+                def print_resp(resp):
+                    print resp
+                d = self.mserver.unfollow(node)
+                d.addCallback(print_resp)
+        d = self.kserver.resolve(unhexlify(guid))
+        d.addCallback(get_node)
+        return "unfollowing node..."
+
+    def jsonrpc_getfollowers(self, guid):
+        def get_node(node):
+            if node is not None:
+                def print_resp(resp):
+                    print resp
+                d = self.mserver.get_followers(node)
+                d.addCallback(print_resp)
+        d = self.kserver.resolve(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting followers..."
+
+    def jsonrpc_getfollowing(self, guid):
+        def get_node(node):
+            if node is not None:
+                def print_resp(resp):
+                    print resp
+                d = self.mserver.get_following(node)
+                d.addCallback(print_resp)
+        d = self.kserver.resolve(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting following..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
