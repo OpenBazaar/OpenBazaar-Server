@@ -189,27 +189,28 @@ class FollowData(object):
         except:
             pass
 
-    def follow(self, guid_to_follow):
+    def follow(self, proto):
         cursor = self.db.cursor()
         f = Following()
         ser = self.get_following()
         if ser is not None:
             f.ParseFromString(ser)
-            if guid_to_follow not in f.guids:
-                f.guids.append(guid_to_follow)
-        else:
-            f.guids.append(guid_to_follow)
+            for user in f.users:
+                if user.guid == proto.guid:
+                    f.users.remove(user)
+        f.users.append(proto)
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
-    def unfollow(self, guid_to_unfollow):
+    def unfollow(self, proto):
         cursor = self.db.cursor()
         f = Following()
         ser = self.get_following()
         if ser is not None:
             f.ParseFromString(ser)
-            if guid_to_unfollow in f.guids:
-                f.guids.remove(guid_to_unfollow)
+            for user in f.users:
+                if user.guid == proto.guid:
+                    f.users.remove(user)
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 

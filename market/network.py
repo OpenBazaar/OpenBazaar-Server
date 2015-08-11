@@ -216,8 +216,16 @@ class Server(object):
     def follow(self, node_to_follow):
         def save_to_db(result):
             if result[0] and result[1][0] == "True":
-                FollowData().follow(node_to_follow.id)
-                return True
+                try:
+                    u = objects.Following.User()
+                    u.guid = node_to_follow.id
+                    m = objects.Metadata()
+                    m.ParseFromString(result[1][1])
+                    u.metadata.MergeFrom(m)
+                    FollowData().follow(u)
+                    return True
+                except Exception:
+                    return False
             else:
                 return False
         proto = Profile().get(False)

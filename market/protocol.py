@@ -116,7 +116,13 @@ class MarketProtocol(RPCProtocol):
                 raise Exception('Following wrong node')
             f.signature = signature
             FollowData().set_follower(f)
-            return ["True"]
+            proto = Profile().get(False)
+            m = Metadata()
+            m.name = proto.name
+            m.handle = proto.handle
+            m.avatar_hash = proto.avatar_hash
+            m.nsfw = proto.nsfw
+            return ["True", m.SerializeToString()]
         except Exception:
             self.log.warning("Failed to validate follower")
             return ["False"]
