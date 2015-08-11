@@ -1,7 +1,7 @@
 __author__ = 'chris'
 import sqlite3 as lite
 from constants import DATABASE
-from protos.objects import Listings, Followers
+from protos.objects import Listings, Followers, Following
 
 
 class HashMap(object):
@@ -184,41 +184,39 @@ class FollowData(object):
         try:
             cursor = self.db.cursor()
             cursor.execute('''CREATE TABLE followers(id INTEGER primary key, serializedFollowers BLOB)''')
-            cursor.execute('''CREATE TABLE following(guid BLOB primary key)''')
+            cursor.execute('''CREATE TABLE following(id INTEGER primary key, serializedFollowing BLOB)''')
             self.db.commit()
         except:
             pass
 
-    def follow(self, guid):
+    def follow(self, guid_to_follow):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO following(guid) VALUES (?)''', (guid,))
+        f = Following()
+        ser = self.get_following()
+        f.ParseFromString(ser)
+        if guid_to_follow not in f.guids:
+            f.guids.append(guid_to_follow)
+        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
-    def unfollow(self, guid):
+    def unfollow(self, guid_to_unfollow):
         cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM following WHERE guid = ?''', (guid,))
+        f = Following()
+        ser = self.get_following()
+        f.ParseFromString(ser)
+        if guid_to_unfollow in f.guids:
+            f.guids.remove(guid_to_unfollow)
+        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
     def get_following(self):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT guid FROM following''')
-        guids = cursor.fetchall()
-        if not guids:
+        cursor.execute('''SELECT serializedFollowing FROM following WHERE id=1''')
+        ret = cursor.fetchall()
+        if not ret:
             return None
         else:
-            ret = []
-            for g in guids:
-                ret.append(g[0])
-            return ret
-
-    def is_following(self, guid):
-        cursor = self.db.cursor()
-        cursor.execute('''SELECT guid FROM following WHERE guid = ?''', (guid,))
-        guids = cursor.fetchone()
-        if not guids:
-            return False
-        else:
-            return True
+            return ret[0]
 
     def set_follower(self, proto):
         cursor = self.db.cursor()

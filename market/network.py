@@ -3,6 +3,7 @@ __author__ = 'chris'
 import json
 import os.path
 import nacl.signing
+import nacl.hash
 
 from dht import node
 from twisted.internet import defer
@@ -12,6 +13,7 @@ from collections import OrderedDict
 from constants import DATA_FOLDER
 from protos import objects
 from binascii import hexlify, unhexlify
+from db.datastore import FollowData
 
 
 class Server(object):
@@ -209,6 +211,74 @@ class Server(object):
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.Sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
+
+    def follow(self, node_to_follow):
+        def save_to_db(result):
+            if result[0] and result[1][0] == "True":
+                FollowData().follow(node_to_follow.id)
+                return True
+            else:
+                return False
+
+        signature = self.signing_key.Sign("follow:" + node_to_follow.id)[:64]
+        d = self.protocol.callFollow(node_to_follow, signature)
+        return d.addCallback(save_to_db)
+
+    def unfollow(self, node_to_unfollow):
+        def save_to_db(result):
+            if result[0] and result[1][0] == "True":
+                FollowData().unfollow(node_to_unfollow.id)
+                return True
+            else:
+                return False
+
+        signature = self.signing_key.Sign("unfollow:" + node_to_unfollow.id)[:64]
+        d = self.protocol.callUnfollow(node_to_unfollow, signature)
+        return d.addCallback(save_to_db)
+
+    def get_followers(self, node_to_ask):
+        def get_response(response):
+            # Verify the signature on the response
+            f = objects.Followers()
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(response[1][1] + response[1][0])
+                f.ParseFromString(response[1][0])
+            except Exception:
+                return None
+
+            # Verify the signature and guid of each follower.
+            for follower in f.followers:
+                try:
+                    v_key = nacl.signing.VerifyKey(follower.signed_pubkey[64:])
+                    v_key.verify("follow:" + node_to_ask.id, f.signature)
+                    h = nacl.hash.sha512(follower.signed_pubkey)
+                    pow = h[64:128]
+                    if int(pow[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
+                        raise Exception('Invalid GUID')
+                except:
+                    f.followers.remove(follower)
+            return f
+
+        d = self.protocol.callGetFollowers(node_to_ask)
+        return d.addCallback(get_response)
+
+    def get_following(self, node_to_ask):
+        def get_response(response):
+            # Verify the signature on the response
+            f = objects.Following()
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(response[1][1] + response[1][0])
+                f.ParseFromString(response[1][0])
+            except Exception:
+                return None
+            return f
+
+        d = self.protocol.callGetFollowing(node_to_ask)
+        return d.addCallback(get_response)
 
     def cache(self, file):
         """

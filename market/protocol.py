@@ -107,10 +107,10 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
-            verify_key.verify(signature)
+            verify_key.verify("follow:" + self.proto.guid, signature)
             f = Followers.Follower()
-            f.follower_guid = sender.id
-            f.following_guid = self.proto.guid
+            f.guid = sender.id
+            f.signed_pubkey = sender.signed_pubkey
             f.signature = signature
             FollowData().set_follower(f)
             return ["True"]
@@ -123,7 +123,7 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
-            verify_key.verify(signature)
+            verify_key.verify("unfollow:" + self.proto.guid, signature)
             f = FollowData()
             f.delete_follower(sender.id)
             return ["True"]
@@ -132,7 +132,7 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_get_followers(self, sender):
-        self.log.info("Fetching follower list from db")
+        self.log.info("Fetching followers list from db")
         self.router.addContact(sender)
         ser = FollowData().get_followers()
         if ser is None:
@@ -143,9 +143,11 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_following(self, sender):
         self.log.info("Fetching following list from db")
         self.router.addContact(sender)
-        f = FollowData()
-        following = f.get_followers()
-        return following if following is not None else ["None"]
+        ser = FollowData().get_following()
+        if ser is None:
+            return ["None"]
+        else:
+            return [ser, self.signing_key.sign(ser)[:64]]
 
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)

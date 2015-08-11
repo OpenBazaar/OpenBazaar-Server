@@ -36,6 +36,7 @@ class Parser(object):
     python networkcli.py command [<arguments>]
 
 commands:
+    follow              follow a user
     getinfo             returns an object containing various state info
     getpeers            returns the id of all the peers in the routing table
     get                 fetches the given keyword from the dht
@@ -311,6 +312,18 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    def follow(self):
+        parser = argparse.ArgumentParser(
+            description="Follow a user",
+            usage='''usage:
+    networkcli.py follow [-g GUID]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to query")
+        args = parser.parse_args(sys.argv[2:])
+        guid = args.guid
+        d = proxy.callRemote('follow', guid)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, keys):
@@ -482,6 +495,17 @@ class RPCCalls(jsonrpc.JSONRPC):
 
         self.mserver.get_moderators().addCallback(print_mods)
         return "finding moderators in dht..."
+
+    def jsonrpc_follow(self, guid):
+        def get_node(node):
+            def print_resp(resp):
+                print resp
+            if node is not None:
+                d = self.mserver.protocol.callFollow(node)
+                d.addCallback(print_resp)
+        d = self.kserver.resolve(unhexlify(guid))
+        d.addCallback(get_node)
+        return "getting contract metadata..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)
