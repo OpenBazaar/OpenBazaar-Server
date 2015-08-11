@@ -219,9 +219,11 @@ class Server(object):
                 try:
                     u = objects.Following.User()
                     u.guid = node_to_follow.id
+                    u.signed_pubkey = node_to_follow.signed_pubkey
                     m = objects.Metadata()
                     m.ParseFromString(result[1][1])
                     u.metadata.MergeFrom(m)
+                    u.signature = result[1][2]
                     FollowData().follow(u)
                     return True
                 except Exception:
@@ -296,6 +298,17 @@ class Server(object):
                 f.ParseFromString(response[1][0])
             except Exception:
                 return None
+            for user in f.users:
+                try:
+                    v_key = nacl.signing.VerifyKey(user.signed_pubkey[64:])
+                    signature = user.signature
+                    v_key.verify(user.metadata.SerializeToString(), signature)
+                    h = nacl.hash.sha512(user.signed_pubkey)
+                    pow = h[64:128]
+                    if int(pow[:6], 16) >= 50 or hexlify(user.guid) != h[:40]:
+                        raise Exception('Invalid GUID')
+                except:
+                    f.users.remove(user)
             return f
 
         d = self.protocol.callGetFollowing(node_to_ask)

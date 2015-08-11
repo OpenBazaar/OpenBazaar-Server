@@ -106,7 +106,9 @@ message Following {
     repeated User users = 1;
 
     message User {
-        required bytes guid        = 1;
-        required Metadata metadata = 2;
+        required bytes guid          = 1;
+        required bytes signed_pubkey = 2;
+        required Metadata metadata   = 3;
+        optional bytes signature     = 4;
     }
 }

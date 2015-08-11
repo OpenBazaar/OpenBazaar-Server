@@ -122,7 +122,7 @@ class MarketProtocol(RPCProtocol):
             m.handle = proto.handle
             m.avatar_hash = proto.avatar_hash
             m.nsfw = proto.nsfw
-            return ["True", m.SerializeToString()]
+            return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.warning("Failed to validate follower")
             return ["False"]

@@ -198,7 +198,7 @@ class FollowData(object):
             for user in f.users:
                 if user.guid == proto.guid:
                     f.users.remove(user)
-        f.users.append(proto)
+        f.users.extend([proto])
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
         self.db.commit()
 
