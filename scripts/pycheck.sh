@@ -14,6 +14,7 @@ errored=0;
 count=0;
 for file in $(find . -name "*.py" \
     -not -path "./env/*" \
+    -not -path "./protos/*" \
     -not -path "./html/bower_components/*"); do
     if ! $PYLINT --rcfile .pylintrc $file; then
         errored=$((errored + 1));
