@@ -1,5 +1,4 @@
 __author__ = 'chris'
-from binascii import hexlify
 
 import nacl.signing
 import nacl.secret
@@ -14,7 +13,7 @@ from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
-from protos.objects import Metadata, Listings, Followers
+from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
 from interfaces import NotificationListener, MessageListener
