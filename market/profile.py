@@ -45,7 +45,7 @@ class Profile(object):
     def add_social_account(self, account_type, username, proof):
         s = self.profile.SocialAccount()
         for social_account in self.profile.social:
-            if social_account.account_type == s.SocialType.Value(account_type.upper()):
+            if social_account.type == s.SocialType.Value(account_type.upper()):
                 self.profile.social.remove(social_account)
         s.type = s.SocialType.Value(account_type.upper())
         s.username = username
