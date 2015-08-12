@@ -9,14 +9,14 @@ from dht.node import Node
 from dht.routing import RoutingTable
 
 
-def mknode(id=None, ip=None, port=None, intid=None):
+def mknode(nodeid=None, ip=None, port=None, intid=None):
     """
     Make a node.  Created a random id if not specified.
     """
     if intid is not None:
-        id = pack('>l', intid)
-    id = id or hashlib.sha1(str(random.getrandbits(255))).digest()
-    return Node(id, ip, port)
+        nodeid = pack('>l', intid)
+    nodeid = nodeid or hashlib.sha1(str(random.getrandbits(255))).digest()
+    return Node(nodeid, ip, port)
 
 
 class FakeProtocol(object):
