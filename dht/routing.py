@@ -74,8 +74,8 @@ class KBucket(object):
     def head(self):
         return self.nodes.values()[0]
 
-    def __getitem__(self, id):
-        return self.nodes.get(id, None)
+    def __getitem__(self, item_id):
+        return self.nodes.get(item_id, None)
 
     def __len__(self):
         return len(self.nodes)
@@ -93,6 +93,7 @@ class TableTraverser(object):
     def __iter__(self):
         return self
 
+    @property
     def next(self):
         """
         Pop an item from the left subtree, then right, then left, etc.
@@ -103,12 +104,12 @@ class TableTraverser(object):
         if self.left and len(self.leftBuckets) > 0:
             self.currentNodes = self.leftBuckets.pop().getNodes()
             self.left = False
-            return self.next()
+            return self.next
 
         if len(self.rightBuckets) > 0:
             self.currentNodes = self.rightBuckets.pop().getNodes()
             self.left = True
-            return self.next()
+            return self.next
 
         raise StopIteration
 

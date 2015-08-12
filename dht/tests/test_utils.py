@@ -31,21 +31,21 @@ class UtilsTest(unittest.TestCase):
 
     def test_defferedDict(self):
         def checkValues(d):
-            self.assertTrue(type(d) == dict)
+            self.assertTrue(isinstance(d, dict))
             self.assertTrue(len(d) == 3)
 
         def checkEmpty(d):
-            self.assertTrue(type(d) == dict)
+            self.assertTrue(isinstance(d, dict))
             self.assertTrue(len(d) == 0)
 
         ds = {}
         ds["key1"] = defer.Deferred()
         ds["key2"] = defer.Deferred()
         ds["key3"] = defer.Deferred()
-        d = deferredDict(ds).addCallback(checkValues)
+        deferredDict(ds).addCallback(checkValues)
         for v in ds.itervalues():
             v.callback("True")
-        d = deferredDict({}).addCallback(checkEmpty)
+        deferredDict({}).addCallback(checkEmpty)
 
 
 class OrderedSetTest(unittest.TestCase):
