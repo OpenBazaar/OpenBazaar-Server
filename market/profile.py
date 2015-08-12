@@ -42,21 +42,21 @@ class Profile(object):
         self.profile.MergeFrom(user_info)
         self.db.set_proto(self.profile.SerializeToString())
 
-    def add_social_account(self, type, username, proof):
+    def add_social_account(self, account_type, username, proof):
         s = self.profile.SocialAccount()
         for social_account in self.profile.social:
-            if social_account.type == s.SocialType.Value(type.upper()):
+            if social_account.account_type == s.SocialType.Value(account_type.upper()):
                 self.profile.social.remove(social_account)
-        s.type = s.SocialType.Value(type.upper())
+        s.type = s.SocialType.Value(account_type.upper())
         s.username = username
         s.proof_url = proof
         self.profile.social.extend([s])
         self.db.set_proto(self.profile.SerializeToString())
 
-    def remove_social_account(self, type):
+    def remove_social_account(self, account_type):
         s = self.profile.SocialAccount()
         for social_account in self.profile.social:
-            if social_account.type == s.SocialType.Value(type.upper()):
+            if social_account.type == s.SocialType.Value(account_type.upper()):
                 self.profile.social.remove(social_account)
         self.db.set_proto(self.profile.SerializeToString())
 

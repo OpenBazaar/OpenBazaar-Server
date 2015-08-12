@@ -172,7 +172,7 @@ class KeyStore(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (key_type,))
         ret = cursor.fetchone()
-        if ret == []:
+        if not ret:
             return None
         else:
             return ret

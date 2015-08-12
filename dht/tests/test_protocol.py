@@ -98,8 +98,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("STORE")
         m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
-        for i in range(0, 3):
-            del m.arguments[-1]
+        del m.arguments[-3:]
         m.arguments.append("True")
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
@@ -124,8 +123,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("STORE")
         m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
-        for i in range(0, 3):
-            del m.arguments[-1]
+        del m.arguments[-3:]
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
         self.handler.receive_message(data)
@@ -139,8 +137,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("DELETE")
         m.arguments.extend(["Keyword", "Key", "Bad Signature"])
         data = m.SerializeToString()
-        for i in range(0, 3):
-            del m.arguments[-1]
+        del m.arguments[-3:]
         m.arguments.append("False")
         expected_message2 = m.SerializeToString()
         self.handler.receive_message(data)
@@ -164,8 +161,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("DELETE")
         m.arguments.extend(["Keyword", "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
-        for i in range(0, 3):
-            del m.arguments[-1]
+        del m.arguments[-3:]
         m.arguments.append("True")
         expected_message3 = m.SerializeToString()
         self.handler.receive_message(data)

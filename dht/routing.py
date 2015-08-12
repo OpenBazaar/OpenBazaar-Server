@@ -93,7 +93,6 @@ class TableTraverser(object):
     def __iter__(self):
         return self
 
-    @property
     def next(self):
         """
         Pop an item from the left subtree, then right, then left, etc.
@@ -104,12 +103,12 @@ class TableTraverser(object):
         if self.left and len(self.leftBuckets) > 0:
             self.currentNodes = self.leftBuckets.pop().getNodes()
             self.left = False
-            return self.next
+            return self.next()
 
         if len(self.rightBuckets) > 0:
             self.currentNodes = self.rightBuckets.pop().getNodes()
             self.left = True
-            return self.next
+            return self.next()
 
         raise StopIteration
 

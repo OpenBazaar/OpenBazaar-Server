@@ -20,7 +20,7 @@ class Contract(object):
     A class for creating and interacting with OpenBazaar Ricardian contracts.
     """
 
-    def __init__(self, contract=None, hash=None):
+    def __init__(self, contract=None, hash_value=None):
         """
         This class can be instantiated with either an `OrderedDict` or a hash
         of a contract. If a hash is used, we will load the contract from either
@@ -35,13 +35,13 @@ class Contract(object):
         """
         if contract is not None:
             self.contract = contract
-        elif hash is not None:
+        elif hash_value is not None:
             try:
-                file_path = HashMap().get_file(hash)
+                file_path = HashMap().get_file(hash_value)
                 if file_path is None:
-                    file_path = DATA_FOLDER + "cache/" + hexlify(hash)
-                with open(file_path, 'r') as file:
-                    self.contract = json.load(file, object_pairs_hook=OrderedDict)
+                    file_path = DATA_FOLDER + "cache/" + hexlify(hash_value)
+                with open(file_path, 'r') as filename:
+                    self.contract = json.load(filename, object_pairs_hook=OrderedDict)
             except Exception:
                 self.contract = {}
         else:
@@ -167,11 +167,11 @@ class Contract(object):
         if images is not None:
             self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
             for image in images:
-                hash = digest(image).encode("hex")
-                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(hash)
-                with open(DATA_FOLDER + "store/media/" + hash, 'w') as outfile:
+                hash_value = digest(image).encode("hex")
+                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(hash_value)
+                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
-                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash)
+                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
         self.save()
 
     def update(self,
@@ -261,11 +261,11 @@ class Contract(object):
             if "image_hashes" not in vendor_listing["item"]:
                 vendor_listing["item"]["image_hashes"] = []
             for image in images:
-                hash = digest(image).encode("hex")
-                vendor_listing["item"]["image_hashes"].append(hash)
-                with open(DATA_FOLDER + "store/media/" + hash, 'w') as outfile:
+                hash_value = digest(image).encode("hex")
+                vendor_listing["item"]["image_hashes"].append(hash_value)
+                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
-                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash)
+                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
         if vendor_listing["metadata"]["category"] == "physical good" and condition is not None:
             vendor_listing["item"]["condition"] = condition
         if sku is not None:

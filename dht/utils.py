@@ -13,8 +13,8 @@ def digest(s):
     if not isinstance(s, str):
         s = str(s)
     intermed = hashlib.sha256(s).digest()
-    digest = hashlib.new('ripemd160', intermed).digest()
-    return digest
+    d = hashlib.new('ripemd160', intermed).digest()
+    return d
 
 
 def deferredDict(d):

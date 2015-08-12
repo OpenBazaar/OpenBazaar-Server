@@ -251,6 +251,7 @@ class TTLDict(MutableMapping):
         if now is None:
             now = time.time()
         with self._lock:
+            # pylint: disable=unused-variable
             _expire, value = self._values[key]
             self._values[key] = (now + ttl, value)
 
@@ -259,12 +260,14 @@ class TTLDict(MutableMapping):
         if now is None:
             now = time.time()
         with self._lock:
+            # pylint: disable=unused-variable
             expire, _value = self._values[key]
             return expire - now
 
     def expire_at(self, key, timestamp):
         """ Set the key expire timestamp """
         with self._lock:
+            # pylint: disable=unused-variable
             _expire, value = self._values[key]
             self._values[key] = (timestamp, value)
 
@@ -273,6 +276,7 @@ class TTLDict(MutableMapping):
         with self._lock:
             if now is None:
                 now = time.time()
+            # pylint: disable=unused-variable
             expire, _value = self._values[key]
             if expire is None:
                 return False

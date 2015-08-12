@@ -2,7 +2,6 @@ __author__ = 'chris'
 import time
 
 from twisted.trial import unittest
-from twisted.internet import reactor, task
 
 from dht.utils import digest
 from dht.storage import ForgetfulStorage, PersistentStorage, TTLDict

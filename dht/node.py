@@ -127,6 +127,7 @@ class NodeHeap(object):
         return iter(map(itemgetter(1), nodes))
 
     def __contains__(self, node):
+        # pylint: disable=unused-variable
         for distance, n in self.heap:
             if node.id == n.id:
                 return True

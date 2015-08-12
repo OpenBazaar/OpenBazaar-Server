@@ -2,7 +2,7 @@ __author__ = 'chris'
 import bitcoin
 import nacl.signing
 from db.datastore import KeyStore
-from guid import GUID
+from keyutils.guid import GUID
 
 
 class KeyChain(object):
@@ -18,6 +18,7 @@ class KeyChain(object):
             self.guid_privkey = g.privkey
             self.signing_key = nacl.signing.SigningKey(self.guid_privkey)
             self.guid_signed_pubkey = g.signed_pubkey
+            # pylint: disable=W0633
             self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.db.get_key("bitcoin")
 
     def create_keychain(self):

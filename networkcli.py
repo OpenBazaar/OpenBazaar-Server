@@ -29,7 +29,7 @@ def print_error(error):
 
 
 class Parser(object):
-    def __init__(self, proxy):
+    def __init__(self, proxy_obj):
         parser = argparse.ArgumentParser(
             description='OpenBazaar Network CLI',
             usage='''
@@ -65,7 +65,7 @@ commands:
             parser.print_help()
             exit(1)
         getattr(self, args.command)()
-        self.proxy = proxy
+        self.proxy = proxy_obj
 
     @staticmethod
     def get():
@@ -117,7 +117,7 @@ commands:
             description="Returns an object containing various state info",
             usage='''usage:
     networkcli getinfo''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getinfo')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -128,7 +128,7 @@ commands:
             description="Terminates all outstanding connections.",
             usage='''usage:
     networkcli shutdown''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('shutdown')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -139,7 +139,7 @@ commands:
             description="Returns this node's public key.",
             usage='''usage:
     networkcli getpubkey''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpubkey')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -153,9 +153,9 @@ commands:
         parser.add_argument('-c', '--hash', required=True, help="the hash of the contract")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
-        hash = args.hash
+        hash_value = args.hash
         guid = args.guid
-        d = proxy.callRemote('getcontract', hash, guid)
+        d = proxy.callRemote('getcontract', hash_value, guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -168,9 +168,9 @@ commands:
         parser.add_argument('-i', '--hash', required=True, help="the hash of the image")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
-        hash = args.hash
+        hash_value = args.hash
         guid = args.guid
-        d = proxy.callRemote('getimage', hash, guid)
+        d = proxy.callRemote('getimage', hash_value, guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -180,6 +180,7 @@ commands:
             description="Returns id of all peers in the routing table",
             usage='''usage:
     networkcli getpeers''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpeers')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -221,17 +222,17 @@ commands:
         if args.onename is not None:
             u.handle = args.onename
         if args.avatar is not None:
-            with open(args.avatar, "r") as file:
-                image = file.read()
-            hash = digest(image)
-            u.avatar_hash = hash
-            h.insert(hash, args.avatar)
+            with open(args.avatar, "r") as filename:
+                image = filename.read()
+            hash_value = digest(image)
+            u.avatar_hash = hash_value
+            h.insert(hash_value, args.avatar)
         if args.header is not None:
-            with open(args.header, "r") as file:
-                image = file.read()
-            hash = digest(image)
-            u.header_hash = hash
-            h.insert(hash, args.header)
+            with open(args.header, "r") as filename:
+                image = filename.read()
+            hash_value = digest(image)
+            u.header_hash = hash_value
+            h.insert(hash_value, args.header)
         p.update(u)
 
     @staticmethod
@@ -281,8 +282,8 @@ commands:
     networkcli.py setimage [-f FILEPATH]''')
         parser.add_argument('-f', '--filepath', help="a path to the image")
         args = parser.parse_args(sys.argv[2:])
-        with open(args.filepath, "r") as file:
-            image = file.read()
+        with open(args.filepath, "r") as f:
+            image = f.read()
         d = digest(image)
         h = HashMap()
         h.insert(d, args.filepath)
@@ -322,6 +323,7 @@ commands:
             description="Sets the given node as a moderator.",
             usage='''usage:
     networkcli.py setasmoderator''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('setasmoderator')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -332,6 +334,7 @@ commands:
             description="Fetches a list of moderators",
             usage='''usage:
     networkcli.py getmoderators ''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getmoderators')
         d.addCallbacks(print_value, print_error)
         reactor.run()
@@ -349,7 +352,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def unfollow(self):
+    @staticmethod
+    def unfollow():
         parser = argparse.ArgumentParser(
             description="Unfollow a user",
             usage='''usage:
@@ -361,7 +365,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getfollowers(self):
+    @staticmethod
+    def getfollowers():
         parser = argparse.ArgumentParser(
             description="Get a list of followers of a node",
             usage='''usage:
@@ -373,7 +378,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getfollowing(self):
+    @staticmethod
+    def getfollowing():
         parser = argparse.ArgumentParser(
             description="Get a list users a node is following",
             usage='''usage:
@@ -385,9 +391,11 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, keys):
+        jsonrpc.JSONRPC.__init__(self)
         self.kserver = kserver
         self.mserver = mserver
         self.keys = keys
