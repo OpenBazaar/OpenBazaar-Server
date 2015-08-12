@@ -1,4 +1,6 @@
 __author__ = 'chris'
+
+# pylint: disable=import-error
 import guidc
 from binascii import hexlify, unhexlify
 
