@@ -179,8 +179,9 @@ class RPCFindResponse(object):
         return self.response[0]
 
     def hasValue(self):
-        if self.response[1][0] == "value":
-            return True
+        if len(self.response) > 0 and len(self.response[1]) > 0:
+            if self.response[1][0] == "value":
+                return True
         return False
 
     def getValue(self):
