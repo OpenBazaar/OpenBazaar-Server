@@ -36,6 +36,7 @@ enum Command {
 	UNFOLLOW                = 15;
 	GET_FOLLOWING           = 16;
 	GET_FOLLOWERS           = 17;
+	NOTIFY                  = 18;
 
 	// Error responses
 	BAD_REQUEST             = 400;

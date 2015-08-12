@@ -34,3 +34,14 @@ class MessageProcessor(Interface):
         OpenBazaarProtocol will use this to check which message types are handled by this processor.
         :return: iter([list of enums])
         """
+
+class NotificationListener(Interface):
+    """
+    An interface for handling notifications sent to followers.
+    """
+
+    def notify(message):
+        """
+        New notifications will be sent here. They will only show if this node is following the node
+        which sent the notification.
+        """

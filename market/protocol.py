@@ -9,6 +9,8 @@ from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers
 from binascii import hexlify
+from zope.interface.verify import verifyObject
+from interfaces import NotificationListener
 
 
 
@@ -22,11 +24,16 @@ class MarketProtocol(RPCProtocol):
         self.multiplexer = None
         self.hashmap = HashMap()
         self.signing_key = signing_key
+        self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
-                                 GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING]
+                                 GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
+                                 NOTIFY]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
+
+    def add_listener(self, listener):
+        self.listeners.append(listener)
 
     def rpc_get_contract(self, sender, contract_hash):
         self.log.info("Looking up contract ID %s" % contract_hash.encode('hex'))
@@ -158,6 +165,17 @@ class MarketProtocol(RPCProtocol):
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
+    def rpc_notify(self, sender, message):
+        if len(message) <= 140 and FollowData().is_following(sender.id):
+            self.log.info("Received a notification from %s" % sender)
+            self.router.addContact(sender)
+            for listener in self.listeners:
+                if verifyObject(NotificationListener, listener):
+                    listener.notify(message)
+            return ["True"]
+        else:
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -206,6 +224,11 @@ class MarketProtocol(RPCProtocol):
     def callGetFollowing(self, nodeToAsk):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_following(address)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callNotify(self, nodeToAsk, message):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.notify(address, message)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

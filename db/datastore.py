@@ -223,6 +223,16 @@ class FollowData(object):
         else:
             return ret[0][0]
 
+    def is_following(self, guid):
+        f = Following()
+        ser = self.get_following()
+        if ser is not None:
+            f.ParseFromString(ser)
+            for user in f.users:
+                if user.guid == guid:
+                    return True
+        return False
+
     def set_follower(self, proto):
         cursor = self.db.cursor()
         f = Followers()

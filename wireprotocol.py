@@ -1,10 +1,8 @@
 __author__ = 'chris'
 from zope.interface.verify import verifyObject
-
 from txrudp.rudp import ConnectionMultiplexer
 from txrudp.connection import HandlerFactory, Handler
 from txrudp.crypto_connection import CryptoConnectionFactory
-
 from interfaces import MessageProcessor
 from protos.message import Message
 from log import Logger
