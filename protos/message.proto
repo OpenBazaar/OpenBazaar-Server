@@ -24,19 +24,20 @@ enum Command {
 	HOLE_PUNCH              = 3;
 	STORE                   = 4;
 	DELETE                  = 5;
-	FIND_NODE               = 6;
-	FIND_VALUE              = 7;
-	GET_CONTRACT            = 8;
-	GET_IMAGE               = 9;
-	GET_PROFILE             = 10;
-	GET_LISTINGS            = 11;
-	GET_USER_METADATA       = 12;
-	GET_CONTRACT_METADATA   = 13;
-	FOLLOW                  = 14;
-	UNFOLLOW                = 15;
-	GET_FOLLOWING           = 16;
-	GET_FOLLOWERS           = 17;
-	NOTIFY                  = 18;
+	NOTIFY                  = 6;
+	MESSAGE                 = 7;
+	FOLLOW                  = 8;
+	UNFOLLOW                = 9;
+	FIND_NODE               = 10;
+	FIND_VALUE              = 11;
+	GET_CONTRACT            = 12;
+	GET_IMAGE               = 13;
+	GET_PROFILE             = 14;
+	GET_LISTINGS            = 15;
+	GET_USER_METADATA       = 16;
+	GET_CONTRACT_METADATA   = 17;
+	GET_FOLLOWING           = 18;
+	GET_FOLLOWERS           = 19;
 
 	// Error responses
 	BAD_REQUEST             = 400;

@@ -1,5 +1,8 @@
 __author__ = 'chris'
 import nacl.signing
+import nacl.secret
+import nacl.utils
+import nacl.encoding
 from zope.interface import implements
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
@@ -7,11 +10,10 @@ from log import Logger
 from protos.message import *
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
-from protos.objects import Metadata, Listings, Followers
+from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
-from interfaces import NotificationListener
-
+from interfaces import NotificationListener, MessageListener
 
 
 class MarketProtocol(RPCProtocol):
@@ -176,6 +178,24 @@ class MarketProtocol(RPCProtocol):
         else:
             return ["False"]
 
+    def rpc_message(self, sender, encrypted):
+        box = nacl.secret.SecretBox(self.signing_key.encode(nacl.encoding.RawEncoder))
+        try:
+            plaintext = box.decrypt(encrypted)
+            p = Plaintext_Message()
+            p.ParseFromString(plaintext)
+            if p.sender_guid != sender.id:
+                raise Exception("Invalid guid in message")
+            self.log.info("Received a message from %s" % sender)
+            self.router.addContact(sender)
+            for listener in self.listeners:
+                if verifyObject(MessageListener, listener):
+                    listener.notify(p.sender_guid, p.subject, Plaintext_Message.Type.Name(p.type), p.message)
+            return ["True"]
+        except Exception:
+            self.log.error("Received invalid message from" % sender)
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -229,6 +249,11 @@ class MarketProtocol(RPCProtocol):
     def callNotify(self, nodeToAsk, message):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.notify(address, message)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callMessage(self, nodeToAsk, encrypted):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.message(address, encrypted)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

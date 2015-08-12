@@ -112,3 +112,15 @@ message Following {
         optional bytes signature     = 4;
     }
 }
+
+message Plaintext_Message {
+    required bytes sender_guid = 1;
+    optional string subject    = 2;
+    required Type type         = 3;
+    required string message    = 4;
+
+    enum Type {
+        CHAT    = 1;
+        DISPUTE = 2;
+    }
+}
