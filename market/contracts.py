@@ -1,22 +1,25 @@
 __author__ = 'chris'
 
 import json
+from binascii import unhexlify, hexlify
+from collections import OrderedDict
+
 import re
 import os
-from binascii import unhexlify, hexlify
 from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
 from constants import DATA_FOLDER
 from db.datastore import HashMap, ListingsStore
-from collections import OrderedDict
 from market.profile import Profile
 from keyutils.keys import KeyChain
+
 
 class Contract(object):
     """
     A class for creating and interacting with OpenBazaar Ricardian contracts.
     """
+
     def __init__(self, contract=None, hash=None):
         """
         This class can be instantiated with either an `OrderedDict` or a hash
@@ -39,7 +42,7 @@ class Contract(object):
                     file_path = DATA_FOLDER + "cache/" + hexlify(hash)
                 with open(file_path, 'r') as file:
                     self.contract = json.load(file, object_pairs_hook=OrderedDict)
-            except:
+            except Exception:
                 self.contract = {}
         else:
             self.contract = {}
@@ -112,10 +115,12 @@ class Contract(object):
         if metadata_category == "physical good" and condition is not None:
             self.contract["vendor_offer"]["listing"]["item"]["condition"] = condition
         if currency_code.upper() == "BTC":
-            self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"] = price
+            item = self.contract["vendor_offer"]["listing"]["item"]
+            item["price_per_unit"]["bitcoin"] = price
         else:
-            self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["price"] = price
-            self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["currency_code"] = currency_code
+            item = self.contract["vendor_offer"]["listing"]["item"]
+            item["price_per_unit"]["fiat"]["price"] = price
+            item["price_per_unit"]["fiat"]["currency_code"] = currency_code
         if keywords is not None:
             self.contract["vendor_offer"]["listing"]["item"]["keywords"] = []
             self.contract["vendor_offer"]["listing"]["item"]["keywords"].extend(keywords)
@@ -125,28 +130,38 @@ class Contract(object):
             self.contract["vendor_offer"]["listing"]["item"]["sku"] = sku
         if metadata_category == "physical good":
             self.contract["vendor_offer"]["listing"]["shipping"] = {}
-            self.contract["vendor_offer"]["listing"]["shipping"]["shipping_origin"] = shipping_origin
+            shipping = self.contract["vendor_offer"]["listing"]["shipping"]
+            shipping["shipping_origin"] = shipping_origin
             if free_shipping is False:
                 self.contract["vendor_offer"]["listing"]["shipping"]["free"] = False
                 self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"] = {}
                 if shipping_currency_code == "BTC":
                     self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["domestic"] = shipping_domestic
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["international"] = shipping_international
+                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"][
+                        "domestic"] = shipping_domestic
+                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"][
+                        "international"] = shipping_international
                 else:
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["domestic"] = shipping_domestic
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["international"] = shipping_international
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["currency_code"] = shipping_currency_code
+                    shipping = self.contract["vendor_offer"]["listing"]["shipping"]
+                    shipping["flat_fee"]["fiat"] = {}
+                    shipping["flat_fee"]["fiat"]["price"] = {}
+                    shipping["flat_fee"]["fiat"]["price"][
+                        "domestic"] = shipping_domestic
+                    shipping["flat_fee"]["fiat"]["price"][
+                        "international"] = shipping_international
+                    shipping["flat_fee"]["fiat"][
+                        "currency_code"] = shipping_currency_code
             else:
                 self.contract["vendor_offer"]["listing"]["shipping"]["free"] = True
             self.contract["vendor_offer"]["listing"]["shipping"]["shipping_regions"] = []
             for region in shipping_regions:
-                self.contract["vendor_offer"]["listing"]["shipping"]["shipping_regions"].append(region)
-            self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"] = {}
-            self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
-            self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"]["international"] = est_delivery_international
+                shipping = self.contract["vendor_offer"]["listing"]["shipping"]
+                shipping["shipping_regions"].append(region)
+            listing = self.contract["vendor_offer"]["listing"]
+            listing["shipping"]["est_delivery"] = {}
+            listing["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
+            listing["shipping"]["est_delivery"][
+                "international"] = est_delivery_international
         if profile.HasField("handle"):
             self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"] = profile.handle
         if images is not None:
@@ -176,7 +191,8 @@ class Contract(object):
                category=None,
                condition=None,
                sku=None,
-               image_hashes=None,  # if intending to delete an image, pass in the hashes that are staying.
+               image_hashes=None,  # if intending to delete an image, pass in
+                                   # the hashes that are staying.
                images=None,  # to add new images pass in a list of image files.
                free_shipping=None,
                shipping_currency_code=None,
@@ -184,47 +200,53 @@ class Contract(object):
                shipping_international=None):
 
         self.delete(False)
+        vendor_listing = self.contract["vendor_offer"]["listing"]
         if expiration_date is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["expiry"] = expiration_date
+            vendor_listing["item"]["expiry"] = expiration_date
         if metadata_category is not None:
-            if metadata_category != "physical good" and self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
-                del self.contract["vendor_offer"]["listing"]["shipping"]
-            elif metadata_category == "physical good" and self.contract["vendor_offer"]["listing"]["metadata"]["category"] != "physical good":
-                self.contract["vendor_offer"]["listing"]["shipping"] = {}
-                self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"] = {}
-                self.contract["vendor_offer"]["listing"]["shipping"]["free"] = False
-            self.contract["vendor_offer"]["listing"]["metadata"]["category"] = metadata_category
+            vendor_listing["metadata"]["category"] = metadata_category
+        if metadata_category != "physical good" and vendor_listing["metadata"][
+                "category"] == "physical good":
+            del vendor_listing["shipping"]
+        elif metadata_category == "physical good" and vendor_listing["metadata"][
+                "category"] != "physical good":
+            vendor_listing["shipping"] = {}
+            vendor_listing["shipping"]["est_delivery"] = {}
+            vendor_listing["shipping"]["free"] = False
         if title is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["title"] = title
+            vendor_listing["item"]["title"] = title
         if description is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["description"] = description
+            vendor_listing["item"]["description"] = description
         if currency_code is not None:
-            if currency_code.upper() != "BTC" and "bitcoin" in self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]:
-                p = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"]
-                del self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"]
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"] = {}
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["currency_code"] = currency_code
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["price"] = p
-            elif currency_code.upper() == "BTC" and "fiat" in self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]:
-                p = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["price"]
-                del self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"] = p
+            if currency_code.upper() != "BTC" and "bitcoin" \
+                    in vendor_listing["item"]["price_per_unit"]:
+                p = vendor_listing["item"]["price_per_unit"]["bitcoin"]
+                del vendor_listing["item"]["price_per_unit"]["bitcoin"]
+                vendor_listing["item"]["price_per_unit"]["fiat"] = {}
+                vendor_listing["item"]["price_per_unit"]["fiat"][
+                    "currency_code"] = currency_code
+                vendor_listing["item"]["price_per_unit"]["fiat"]["price"] = p
+            elif currency_code.upper() == "BTC" and "fiat" in \
+                    vendor_listing["item"]["price_per_unit"]:
+                p = vendor_listing["item"]["price_per_unit"]["fiat"]["price"]
+                del vendor_listing["item"]["price_per_unit"]["fiat"]
+                vendor_listing["item"]["price_per_unit"]["bitcoin"] = p
         if price is not None:
-            if "bitcoin" in self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]:
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"] = price
+            if "bitcoin" in vendor_listing["item"]["price_per_unit"]:
+                vendor_listing["item"]["price_per_unit"]["bitcoin"] = price
             else:
-                self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["price"] = price
+                vendor_listing["item"]["price_per_unit"]["fiat"]["price"] = price
         if process_time is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["process_time"] = process_time
+            vendor_listing["item"]["process_time"] = process_time
         if nsfw is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["nsfw"] = nsfw
+            vendor_listing["item"]["nsfw"] = nsfw
         if keywords is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["keywords"] = []
-            self.contract["vendor_offer"]["listing"]["item"]["keywords"].extend(keywords)
+            vendor_listing["item"]["keywords"] = []
+            vendor_listing["item"]["keywords"].extend(keywords)
         if category is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["category"] = category
+            vendor_listing["item"]["category"] = category
         if image_hashes is not None:
-            to_delete = list(set(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"]) - set(image_hashes))
+            to_delete = list(set(vendor_listing["item"]["image_hashes"]) - set(image_hashes))
             for image_hash in to_delete:
                 # delete from disk
                 h = HashMap()
@@ -233,63 +255,77 @@ class Contract(object):
                     os.remove(image_path)
                 # remove pointer to the image from the HashMap
                 h.delete(unhexlify(image_hash))
-            self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
-            self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].extend(image_hashes)
+            vendor_listing["item"]["image_hashes"] = []
+            vendor_listing["item"]["image_hashes"].extend(image_hashes)
         if images is not None:
-            if "image_hashes" not in self.contract["vendor_offer"]["listing"]["item"]:
-                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
+            if "image_hashes" not in vendor_listing["item"]:
+                vendor_listing["item"]["image_hashes"] = []
             for image in images:
                 hash = digest(image).encode("hex")
-                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(hash)
+                vendor_listing["item"]["image_hashes"].append(hash)
                 with open(DATA_FOLDER + "store/media/" + hash, 'w') as outfile:
                     outfile.write(image)
                 HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash)
-        if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good" and condition is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["condition"] = condition
+        if vendor_listing["metadata"]["category"] == "physical good" and condition is not None:
+            vendor_listing["item"]["condition"] = condition
         if sku is not None:
-            self.contract["vendor_offer"]["listing"]["item"]["sku"] = sku
-        if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
+            vendor_listing["item"]["sku"] = sku
+        if vendor_listing["metadata"]["category"] == "physical good":
             if shipping_origin is not None:
-                self.contract["vendor_offer"]["listing"]["shipping"]["shipping_origin"] = shipping_origin
+                vendor_listing["shipping"]["shipping_origin"] = shipping_origin
             if free_shipping is not None:
-                if free_shipping is True and self.contract["vendor_offer"]["listing"]["shipping"]["free"] == False:
-                    self.contract["vendor_offer"]["listing"]["shipping"]["free"] = True
-                    del self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]
-                elif free_shipping is False and self.contract["vendor_offer"]["listing"]["shipping"]["free"] == True:
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["free"] = False
-            if shipping_currency_code is not None and self.contract["vendor_offer"]["listing"]["shipping"]["free"] == False:
-                if shipping_currency_code == "BTC" and "bitcoin" not in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"] = {}
-                    d = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["domestic"]
-                    i = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["international"]
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["domestic"] = d
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["international"] = i
-                    del self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]
-                elif shipping_currency_code != "BTC" and "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                    d = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["domestic"]
-                    i = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["international"]
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"] = {}
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["domestic"] = d
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["international"] = i
-                    self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["currency_code"] = shipping_currency_code
-                    del self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]
-            if shipping_domestic is not None and "bitcoin" not in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["domestic"] = shipping_domestic
-            if shipping_international is not None and "bitcoin" not in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"]["price"]["international"] = shipping_international
-            if shipping_domestic is not None and "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["domestic"] = shipping_domestic
-            if shipping_international is not None and "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["bitcoin"]["international"] = shipping_international
+                if free_shipping is True and vendor_listing["shipping"]["free"] is False:
+                    vendor_listing["shipping"]["free"] = True
+                    del vendor_listing["shipping"]["flat_fee"]
+                elif free_shipping is False and vendor_listing["shipping"]["free"] is True:
+                    vendor_listing["shipping"]["flat_fee"] = {}
+                    vendor_listing["shipping"]["flat_fee"]["bitcoin"] = {}
+                    vendor_listing["shipping"]["free"] = False
+            if shipping_currency_code is not None and vendor_listing["shipping"]["free"] is False:
+                if shipping_currency_code == "BTC" and "bitcoin" not in \
+                        vendor_listing["shipping"]["flat_fee"]:
+                    vendor_listing["shipping"]["flat_fee"]["bitcoin"] = {}
+                    d = vendor_listing["shipping"]["flat_fee"]["fiat"]["price"]["domestic"]
+                    i = vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
+                        "international"]
+                    vendor_listing["shipping"]["flat_fee"]["bitcoin"]["domestic"] = d
+                    vendor_listing["shipping"]["flat_fee"]["bitcoin"]["international"] = i
+                    del vendor_listing["shipping"]["flat_fee"]["fiat"]
+                elif shipping_currency_code != "BTC" and "bitcoin" in \
+                        vendor_listing["shipping"]["flat_fee"]:
+                    d = vendor_listing["shipping"]["flat_fee"]["bitcoin"]["domestic"]
+                    i = vendor_listing["shipping"]["flat_fee"]["bitcoin"]["international"]
+                    vendor_listing["shipping"]["flat_fee"]["fiat"] = {}
+                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"] = {}
+                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"]["domestic"] = d
+                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
+                        "international"] = i
+                    vendor_listing["shipping"]["flat_fee"]["fiat"][
+                        "currency_code"] = shipping_currency_code
+                    del vendor_listing["shipping"]["flat_fee"]["bitcoin"]
+            if shipping_domestic is not None and "bitcoin" not in \
+                    vendor_listing["shipping"]["flat_fee"]:
+                vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
+                    "domestic"] = shipping_domestic
+            if shipping_international is not None and "bitcoin" not in \
+                    vendor_listing["shipping"]["flat_fee"]:
+                vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
+                    "international"] = shipping_international
+            if shipping_domestic is not None and "bitcoin" in \
+                    vendor_listing["shipping"]["flat_fee"]:
+                vendor_listing["shipping"]["flat_fee"]["bitcoin"][
+                    "domestic"] = shipping_domestic
+            if shipping_international is not None and "bitcoin" in \
+                    vendor_listing["shipping"]["flat_fee"]:
+                vendor_listing["shipping"]["flat_fee"]["bitcoin"][
+                    "international"] = shipping_international
             if shipping_regions is not None:
-                self.contract["vendor_offer"]["listing"]["shipping"]["shipping_regions"] = shipping_regions
+                vendor_listing["shipping"]["shipping_regions"] = shipping_regions
             if est_delivery_domestic is not None:
-                self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
+                vendor_listing["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
             if est_delivery_international is not None:
-                self.contract["vendor_offer"]["listing"]["shipping"]["est_delivery"]["international"] = est_delivery_international
+                vendor_listing["shipping"]["est_delivery"][
+                    "international"] = est_delivery_international
 
         self.save()
 
@@ -349,21 +385,24 @@ class Contract(object):
         listings = Listings()
         data = listings.ListingMetadata()
         data.contract_hash = digest(json.dumps(self.contract, indent=4))
-        data.title = self.contract["vendor_offer"]["listing"]["item"]["title"]
-        if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
-            data.thumbnail_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
-        data.category = self.contract["vendor_offer"]["listing"]["item"]["category"]
-        if "bitcoin" not in self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]:
-            data.price = float(self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["price"])
-            data.currency_code = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["fiat"]["currency_code"]
+        vendor_item = self.contract["vendor_offer"]["listing"]["item"]
+        data.title = vendor_item["title"]
+        if "image_hashes" in vendor_item:
+            data.thumbnail_hash = unhexlify(vendor_item["image_hashes"][0])
+        data.category = vendor_item["category"]
+        if "bitcoin" not in vendor_item["price_per_unit"]:
+            data.price = float(vendor_item["price_per_unit"]["fiat"]["price"])
+            data.currency_code = vendor_item["price_per_unit"]["fiat"][
+                "currency_code"]
         else:
-            data.price = float(self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]["bitcoin"])
+            data.price = float(vendor_item["price_per_unit"]["bitcoin"])
             data.currency_code = "BTC"
-        data.nsfw = self.contract["vendor_offer"]["listing"]["item"]["nsfw"]
+        data.nsfw = vendor_item["nsfw"]
         if "shipping" not in self.contract["vendor_offer"]["listing"]:
             data.origin = CountryCode.Value("NA")
         else:
-            data.origin = CountryCode.Value(self.contract["vendor_offer"]["listing"]["shipping"]["shipping_origin"].upper())
+            data.origin = CountryCode.Value(
+                self.contract["vendor_offer"]["listing"]["shipping"]["shipping_origin"].upper())
             for region in self.contract["vendor_offer"]["listing"]["shipping"]["shipping_regions"]:
                 data.ships_to.append(CountryCode.Value(region.upper()))
 

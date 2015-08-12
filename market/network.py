@@ -49,7 +49,8 @@ class Server(object):
                     signature = contract["vendor"]["signatures"]["guid"]
                     pubkey = node_to_ask.signed_pubkey[64:]
                     verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(unhexlify(signature) + unhexlify(json.dumps(contract["vendor"]["listing"], indent=4).encode("hex")))
+                    verify_key.verify(unhexlify(signature) +
+                                      unhexlify(json.dumps(contract["vendor"]["listing"], indent=4).encode("hex")))
                 except Exception:
                     return None
                 self.cache(result[1][0])
@@ -314,10 +315,11 @@ class Server(object):
         d = self.protocol.callGetFollowing(node_to_ask)
         return d.addCallback(get_response)
 
-    def cache(self, file):
+    @staticmethod
+    def cache(filename):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(file).encode("hex")):
-            with open(DATA_FOLDER + "cache/" + digest(file).encode("hex"), 'w') as outfile:
-                outfile.write(file)
+        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(filename).encode("hex")):
+            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'w') as outfile:
+                outfile.write(filename)

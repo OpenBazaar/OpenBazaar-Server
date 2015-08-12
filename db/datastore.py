@@ -1,10 +1,8 @@
 __author__ = 'chris'
 import sqlite3 as lite
+
 from constants import DATABASE
 from protos.objects import Listings, Followers, Following
-
-
-
 
 
 class HashMap(object):
@@ -14,25 +12,26 @@ class HashMap(object):
     storage. This is useful for users who want to look through their store
     data on disk.
     """
+
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE hashmap(hash BLOB primary key, filepath TEXT)''')
+            cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')
             self.db.commit()
-        except:
+        except Exception:
             pass
 
-    def insert(self, hash, filepath):
+    def insert(self, hash_value, filepath):
         cursor = self.db.cursor()
         cursor.execute('''INSERT OR REPLACE INTO hashmap(hash, filepath)
-                      VALUES (?,?)''', (hash, filepath))
+                      VALUES (?,?)''', (hash_value, filepath))
         self.db.commit()
 
-    def get_file(self, hash):
+    def get_file(self, hash_value):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT filepath FROM hashmap WHERE hash=?''', (hash,))
+        cursor.execute('''SELECT filepath FROM hashmap WHERE hash=?''', (hash_value,))
         ret = cursor.fetchone()
         if ret is None:
             return None
@@ -44,15 +43,16 @@ class HashMap(object):
         ret = cursor.fetchall()
         return ret
 
-    def delete(self, hash):
+    def delete(self, hash_value):
         cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash,))
+        cursor.execute('''DELETE FROM hashmap WHERE hash = ?''', (hash_value,))
         self.db.commit()
 
     def delete_all(self):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM hashmap''')
         self.db.commit()
+
 
 class ProfileStore(object):
     """
@@ -63,14 +63,15 @@ class ProfileStore(object):
     rebuild it every startup. To interact with the profile you should use the
     `market.profile` module and not this class directly.
     """
+
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE profile(id INTEGER primary key, serializedUserInfo BLOB)''')
+            cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
             self.db.commit()
-        except:
+        except Exception:
             pass
 
     def set_proto(self, proto):
@@ -87,20 +88,22 @@ class ProfileStore(object):
             return None
         return ret[0]
 
+
 class ListingsStore(object):
     """
     Stores a serialized `Listings` protobuf object. It contains metadata for all the
     contracts hosted by this store. We will send this in response to a GET_LISTING
     query. This should be updated each time a new contract is created.
     """
+
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE listings(id INTEGER primary key, serializedListings BLOB)''')
+            cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
             self.db.commit()
-        except:
+        except Exception:
             pass
 
     def add_listing(self, proto):
@@ -120,7 +123,7 @@ class ListingsStore(object):
                       VALUES (?,?)''', (1, l.SerializeToString()))
         self.db.commit()
 
-    def delete_listing(self, hash):
+    def delete_listing(self, hash_value):
         cursor = self.db.cursor()
         ser = self.get_proto()
         if ser is None:
@@ -128,7 +131,7 @@ class ListingsStore(object):
         l = Listings()
         l.ParseFromString(ser)
         for listing in l.listing:
-            if listing.contract_hash == hash:
+            if listing.contract_hash == hash_value:
                 l.listing.remove(listing)
         cursor.execute('''INSERT OR REPLACE INTO listings(id, serializedListings)
                       VALUES (?,?)''', (1, l.SerializeToString()))
@@ -147,26 +150,27 @@ class ListingsStore(object):
             return None
         return ret[0]
 
+
 class KeyStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE keystore(type TEXT primary key, privkey BLOB, pubkey BLOB)''')
+            cursor.execute('''CREATE TABLE keystore(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
             self.db.commit()
-        except:
+        except Exception:
             pass
 
-    def set_key(self, type, privkey, pubkey):
+    def set_key(self, key_type, privkey, pubkey):
         cursor = self.db.cursor()
         cursor.execute('''INSERT OR REPLACE INTO keystore(type, privkey, pubkey)
-                      VALUES (?,?,?)''', (type, privkey, pubkey))
+                      VALUES (?,?,?)''', (key_type, privkey, pubkey))
         self.db.commit()
 
-    def get_key(self, type):
+    def get_key(self, key_type):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (type,))
+        cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (key_type,))
         ret = cursor.fetchone()
         if ret == []:
             return None
@@ -185,10 +189,10 @@ class FollowData(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE followers(id INTEGER primary key, serializedFollowers BLOB)''')
-            cursor.execute('''CREATE TABLE following(id INTEGER primary key, serializedFollowing BLOB)''')
+            cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+            cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
             self.db.commit()
-        except:
+        except Exception:
             pass
 
     def follow(self, proto):
@@ -244,7 +248,8 @@ class FollowData(object):
                 if follower.guid == proto.guid:
                     f.followers.remove(follower)
         f.followers.extend([proto])
-        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
+        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
+                       (1, f.SerializeToString()))
         self.db.commit()
 
     def delete_follower(self, guid):

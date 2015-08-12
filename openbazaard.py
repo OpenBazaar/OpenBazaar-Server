@@ -42,7 +42,9 @@ if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
 else:
     kserver = Server(node)
     kserver.protocol.connect_multiplexer(protocol)
-    kserver.bootstrap(kserver.querySeed("162.213.253.147:8080", "5b56c8daeb3b37c8a9b47be6102fa43b9f069f58dcb57475984041b26c99e389"))
+    kserver.bootstrap(
+        kserver.querySeed("162.213.253.147:8080",
+                          "5b56c8daeb3b37c8a9b47be6102fa43b9f069f58dcb57475984041b26c99e389"))
 
 kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)

@@ -1,11 +1,11 @@
 import unittest
+
 from db import datastore
 from protos.objects import Profile, Listings
 from protos.countries import CountryCode
 
 
 class DatastoreTest(unittest.TestCase):
-
     def setUp(self):
         self.test_hash = "87e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_hash2 = "97e0555568bf5c7e4debd6645fc3f41e88df6ca8"

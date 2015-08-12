@@ -4,6 +4,7 @@ import nacl.signing
 from db.datastore import KeyStore
 from guid import GUID
 
+
 class KeyChain(object):
 
     def __init__(self):

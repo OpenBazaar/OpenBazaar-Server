@@ -1,9 +1,12 @@
 __author__ = 'chris'
-import mock
 import time
 import random
-import nacl.signing, nacl.encoding, nacl.hash
 from binascii import unhexlify
+
+import mock
+import nacl.signing
+import nacl.encoding
+import nacl.hash
 from txrudp import connection, rudp, packet, constants
 from twisted.trial import unittest
 from twisted.internet import task, reactor, address, udp
@@ -16,9 +19,7 @@ from protos import message, objects
 from wireprotocol import OpenBazaarProtocol
 
 
-
 class KademliaProtocolTest(unittest.TestCase):
-
     def setUp(self):
         self.public_ip = '123.45.67.89'
         self.port = 12345
@@ -110,7 +111,8 @@ class KademliaProtocolTest(unittest.TestCase):
         received_message = sent_packet.payload
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+        self.assertTrue(
+            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
     def test_rpc_delete(self):
         self._connecting_to_connected()
@@ -127,7 +129,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+        self.assertTrue(
+            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         # Test bad signature
         m = message.Message()
@@ -141,7 +144,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append("False")
         expected_message2 = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+        self.assertTrue(
+            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -208,7 +212,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
         del m.arguments[-1]
-        m.arguments.extend([node2.getProto().SerializeToString(), node1.getProto().SerializeToString(), node3.getProto().SerializeToString()])
+        m.arguments.extend([node2.getProto().SerializeToString(), node1.getProto().SerializeToString(),
+                            node3.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -233,7 +238,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         self.handler.receive_message(data)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+        self.assertTrue(
+            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
 
         # Send the find_value rpc
         m = message.Message()
@@ -282,7 +288,8 @@ class KademliaProtocolTest(unittest.TestCase):
         self.handler.receive_message(data)
 
         del m.arguments[-1]
-        m.arguments.extend([node3.getProto().SerializeToString(), node1.getProto().SerializeToString(), node2.getProto().SerializeToString()])
+        m.arguments.extend([node3.getProto().SerializeToString(), node1.getProto().SerializeToString(),
+                            node2.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -321,7 +328,8 @@ class KademliaProtocolTest(unittest.TestCase):
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         self.wire_protocol[self.addr1] = self.con
-        self.protocol.callStore(n, digest("Keyword"), digest("Key"), self.protocol.sourceNode.getProto().SerializeToString())
+        self.protocol.callStore(n, digest("Keyword"), digest("Key"),
+                                self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -458,7 +466,8 @@ class KademliaProtocolTest(unittest.TestCase):
 
         self.protocol.addToRouter(mknode())
 
-        self.protocol.storage[digest("keyword")] = (digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
+        self.protocol.storage[digest("keyword")] = (
+            digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
 
         self.clock.advance(1)

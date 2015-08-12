@@ -67,7 +67,8 @@ commands:
         getattr(self, args.command)()
         self.proxy = proxy
 
-    def get(self):
+    @staticmethod
+    def get():
         parser = argparse.ArgumentParser(
             description="Fetch the given keyword from the dht and return all the entries",
             usage='''usage:
@@ -79,7 +80,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def set(self):
+    @staticmethod
+    def set():
         parser = argparse.ArgumentParser(
             description='Set the given keyword/key pair in the dht. The value will be your '
                         'serialized node information.',
@@ -94,7 +96,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def delete(self):
+    @staticmethod
+    def delete():
         parser = argparse.ArgumentParser(
             description="Deletes the given keyword/key from the dht. Signature will be automatically generated.",
             usage='''usage:
@@ -108,7 +111,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getinfo(self):
+    @staticmethod
+    def getinfo():
         parser = argparse.ArgumentParser(
             description="Returns an object containing various state info",
             usage='''usage:
@@ -118,7 +122,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def shutdown(self):
+    @staticmethod
+    def shutdown():
         parser = argparse.ArgumentParser(
             description="Terminates all outstanding connections.",
             usage='''usage:
@@ -128,7 +133,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getpubkey(self):
+    @staticmethod
+    def getpubkey():
         parser = argparse.ArgumentParser(
             description="Returns this node's public key.",
             usage='''usage:
@@ -138,7 +144,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getcontract(self):
+    @staticmethod
+    def getcontract():
         parser = argparse.ArgumentParser(
             description="Fetch a contract given its hash and guid.",
             usage='''usage:
@@ -152,7 +159,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getimage(self):
+    @staticmethod
+    def getimage():
         parser = argparse.ArgumentParser(
             description="Fetch an image given its hash and guid.",
             usage='''usage:
@@ -166,7 +174,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getpeers(self):
+    @staticmethod
+    def getpeers():
         parser = argparse.ArgumentParser(
             description="Returns id of all peers in the routing table",
             usage='''usage:
@@ -175,7 +184,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getnode(self):
+    @staticmethod
+    def getnode():
         parser = argparse.ArgumentParser(
             description="Fetch the ip address for a node given its guid.",
             usage='''usage:
@@ -187,7 +197,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setprofile(self):
+    @staticmethod
+    def setprofile():
         parser = argparse.ArgumentParser(
             description="Sets a profile in the database.",
             usage='''usage:
@@ -196,7 +207,8 @@ commands:
         parser.add_argument('-o', '--onename', help="the onename id")
         parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
         parser.add_argument('-hd', '--header', help="the file path to the header image")
-        parser.add_argument('-c', '--country', help="a string consisting of country from protos.countries.CountryCode")
+        parser.add_argument('-c', '--country',
+                            help="a string consisting of country from protos.countries.CountryCode")
         # we could add all the fields here but this is good enough to test.
         args = parser.parse_args(sys.argv[2:])
         p = Profile()
@@ -222,7 +234,8 @@ commands:
             h.insert(hash, args.header)
         p.update(u)
 
-    def getprofile(self):
+    @staticmethod
+    def getprofile():
         parser = argparse.ArgumentParser(
             description="Fetch the profile from the given node. Images will be saved in cache.",
             usage='''usage:
@@ -234,9 +247,11 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getusermetadata(self):
+    @staticmethod
+    def getusermetadata():
         parser = argparse.ArgumentParser(
-            description="Fetches the metadata (small profile) from a given node. The images will be saved in cache.",
+            description="Fetches the metadata (small profile) from"
+                        "a given node. The images will be saved in cache.",
             usage='''usage:
     networkcli.py getusermetadata [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
@@ -246,7 +261,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setcontract(self, ):
+    @staticmethod
+    def setcontract():
         parser = argparse.ArgumentParser(
             description="Sets a new contract in the database and filesystem.",
             usage='''usage:
@@ -257,7 +273,8 @@ commands:
             contract = json.load(data_file, object_pairs_hook=OrderedDict)
         Contract(contract).save()
 
-    def setimage(self, ):
+    @staticmethod
+    def setimage():
         parser = argparse.ArgumentParser(
             description="Maps a image hash to a file path in the database",
             usage='''usage:
@@ -271,7 +288,8 @@ commands:
         h.insert(d, args.filepath)
         print h.get_file(d)
 
-    def getlistings(self):
+    @staticmethod
+    def getlistings():
         parser = argparse.ArgumentParser(
             description="Fetches metadata about the store's listings",
             usage='''usage:
@@ -283,7 +301,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getcontractmetadata(self):
+    @staticmethod
+    def getcontractmetadata():
         parser = argparse.ArgumentParser(
             description="Fetches the metadata for the given contract. The thumbnail images will be saved in cache.",
             usage='''usage:
@@ -297,7 +316,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setasmoderator(self):
+    @staticmethod
+    def setasmoderator():
         parser = argparse.ArgumentParser(
             description="Sets the given node as a moderator.",
             usage='''usage:
@@ -306,7 +326,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getmoderators(self):
+    @staticmethod
+    def getmoderators():
         parser = argparse.ArgumentParser(
             description="Fetches a list of moderators",
             usage='''usage:
@@ -315,7 +336,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def follow(self):
+    @staticmethod
+    def follow():
         parser = argparse.ArgumentParser(
             description="Follow a user",
             usage='''usage:

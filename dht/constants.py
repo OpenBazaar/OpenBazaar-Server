@@ -1,0 +1,2 @@
+KSIZE = 20
+ALPHA = 3

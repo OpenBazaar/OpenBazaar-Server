@@ -1,9 +1,12 @@
 __author__ = 'chris'
-import mock
-import nacl.signing, nacl.hash
 from binascii import unhexlify
+
+import dht.constants
+import mock
+import nacl.signing
+import nacl.hash
 from txrudp import packet, connection, rudp, constants
-from twisted.internet import udp, address, task, base
+from twisted.internet import udp, address, task
 from twisted.trial import unittest
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
@@ -15,7 +18,6 @@ from wireprotocol import OpenBazaarProtocol
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
-
     def setUp(self):
         self.public_ip = '123.45.67.89'
         self.port = 12345
@@ -76,7 +78,8 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest,
+                                  dht.constants.KSIZE, dht.constants.ALPHA)
         spider.find()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -96,7 +99,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         # test resonse with uncontacted nodes
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
@@ -106,7 +109,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         # test all been contacted
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
         for peer in spider.nearest.getUncontacted():
             spider.nearest.markContacted(peer)
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
@@ -116,7 +119,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.assertTrue(resp is None)
 
         # test didn't happen
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
         response = (False, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                             self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
@@ -143,7 +146,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
         val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.node1.getProto().SerializeToString()
@@ -191,7 +194,6 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
 
 class NodeSpiderCrawlTest(unittest.TestCase):
-
     def setUp(self):
         self.public_ip = '123.45.67.89'
         self.port = 12345
@@ -351,8 +353,9 @@ class RPCFindResponseTest(unittest.TestCase):
         node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"), vendor=True)
         node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"), vendor=True)
         node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
-        response = (True, (node1.getProto().SerializeToString(), node2.getProto().SerializeToString(), node3.getProto().SerializeToString(),
-            "sdfasdfsd"))
+        response = (True, (node1.getProto().SerializeToString(), node2.getProto().SerializeToString(),
+                           node3.getProto().SerializeToString(),
+                           "sdfasdfsd"))
         r = RPCFindResponse(response)
         nodes = r.getNodeList()
         self.assertEqual(nodes[0].getProto(), node1.getProto())

@@ -1,8 +1,10 @@
 __author__ = 'chris'
-import nacl.signing
-import nacl.hash
 import guidc
 from binascii import hexlify, unhexlify
+
+import nacl.signing
+import nacl.hash
+
 
 class GUID(object):
     def __init__(self, privkey=None, use_C_lib=False):
@@ -56,4 +58,5 @@ class GUID(object):
             return False
 
     def __str__(self):
-        return "privkey: %s\nsigned pubkey: %s\nguid: %s" % (hexlify(self.privkey), hexlify(self.signed_pubkey), hexlify(self.guid))
+        return "privkey: %s\nsigned pubkey: %s\nguid: %s" % (
+            hexlify(self.privkey), hexlify(self.signed_pubkey), hexlify(self.guid))
