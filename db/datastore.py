@@ -205,7 +205,8 @@ class FollowData(object):
                 if user.guid == proto.guid:
                     f.users.remove(user)
         f.users.extend([proto])
-        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
+        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''',
+                       (1, f.SerializeToString()))
         self.db.commit()
 
     def unfollow(self, proto):
@@ -217,7 +218,8 @@ class FollowData(object):
             for user in f.users:
                 if user.guid == proto.guid:
                     f.users.remove(user)
-        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''', (1, f.SerializeToString()))
+        cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''',
+                       (1, f.SerializeToString()))
         self.db.commit()
 
     def get_following(self):
@@ -261,7 +263,8 @@ class FollowData(object):
             for follower in f.followers:
                 if follower.guid == guid:
                     f.followers.remove(follower)
-        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''', (1, f.SerializeToString()))
+        cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
+                       (1, f.SerializeToString()))
         self.db.commit()
 
     def get_followers(self):
