@@ -528,11 +528,12 @@ class RPCCalls(jsonrpc.JSONRPC):
         def get_node(node):
             def print_resp(resp):
                 print time.time() - start
-                for l in resp.listing:
-                    resp.listing.remove(l)
-                    h = l.contract_hash
-                    l.contract_hash = hexlify(h)
-                    resp.listing.extend([l])
+                if resp:
+                    for l in resp.listing:
+                        resp.listing.remove(l)
+                        h = l.contract_hash
+                        l.contract_hash = hexlify(h)
+                        resp.listing.extend([l])
                 print resp
             if node is not None:
                 d = self.mserver.get_listings(node)
