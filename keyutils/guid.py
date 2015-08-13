@@ -7,10 +7,12 @@ from binascii import hexlify, unhexlify
 import nacl.signing
 import nacl.hash
 
+def _testpow(pow_hash):
+    return True if int(pow_hash, 16) < 50 else False
 
 class GUID(object):
-    def __init__(self, privkey=None, use_C_lib=False):
-        if privkey is None:
+    def __init__(self, keys=None, use_C_lib=False):
+        if keys is None:
             if use_C_lib:
                 self.privkey = unhexlify(guidc.generate())
                 self.signing_key = nacl.signing.SigningKey(self.privkey)
@@ -22,12 +24,9 @@ class GUID(object):
             else:
                 self.privkey = self.generate()
         else:
-            self.from_privkey(privkey)
+            self.signing_key, self.guid, self.signed_pubkey, self.privkey = keys
 
     def generate(self):
-        def testpow(pow_hash):
-            return True if int(pow_hash, 16) < 50 else False
-
         valid_pow = False
         while not valid_pow:
             signing_key = nacl.signing.SigningKey.generate()
@@ -35,29 +34,21 @@ class GUID(object):
             signed = signing_key.sign(str(verify_key))
             h = nacl.hash.sha512(signed)
             pow_hash = h[64:128]
-            valid_pow = testpow(pow_hash[:6])
+            valid_pow = _testpow(pow_hash[:6])
         self.signing_key = signing_key
         self.guid = unhexlify(h[:40])
         self.signed_pubkey = signed
         return signing_key.encode()
 
-    def from_privkey(self, privkey):
-        def testpow(pow_hash):
-            return True if int(pow_hash, 16) < 50 else False
-
+    @classmethod
+    def from_privkey(cls, privkey):
         signing_key = nacl.signing.SigningKey(privkey)
         verify_key = signing_key.verify_key
         signed = signing_key.sign(str(verify_key))
         h = nacl.hash.sha512(signed)
         pow_hash = h[64:128]
-        if testpow(pow_hash[:6]):
-            self.signing_key = signing_key
-            self.guid = unhexlify(h[:40])
-            self.signed_pubkey = signed
-            self.privkey = privkey
-            return True
-        else:
-            return False
+        if _testpow(pow_hash[:6]):
+            GUID((signing_key, unhexlify(h[:40]), signed, privkey))
 
     def __str__(self):
         return "privkey: %s\nsigned pubkey: %s\nguid: %s" % (

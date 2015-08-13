@@ -114,10 +114,13 @@ message Following {
 }
 
 message Plaintext_Message {
-    required bytes sender_guid = 1;
-    optional string subject    = 2;
-    required Type type         = 3;
-    required string message    = 4;
+    required bytes sender_guid       = 1;
+    required bytes signed_pubkey     = 2;
+    required bytes encryption_pubkey = 3;
+    optional string subject          = 4;
+    required Type type               = 5;
+    required string message          = 6;
+    optional bytes signature         = 7;
 
     enum Type {
         CHAT    = 1;

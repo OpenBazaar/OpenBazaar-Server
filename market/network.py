@@ -7,9 +7,9 @@ from binascii import hexlify, unhexlify
 import os.path
 import nacl.signing
 import nacl.hash
-import nacl.secret
 import nacl.encoding
 import nacl.utils
+from nacl.public import PrivateKey, PublicKey, Box
 from dht import node
 from twisted.internet import defer
 from market.protocol import MarketProtocol
@@ -401,7 +401,7 @@ class Server(object):
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
 
-    def send_message(self, receiving_node, message_type, message, subject=None):
+    def send_message(self, receiving_node, public_key, message_type, message, subject=None):
         """
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
@@ -409,14 +409,22 @@ class Server(object):
 
         p = objects.Plaintext_Message()
         p.sender_guid = receiving_node.id
+        p.signed_pubkey = receiving_node.signed_pubkey
+        p.encyrption_pubkey = PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder))\
+            .public_key.encode(nacl.encoding.RawEncoder)
         p.type = message_type
         p.message = message
         if subject is not None:
             p.subject = subject
-        box = nacl.secret.SecretBox(self.signing_key.encode(nacl.encoding.RawEncoder))
-        nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE)
+        signature = self.signing_key.sign(p.SerializeToString())
+        p.signature = signature
+
+        skephem = PrivateKey.generate()
+        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+        box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+        nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(p.SerializeToString(), nonce)
-        self.protocol.callMessage(receiving_node, ciphertext)
+        self.protocol.callMessage(receiving_node, pkephem, ciphertext)
 
     @staticmethod
     def cache(filename):

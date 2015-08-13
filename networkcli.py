@@ -410,13 +410,15 @@ commands:
         parser = argparse.ArgumentParser(
             description="Send a message to another node",
             usage='''usage:
-    networkcli.py sendmessage [-g GUID] [-m MESSAGE]''')
+    networkcli.py sendmessage [-g GUID] [-p PUBKEY] [-m MESSAGE]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to send to")
+        parser.add_argument('-p', '--pubkey', required=True, help="the encryption key of the node")
         parser.add_argument('-m', '--message', required=True, help="the message to send")
         args = parser.parse_args(sys.argv[2:])
         message = args.message
         guid = args.guid
-        d = proxy.callRemote('sendmessage', guid, message)
+        pubkey = args.pubkey
+        d = proxy.callRemote('sendmessage', guid, pubkey, message)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -645,12 +647,12 @@ class RPCCalls(jsonrpc.JSONRPC):
         d.addCallback(get_count)
         return "sendng notification..."
 
-    def jsonrpc_sendmessage(self, guid, message):
+    def jsonrpc_sendmessage(self, guid, pubkey, message):
         def get_node(node):
             if node is not None:
                 def print_resp(resp):
                     print resp
-                self.mserver.send_message(node, objects.Plaintext_Message.CHAT, message)
+                self.mserver.send_message(node, pubkey, objects.Plaintext_Message.CHAT, message)
                 #d.addCallback(print_resp)
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
