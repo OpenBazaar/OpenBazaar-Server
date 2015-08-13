@@ -1,21 +1,22 @@
 __author__ = 'chris'
 import sys
-import os
 import pickle
 import json
 import random
-import stun
-import nacl.signing
-import nacl.hash
-import nacl.encoding
-import log
+from binascii import hexlify
+from random import shuffle
+
+import os
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
 from twisted.internet import task
 from twisted.web import resource, server
-from binascii import hexlify
-from random import shuffle
+import stun
+import nacl.signing
+import nacl.hash
+import nacl.encoding
 from seed import peers
+import log
 from dht.node import Node
 from dht.network import Server
 from dht.crawling import NodeSpiderCrawl
@@ -38,9 +39,9 @@ if os.path.isfile('keys.pickle'):
 else:
     signing_key = nacl.signing.SigningKey.generate()
     keys = {
-            'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
-            'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
-            }
+        'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
+        'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
+    }
     pickle.dump(keys, open("keys.pickle", "wb"))
 
 # Stun
@@ -69,10 +70,11 @@ protocol.register_processor(mserver.protocol)
 udpserver = internet.UDPServer(18467, protocol)
 udpserver.setServiceParent(application)
 
+
 class WebResource(resource.Resource):
-    def __init__(self, kserver):
+    def __init__(self, kserver_r):
         resource.Resource.__init__(self)
-        self.kserver = kserver
+        self.kserver = kserver_r
         self.nodes = {}
         for bucket in self.kserver.protocol.router.buckets:
             for node in bucket.getNodes():
@@ -132,7 +134,7 @@ class WebResource(resource.Resource):
                             node_dic["port"] = node.port
                             json_list.append(node_dic)
                     sig = signing_key.sign(str(json_list))
-                    resp = {"peers" : json_list, "signature" : hexlify(sig[:64])}
+                    resp = {"peers": json_list, "signature": hexlify(sig[:64])}
                     request.write(json.dumps(resp, indent=4))
                 else:
                     for node in nodes[:50]:
@@ -141,7 +143,7 @@ class WebResource(resource.Resource):
                         node_dic["port"] = node.port
                         json_list.append(node_dic)
                     sig = signing_key.sign(str(json_list))
-                    resp = {"peers" : json_list, "signature" : hexlify(sig[:64])}
+                    resp = {"peers": json_list, "signature": hexlify(sig[:64])}
                     request.write(json.dumps(resp, indent=4))
             elif request.args["format"][0] == "protobuf":
                 proto = peers.PeerSeeds()
@@ -185,6 +187,7 @@ class WebResource(resource.Resource):
                 request.write(uncompressed_data.encode("zlib"))
         request.finish()
         return server.NOT_DONE_YET
+
 
 server_protocol = server.Site(WebResource(kserver))
 seed_server = internet.TCPServer(8080, server_protocol)

@@ -19,7 +19,7 @@ from dht import node
 from constants import SEED_NODE
 
 
-class RPCProtocol():
+class RPCProtocol:
     """
     This is an abstract class for processing and sending rpc messages.
     A class that implements the `MessageProcessor` interface probably should
@@ -62,9 +62,10 @@ class RPCProtocol():
                 verify_key = nacl.signing.VerifyKey(pubkey)
                 verify_key.verify(m.sender.signedPublicKey)
                 h = nacl.hash.sha512(m.sender.signedPublicKey)
-                pow = h[64:128]
-                if int(pow[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
+                pow_hash = h[64:128]
+                if int(pow_hash[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
                     raise Exception('Invalid GUID')
+
             except Exception:
                 self.log.warning("Received message from sender with invalid GUID, ignoring")
                 return False

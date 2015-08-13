@@ -27,6 +27,18 @@ from dht.crawling import NodeSpiderCrawl
 from protos import objects
 
 
+def _anyRespondSuccess(responses):
+    """
+    Given the result of a DeferredList of calls to peers, ensure that at least
+    one of them was contacted and responded with a Truthy result.
+    """
+    for deferSuccess, result in responses:
+        peerReached, peerResponse = result
+        if deferSuccess and peerReached and peerResponse:
+            return True
+    return False
+
+
 class Server(object):
     """
     High level view of a node instance.  This is the object that should be created
@@ -68,10 +80,10 @@ class Server(object):
         (per section 2.3 of the paper).
         """
         ds = []
-        for id in self.protocol.getRefreshIDs():
-            node = Node(id)
+        for rid in self.protocol.getRefreshIDs():
+            node = Node(rid)
             nearest = self.protocol.router.findNeighbors(node, self.alpha)
-            spider = NodeSpiderCrawl(self.protocol, node, nearest)
+            spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
             ds.append(spider.find())
 
         def republishKeys(_):
@@ -151,8 +163,8 @@ class Server(object):
                         verify_key = nacl.signing.VerifyKey(pubkey)
                         verify_key.verify(n.signedPublicKey)
                         h = nacl.hash.sha512(n.signedPublicKey)
-                        pow = h[64:128]
-                        if int(pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
+                        hash_pow = h[64:128]
+                        if int(hash_pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
                         nodes.append(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
                     except Exception:
@@ -225,7 +237,7 @@ class Server(object):
         dkey = digest(keyword)
 
         def store(nodes):
-            self.log.info("setting '%s' on %s" % (keyword, map(str, nodes)))
+            self.log.info("setting '%s' on %s" % (keyword, [str(i) for i in nodes]))
             ds = [self.protocol.callStore(node, dkey, key, value) for node in nodes]
 
             keynode = Node(dkey)
@@ -233,7 +245,7 @@ class Server(object):
                 self.storage[dkey] = (key, value)
                 self.log.debug("got a store request from %s, storing value" % str(self.node))
 
-            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+            return defer.DeferredList(ds).addCallback(_anyRespondSuccess)
 
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
@@ -261,13 +273,13 @@ class Server(object):
         dkey = digest(keyword)
 
         def delete(nodes):
-            self.log.debug("deleting '%s' on %s" % (key, map(str, nodes)))
+            self.log.debug("deleting '%s' on %s" % (key, [str(i) for i in nodes]))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
             if self.storage.getSpecific(dkey, key) is not None:
                 self.storage.delete(dkey, key)
 
-            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+            return defer.DeferredList(ds).addCallback(_anyRespondSuccess)
 
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
@@ -303,17 +315,6 @@ class Server(object):
             return defer.succeed(None)
         spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(check_for_node)
-
-    def _anyRespondSuccess(self, responses):
-        """
-        Given the result of a DeferredList of calls to peers, ensure that at least
-        one of them was contacted and responded with a Truthy result.
-        """
-        for deferSuccess, result in responses:
-            peerReached, peerResponse = result
-            if deferSuccess and peerReached and peerResponse:
-                return True
-        return False
 
     def saveState(self, fname):
         """

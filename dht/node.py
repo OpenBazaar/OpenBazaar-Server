@@ -9,14 +9,14 @@ from protos import objects
 
 
 class Node(object):
-    def __init__(self, id, ip=None, port=None, signed_pubkey=None,
+    def __init__(self, node_id, ip=None, port=None, signed_pubkey=None,
                  vendor=False):
-        self.id = id
+        self.id = node_id
         self.ip = ip
         self.port = port
         self.signed_pubkey = signed_pubkey
         self.vendor = vendor
-        self.long_id = long(id.encode('hex'), 16)
+        self.long_id = long(node_id.encode('hex'), 16)
 
     def getProto(self):
         n = objects.Node()
@@ -85,9 +85,9 @@ class NodeHeap(object):
                 heapq.heappush(nheap, (distance, node))
         self.heap = nheap
 
-    def getNodeById(self, id):
+    def getNodeById(self, node_id):
         for _, node in self.heap:
-            if node.id == id:
+            if node.id == node_id:
                 return node
         return None
 
@@ -127,6 +127,7 @@ class NodeHeap(object):
         return iter(map(itemgetter(1), nodes))
 
     def __contains__(self, node):
+        # pylint: disable=unused-variable
         for distance, n in self.heap:
             if node.id == n.id:
                 return True

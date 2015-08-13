@@ -10,4 +10,4 @@ Modifications include:
     The node ID is generated using a proof of work and validated when a new message is received.
 """
 version_info = (0, 1)
-version = '.'.join(map(str, version_info))
+version = '.'.join([str(i) for i in version_info])

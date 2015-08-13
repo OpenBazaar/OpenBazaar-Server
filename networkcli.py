@@ -29,7 +29,7 @@ def print_error(error):
 
 
 class Parser(object):
-    def __init__(self, proxy):
+    def __init__(self, proxy_obj):
         parser = argparse.ArgumentParser(
             description='OpenBazaar Network CLI',
             usage='''
@@ -65,9 +65,10 @@ commands:
             parser.print_help()
             exit(1)
         getattr(self, args.command)()
-        self.proxy = proxy
+        self.proxy = proxy_obj
 
-    def get(self):
+    @staticmethod
+    def get():
         parser = argparse.ArgumentParser(
             description="Fetch the given keyword from the dht and return all the entries",
             usage='''usage:
@@ -79,7 +80,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def set(self):
+    @staticmethod
+    def set():
         parser = argparse.ArgumentParser(
             description='Set the given keyword/key pair in the dht. The value will be your '
                         'serialized node information.',
@@ -94,7 +96,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def delete(self):
+    @staticmethod
+    def delete():
         parser = argparse.ArgumentParser(
             description="Deletes the given keyword/key from the dht. Signature will be automatically generated.",
             usage='''usage:
@@ -108,37 +111,41 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getinfo(self):
+    @staticmethod
+    def getinfo():
         parser = argparse.ArgumentParser(
             description="Returns an object containing various state info",
             usage='''usage:
     networkcli getinfo''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getinfo')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def shutdown(self):
+    @staticmethod
+    def shutdown():
         parser = argparse.ArgumentParser(
             description="Terminates all outstanding connections.",
             usage='''usage:
     networkcli shutdown''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('shutdown')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getpubkey(self):
+    @staticmethod
+    def getpubkey():
         parser = argparse.ArgumentParser(
             description="Returns this node's public key.",
             usage='''usage:
     networkcli getpubkey''')
-        args = parser.parse_args(sys.argv[2:])
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpubkey')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getcontract(self):
+    @staticmethod
+    def getcontract():
         parser = argparse.ArgumentParser(
             description="Fetch a contract given its hash and guid.",
             usage='''usage:
@@ -146,13 +153,14 @@ commands:
         parser.add_argument('-c', '--hash', required=True, help="the hash of the contract")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
-        hash = args.hash
+        hash_value = args.hash
         guid = args.guid
-        d = proxy.callRemote('getcontract', hash, guid)
+        d = proxy.callRemote('getcontract', hash_value, guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getimage(self):
+    @staticmethod
+    def getimage():
         parser = argparse.ArgumentParser(
             description="Fetch an image given its hash and guid.",
             usage='''usage:
@@ -160,22 +168,25 @@ commands:
         parser.add_argument('-i', '--hash', required=True, help="the hash of the image")
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
         args = parser.parse_args(sys.argv[2:])
-        hash = args.hash
+        hash_value = args.hash
         guid = args.guid
-        d = proxy.callRemote('getimage', hash, guid)
+        d = proxy.callRemote('getimage', hash_value, guid)
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getpeers(self):
+    @staticmethod
+    def getpeers():
         parser = argparse.ArgumentParser(
             description="Returns id of all peers in the routing table",
             usage='''usage:
     networkcli getpeers''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getpeers')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getnode(self):
+    @staticmethod
+    def getnode():
         parser = argparse.ArgumentParser(
             description="Fetch the ip address for a node given its guid.",
             usage='''usage:
@@ -187,7 +198,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setprofile(self):
+    @staticmethod
+    def setprofile():
         parser = argparse.ArgumentParser(
             description="Sets a profile in the database.",
             usage='''usage:
@@ -196,7 +208,8 @@ commands:
         parser.add_argument('-o', '--onename', help="the onename id")
         parser.add_argument('-a', '--avatar', help="the file path to the avatar image")
         parser.add_argument('-hd', '--header', help="the file path to the header image")
-        parser.add_argument('-c', '--country', help="a string consisting of country from protos.countries.CountryCode")
+        parser.add_argument('-c', '--country',
+                            help="a string consisting of country from protos.countries.CountryCode")
         # we could add all the fields here but this is good enough to test.
         args = parser.parse_args(sys.argv[2:])
         p = Profile()
@@ -209,20 +222,21 @@ commands:
         if args.onename is not None:
             u.handle = args.onename
         if args.avatar is not None:
-            with open(args.avatar, "r") as file:
-                image = file.read()
-            hash = digest(image)
-            u.avatar_hash = hash
-            h.insert(hash, args.avatar)
+            with open(args.avatar, "r") as filename:
+                image = filename.read()
+            hash_value = digest(image)
+            u.avatar_hash = hash_value
+            h.insert(hash_value, args.avatar)
         if args.header is not None:
-            with open(args.header, "r") as file:
-                image = file.read()
-            hash = digest(image)
-            u.header_hash = hash
-            h.insert(hash, args.header)
+            with open(args.header, "r") as filename:
+                image = filename.read()
+            hash_value = digest(image)
+            u.header_hash = hash_value
+            h.insert(hash_value, args.header)
         p.update(u)
 
-    def getprofile(self):
+    @staticmethod
+    def getprofile():
         parser = argparse.ArgumentParser(
             description="Fetch the profile from the given node. Images will be saved in cache.",
             usage='''usage:
@@ -234,9 +248,11 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getusermetadata(self):
+    @staticmethod
+    def getusermetadata():
         parser = argparse.ArgumentParser(
-            description="Fetches the metadata (small profile) from a given node. The images will be saved in cache.",
+            description="Fetches the metadata (small profile) from"
+                        "a given node. The images will be saved in cache.",
             usage='''usage:
     networkcli.py getusermetadata [-g GUID]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to query")
@@ -246,7 +262,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setcontract(self, ):
+    @staticmethod
+    def setcontract():
         parser = argparse.ArgumentParser(
             description="Sets a new contract in the database and filesystem.",
             usage='''usage:
@@ -257,21 +274,23 @@ commands:
             contract = json.load(data_file, object_pairs_hook=OrderedDict)
         Contract(contract).save()
 
-    def setimage(self, ):
+    @staticmethod
+    def setimage():
         parser = argparse.ArgumentParser(
             description="Maps a image hash to a file path in the database",
             usage='''usage:
     networkcli.py setimage [-f FILEPATH]''')
         parser.add_argument('-f', '--filepath', help="a path to the image")
         args = parser.parse_args(sys.argv[2:])
-        with open(args.filepath, "r") as file:
-            image = file.read()
+        with open(args.filepath, "r") as f:
+            image = f.read()
         d = digest(image)
         h = HashMap()
         h.insert(d, args.filepath)
         print h.get_file(d)
 
-    def getlistings(self):
+    @staticmethod
+    def getlistings():
         parser = argparse.ArgumentParser(
             description="Fetches metadata about the store's listings",
             usage='''usage:
@@ -283,7 +302,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getcontractmetadata(self):
+    @staticmethod
+    def getcontractmetadata():
         parser = argparse.ArgumentParser(
             description="Fetches the metadata for the given contract. The thumbnail images will be saved in cache.",
             usage='''usage:
@@ -297,25 +317,30 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def setasmoderator(self):
+    @staticmethod
+    def setasmoderator():
         parser = argparse.ArgumentParser(
             description="Sets the given node as a moderator.",
             usage='''usage:
     networkcli.py setasmoderator''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('setasmoderator')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getmoderators(self):
+    @staticmethod
+    def getmoderators():
         parser = argparse.ArgumentParser(
             description="Fetches a list of moderators",
             usage='''usage:
     networkcli.py getmoderators ''')
+        parser.parse_args(sys.argv[2:])
         d = proxy.callRemote('getmoderators')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def follow(self):
+    @staticmethod
+    def follow():
         parser = argparse.ArgumentParser(
             description="Follow a user",
             usage='''usage:
@@ -327,7 +352,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def unfollow(self):
+    @staticmethod
+    def unfollow():
         parser = argparse.ArgumentParser(
             description="Unfollow a user",
             usage='''usage:
@@ -339,7 +365,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getfollowers(self):
+    @staticmethod
+    def getfollowers():
         parser = argparse.ArgumentParser(
             description="Get a list of followers of a node",
             usage='''usage:
@@ -351,7 +378,8 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
-    def getfollowing(self):
+    @staticmethod
+    def getfollowing():
         parser = argparse.ArgumentParser(
             description="Get a list users a node is following",
             usage='''usage:
@@ -363,9 +391,11 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, keys):
+        jsonrpc.JSONRPC.__init__(self)
         self.kserver = kserver
         self.mserver = mserver
         self.keys = keys
@@ -498,11 +528,12 @@ class RPCCalls(jsonrpc.JSONRPC):
         def get_node(node):
             def print_resp(resp):
                 print time.time() - start
-                for l in resp.listing:
-                    resp.listing.remove(l)
-                    h = l.contract_hash
-                    l.contract_hash = hexlify(h)
-                    resp.listing.extend([l])
+                if resp:
+                    for l in resp.listing:
+                        resp.listing.remove(l)
+                        h = l.contract_hash
+                        l.contract_hash = hexlify(h)
+                        resp.listing.extend([l])
                 print resp
             if node is not None:
                 d = self.mserver.get_listings(node)

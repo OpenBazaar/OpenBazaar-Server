@@ -1,4 +1,5 @@
 __author__ = 'chris'
+
 import nacl.signing
 import nacl.secret
 import nacl.utils
@@ -7,14 +8,15 @@ from zope.interface import implements
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
-from protos.message import *
+from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
+    GET_USER_METADATA, FOLLOW, UNFOLLOW, \
+    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
 from interfaces import NotificationListener, MessageListener
-
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -41,8 +43,8 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up contract ID %s" % contract_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(self.hashmap.get_file(contract_hash), "r") as file:
-                contract = file.read()
+            with open(self.hashmap.get_file(contract_hash), "r") as filename:
+                contract = filename.read()
             return [contract]
         except Exception:
             self.log.warning("Could not find contract %s" % contract_hash.encode('hex'))
@@ -52,8 +54,8 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up image with hash %s" % image_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(self.hashmap.get_file(image_hash), "r") as file:
-                image = file.read()
+            with open(self.hashmap.get_file(image_hash), "r") as filename:
+                image = filename.read()
             return [image]
         except Exception:
             self.log.warning("Could not find image %s" % image_hash.encode('hex'))

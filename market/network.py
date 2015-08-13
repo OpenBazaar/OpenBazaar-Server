@@ -1,24 +1,23 @@
 __author__ = 'chris'
 
 import json
+from collections import OrderedDict
+from binascii import hexlify, unhexlify
+
 import os.path
 import nacl.signing
 import nacl.hash
-
 from dht import node
 from twisted.internet import defer
 from market.protocol import MarketProtocol
 from dht.utils import digest, deferredDict
-from collections import OrderedDict
 from constants import DATA_FOLDER
 from protos import objects
-from binascii import hexlify, unhexlify
 from db.datastore import FollowData
 from market.profile import Profile
 
 
 class Server(object):
-
     def __init__(self, kserver, signing_key):
         """
         A high level class for sending direct, market messages to other nodes.
@@ -42,6 +41,7 @@ class Server(object):
             node_to_ask: a `dht.node.Node` object containing an ip and port
             contract_hash: a 20 byte hash in raw byte format
         """
+
         def get_result(result):
             if digest(result[1][0]) == contract_hash:
                 contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
@@ -49,7 +49,8 @@ class Server(object):
                     signature = contract["vendor"]["signatures"]["guid"]
                     pubkey = node_to_ask.signed_pubkey[64:]
                     verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(unhexlify(signature) + unhexlify(json.dumps(contract["vendor"]["listing"], indent=4).encode("hex")))
+                    verify_key.verify(unhexlify(signature) +
+                                      unhexlify(json.dumps(contract["vendor"]["listing"], indent=4).encode("hex")))
                 except Exception:
                     return None
                 self.cache(result[1][0])
@@ -59,6 +60,7 @@ class Server(object):
                 return contract
             else:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetContract(node_to_ask, contract_hash)
@@ -73,12 +75,14 @@ class Server(object):
             node_to_ask: a `dht.node.Node` object containing an ip and port
             image_hash: a 20 byte hash in raw byte format
         """
+
         def get_result(result):
             if digest(result[1][0]) == image_hash:
                 self.cache(result[1][0])
                 return result[1][0]
             else:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetImage(node_to_ask, image_hash)
@@ -89,6 +93,7 @@ class Server(object):
         Downloads the profile from the given node. If the images do not already
         exist in cache, it will download and cache them before returning the profile.
         """
+
         def get_result(result):
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
@@ -101,8 +106,9 @@ class Server(object):
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.header_hash)):
                     self.get_image(node_to_ask, p.header_hash)
                 return p
-            except:
+            except Exception:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetProfile(node_to_ask)
@@ -115,6 +121,7 @@ class Server(object):
         Since we need fast loading we shouldn't download the full profile here.
         It will download the avatar if it isn't already in cache.
         """
+
         def get_result(result):
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
@@ -125,8 +132,9 @@ class Server(object):
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(m.avatar_hash)):
                     self.get_image(node_to_ask, m.avatar_hash)
                 return m
-            except:
+            except Exception:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetUserMetadata(node_to_ask)
@@ -138,6 +146,7 @@ class Server(object):
         is returned containing some metadata for each contract. The individual contracts
         should be fetched with a get_contract call.
         """
+
         def get_result(result):
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
@@ -146,8 +155,9 @@ class Server(object):
                 l = objects.Listings()
                 l.ParseFromString(result[1][0])
                 return l
-            except:
+            except Exception:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetListings(node_to_ask)
@@ -159,6 +169,7 @@ class Server(object):
         search results in a list view without downloading the entire contract.
         It will download the thumbnail image if it isn't already in cache.
         """
+
         def get_result(result):
             try:
                 pubkey = node_to_ask.signed_pubkey[64:]
@@ -170,8 +181,9 @@ class Server(object):
                     if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
                         self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
-            except:
+            except Exception:
                 return None
+
         if node_to_ask.ip is None:
             return defer.succeed(None)
         d = self.protocol.callGetContractMetadata(node_to_ask, contract_hash)
@@ -182,6 +194,7 @@ class Server(object):
         Retrieves moderator list from the dht. Each node is queried
         to get metadata and ensure it's alive for usage.
         """
+
         def parse_response(moderators):
             if moderators is None:
                 return None
@@ -191,6 +204,7 @@ class Server(object):
                     if v is None:
                         del responses[k]
                 return responses
+
             ds = {}
             for mod in moderators:
                 try:
@@ -199,9 +213,10 @@ class Server(object):
                     n = objects.Node()
                     n.ParseFromString(val.serializedData)
                     ds[val.serializedData] = self.get_profile(node.Node(n.guid, n.ip, n.port, n.signedPublicKey))
-                except:
+                except Exception:
                     pass
             return deferredDict(ds).addCallback(parse_profiles)
+
         return self.kserver.get("moderators").addCallback(parse_response)
 
     def make_moderator(self):
@@ -230,6 +245,7 @@ class Server(object):
                     return False
             else:
                 return False
+
         proto = Profile().get(False)
         m = objects.Metadata()
         m.name = proto.name
@@ -276,14 +292,15 @@ class Server(object):
                     follower.ClearField("signature")
                     v_key.verify(follower.SerializeToString(), signature)
                     h = nacl.hash.sha512(follower.signed_pubkey)
-                    pow = h[64:128]
-                    if int(pow[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
+                    pow_hash = h[64:128]
+                    if int(pow_hash[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
                         raise Exception('Invalid GUID')
                     if follower.following != node_to_ask.id:
                         raise Exception('Invalid follower')
-                except:
+                except Exception:
                     f.followers.remove(follower)
             return f
+
         d = self.protocol.callGetFollowers(node_to_ask)
         return d.addCallback(get_response)
 
@@ -304,20 +321,21 @@ class Server(object):
                     signature = user.signature
                     v_key.verify(user.metadata.SerializeToString(), signature)
                     h = nacl.hash.sha512(user.signed_pubkey)
-                    pow = h[64:128]
-                    if int(pow[:6], 16) >= 50 or hexlify(user.guid) != h[:40]:
+                    pow_hash = h[64:128]
+                    if int(pow_hash[:6], 16) >= 50 or hexlify(user.guid) != h[:40]:
                         raise Exception('Invalid GUID')
-                except:
+                except Exception:
                     f.users.remove(user)
             return f
 
         d = self.protocol.callGetFollowing(node_to_ask)
         return d.addCallback(get_response)
 
-    def cache(self, file):
+    @staticmethod
+    def cache(filename):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(file).encode("hex")):
-            with open(DATA_FOLDER + "cache/" + digest(file).encode("hex"), 'w') as outfile:
-                outfile.write(file)
+        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(filename).encode("hex")):
+            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'w') as outfile:
+                outfile.write(filename)

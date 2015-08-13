@@ -74,8 +74,8 @@ class KBucket(object):
     def head(self):
         return self.nodes.values()[0]
 
-    def __getitem__(self, id):
-        return self.nodes.get(id, None)
+    def __getitem__(self, item_id):
+        return self.nodes.get(item_id, None)
 
     def __len__(self):
         return len(self.nodes)

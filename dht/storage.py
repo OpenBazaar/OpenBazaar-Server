@@ -16,47 +16,47 @@ class IStorage(Interface):
     Local storage for this node.
     """
 
-    def __setitem__(key, value):
+    def __setitem__(self, key, value):
         """
         Set a key to the given value.
         """
 
-    def __getitem__(key):
+    def __getitem__(self, key):
         """
         Get the given key.  If item doesn't exist, raises C{KeyError}
         """
 
-    def get(key, default=None):
+    def get(self, key, default=None):
         """
         Get given key.  If not found, return default.
         """
 
-    def getSpecific(keyword, key):
+    def getSpecific(self, keyword, key):
         """
         Return the exact value for a given keyword and key.
         """
 
-    def cull():
+    def cull(self):
         """
         Iterate over all keys and remove expired items
         """
 
-    def delete(keyword, key):
+    def delete(self, keyword, key):
         """
         Delete the value stored at keyword/key.
         """
 
-    def iterkeys():
+    def iterkeys(self):
         """
         Get the key iterator for this storage, should yield a list of keys
         """
 
-    def iteritems(keyword):
+    def iteritems(self, keyword):
         """
         Get the value iterator for the given keyword, should yield a tuple of (key, value)
         """
 
-    def get_ttl(keyword, key):
+    def get_ttl(self, keyword, key):
         """
         Get the remaining time for a given key.
         """
@@ -251,6 +251,7 @@ class TTLDict(MutableMapping):
         if now is None:
             now = time.time()
         with self._lock:
+            # pylint: disable=unused-variable
             _expire, value = self._values[key]
             self._values[key] = (now + ttl, value)
 
@@ -259,12 +260,14 @@ class TTLDict(MutableMapping):
         if now is None:
             now = time.time()
         with self._lock:
+            # pylint: disable=unused-variable
             expire, _value = self._values[key]
             return expire - now
 
     def expire_at(self, key, timestamp):
         """ Set the key expire timestamp """
         with self._lock:
+            # pylint: disable=unused-variable
             _expire, value = self._values[key]
             self._values[key] = (timestamp, value)
 
@@ -273,6 +276,7 @@ class TTLDict(MutableMapping):
         with self._lock:
             if now is None:
                 now = time.time()
+            # pylint: disable=unused-variable
             expire, _value = self._values[key]
             if expire is None:
                 return False
