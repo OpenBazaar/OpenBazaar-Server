@@ -209,14 +209,14 @@ class FollowData(object):
                        (1, f.SerializeToString()))
         self.db.commit()
 
-    def unfollow(self, proto):
+    def unfollow(self, guid):
         cursor = self.db.cursor()
         f = Following()
         ser = self.get_following()
         if ser is not None:
             f.ParseFromString(ser)
             for user in f.users:
-                if user.guid == proto.guid:
+                if user.guid == guid:
                     f.users.remove(user)
         cursor.execute('''INSERT OR REPLACE INTO following(id, serializedFollowing) VALUES (?,?)''',
                        (1, f.SerializeToString()))
