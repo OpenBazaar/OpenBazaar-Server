@@ -331,6 +331,27 @@ class Server(object):
         d = self.protocol.callGetFollowing(node_to_ask)
         return d.addCallback(get_response)
 
+    def send_notification(self, message):
+        def send(nodes):
+            def how_many_reached(responses):
+                count = 0
+                for resp in responses:
+                    if resp[1][0] and resp[1][1][0] == "True":
+                        count += 1
+                return count
+
+            ds = []
+            for node in nodes:
+                if node[1] is not None:
+                    ds.append(self.protocol.callNotify(node[1], message))
+            return defer.DeferredList(ds).addCallback(how_many_reached)
+        dl = []
+        F = objects.Followers()
+        F.ParseFromString(FollowData().get_followers())
+        for follower in F.followers:
+            dl.append(self.kserver.resolve(follower.guid))
+        return defer.DeferredList(dl).addCallback(send)
+
     @staticmethod
     def cache(filename):
         """

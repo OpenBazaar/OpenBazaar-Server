@@ -53,6 +53,7 @@ commands:
     getlistings         fetches metadata about the store's listings
     getfollowers        fetches a list of followers of a node
     getfollowing        fetches a list of users a node is following
+    sendnotification    sends a notification to all your followers
     setcontract         sets a contract in the filesystem and db
     setimage            maps an image hash to a filepath in the db
     setasmoderator      sets a node as a moderator
@@ -391,6 +392,18 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    @staticmethod
+    def sendnotification():
+        parser = argparse.ArgumentParser(
+            description="Send a notification to all your followers",
+            usage='''usage:
+    networkcli.py sendnotification [-m MESSAGE]''')
+        parser.add_argument('-m', '--message', required=True, help="the message to send")
+        args = parser.parse_args(sys.argv[2:])
+        message = args.message
+        d = proxy.callRemote('sendnotification', message)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
 
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
@@ -608,6 +621,13 @@ class RPCCalls(jsonrpc.JSONRPC):
                 d.addCallback(print_resp)
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
+        return "getting following..."
+
+    def jsonrpc_sendnotification(self, message):
+        def get_count(count):
+            print "Notfication reached %i followers" % count
+        d = self.mserver.send_notification(message)
+        d.addCallback(get_count)
         return "getting following..."
 
 if __name__ == "__main__":
