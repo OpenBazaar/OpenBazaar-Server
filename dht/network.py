@@ -23,7 +23,6 @@ from dht.storage import ForgetfulStorage
 from dht.node import Node
 from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
-import dht.constants
 
 from protos import objects
 
@@ -84,7 +83,7 @@ class Server(object):
         for rid in self.protocol.getRefreshIDs():
             node = Node(rid)
             nearest = self.protocol.router.findNeighbors(node, self.alpha)
-            spider = NodeSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
+            spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
             ds.append(spider.find())
 
         def republishKeys(_):

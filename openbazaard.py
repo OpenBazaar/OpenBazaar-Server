@@ -16,6 +16,7 @@ from constants import DATA_FOLDER
 from market import network
 from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
+import dht.constants
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -40,7 +41,7 @@ node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
     kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol)
 else:
-    kserver = Server(node)
+    kserver = Server(node, dht.constants.KSIZE, dht.constants.ALPHA)
     kserver.protocol.connect_multiplexer(protocol)
     kserver.bootstrap(
         kserver.querySeed("162.213.253.147:8080",
