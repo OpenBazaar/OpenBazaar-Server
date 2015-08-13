@@ -625,7 +625,7 @@ class RPCCalls(jsonrpc.JSONRPC):
 
     def jsonrpc_sendnotification(self, message):
         def get_count(count):
-            print "Notfication reached %i followers" % count
+            print "Notification reached %i follower(s)" % count
         d = self.mserver.send_notification(message)
         d.addCallback(get_count)
         return "getting following..."

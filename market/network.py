@@ -24,6 +24,7 @@ class Server(object):
         A node will need one of these to participate in buying and selling.
         Should be initialized after the Kademlia server.
         """
+        
         self.kserver = kserver
         self.signing_key = signing_key
         self.router = kserver.protocol.router
@@ -220,15 +221,31 @@ class Server(object):
         return self.kserver.get("moderators").addCallback(parse_response)
 
     def make_moderator(self):
+        """
+        Set self as a moderator in the DHT.
+        """
+
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set("moderators", digest(proto), proto)
 
     def unmake_moderator(self):
+        """
+        Deletes our moderator entry from the network.
+        """
+
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
 
     def follow(self, node_to_follow):
+        """
+        Sends a follow message to another node in the network. The node must be online
+        to receive the message. The message contains a signed, serialized `Follower`
+        protobuf object which the recipient will store and can send to other nodes,
+        proving you are following them. The response is a signed `Metadata` protobuf
+        that will store in the db.
+        """
+
         def save_to_db(result):
             if result[0] and result[1][0] == "True":
                 try:
@@ -239,6 +256,9 @@ class Server(object):
                     m.ParseFromString(result[1][1])
                     u.metadata.MergeFrom(m)
                     u.signature = result[1][2]
+                    pubkey = node_to_follow.signed_pubkey[64:]
+                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key.verify(result[1][1], result[1][2])
                     FollowData().follow(u)
                     return True
                 except Exception:
@@ -262,6 +282,10 @@ class Server(object):
         return d.addCallback(save_to_db)
 
     def unfollow(self, node_to_unfollow):
+        """
+        Sends an unfollow message to a node and removes them from our db.
+        """
+
         def save_to_db(result):
             if result[0] and result[1][0] == "True":
                 FollowData().unfollow(node_to_unfollow.id)
@@ -274,6 +298,12 @@ class Server(object):
         return d.addCallback(save_to_db)
 
     def get_followers(self, node_to_ask):
+        """
+        Query the given node for a list if its followers. The response will be a
+        `Followers` protobuf object. We will verify the signature for each follower
+        to make sure that node really did follower this user.
+        """
+
         def get_response(response):
             # Verify the signature on the response
             f = objects.Followers()
@@ -305,6 +335,14 @@ class Server(object):
         return d.addCallback(get_response)
 
     def get_following(self, node_to_ask):
+        """
+        Query the given node for a list of users it's following. The return
+        is `Following` protobuf object that contains signed metadata for each
+        user this node is following. The signature on the metadata is there to
+        prevent this node from altering the name/handle/avatar associated with
+        the guid.
+        """
+
         def get_response(response):
             # Verify the signature on the response
             f = objects.Following()
@@ -332,6 +370,15 @@ class Server(object):
         return d.addCallback(get_response)
 
     def send_notification(self, message):
+        """
+        Sends a notification message to all online followers. It will resolve
+        each guid before sending the notification. Messages must be less than
+        140 characters. Returns the number of followers the notification reached.
+        """
+
+        if len(message) > 140:
+            return defer.succeed(0)
+
         def send(nodes):
             def how_many_reached(responses):
                 count = 0
@@ -341,14 +388,14 @@ class Server(object):
                 return count
 
             ds = []
-            for node in nodes:
-                if node[1] is not None:
-                    ds.append(self.protocol.callNotify(node[1], message))
+            for n in nodes:
+                if n[1] is not None:
+                    ds.append(self.protocol.callNotify(n[1], message))
             return defer.DeferredList(ds).addCallback(how_many_reached)
         dl = []
-        F = objects.Followers()
-        F.ParseFromString(FollowData().get_followers())
-        for follower in F.followers:
+        f = objects.Followers()
+        f.ParseFromString(FollowData().get_followers())
+        for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
 
