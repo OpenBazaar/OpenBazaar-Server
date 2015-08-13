@@ -1,9 +1,0 @@
-[run]
-omit =
-    */python?.?/*
-    */site-packages/nose/*
-    *__init__*
-    */env/*
-    */guidutils/*
-    */build/*
-    */mock*
