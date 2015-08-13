@@ -7,6 +7,9 @@ from binascii import hexlify, unhexlify
 import os.path
 import nacl.signing
 import nacl.hash
+import nacl.secret
+import nacl.encoding
+import nacl.utils
 from dht import node
 from twisted.internet import defer
 from market.protocol import MarketProtocol
@@ -24,7 +27,6 @@ class Server(object):
         A node will need one of these to participate in buying and selling.
         Should be initialized after the Kademlia server.
         """
-        
         self.kserver = kserver
         self.signing_key = signing_key
         self.router = kserver.protocol.router
@@ -398,6 +400,23 @@ class Server(object):
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
+
+    def send_message(self, receiving_node, message_type, message, subject=None):
+        """
+        Sends a message to another node. If the node isn't online it
+        will be placed in the dht for the node to pick up later.
+        """
+
+        p = objects.Plaintext_Message()
+        p.sender_guid = receiving_node.id
+        p.type = message_type
+        p.message = message
+        if subject is not None:
+            p.subject = subject
+        box = nacl.secret.SecretBox(self.signing_key.encode(nacl.encoding.RawEncoder))
+        nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE)
+        ciphertext = box.encrypt(p.SerializeToString(), nonce)
+        self.protocol.callMessage(receiving_node, ciphertext)
 
     @staticmethod
     def cache(filename):

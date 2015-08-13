@@ -405,6 +405,21 @@ commands:
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
+    @staticmethod
+    def sendmessage():
+        parser = argparse.ArgumentParser(
+            description="Send a message to another node",
+            usage='''usage:
+    networkcli.py sendmessage [-g GUID] [-m MESSAGE]''')
+        parser.add_argument('-g', '--guid', required=True, help="the guid to send to")
+        parser.add_argument('-m', '--message', required=True, help="the message to send")
+        args = parser.parse_args(sys.argv[2:])
+        message = args.message
+        guid = args.guid
+        d = proxy.callRemote('sendmessage', guid, message)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
 # RPC-Server
 class RPCCalls(jsonrpc.JSONRPC):
     def __init__(self, kserver, mserver, keys):
@@ -628,7 +643,18 @@ class RPCCalls(jsonrpc.JSONRPC):
             print "Notification reached %i follower(s)" % count
         d = self.mserver.send_notification(message)
         d.addCallback(get_count)
-        return "getting following..."
+        return "sendng notification..."
+
+    def jsonrpc_sendmessage(self, guid, message):
+        def get_node(node):
+            if node is not None:
+                def print_resp(resp):
+                    print resp
+                self.mserver.send_message(node, objects.Plaintext_Message.CHAT, message)
+                #d.addCallback(print_resp)
+        d = self.kserver.resolve(unhexlify(guid))
+        d.addCallback(get_node)
+        return "sending message..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)

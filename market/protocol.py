@@ -10,7 +10,7 @@ from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, \
-    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA
+    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
@@ -31,7 +31,7 @@ class MarketProtocol(RPCProtocol):
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY]
+                                 NOTIFY, MESSAGE]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
