@@ -11,6 +11,7 @@ def _testpow(pow_hash):
     return True if int(pow_hash, 16) < 50 else False
 
 class GUID(object):
+    # pylint: disable=W0633
     def __init__(self, keys=None, use_C_lib=False):
         if keys is None:
             if use_C_lib:
@@ -48,7 +49,7 @@ class GUID(object):
         h = nacl.hash.sha512(signed)
         pow_hash = h[64:128]
         if _testpow(pow_hash[:6]):
-            GUID((signing_key, unhexlify(h[:40]), signed, privkey))
+            return GUID((signing_key, unhexlify(h[:40]), signed, privkey))
 
     def __str__(self):
         return "privkey: %s\nsigned pubkey: %s\nguid: %s" % (

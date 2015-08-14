@@ -199,7 +199,8 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             for listener in self.listeners:
                 if verifyObject(MessageListener, listener):
-                    listener.notify(p.sender_guid, p.encyption_pubkey, p.subject, Plaintext_Message.Type.Name(p.type), p.message)
+                    listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
+                                    Plaintext_Message.Type.Name(p.type), p.message)
             return ["True"]
         except Exception:
             self.log.error("Received invalid message from %s" % sender)

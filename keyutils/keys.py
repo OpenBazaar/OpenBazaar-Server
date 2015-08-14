@@ -22,7 +22,7 @@ class KeyChain(object):
             # pylint: disable=W0633
             self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.db.get_key("bitcoin")
             self.encryption_key = PrivateKey(self.guid_privkey)
-            self.encryption_pubkey = self.encryption_key.public_key.encode(nacl.encoding.RawEncoder)
+            self.encryption_pubkey = self.encryption_key.public_key.encode()
 
     def create_keychain(self):
         print "Generating GUID, stand by..."
@@ -38,4 +38,4 @@ class KeyChain(object):
         self.db.set_key("bitcoin", self.bitcoin_master_privkey, self.bitcoin_master_pubkey)
 
         self.encryption_key = PrivateKey(self.guid_privkey)
-        self.encryption_pubkey = self.encryption_key.public_key.encode(nacl.encoding.RawEncoder)
+        self.encryption_pubkey = self.encryption_key.public_key.encode()

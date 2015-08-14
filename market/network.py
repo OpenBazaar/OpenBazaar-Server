@@ -410,8 +410,7 @@ class Server(object):
         p = objects.Plaintext_Message()
         p.sender_guid = receiving_node.id
         p.signed_pubkey = receiving_node.signed_pubkey
-        p.encyrption_pubkey = PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder))\
-            .public_key.encode(nacl.encoding.RawEncoder)
+        p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
         p.type = message_type
         p.message = message
         if subject is not None:
@@ -420,7 +419,7 @@ class Server(object):
         p.signature = signature
 
         skephem = PrivateKey.generate()
-        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+        pkephem = skephem.public_key.encode()
         box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(p.SerializeToString(), nonce)

@@ -650,10 +650,7 @@ class RPCCalls(jsonrpc.JSONRPC):
     def jsonrpc_sendmessage(self, guid, pubkey, message):
         def get_node(node):
             if node is not None:
-                def print_resp(resp):
-                    print resp
                 self.mserver.send_message(node, pubkey, objects.Plaintext_Message.CHAT, message)
-                #d.addCallback(print_resp)
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "sending message..."
