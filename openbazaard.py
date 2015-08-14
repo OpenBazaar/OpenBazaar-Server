@@ -7,6 +7,7 @@ We will fit the actual implementation in where appropriate.
 import stun
 import os
 import sys
+import dht.constants
 from twisted.internet import reactor
 from twisted.python import log, logfile
 from keyutils.keys import KeyChain
@@ -17,7 +18,8 @@ from constants import DATA_FOLDER
 from market import network
 from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
-import dht.constants
+from interfaces import MessageListener
+from zope.interface import implements
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -33,8 +35,15 @@ port = response[2]
 
 # key generation
 keys = KeyChain()
-print keys.encryption_pubkey.encode("hex")
-print keys.guid.encode("hex")
+
+def on_bootstrap_complete(resp):
+    class GetMyMessages(object):
+        implements(MessageListener)
+
+        @staticmethod
+        def notify(sender_guid, encryption_pubkey, subject, message_type, message):
+            print message
+    mserver.get_messages(GetMyMessages())
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
@@ -42,13 +51,14 @@ protocol = OpenBazaarProtocol((ip_address, port))
 node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
-    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol)
+    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, on_bootstrap_complete)
 else:
     kserver = Server(node, dht.constants.KSIZE, dht.constants.ALPHA)
     kserver.protocol.connect_multiplexer(protocol)
     kserver.bootstrap(
         kserver.querySeed("162.213.253.147:8080",
-                          "5b56c8daeb3b37c8a9b47be6102fa43b9f069f58dcb57475984041b26c99e389"))
+                          "5b56c8daeb3b37c8a9b47be6102fa43b9f069f58dcb57475984041b26c99e389"))\
+        .addCallback(on_bootstrap_complete)
 
 kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)

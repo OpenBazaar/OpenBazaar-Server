@@ -1,9 +1,6 @@
 __author__ = 'chris'
 
 import json
-from collections import OrderedDict
-from binascii import hexlify, unhexlify
-
 import os.path
 import nacl.signing
 import nacl.hash
@@ -11,13 +8,15 @@ import nacl.encoding
 import nacl.utils
 from nacl.public import PrivateKey, PublicKey, Box
 from dht import node
-from twisted.internet import defer
+from twisted.internet import defer, reactor, task
 from market.protocol import MarketProtocol
 from dht.utils import digest, deferredDict
 from constants import DATA_FOLDER
 from protos import objects
 from db.datastore import FollowData
 from market.profile import Profile
+from collections import OrderedDict
+from binascii import hexlify, unhexlify
 
 
 class Server(object):
@@ -431,6 +430,10 @@ class Server(object):
         self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
 
     def get_messages(self, listener):
+        # if the transport hasn't been initialized yet, wait a second
+        if self.protocol.multiplexer is None or self.protocol.multiplexer.transport is None:
+            return task.deferLater(reactor, 1, self.get_messages, listener)
+
         def parse_messages(messages):
             if messages is not None:
                 for message in messages:
