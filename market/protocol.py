@@ -182,7 +182,7 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_message(self, sender, pubkey, encrypted):
-        box = Box(PrivateKey(self.signing_key.encode()), PublicKey(pubkey))
+        box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
         try:
             plaintext = box.decrypt(encrypted)
             p = Plaintext_Message()

@@ -14,6 +14,9 @@ from db.datastore import HashMap
 from keyutils.keys import KeyChain
 from market.contracts import Contract
 from collections import OrderedDict
+from interfaces import MessageListener
+from zope.interface import implements
+from dht.node import Node
 
 def do_continue(value):
     pass
@@ -54,6 +57,7 @@ commands:
     getlistings         fetches metadata about the store's listings
     getfollowers        fetches a list of followers of a node
     getfollowing        fetches a list of users a node is following
+    getmessages         fetches messages from the dht
     sendnotification    sends a notification to all your followers
     setcontract         sets a contract in the filesystem and db
     setimage            maps an image hash to a filepath in the db
@@ -412,15 +416,28 @@ commands:
         parser = argparse.ArgumentParser(
             description="Send a message to another node",
             usage='''usage:
-    networkcli.py sendmessage [-g GUID] [-p PUBKEY] [-m MESSAGE]''')
+    networkcli.py sendmessage [-g GUID] [-p PUBKEY] [-m MESSAGE] [-o]''')
         parser.add_argument('-g', '--guid', required=True, help="the guid to send to")
         parser.add_argument('-p', '--pubkey', required=True, help="the encryption key of the node")
         parser.add_argument('-m', '--message', required=True, help="the message to send")
+        parser.add_argument('-o', '--offline', action='store_true', help="sends to offline recipient")
         args = parser.parse_args(sys.argv[2:])
         message = args.message
         guid = args.guid
         pubkey = args.pubkey
-        d = proxy.callRemote('sendmessage', guid, pubkey, message)
+        offline = args.offline
+        d = proxy.callRemote('sendmessage', guid, pubkey, message, offline)
+        d.addCallbacks(print_value, print_error)
+        reactor.run()
+
+    @staticmethod
+    def getmessages():
+        parser = argparse.ArgumentParser(
+            description="Get messages from the dht",
+            usage='''usage:
+    networkcli.py getmessages''')
+        parser.parse_args(sys.argv[2:])
+        d = proxy.callRemote('getmessages')
         d.addCallbacks(print_value, print_error)
         reactor.run()
 
@@ -650,13 +667,25 @@ class RPCCalls(jsonrpc.JSONRPC):
         d.addCallback(get_count)
         return "sendng notification..."
 
-    def jsonrpc_sendmessage(self, guid, pubkey, message):
+    def jsonrpc_sendmessage(self, guid, pubkey, message, offline=False):
         def get_node(node):
-            if node is not None:
+            if node is not None or offline is True:
+                if offline is True:
+                    node = Node(unhexlify(guid), "127.0.0.1", 1234, digest("adsf"))
                 self.mserver.send_message(node, pubkey, objects.Plaintext_Message.CHAT, message)
         d = self.kserver.resolve(unhexlify(guid))
         d.addCallback(get_node)
         return "sending message..."
+
+    def jsonrpc_getmessages(self):
+        class GetMyMessages(object):
+            implements(MessageListener)
+
+            @staticmethod
+            def notify(sender_guid, encryption_pubkey, subject, message_type, message):
+                print message
+        self.mserver.get_messages(GetMyMessages())
+        return "getting messages..."
 
 if __name__ == "__main__":
     proxy = Proxy('127.0.0.1', 18465)

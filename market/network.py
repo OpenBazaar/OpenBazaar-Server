@@ -420,7 +420,7 @@ class Server(object):
         p.signature = signature
 
         skephem = PrivateKey.generate()
-        pkephem = skephem.public_key.encode()
+        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
         box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(p.SerializeToString(), nonce)

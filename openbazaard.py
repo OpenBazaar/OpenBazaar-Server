@@ -3,6 +3,7 @@ __author__ = 'chris'
 Just using this class for testing the DHT for now.
 We will fit the actual implementation in where appropriate.
 """
+
 import stun
 import os
 import sys
@@ -33,6 +34,7 @@ port = response[2]
 # key generation
 keys = KeyChain()
 print keys.encryption_pubkey.encode("hex")
+print keys.guid.encode("hex")
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
