@@ -60,10 +60,7 @@ class KademliaProtocol(RPCProtocol):
         self.addToRouter(sender)
         value = self.storage.getSpecific(keyword, key)
         if value is not None:
-            '''
-            Values store at digest(guid) have a different structure than normal values
-            and can only be deleted by the owner of the guid
-            '''
+            # Try to delete a message from the dht
             if keyword == digest(sender.id):
                 try:
                     verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
@@ -72,11 +69,12 @@ class KademliaProtocol(RPCProtocol):
                     return ["True"]
                 except Exception:
                     return ["False"]
+            # Or try to delete a pointer
             else:
                 try:
                     node = objects.Node()
                     node.ParseFromString(value)
-                    pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
+                    pubkey = node.signedPublicKey[64:]
                     try:
                         verify_key = nacl.signing.VerifyKey(pubkey)
                         verify_key.verify(signature + key)

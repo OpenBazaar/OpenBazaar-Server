@@ -182,7 +182,7 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_message(self, sender, pubkey, encrypted):
-        box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+        box = Box(PrivateKey(self.signing_key.encode()), PublicKey(pubkey))
         try:
             plaintext = box.decrypt(encrypted)
             p = Plaintext_Message()
@@ -194,7 +194,7 @@ class MarketProtocol(RPCProtocol):
             h = nacl.hash.sha512(p.signed_pubkey)
             pow_hash = h[64:128]
             if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40] or p.sender_guid != sender.id:
-                raise Exception('Invalid guid in')
+                raise Exception('Invalid guid')
             self.log.info("Received a message from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:

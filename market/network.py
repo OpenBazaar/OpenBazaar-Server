@@ -429,6 +429,37 @@ class Server(object):
                 self.kserver.set(receiving_node.id, pkephem, ciphertext)
         self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
 
+    def get_messages(self, listener):
+        def parse_messages(messages):
+            if messages is not None:
+                for message in messages:
+                    try:
+                        value = objects.Value()
+                        value.ParseFromString(message)
+                        try:
+                            box = Box(PrivateKey(self.signing_key.encode()), PublicKey(value.valueKey))
+                            ciphertext = value.serializedData
+                            plaintext = box.decrypt(ciphertext)
+                            p = objects.Plaintext_Message()
+                            p.ParseFromString(plaintext)
+                            signature = p.signature
+                            p.ClearField("signature")
+                            verify_key = nacl.signing.VerifyKey(p.signed_pubkey[64:])
+                            verify_key.verify(p.SerializeToString(), signature)
+                            h = nacl.hash.sha512(p.signed_pubkey)
+                            pow_hash = h[64:128]
+                            if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40]:
+                                raise Exception('Invalid guid')
+                            listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
+                                            objects.Plaintext_Message.Type.Name(p.type), p.message)
+                        except Exception:
+                            pass
+                        signature = self.signing_key.sign(value.valueKey)[:64]
+                        self.kserver.delete(self.kserver.node.id, value.valueKey, signature)
+                    except Exception:
+                        pass
+        self.kserver.get(self.kserver.node.id).addCallback(parse_messages)
+
     @staticmethod
     def cache(filename):
         """
