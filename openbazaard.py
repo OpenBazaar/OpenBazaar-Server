@@ -32,6 +32,7 @@ port = response[2]
 
 # key generation
 keys = KeyChain()
+print keys.encryption_pubkey.encode("hex")
 
 protocol = OpenBazaarProtocol((ip_address, port))
 

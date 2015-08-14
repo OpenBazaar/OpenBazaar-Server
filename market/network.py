@@ -408,14 +408,14 @@ class Server(object):
         """
 
         p = objects.Plaintext_Message()
-        p.sender_guid = receiving_node.id
-        p.signed_pubkey = receiving_node.signed_pubkey
+        p.sender_guid = self.kserver.node.id
+        p.signed_pubkey = self.kserver.node.signed_pubkey
         p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
         p.type = message_type
         p.message = message
         if subject is not None:
             p.subject = subject
-        signature = self.signing_key.sign(p.SerializeToString())
+        signature = self.signing_key.sign(p.SerializeToString())[:64]
         p.signature = signature
 
         skephem = PrivateKey.generate()
@@ -423,7 +423,11 @@ class Server(object):
         box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(p.SerializeToString(), nonce)
-        self.protocol.callMessage(receiving_node, pkephem, ciphertext)
+
+        def get_response(response):
+            if not response[0]:
+                self.kserver.set(receiving_node.id, pkephem, ciphertext)
+        self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
 
     @staticmethod
     def cache(filename):

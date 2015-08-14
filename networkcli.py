@@ -11,6 +11,7 @@ from txjsonrpc.netstring import jsonrpc
 from market.profile import Profile
 from protos import objects, countries
 from db.datastore import HashMap
+from keyutils.keys import KeyChain
 from market.contracts import Contract
 from collections import OrderedDict
 
@@ -234,6 +235,7 @@ commands:
             hash_value = digest(image)
             u.header_hash = hash_value
             h.insert(hash_value, args.header)
+        u.encryption_key = KeyChain().encryption_pubkey
         p.update(u)
 
     @staticmethod
@@ -531,6 +533,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             def print_resp(resp):
                 print time.time() - start
                 print resp
+                print hexlify(resp.encryption_key)
             if node is not None:
                 d = self.mserver.get_profile(node)
                 d.addCallback(print_resp)

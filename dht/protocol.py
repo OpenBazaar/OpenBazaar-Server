@@ -9,6 +9,7 @@ from zope.interface import implements
 import nacl.signing
 from dht.node import Node
 from dht.routing import RoutingTable
+from dht.utils import digest
 from log import Logger
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
@@ -59,19 +60,32 @@ class KademliaProtocol(RPCProtocol):
         self.addToRouter(sender)
         value = self.storage.getSpecific(keyword, key)
         if value is not None:
-            try:
-                node = objects.Node()
-                node.ParseFromString(value)
-                pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
+            '''
+            Values store at digest(guid) have a different structure than normal values
+            and can only be deleted by the owner of the guid
+            '''
+            if keyword == digest(sender.id):
                 try:
-                    verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(signature + key)
+                    verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+                    verify_key.verify(key, signature)
                     self.storage.delete(keyword, key)
                     return ["True"]
                 except Exception:
                     return ["False"]
-            except Exception:
-                pass
+            else:
+                try:
+                    node = objects.Node()
+                    node.ParseFromString(value)
+                    pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
+                    try:
+                        verify_key = nacl.signing.VerifyKey(pubkey)
+                        verify_key.verify(signature + key)
+                        self.storage.delete(keyword, key)
+                        return ["True"]
+                    except Exception:
+                        return ["False"]
+                except Exception:
+                    pass
         return ["False"]
 
     def rpc_find_node(self, sender, key):
