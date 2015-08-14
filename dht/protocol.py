@@ -53,8 +53,11 @@ class KademliaProtocol(RPCProtocol):
     def rpc_store(self, sender, keyword, key, value):
         self.addToRouter(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        self.storage[keyword] = (key, value)
-        return ["True"]
+        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 1800:
+            self.storage[keyword] = (key, value)
+            return ["True"]
+        else:
+            return ["False"]
 
     def rpc_delete(self, sender, keyword, key, signature):
         self.addToRouter(sender)

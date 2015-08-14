@@ -96,7 +96,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("True")
@@ -111,7 +111,8 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
         self.assertTrue(
-            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+            self.storage.getSpecific(digest("Keyword"), "Key") ==
+            self.protocol.sourceNode.getProto().SerializeToString())
 
     def test_rpc_delete(self):
         self._connecting_to_connected()
@@ -121,28 +122,30 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
         self.handler.receive_message(data)
         self.assertTrue(
-            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+            self.storage.getSpecific(digest("Keyword"), "Key") ==
+            self.protocol.sourceNode.getProto().SerializeToString())
 
         # Test bad signature
         m = message.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
-        m.arguments.extend(["Keyword", "Key", "Bad Signature"])
+        m.arguments.extend([digest("Keyword"), "Key", "Bad Signature"])
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("False")
         expected_message2 = m.SerializeToString()
         self.handler.receive_message(data)
         self.assertTrue(
-            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+            self.storage.getSpecific(digest("Keyword"), "Key") ==
+            self.protocol.sourceNode.getProto().SerializeToString())
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -159,7 +162,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
-        m.arguments.extend(["Keyword", "Key", self.signing_key.sign("Key")[:64]])
+        m.arguments.extend([digest("Keyword"), "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("True")
@@ -168,7 +171,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         self.assertEqual(sent_packet.payload, expected_message3)
-        self.assertTrue(self.storage.getSpecific("Keyword", "Key") is None)
+        self.assertTrue(self.storage.getSpecific(digest("Keyword"), "Key") is None)
 
     def test_rpc_stun(self):
         self._connecting_to_connected()
@@ -231,18 +234,19 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
-        m.arguments.extend(["Keyword", "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         self.handler.receive_message(data)
         self.assertTrue(
-            self.storage.getSpecific("Keyword", "Key") == self.protocol.sourceNode.getProto().SerializeToString())
+            self.storage.getSpecific(digest("Keyword"), "Key") ==
+            self.protocol.sourceNode.getProto().SerializeToString())
 
         # Send the find_value rpc
         m = message.Message()
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_VALUE")
-        m.arguments.append("Keyword")
+        m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
         self.handler.receive_message(data)
 

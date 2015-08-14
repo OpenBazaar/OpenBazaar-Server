@@ -406,7 +406,8 @@ class Server(object):
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
         """
-
+        if len(message) > 1500:
+            return
         p = objects.Plaintext_Message()
         p.sender_guid = self.kserver.node.id
         p.signed_pubkey = self.kserver.node.signed_pubkey
