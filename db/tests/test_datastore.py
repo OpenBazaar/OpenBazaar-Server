@@ -14,6 +14,7 @@ class DatastoreTest(unittest.TestCase):
 
         self.sp = Profile()
         self.sp.name = "Test User"
+        self.sp.encryption_key = "Key"
         self.sp.location = CountryCode.Value('UNITED_STATES')
 
         self.serialized_listings = Listings()

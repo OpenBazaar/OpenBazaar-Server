@@ -333,7 +333,7 @@ class Server(object):
             pickle.dump(data, f)
 
     @classmethod
-    def loadState(cls, fname, ip_address, port, multiplexer, storage=None):
+    def loadState(cls, fname, ip_address, port, multiplexer, callback=None, storage=None):
         """
         Load the state of this node (the alpha/ksize/id/immediate neighbors)
         from a cache file with the given fname.
@@ -344,7 +344,10 @@ class Server(object):
         s = Server(n, data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
         if len(data['neighbors']) > 0:
-            s.bootstrap(data['neighbors'])
+            if callback is not None:
+                s.bootstrap(data['neighbors']).addCallback(callback)
+            else:
+                s.bootstrap(data['neighbors'])
         return s
 
     def saveStateRegularly(self, fname, frequency=600):

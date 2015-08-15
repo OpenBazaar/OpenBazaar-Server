@@ -1,20 +1,22 @@
 __author__ = 'chris'
 
 import json
-from collections import OrderedDict
-from binascii import hexlify, unhexlify
-
 import os.path
 import nacl.signing
 import nacl.hash
+import nacl.encoding
+import nacl.utils
+from nacl.public import PrivateKey, PublicKey, Box
 from dht import node
-from twisted.internet import defer
+from twisted.internet import defer, reactor, task
 from market.protocol import MarketProtocol
 from dht.utils import digest, deferredDict
 from constants import DATA_FOLDER
 from protos import objects
 from db.datastore import FollowData
 from market.profile import Profile
+from collections import OrderedDict
+from binascii import hexlify, unhexlify
 
 
 class Server(object):
@@ -24,7 +26,6 @@ class Server(object):
         A node will need one of these to participate in buying and selling.
         Should be initialized after the Kademlia server.
         """
-        
         self.kserver = kserver
         self.signing_key = signing_key
         self.router = kserver.protocol.router
@@ -398,6 +399,70 @@ class Server(object):
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
+
+    def send_message(self, receiving_node, public_key, message_type, message, subject=None):
+        """
+        Sends a message to another node. If the node isn't online it
+        will be placed in the dht for the node to pick up later.
+        """
+        if len(message) > 1500:
+            return
+        p = objects.Plaintext_Message()
+        p.sender_guid = self.kserver.node.id
+        p.signed_pubkey = self.kserver.node.signed_pubkey
+        p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
+        p.type = message_type
+        p.message = message
+        if subject is not None:
+            p.subject = subject
+        signature = self.signing_key.sign(p.SerializeToString())[:64]
+        p.signature = signature
+
+        skephem = PrivateKey.generate()
+        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+        box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+        nonce = nacl.utils.random(Box.NONCE_SIZE)
+        ciphertext = box.encrypt(p.SerializeToString(), nonce)
+
+        def get_response(response):
+            if not response[0]:
+                self.kserver.set(receiving_node.id, pkephem, ciphertext)
+        self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
+
+    def get_messages(self, listener):
+        # if the transport hasn't been initialized yet, wait a second
+        if self.protocol.multiplexer is None or self.protocol.multiplexer.transport is None:
+            return task.deferLater(reactor, 1, self.get_messages, listener)
+
+        def parse_messages(messages):
+            if messages is not None:
+                for message in messages:
+                    try:
+                        value = objects.Value()
+                        value.ParseFromString(message)
+                        try:
+                            box = Box(PrivateKey(self.signing_key.encode()), PublicKey(value.valueKey))
+                            ciphertext = value.serializedData
+                            plaintext = box.decrypt(ciphertext)
+                            p = objects.Plaintext_Message()
+                            p.ParseFromString(plaintext)
+                            signature = p.signature
+                            p.ClearField("signature")
+                            verify_key = nacl.signing.VerifyKey(p.signed_pubkey[64:])
+                            verify_key.verify(p.SerializeToString(), signature)
+                            h = nacl.hash.sha512(p.signed_pubkey)
+                            pow_hash = h[64:128]
+                            if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40]:
+                                raise Exception('Invalid guid')
+                            listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
+                                            objects.Plaintext_Message.Type.Name(p.type), p.message)
+                        except Exception:
+                            pass
+                        signature = self.signing_key.sign(value.valueKey)[:64]
+                        self.kserver.delete(self.kserver.node.id, value.valueKey, signature)
+                    except Exception:
+                        pass
+        self.kserver.get(self.kserver.node.id).addCallback(parse_messages)
 
     @staticmethod
     def cache(filename):

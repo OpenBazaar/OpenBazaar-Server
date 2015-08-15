@@ -51,11 +51,12 @@ class MessageListener(Interface):
     An interface for handling messages sent between nodes.
     """
 
-    def notify(sender_guid, subject, message_type, message):
+    def notify(sender_guid, encryption_pubkey, subject, message_type, message):
         """
         New messages will be sent here if they decrypt and parse correctly.
         Args:
             sender_guid: in raw bytes
+            encryption_pubkey: the encryption key to be used when responding to this message.
             subject: a `string` which may be empty if no subject was included.
             message_type: a `string` signifying the type of message (CHAT, DISPUTE, etc).
             message: the `string` message.

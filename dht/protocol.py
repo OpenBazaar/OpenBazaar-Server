@@ -9,6 +9,7 @@ from zope.interface import implements
 import nacl.signing
 from dht.node import Node
 from dht.routing import RoutingTable
+from dht.utils import digest
 from log import Logger
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
@@ -52,26 +53,40 @@ class KademliaProtocol(RPCProtocol):
     def rpc_store(self, sender, keyword, key, value):
         self.addToRouter(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        self.storage[keyword] = (key, value)
-        return ["True"]
+        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 1800:
+            self.storage[keyword] = (key, value)
+            return ["True"]
+        else:
+            return ["False"]
 
     def rpc_delete(self, sender, keyword, key, signature):
         self.addToRouter(sender)
         value = self.storage.getSpecific(keyword, key)
         if value is not None:
-            try:
-                node = objects.Node()
-                node.ParseFromString(value)
-                pubkey = node.signedPublicKey[len(node.signedPublicKey) - 32:]
+            # Try to delete a message from the dht
+            if keyword == digest(sender.id):
                 try:
-                    verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(signature + key)
+                    verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+                    verify_key.verify(key, signature)
                     self.storage.delete(keyword, key)
                     return ["True"]
                 except Exception:
                     return ["False"]
-            except Exception:
-                pass
+            # Or try to delete a pointer
+            else:
+                try:
+                    node = objects.Node()
+                    node.ParseFromString(value)
+                    pubkey = node.signedPublicKey[64:]
+                    try:
+                        verify_key = nacl.signing.VerifyKey(pubkey)
+                        verify_key.verify(signature + key)
+                        self.storage.delete(keyword, key)
+                        return ["True"]
+                    except Exception:
+                        return ["False"]
+                except Exception:
+                    pass
         return ["False"]
 
     def rpc_find_node(self, sender, key):

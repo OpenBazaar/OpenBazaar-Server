@@ -1,16 +1,17 @@
 __author__ = 'chris'
 
 import nacl.signing
-import nacl.secret
 import nacl.utils
 import nacl.encoding
+import nacl.hash
+from nacl.public import PrivateKey, PublicKey, Box
 from zope.interface import implements
 from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, \
-    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA
+    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE
 from db.datastore import HashMap, ListingsStore, FollowData
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
@@ -31,7 +32,7 @@ class MarketProtocol(RPCProtocol):
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY]
+                                 NOTIFY, MESSAGE]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -180,22 +181,29 @@ class MarketProtocol(RPCProtocol):
         else:
             return ["False"]
 
-    def rpc_message(self, sender, encrypted):
-        box = nacl.secret.SecretBox(self.signing_key.encode(nacl.encoding.RawEncoder))
+    def rpc_message(self, sender, pubkey, encrypted):
+        box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
         try:
             plaintext = box.decrypt(encrypted)
             p = Plaintext_Message()
             p.ParseFromString(plaintext)
-            if p.sender_guid != sender.id:
-                raise Exception("Invalid guid in message")
+            signature = p.signature
+            p.ClearField("signature")
+            verify_key = nacl.signing.VerifyKey(p.signed_pubkey[64:])
+            verify_key.verify(p.SerializeToString(), signature)
+            h = nacl.hash.sha512(p.signed_pubkey)
+            pow_hash = h[64:128]
+            if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40] or p.sender_guid != sender.id:
+                raise Exception('Invalid guid')
             self.log.info("Received a message from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:
                 if verifyObject(MessageListener, listener):
-                    listener.notify(p.sender_guid, p.subject, Plaintext_Message.Type.Name(p.type), p.message)
+                    listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
+                                    Plaintext_Message.Type.Name(p.type), p.message)
             return ["True"]
         except Exception:
-            self.log.error("Received invalid message from" % sender)
+            self.log.error("Received invalid message from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
@@ -253,9 +261,9 @@ class MarketProtocol(RPCProtocol):
         d = self.notify(address, message)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callMessage(self, nodeToAsk, encrypted):
+    def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.message(address, encrypted)
+        d = self.message(address, ehemeral_pubkey, ciphertext)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):
