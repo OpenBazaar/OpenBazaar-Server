@@ -121,7 +121,8 @@ message Plaintext_Message {
     optional string subject          = 4;
     required Type type               = 5;
     required string message          = 6;
-    optional bytes signature         = 7;
+    required uint64 timestamp        = 7;
+    optional bytes signature         = 8;
 
     enum Type {
         CHAT    = 1;

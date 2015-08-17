@@ -275,3 +275,39 @@ class FollowData(object):
             return None
         else:
             return proto[0]
+
+class MessageStore(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE messages(guid BLOB , signed_pubkey BLOB,
+encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER, signature BLOB)''')
+            cursor.execute('''CREATE INDEX idx1 ON messages(guid);''')
+            self.db.commit()
+        except Exception:
+            pass
+
+    def save_message(self, guid, signed_pubkey, encryption_pubkey,
+                     subject, message_type, message, timestamp, signature):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT INTO messages(guid, signed_pubkey, encryption_pubkey, subject, message_type,
+message, timestamp, signature) VALUES (?,?,?,?,?,?,?,?)''',
+                       (guid, signed_pubkey, encryption_pubkey, subject, message_type, message, timestamp, signature))
+        self.db.commit()
+
+    def get_messages(self, guid, message_type):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid, signed_pubkey, encryption_pubkey, subject, message_type, message,
+timestamp, signature FROM messages WHERE guid=? AND message_type=?''', (guid, message_type))
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret
+
+    def delete_message(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM messages WHERE guid=? AND message_type="CHAT"''', (guid, ))
+        self.db.commit()
