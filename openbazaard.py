@@ -10,6 +10,8 @@ import sys
 import dht.constants
 from twisted.internet import reactor
 from twisted.python import log, logfile
+from twisted.web.server import Site
+from twisted.web.static import File
 from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
@@ -19,6 +21,8 @@ from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
 from market import network
 from market.listeners import MessageListenerImpl
+from ws import WSFactory, WSProtocol
+from autobahn.twisted.websocket import listenWS
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -36,7 +40,7 @@ port = response[2]
 keys = KeyChain()
 
 def on_bootstrap_complete(resp):
-    mserver.get_messages(MessageListenerImpl())
+    mserver.get_messages(MessageListenerImpl(ws_factory))
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
@@ -66,5 +70,14 @@ reactor.listenUDP(port, protocol)
 # json-rpc server
 factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver, keys))
 reactor.listenTCP(18465, factory, interface="127.0.0.1")
+
+# web sockets
+ws_factory = WSFactory("ws://127.0.0.1:18466", mserver)
+ws_factory.protocol = WSProtocol
+ws_factory.setProtocolOptions(allowHixie76=True)
+listenWS(ws_factory)
+webdir = File(".")
+web = Site(webdir)
+reactor.listenTCP(18466, web)
 
 reactor.run()

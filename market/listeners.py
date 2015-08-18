@@ -8,8 +8,8 @@ from twisted.internet import task, reactor
 class MessageListenerImpl(object):
     implements(MessageListener)
 
-    def __init__(self, web_socket_handler):
-        self.handler = web_socket_handler
+    def __init__(self, web_socket_factory):
+        self.ws = web_socket_factory
         self.db = MessageStore()
 
     def notify(self, sender_guid, signed_pubkey, encryption_pubkey,
@@ -19,16 +19,16 @@ class MessageListenerImpl(object):
                              message_type, message, timestamp, signature)
 
         message_json = {
-            "sender": sender_guid,
-            "subject": subject,
-            "message_type": message_type,
-            "message": message,
-            "timestamp": timestamp
+            "type": "message",
+            "data": {
+                "sender": sender_guid,
+                "subject": subject,
+                "message_type": message_type,
+                "message": message,
+                "timestamp": timestamp
+            }
         }
         self.send_to_websocket(message_json)
 
     def send_to_websocket(self, message_json):
-        # Wait for the transport to get initialized
-        if self.handler.transport is None:
-            return task.deferLater(reactor, 1, self.send_to_websocket, message_json)
-        self.handler.transport.write(json.dumps(message_json))
+        self.ws.push(message_json)
