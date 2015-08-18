@@ -15,11 +15,10 @@ from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
 from constants import DATA_FOLDER
-from market import network
 from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
-from interfaces import MessageListener
-from zope.interface import implements
+from market import network
+from market.listeners import MessageListenerImpl
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -37,13 +36,7 @@ port = response[2]
 keys = KeyChain()
 
 def on_bootstrap_complete(resp):
-    class GetMyMessages(object):
-        implements(MessageListener)
-
-        @staticmethod
-        def notify(sender_guid, encryption_pubkey, subject, message_type, message):
-            print message
-    mserver.get_messages(GetMyMessages())
+    mserver.get_messages(MessageListenerImpl())
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
