@@ -390,7 +390,7 @@ class Server(object):
                 return count
 
             ds = []
-            signature = self.signing_key.sign(message)[:64]
+            signature = self.signing_key.sign(str(message))[:64]
             for n in nodes:
                 if n[1] is not None:
                     ds.append(self.protocol.callNotify(n[1], message, signature))

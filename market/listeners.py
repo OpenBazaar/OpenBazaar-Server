@@ -3,6 +3,7 @@ import json
 from interfaces import MessageListener, NotificationListener
 from zope.interface import implements
 from db.datastore import MessageStore
+from protos.objects import Plaintext_Message
 
 class MessageListenerImpl(object):
     implements(MessageListener)
@@ -11,19 +12,19 @@ class MessageListenerImpl(object):
         self.ws = web_socket_factory
         self.db = MessageStore()
 
-    def notify(self, sender_guid, signed_pubkey, encryption_pubkey,
-               subject, message_type, message, timestamp, signature):
+    def notify(self, plaintext, signature):
 
-        self.db.save_message(sender_guid, signed_pubkey, encryption_pubkey, subject,
-                             message_type, message, timestamp, signature)
+        self.db.save_message(plaintext.sender_guid, plaintext.signed_pubkey, plaintext.encryption_pubkey,
+                             plaintext.subject, Plaintext_Message.Type.Name(plaintext.type), plaintext.message,
+                             plaintext.timestamp, signature)
 
         message_json = {
             "message": {
-                "sender": sender_guid.encode("hex"),
-                "subject": subject,
-                "message_type": message_type,
-                "message": message,
-                "timestamp": timestamp
+                "sender": plaintext.sender_guid.encode("hex"),
+                "subject": plaintext.subject,
+                "message_type": Plaintext_Message.Type.Name(plaintext.type),
+                "message": plaintext.message,
+                "timestamp": plaintext.timestamp
             }
         }
         self.ws.push(json.dumps(message_json, indent=4))

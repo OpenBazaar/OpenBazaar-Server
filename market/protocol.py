@@ -17,6 +17,7 @@ from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
+from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
 
 class MarketProtocol(RPCProtocol):
@@ -180,8 +181,11 @@ class MarketProtocol(RPCProtocol):
             self.log.info("Received a notification from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:
-                if verifyObject(NotificationListener, listener):
+                try:
+                    verifyObject(NotificationListener, listener)
                     listener.notify(message)
+                except DoesNotImplement:
+                    pass
             return ["True"]
         else:
             return ["False"]
@@ -203,9 +207,11 @@ class MarketProtocol(RPCProtocol):
             self.log.info("Received a message from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:
-                if verifyObject(MessageListener, listener):
-                    listener.notify(p.sender_guid, p.signed_pubkey, p.encryption_pubkey, p.subject,
-                                    Plaintext_Message.Type.Name(p.type), p.message, p.timestamp, signature)
+                try:
+                    verifyObject(MessageListener, listener)
+                    listener.notify(p, signature)
+                except DoesNotImplement:
+                    pass
             return ["True"]
         except Exception:
             self.log.error("Received invalid message from %s" % sender)
