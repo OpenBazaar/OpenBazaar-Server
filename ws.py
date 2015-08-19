@@ -1,5 +1,5 @@
 __author__ = 'chris'
-from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol, listenWS
+from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 
 class WSProtocol(WebSocketServerProtocol):
 

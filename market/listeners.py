@@ -1,9 +1,8 @@
 __author__ = 'chris'
 import json
-from interfaces import MessageListener
+from interfaces import MessageListener, NotificationListener
 from zope.interface import implements
 from db.datastore import MessageStore
-from twisted.internet import task, reactor
 
 class MessageListenerImpl(object):
     implements(MessageListener)
@@ -19,16 +18,26 @@ class MessageListenerImpl(object):
                              message_type, message, timestamp, signature)
 
         message_json = {
-            "type": "message",
-            "data": {
-                "sender": sender_guid,
+            "message": {
+                "sender": sender_guid.encode("hex"),
                 "subject": subject,
                 "message_type": message_type,
                 "message": message,
                 "timestamp": timestamp
             }
         }
-        self.send_to_websocket(message_json)
+        self.ws.push(json.dumps(message_json, indent=4))
 
-    def send_to_websocket(self, message_json):
-        self.ws.push(message_json)
+class NotificationListenerImpl(object):
+    implements(NotificationListener)
+
+    def __init__(self, web_socket_factory):
+        self.ws = web_socket_factory
+
+    def notify(self, message):
+        notification_json = {
+            "notification": {
+                "message": message
+            }
+        }
+        self.ws.push(json.dumps(notification_json, indent=4))

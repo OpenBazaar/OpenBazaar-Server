@@ -1,5 +1,6 @@
 __author__ = 'chris'
 
+import time
 import json
 import os.path
 import nacl.signing
@@ -389,9 +390,10 @@ class Server(object):
                 return count
 
             ds = []
+            signature = self.signing_key.sign(message)[:64]
             for n in nodes:
                 if n[1] is not None:
-                    ds.append(self.protocol.callNotify(n[1], message))
+                    ds.append(self.protocol.callNotify(n[1], message, signature))
             return defer.DeferredList(ds).addCallback(how_many_reached)
         dl = []
         f = objects.Followers()
@@ -415,6 +417,7 @@ class Server(object):
         p.message = message
         if subject is not None:
             p.subject = subject
+        p.timestamp = int(time.time())
         signature = self.signing_key.sign(p.SerializeToString())[:64]
         p.signature = signature
 

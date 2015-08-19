@@ -20,7 +20,7 @@ from constants import DATA_FOLDER
 from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
 from market import network
-from market.listeners import MessageListenerImpl
+from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from ws import WSFactory, WSProtocol
 from autobahn.twisted.websocket import listenWS
 
@@ -38,9 +38,15 @@ port = response[2]
 
 # key generation
 keys = KeyChain()
+print keys.guid.encode("hex")
+print keys.encryption_pubkey.encode("hex")
 
 def on_bootstrap_complete(resp):
-    mserver.get_messages(MessageListenerImpl(ws_factory))
+    mlistener = MessageListenerImpl(ws_factory)
+    mserver.get_messages(mlistener)
+    mserver.protocol.add_listener(mlistener)
+    nlistener = NotificationListenerImpl(ws_factory)
+    mserver.protocol.add_listener(nlistener)
 
 protocol = OpenBazaarProtocol((ip_address, port))
 
@@ -78,6 +84,6 @@ ws_factory.setProtocolOptions(allowHixie76=True)
 listenWS(ws_factory)
 webdir = File(".")
 web = Site(webdir)
-reactor.listenTCP(18466, web)
+reactor.listenTCP(9000, web)
 
 reactor.run()

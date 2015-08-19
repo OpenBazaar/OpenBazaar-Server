@@ -170,8 +170,13 @@ class MarketProtocol(RPCProtocol):
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
-    def rpc_notify(self, sender, message):
+    def rpc_notify(self, sender, message, signature):
         if len(message) <= 140 and FollowData().is_following(sender.id):
+            try:
+                verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+                verify_key.verify(message, signature)
+            except Exception:
+                return ["False"]
             self.log.info("Received a notification from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:
@@ -182,8 +187,8 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_message(self, sender, pubkey, encrypted):
-        box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
         try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
             plaintext = box.decrypt(encrypted)
             p = Plaintext_Message()
             p.ParseFromString(plaintext)
@@ -256,9 +261,9 @@ class MarketProtocol(RPCProtocol):
         d = self.get_following(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callNotify(self, nodeToAsk, message):
+    def callNotify(self, nodeToAsk, message, signature):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.notify(address, message)
+        d = self.notify(address, message, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):

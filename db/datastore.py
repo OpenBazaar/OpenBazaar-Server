@@ -294,7 +294,8 @@ encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp
         cursor = self.db.cursor()
         cursor.execute('''INSERT INTO messages(guid, signed_pubkey, encryption_pubkey, subject, message_type,
 message, timestamp, signature) VALUES (?,?,?,?,?,?,?,?)''',
-                       (guid, signed_pubkey, encryption_pubkey, subject, message_type, message, timestamp, signature))
+                       (guid, signed_pubkey, encryption_pubkey, subject, message_type,
+                        message, timestamp, signature))
         self.db.commit()
 
     def get_messages(self, guid, message_type):
