@@ -40,7 +40,7 @@ class NotificationListener(Interface):
     An interface for handling notifications sent to followers.
     """
 
-    def notify(message):
+    def notify(guid, message):
         """
         New notifications will be sent here. They will only show if this node is following the node
         which sent the notification.

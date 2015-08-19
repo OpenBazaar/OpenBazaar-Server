@@ -407,6 +407,7 @@ class Server(object):
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
         """
+        pro = Profile().get()
         if len(message) > 1500:
             return
         p = objects.Plaintext_Message()
@@ -417,6 +418,10 @@ class Server(object):
         p.message = message
         if subject is not None:
             p.subject = subject
+        if pro.handle:
+            p.handle = pro.handle
+        if pro.avatar_hash:
+            p.avatar_hash = pro.avatar_hash
         p.timestamp = int(time.time())
         signature = self.signing_key.sign(p.SerializeToString())[:64]
         p.signature = signature

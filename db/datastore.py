@@ -282,26 +282,27 @@ class MessageStore(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE messages(guid BLOB , signed_pubkey BLOB,
-encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER, signature BLOB)''')
+            cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
+encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
+avatar_hash BLOB, signature BLOB)''')
             cursor.execute('''CREATE INDEX idx1 ON messages(guid);''')
             self.db.commit()
         except Exception:
             pass
 
-    def save_message(self, guid, signed_pubkey, encryption_pubkey,
-                     subject, message_type, message, timestamp, signature):
+    def save_message(self, guid, handle, signed_pubkey, encryption_pubkey,
+                     subject, message_type, message, timestamp, avatar_hash, signature):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT INTO messages(guid, signed_pubkey, encryption_pubkey, subject, message_type,
-message, timestamp, signature) VALUES (?,?,?,?,?,?,?,?)''',
-                       (guid, signed_pubkey, encryption_pubkey, subject, message_type,
-                        message, timestamp, signature))
+        cursor.execute('''INSERT INTO messages(guid, handle, signed_pubkey, encryption_pubkey, subject,
+message_type, message, timestamp, avatar_hash, signature) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                       (guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
+                        message, timestamp, avatar_hash, signature))
         self.db.commit()
 
     def get_messages(self, guid, message_type):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT guid, signed_pubkey, encryption_pubkey, subject, message_type, message,
-timestamp, signature FROM messages WHERE guid=? AND message_type=?''', (guid, message_type))
+        cursor.execute('''SELECT guid, handle, signed_pubkey, encryption_pubkey, subject, message_type, message,
+timestamp, avatar_hash, signature FROM messages WHERE guid=? AND message_type=?''', (guid, message_type))
         ret = cursor.fetchall()
         if not ret:
             return None
@@ -311,4 +312,36 @@ timestamp, signature FROM messages WHERE guid=? AND message_type=?''', (guid, me
     def delete_message(self, guid):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM messages WHERE guid=? AND message_type="CHAT"''', (guid, ))
+        self.db.commit()
+
+class NotificationStore(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
+timestamp INTEGER, avatar_hash BLOB)''')
+            self.db.commit()
+        except Exception:
+            pass
+
+    def save_notification(self, guid, handle, message, timestamp, avatar_hash):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT INTO notifications(guid, handle, message, timestamp, avatar_hash)
+VALUES (?,?,?,?,?)''', (guid, handle, message, timestamp, avatar_hash))
+        self.db.commit()
+
+    def get_notifications(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid, handle, message, timestamp, avatar_hash FROM notifications''')
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret
+
+    def delete_notfication(self, guid, timestamp):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM notifications WHERE guid=? AND timestamp=?''', (guid, timestamp))
         self.db.commit()

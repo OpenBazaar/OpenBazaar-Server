@@ -183,7 +183,7 @@ class MarketProtocol(RPCProtocol):
             for listener in self.listeners:
                 try:
                     verifyObject(NotificationListener, listener)
-                    listener.notify(message)
+                    listener.notify(sender.id, message)
                 except DoesNotImplement:
                     pass
             return ["True"]
