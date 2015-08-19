@@ -684,7 +684,7 @@ class RPCCalls(jsonrpc.JSONRPC):
             @staticmethod
             def notify(sender_guid, encryption_pubkey, subject, message_type, message):
                 print message
-        self.mserver.get_messages(GetMyMessages())
+        self.mserer.get_messages(GetMyMessages())
         return "getting messages..."
 
 if __name__ == "__main__":

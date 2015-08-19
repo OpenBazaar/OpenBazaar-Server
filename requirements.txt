@@ -7,3 +7,4 @@ pystun==0.1.0
 bitcoin==1.1.25
 gnupg==2.0.2
 pynacl==0.3.0
+autobahn==0.10.5-2

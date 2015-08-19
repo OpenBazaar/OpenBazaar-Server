@@ -29,7 +29,7 @@ class MessageListenerImpl(object):
                 "message_type": Plaintext_Message.Type.Name(plaintext.type),
                 "message": plaintext.message,
                 "timestamp": plaintext.timestamp,
-                "avatar_hash": plaintext.avatar_hash
+                "avatar_hash": plaintext.avatar_hash.encode("hex")
             }
         }
         if plaintext.handle:
@@ -59,7 +59,7 @@ class NotificationListenerImpl(object):
                 "guid": guid.encode("hex"),
                 "message": message,
                 "timestamp": timestamp,
-                "avatar_hash": avatar_hash
+                "avatar_hash": avatar_hash.encode("hex")
             }
         }
         if handle:
