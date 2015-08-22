@@ -4,6 +4,24 @@ import sqlite3 as lite
 from constants import DATABASE
 from protos.objects import Listings, Followers, Following
 
+def create_database(filepath=None):
+    if filepath == None:
+        db = lite.connect(DATABASE)
+    else:
+        db = lite.connect(filepath)
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')
+    cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
+    cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
+    cursor.execute('''CREATE TABLE keystore(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
+    cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+    cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
+    cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
+encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
+avatar_hash BLOB, signature BLOB)''')
+    cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
+timestamp INTEGER, avatar_hash BLOB)''')
+    db.commit()
 
 class HashMap(object):
     """
@@ -16,12 +34,6 @@ class HashMap(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def insert(self, hash_value, filepath):
         cursor = self.db.cursor()
@@ -67,12 +79,6 @@ class ProfileStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def set_proto(self, proto):
         cursor = self.db.cursor()
@@ -99,12 +105,6 @@ class ListingsStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def add_listing(self, proto):
         """
@@ -155,12 +155,6 @@ class KeyStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE keystore(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def set_key(self, key_type, privkey, pubkey):
         cursor = self.db.cursor()
@@ -187,13 +181,6 @@ class FollowData(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
-            cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def follow(self, proto):
         cursor = self.db.cursor()
@@ -280,15 +267,6 @@ class MessageStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
-encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
-avatar_hash BLOB, signature BLOB)''')
-            cursor.execute('''CREATE INDEX idx1 ON messages(guid);''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def save_message(self, guid, handle, signed_pubkey, encryption_pubkey,
                      subject, message_type, message, timestamp, avatar_hash, signature):
@@ -318,13 +296,6 @@ class NotificationStore(object):
     def __init__(self):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
-        try:
-            cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
-timestamp INTEGER, avatar_hash BLOB)''')
-            self.db.commit()
-        except Exception:
-            pass
 
     def save_notification(self, guid, handle, message, timestamp, avatar_hash):
         cursor = self.db.cursor()

@@ -8,6 +8,7 @@ import stun
 import os
 import sys
 import dht.constants
+from db.datastore import create_database
 from twisted.internet import reactor
 from twisted.python import log, logfile
 from twisted.web.server import Site
@@ -16,7 +17,7 @@ from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER
+from constants import DATA_FOLDER, DATABASE
 from txjsonrpc.netstring import jsonrpc
 from networkcli import RPCCalls
 from market import network
@@ -36,10 +37,12 @@ print "%s on %s:%s" % (response[0], response[1], response[2])
 ip_address = response[1]
 port = response[2]
 
+# database
+if not os.path.isfile(DATABASE):
+    create_database()
+
 # key generation
 keys = KeyChain()
-print keys.guid.encode("hex")
-print keys.encryption_pubkey.encode("hex")
 
 def on_bootstrap_complete(resp):
     mlistener = MessageListenerImpl(ws_factory)
