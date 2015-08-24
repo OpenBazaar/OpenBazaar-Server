@@ -92,8 +92,12 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching listings")
         self.router.addContact(sender)
         try:
-            proto = ListingsStore().get_proto()
-            return [proto, self.signing_key.sign(proto)[:64]]
+            p = Profile().get()
+            l = Listings()
+            l.ParseFromString(ListingsStore().get_proto())
+            l.handle = p.handle
+            l.avatar_hash = p.avatar_hash
+            return [l.SerializeToString(), self.signing_key.sign(l.SerializeToString())[:64]]
         except Exception:
             self.log.warning("Could not find any listings in the database")
             return ["None"]

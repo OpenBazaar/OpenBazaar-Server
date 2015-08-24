@@ -68,8 +68,9 @@ class WSProtocol(WebSocketServerProtocol):
             for result in results:
                 to_query -= result
             shuffle(vendors)
-            for node in vendors[:to_query/3]:
-                dl.append(self.factory.mserver.get_listings(node).addCallback(handle_response, node))
+            if to_query/3 > 0 and len(vendors) > 0:
+                for node in vendors[:to_query/3]:
+                    dl.append(self.factory.mserver.get_listings(node).addCallback(handle_response, node))
                 defer.gatherResults(dl).addCallback(count_results)
 
         def handle_response(listings, node):
@@ -82,6 +83,8 @@ class WSProtocol(WebSocketServerProtocol):
                             "listing":
                                 {
                                     "guid": node.id.encode("hex"),
+                                    "handle": listings.handle,
+                                    "avatar_hash": listings.avatar_hash.encode("hex"),
                                     "title": l.title,
                                     "contract_hash": l.contract_hash.encode("hex"),
                                     "thumbnail_hash": l.thumbnail_hash.encode("hex"),
@@ -97,13 +100,17 @@ class WSProtocol(WebSocketServerProtocol):
                             listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
                         if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
                             self.factory.mserver.get_image(node, l.thumbnail_hash)
+                        if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
+                            self.factory.mserver.get_image(node, listings.avatar_hash)
                         self.sendMessage(json.dumps(listing_json, indent=4), False)
                         count += 1
                         self.factory.outstanding[message_id].append(l.contract_hash)
                         if count == 3:
-                            break
+                            return count
+                vendors.remove(node)
             else:
                 VendorStore().delete_vendor(node.id)
+                vendors.remove(node)
             return count
 
         dl = []

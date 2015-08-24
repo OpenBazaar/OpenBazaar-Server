@@ -77,6 +77,8 @@ message Metadata {
 
 message Listings {
     repeated ListingMetadata listing = 1;
+    optional string handle           = 2;
+    optional bytes avatar_hash       = 3;
 
     message ListingMetadata {
         required bytes contract_hash  = 1;
