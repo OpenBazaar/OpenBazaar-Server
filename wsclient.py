@@ -16,7 +16,13 @@ class BroadcastClientProtocol(WebSocketClientProtocol):
             "request": {
                 "api": "v1",
                 "id": digest("some_id").encode("hex"),
-                "command": "get_homepage_listings"
+                "command": "send_message",
+                "message": "Hello World!",
+                "subject": "yo!",
+                "handle": "@vintage",
+                "guid": "5aef2616b37496d65e06f8413724167811756af5",
+                "message_type": "CHAT",
+                "recipient_key": "769fd0d4f24cdeef820c28dc1df71d3b47ccf2403c8e205dfb89b21fee61c673"
             }
         }
         self.sendMessage(json.dumps(request, indent=4))

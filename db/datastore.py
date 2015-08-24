@@ -19,7 +19,7 @@ def create_database(filepath=None):
     cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
     cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
 encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
-avatar_hash BLOB, signature BLOB)''')
+avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
     cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
 timestamp INTEGER, avatar_hash BLOB)''')
     cursor.execute('''CREATE TABLE vendors(guid BLOB UNIQUE, ip TEXT, port INTEGER, signedPubkey BLOB)''')
@@ -272,19 +272,20 @@ class MessageStore(object):
         self.db = lite.connect(DATABASE)
         self.db.text_factory = str
 
-    def save_message(self, guid, handle, signed_pubkey, encryption_pubkey,
-                     subject, message_type, message, timestamp, avatar_hash, signature):
+    def save_message(self, guid, handle, signed_pubkey, encryption_pubkey, subject,
+                     message_type, message, timestamp, avatar_hash, signature, is_outgoing):
+        outgoing = 1 if is_outgoing else 0
         cursor = self.db.cursor()
         cursor.execute('''INSERT INTO messages(guid, handle, signed_pubkey, encryption_pubkey, subject,
-message_type, message, timestamp, avatar_hash, signature) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+message_type, message, timestamp, avatar_hash, signature, outgoing) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                        (guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
-                        message, timestamp, avatar_hash, signature))
+                        message, timestamp, avatar_hash, signature, outgoing))
         self.db.commit()
 
     def get_messages(self, guid, message_type):
         cursor = self.db.cursor()
         cursor.execute('''SELECT guid, handle, signed_pubkey, encryption_pubkey, subject, message_type, message,
-timestamp, avatar_hash, signature FROM messages WHERE guid=? AND message_type=?''', (guid, message_type))
+timestamp, avatar_hash, signature, outgoing FROM messages WHERE guid=? AND message_type=?''', (guid, message_type))
         ret = cursor.fetchall()
         if not ret:
             return None

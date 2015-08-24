@@ -2,12 +2,16 @@ __author__ = 'chris'
 
 import json
 import os
+import time
 from constants import DATA_FOLDER
-from db.datastore import VendorStore
+from db.datastore import VendorStore, MessageStore
 from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from protos.countries import CountryCode
+from protos.objects import Plaintext_Message
 from twisted.internet import defer
+from binascii import unhexlify
+from dht.node import Node
 
 class WSProtocol(WebSocketServerProtocol):
 
@@ -118,6 +122,17 @@ class WSProtocol(WebSocketServerProtocol):
             dl.append(self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor))
         defer.gatherResults(dl).addCallback(count_results)
 
+    def send_message(self, guid, handle, message, subject, message_type, recipient_encryption_key):
+        MessageStore().save_message(guid, handle, "", recipient_encryption_key, subject,
+                                    message_type, message, "", time.time(), "", True)
+
+        def send(node):
+            n = node if node is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
+            self.factory.mserver.send_message(n, recipient_encryption_key,
+                                              Plaintext_Message.Type.Value(message_type.upper()),
+                                              message, subject)
+        self.factory.kserver.resolve(unhexlify(guid)).addCallback(send)
+
     def onMessage(self, payload, isBinary):
         try:
             request_json = json.loads(payload)
@@ -128,6 +143,14 @@ class WSProtocol(WebSocketServerProtocol):
 
             elif request_json["request"]["command"] == "get_homepage_listings":
                 self.get_homepage_listings(message_id)
+
+            elif request_json["request"]["command"] == "send_message":
+                self.send_message(request_json["request"]["guid"],
+                                  request_json["request"]["handle"],
+                                  request_json["request"]["message"],
+                                  request_json["request"]["subject"],
+                                  request_json["request"]["message_type"],
+                                  request_json["request"]["recipient_key"])
 
         except Exception:
             pass
@@ -144,9 +167,10 @@ class WSFactory(WebSocketServerFactory):
     currently connected clients.
     """
 
-    def __init__(self, url, mserver, debug=False, debugCodePaths=False):
+    def __init__(self, url, mserver, kserver, debug=False, debugCodePaths=False):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.mserver = mserver
+        self.kserver = kserver
         self.outstanding = {}
         self.clients = []
 

@@ -18,7 +18,7 @@ class MessageListenerImpl(object):
         self.db.save_message(plaintext.sender_guid, plaintext.handle, plaintext.signed_pubkey,
                              plaintext.encryption_pubkey, plaintext.subject,
                              Plaintext_Message.Type.Name(plaintext.type), plaintext.message,
-                             plaintext.avatar_hash, plaintext.timestamp, signature)
+                             plaintext.avatar_hash, plaintext.timestamp, signature, False)
 
         # TODO: should probably resolve the handle and make sure it matches the guid so the sender can't spoof it
 
@@ -29,7 +29,8 @@ class MessageListenerImpl(object):
                 "message_type": Plaintext_Message.Type.Name(plaintext.type),
                 "message": plaintext.message,
                 "timestamp": plaintext.timestamp,
-                "avatar_hash": plaintext.avatar_hash.encode("hex")
+                "avatar_hash": plaintext.avatar_hash.encode("hex"),
+                "encryption_key": plaintext.encryption_pubkey.encode("hex")
             }
         }
         if plaintext.handle:

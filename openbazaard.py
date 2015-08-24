@@ -82,7 +82,7 @@ factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver, keys))
 reactor.listenTCP(18465, factory, interface="127.0.0.1")
 
 # web sockets
-ws_factory = WSFactory("ws://127.0.0.1:18466", mserver)
+ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
 ws_factory.protocol = WSProtocol
 ws_factory.setProtocolOptions(allowHixie76=True)
 listenWS(ws_factory)
