@@ -1,15 +1,129 @@
 __author__ = 'chris'
+
+import json
+import os
+from constants import DATA_FOLDER
+from db.datastore import VendorStore
+from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
+from protos.countries import CountryCode
+from twisted.internet import defer
 
 class WSProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         self.factory.register(self)
 
+    def get_vendors(self, message_id):
+        if message_id in self.factory.outstanding:
+            vendors = self.factory.outstanding[message_id]
+        else:
+            vendors = VendorStore().get_vendors()
+            shuffle(vendors)
+            self.factory.outstanding[message_id] = vendors
+
+        def count_results(results):
+            to_query = 0
+            for result in results:
+                if not result:
+                    to_query += 1
+            for node in vendors[:to_query]:
+                dl.append(self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node))
+                defer.gatherResults(dl).addCallback(count_results)
+
+        def handle_response(metadata, node):
+            if metadata is not None:
+                vendor = {
+                    "id": message_id,
+                    "vendor":
+                        {
+                            "guid": node.id.encode("hex"),
+                            "name": metadata.name,
+                            "handle": metadata.handle,
+                            "avatar_hash": metadata.avatar_hash.encode("hex"),
+                            "nsfw": metadata.nsfw
+                        }
+                }
+                self.sendMessage(json.dumps(vendor, indent=4), False)
+                vendors.remove(node)
+                return True
+            else:
+                VendorStore().delete_vendor(node.id)
+                vendors.remove(node)
+                return False
+
+        dl = []
+        for node in vendors[:30]:
+            dl.append(self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node))
+        defer.gatherResults(dl).addCallback(count_results)
+
+    def get_homepage_listings(self, message_id):
+        if message_id not in self.factory.outstanding:
+            self.factory.outstanding[message_id] = []
+        vendors = VendorStore().get_vendors()
+        shuffle(vendors)
+
+        def count_results(results):
+            to_query = 30
+            for result in results:
+                to_query -= result
+            shuffle(vendors)
+            for node in vendors[:to_query/3]:
+                dl.append(self.factory.mserver.get_listings(node).addCallback(handle_response, node))
+                defer.gatherResults(dl).addCallback(count_results)
+
+        def handle_response(listings, node):
+            count = 0
+            if listings is not None:
+                for l in listings.listing:
+                    if l.contract_hash not in self.factory.outstanding[message_id]:
+                        listing_json = {
+                            "id": message_id,
+                            "listing":
+                                {
+                                    "guid": node.id.encode("hex"),
+                                    "title": l.title,
+                                    "contract_hash": l.contract_hash.encode("hex"),
+                                    "thumbnail_hash": l.thumbnail_hash.encode("hex"),
+                                    "category": l.category,
+                                    "price": l.price,
+                                    "currency_code": l.currency_code,
+                                    "nsfw": l.nsfw,
+                                    "origin": str(CountryCode.Name(l.origin)),
+                                    "ships_to": []
+                                }
+                        }
+                        for country in l.ships_to:
+                            listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
+                        if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                            self.factory.mserver.get_image(node, l.thumbnail_hash)
+                        self.sendMessage(json.dumps(listing_json, indent=4), False)
+                        count += 1
+                        self.factory.outstanding[message_id].append(l.contract_hash)
+                        if count == 3:
+                            break
+            else:
+                VendorStore().delete_vendor(node.id)
+            return count
+
+        dl = []
+        for vendor in vendors[:10]:
+            dl.append(self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor))
+        defer.gatherResults(dl).addCallback(count_results)
+
     def onMessage(self, payload, isBinary):
-        """
-        handle outgoing messages and notifications here
-        """
+        try:
+            request_json = json.loads(payload)
+            message_id = request_json["request"]["id"]
+
+            if request_json["request"]["command"] == "get_vendors":
+                self.get_vendors(message_id)
+
+            elif request_json["request"]["command"] == "get_homepage_listings":
+                self.get_homepage_listings(message_id)
+
+        except Exception:
+            pass
 
     def connectionLost(self, reason):
         WebSocketServerProtocol.connectionLost(self, reason)
@@ -26,6 +140,7 @@ class WSFactory(WebSocketServerFactory):
     def __init__(self, url, mserver, debug=False, debugCodePaths=False):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.mserver = mserver
+        self.outstanding = {}
         self.clients = []
 
     def register(self, client):

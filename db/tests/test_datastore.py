@@ -1,5 +1,5 @@
 import unittest
-
+import os
 from db import datastore
 from protos.objects import Profile, Listings
 from protos.countries import CountryCode
@@ -7,7 +7,8 @@ from protos.countries import CountryCode
 
 class DatastoreTest(unittest.TestCase):
     def setUp(self):
-        datastore.create_database(":memory:")
+        datastore.create_database("test.db")
+        datastore.DATABASE = "test.db"
         self.test_hash = "87e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_hash2 = "97e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_file = "Contents of test.txt"
@@ -33,6 +34,9 @@ class DatastoreTest(unittest.TestCase):
         self.ps = datastore.ProfileStore()
         self.ls = datastore.ListingsStore()
         self.ks = datastore.KeyStore()
+
+    def tearDown(self):
+        os.remove("test.db")
 
     def test_hashmapInsert(self):
         self.hm.insert(self.test_hash, self.test_file)

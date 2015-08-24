@@ -3,6 +3,7 @@ import sqlite3 as lite
 
 from constants import DATABASE
 from protos.objects import Listings, Followers, Following
+from dht.node import Node
 
 def create_database(filepath=None):
     if filepath == None:
@@ -21,7 +22,10 @@ encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp
 avatar_hash BLOB, signature BLOB)''')
     cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
 timestamp INTEGER, avatar_hash BLOB)''')
+    cursor.execute('''CREATE TABLE vendors(guid BLOB UNIQUE, ip TEXT, port INTEGER, signedPubkey BLOB)''')
+    cursor.execute('''CREATE INDEX idx1 ON vendors(guid);''')
     db.commit()
+    return db
 
 class HashMap(object):
     """
@@ -315,4 +319,30 @@ VALUES (?,?,?,?,?)''', (guid, handle, message, timestamp, avatar_hash))
     def delete_notfication(self, guid, timestamp):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM notifications WHERE guid=? AND timestamp=?''', (guid, timestamp))
+        self.db.commit()
+
+class VendorStore(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+
+    def save_vendor(self, guid, ip, port, signed_pubkey):
+        cursor = self.db.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO vendors(guid, ip, port, signedPubkey)
+VALUES (?,?,?,?)''', (guid, ip, port, signed_pubkey))
+        self.db.commit()
+
+    def get_vendors(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid, ip, port, signedPubkey FROM vendors''')
+        ret = cursor.fetchall()
+        nodes = []
+        for n in ret:
+            node = Node(n[0], n[1], n[2], n[3], True)
+            nodes.append(node)
+        return nodes
+
+    def delete_vendor(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM vendors WHERE guid=?''', (guid,))
         self.db.commit()

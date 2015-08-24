@@ -7,6 +7,7 @@ import nacl.signing
 import nacl.hash
 import nacl.encoding
 import nacl.utils
+import gnupg
 from nacl.public import PrivateKey, PublicKey, Box
 from dht import node
 from twisted.internet import defer, reactor, task
@@ -104,6 +105,12 @@ class Server(object):
                 verify_key.verify(result[1][1] + result[1][0])
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
+                if p.pgp_key:
+                    gpg = gnupg.GPG()
+                    gpg.import_keys(p.pgp_key.publicKey)
+                    if not gpg.verify(p.pgp_key.signature) or \
+                                    node_to_ask.id.encode('hex') not in p.pgp_key.signature:
+                        p.ClearField("pgp_key")
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.avatar_hash)):
                     self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.header_hash)):

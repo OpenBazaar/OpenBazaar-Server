@@ -17,6 +17,7 @@ from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import SEED_NODE
+from db.datastore import VendorStore
 
 
 class RPCProtocol:
@@ -69,6 +70,9 @@ class RPCProtocol:
             except Exception:
                 self.log.warning("Received message from sender with invalid GUID, ignoring")
                 return False
+
+        if m.sender.vendor:
+            VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
 
         msgID = m.messageID
         data = tuple(m.arguments)

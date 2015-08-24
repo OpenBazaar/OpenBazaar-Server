@@ -24,6 +24,7 @@ from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from ws import WSFactory, WSProtocol
 from autobahn.twisted.websocket import listenWS
+from restapi import OpenBazaarAPI
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -87,6 +88,11 @@ ws_factory.setProtocolOptions(allowHixie76=True)
 listenWS(ws_factory)
 webdir = File(".")
 web = Site(webdir)
-reactor.listenTCP(9000, web)
+reactor.listenTCP(9000, web, interface="127.0.0.1")
+
+# rest api
+api = OpenBazaarAPI(mserver, kserver)
+site = Site(api, timeout=None)
+reactor.listenTCP(18469, site, interface="127.0.0.1")
 
 reactor.run()

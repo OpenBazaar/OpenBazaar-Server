@@ -119,6 +119,7 @@ class Contract(object):
             item["price_per_unit"]["bitcoin"] = price
         else:
             item = self.contract["vendor_offer"]["listing"]["item"]
+            item["price_per_unit"]["fiat"] = {}
             item["price_per_unit"]["fiat"]["price"] = price
             item["price_per_unit"]["fiat"]["currency_code"] = currency_code
         if keywords is not None:

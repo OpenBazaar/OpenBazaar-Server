@@ -40,6 +40,8 @@ class Parser(object):
     python networkcli.py command [<arguments>]
 
 commands:
+    addsocialaccount    add a social media account to the profile
+    addpgpkey           add a pgp key to the profile
     follow              follow a user
     unfollow            unfollow a user
     getinfo             returns an object containing various state info
@@ -241,6 +243,35 @@ commands:
             h.insert(hash_value, args.header)
         u.encryption_key = KeyChain().encryption_pubkey
         p.update(u)
+
+    @staticmethod
+    def addpgpkey():
+        parser = argparse.ArgumentParser(
+            description="Add a pgp key to the profile.",
+            usage='''usage:
+    networkcli.py addpgpkey -k KEY, -s SIGNATURE''')
+        parser.add_argument('-k', '--key', help="path to the key file")
+        parser.add_argument('-s', '--signature', help="path to the signature file")
+        args = parser.parse_args(sys.argv[2:])
+        with open(args.key, "r") as filename:
+            key = filename.read()
+        with open(args.signature, "r") as filename:
+            sig = filename.read()
+        p = Profile()
+        print p.add_pgp_key(key, sig, KeyChain().guid.encode("hex"))
+
+    @staticmethod
+    def addsocialaccount():
+        parser = argparse.ArgumentParser(
+            description="Add a social media account to the profile.",
+            usage='''usage:
+    networkcli.py addsocialaccout -t TYPE, -u USERNAME, -p PROOF''')
+        parser.add_argument('-t', '--type', help="the type of account")
+        parser.add_argument('-u', '--username', help="the username")
+        parser.add_argument('-p', '--proof', help="the proof url")
+        args = parser.parse_args(sys.argv[2:])
+        p = Profile()
+        p.add_social_account(args.type, args.username, args.proof)
 
     @staticmethod
     def getprofile():
