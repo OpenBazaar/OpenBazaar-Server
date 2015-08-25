@@ -127,29 +127,57 @@ class OpenBazaarAPI(APIResource):
                         response = {"listings": []}
                         for l in listings.listing:
                             listing_json = {
-                                "listing":
-                                    {
-                                        "title": l.title,
-                                        "contract_hash": l.contract_hash.encode("hex"),
-                                        "thumbnail_hash": l.thumbnail_hash.encode("hex"),
-                                        "category": l.category,
-                                        "price": l.price,
-                                        "currency_code": l.currency_code,
-                                        "nsfw": l.nsfw,
-                                        "origin": str(CountryCode.Name(l.origin)),
-                                        "ships_to": []
-                                    }
+                                    "title": l.title,
+                                    "contract_hash": l.contract_hash.encode("hex"),
+                                    "thumbnail_hash": l.thumbnail_hash.encode("hex"),
+                                    "category": l.category,
+                                    "price": l.price,
+                                    "currency_code": l.currency_code,
+                                    "nsfw": l.nsfw,
+                                    "origin": str(CountryCode.Name(l.origin)),
+                                    "ships_to": []
                             }
                             for country in l.ships_to:
-                                listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
+                                listing_json["ships_to"].append(str(CountryCode.Name(country)))
                             response["listings"].append(listing_json)
                         request.setHeader('content-type', "application/json")
                         request.write(json.dumps(response, indent=4))
                         request.finish()
                     self.mserver.get_listings(node).addCallback(parse_listings)
+                else:
+                    request.write(NoResource().render(request))
+                    request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
             request.write(NoResource().render(request))
             request.finish()
         return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_followers')
+    def get_followers(self, request):
+        if "guid" in request.args:
+            def get_node(node):
+                if node is not None:
+                    def parse_followers(followers):
+                        response = {"followers": []}
+                        for f in followers.followers:
+                            follower_json = {
+                                "guid": f.guid.encode("hex"),
+                                "handle": f.metadata.handle,
+                                "name": f.metadata.name,
+                                "avatar_hash": f.metadata.avatar_hash.encode("hex"),
+                                "nsfw": f.metadata.nsfw
+                            }
+                            response["followers"].append(follower_json)
+                        request.setHeader('content-type', "application/json")
+                        request.write(json.dumps(response, indent=4))
+                        request.finish()
+                    self.mserver.get_followers(node).addCallback(parse_followers)
+                else:
+                    request.write(NoResource().render(request))
+                    request.finish()
+            self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+        else:
+            request.write(NoResource().render(request))
+            request.finish()
+        return server.NOT_DONE_YET
