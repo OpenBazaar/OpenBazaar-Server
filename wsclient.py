@@ -16,7 +16,8 @@ class BroadcastClientProtocol(WebSocketClientProtocol):
             "request": {
                 "api": "v1",
                 "id": digest("some_id").encode("hex"),
-                "command": "send_message",
+                "command": "search",
+                "keyword": "rustic",
                 "message": "Hello World!",
                 "subject": "yo!",
                 "handle": "@vintage",

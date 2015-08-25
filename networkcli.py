@@ -500,7 +500,7 @@ class RPCCalls(jsonrpc.JSONRPC):
         def handle_result(result):
             print "JSONRPC result:", result
 
-        d = self.kserver.set(str(keyword), digest(key), self.kserver.node.getProto().SerializeToString())
+        d = self.kserver.set(str(keyword), unhexlify(key), self.kserver.node.getProto().SerializeToString())
         d.addCallback(handle_result)
         return "Sending store request..."
 

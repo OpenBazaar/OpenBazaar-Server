@@ -8,12 +8,16 @@ from db.datastore import VendorStore, MessageStore
 from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from protos.countries import CountryCode
-from protos.objects import Plaintext_Message
+from protos.objects import Plaintext_Message, Value
+from protos import objects
 from twisted.internet import defer
 from binascii import unhexlify
 from dht.node import Node
 
 class WSProtocol(WebSocketServerProtocol):
+    """
+    Handles new incoming requests coming from a websocket.
+    """
 
     def onOpen(self):
         self.factory.register(self)
@@ -126,12 +130,50 @@ class WSProtocol(WebSocketServerProtocol):
         MessageStore().save_message(guid, handle, "", recipient_encryption_key, subject,
                                     message_type, message, "", time.time(), "", True)
 
-        def send(node):
-            n = node if node is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
+        def send(node_to_send):
+            n = node_to_send if node_to_send is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
             self.factory.mserver.send_message(n, recipient_encryption_key,
                                               Plaintext_Message.Type.Value(message_type.upper()),
                                               message, subject)
         self.factory.kserver.resolve(unhexlify(guid)).addCallback(send)
+
+    def search(self, message_id, keyword):
+        def respond(l, node):
+            if l is not None:
+                listing_json = {
+                    "id": message_id,
+                    "listing":
+                        {
+                            "guid": node.id.encode("hex"),
+                            "title": l.title,
+                            "contract_hash": l.contract_hash.encode("hex"),
+                            "thumbnail_hash": l.thumbnail_hash.encode("hex"),
+                            "category": l.category,
+                            "price": l.price,
+                            "currency_code": l.currency_code,
+                            "nsfw": l.nsfw,
+                            "origin": str(CountryCode.Name(l.origin)),
+                            "ships_to": []
+                        }
+                }
+                for country in l.ships_to:
+                    listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
+                self.sendMessage(json.dumps(listing_json, indent=4), False)
+
+        def parse_results(values):
+            if values is not None:
+                for v in values:
+                    try:
+                        val = Value()
+                        val.ParseFromString(v)
+                        n = objects.Node()
+                        n.ParseFromString(val.serializedData)
+                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey, True)
+                        self.factory.mserver.get_contract_metadata(node_to_ask,
+                                                                   val.valueKey).addCallback(respond, node_to_ask)
+                    except Exception:
+                        pass
+        self.factory.kserver.get(keyword).addCallback(parse_results)
 
     def onMessage(self, payload, isBinary):
         try:
@@ -143,6 +185,9 @@ class WSProtocol(WebSocketServerProtocol):
 
             elif request_json["request"]["command"] == "get_homepage_listings":
                 self.get_homepage_listings(message_id)
+
+            elif request_json["request"]["command"] == "search":
+                self.search(message_id, request_json["request"]["keyword"].lower())
 
             elif request_json["request"]["command"] == "send_message":
                 self.send_message(request_json["request"]["guid"],

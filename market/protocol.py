@@ -111,8 +111,6 @@ class MarketProtocol(RPCProtocol):
             l.ParseFromString(proto)
             for listing in l.listing:
                 if listing.contract_hash == contract_hash:
-                    country_code = Profile().get().country_code
-                    listing.country_code = country_code
                     ser = listing.SerializeToString()
             return [ser, self.signing_key.sign(ser)[:64]]
         except Exception:
