@@ -25,6 +25,7 @@ from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from ws import WSFactory, WSProtocol
 from autobahn.twisted.websocket import listenWS
 from restapi import OpenBazaarAPI
+from dht.storage import PersistentStorage
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -58,9 +59,10 @@ protocol = OpenBazaarProtocol((ip_address, port))
 node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
-    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, on_bootstrap_complete)
+    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol,
+                               on_bootstrap_complete, storage=PersistentStorage(DATABASE))
 else:
-    kserver = Server(node, dht.constants.KSIZE, dht.constants.ALPHA)
+    kserver = Server(node, dht.constants.KSIZE, dht.constants.ALPHA, storage=PersistentStorage(DATABASE))
     kserver.protocol.connect_multiplexer(protocol)
     kserver.bootstrap(
         kserver.querySeed("162.213.253.147:8080",
