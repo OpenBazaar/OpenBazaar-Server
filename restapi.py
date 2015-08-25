@@ -2,7 +2,7 @@ __author__ = 'chris'
 import json
 import os
 from txrestapi.resource import APIResource
-from txrestapi.methods import GET
+from txrestapi.methods import GET, POST
 from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
@@ -159,19 +159,23 @@ class OpenBazaarAPI(APIResource):
             def get_node(node):
                 if node is not None:
                     def parse_followers(followers):
-                        response = {"followers": []}
-                        for f in followers.followers:
-                            follower_json = {
-                                "guid": f.guid.encode("hex"),
-                                "handle": f.metadata.handle,
-                                "name": f.metadata.name,
-                                "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                                "nsfw": f.metadata.nsfw
-                            }
-                            response["followers"].append(follower_json)
-                        request.setHeader('content-type', "application/json")
-                        request.write(json.dumps(response, indent=4))
-                        request.finish()
+                        if followers is not None:
+                            response = {"followers": []}
+                            for f in followers.followers:
+                                follower_json = {
+                                    "guid": f.guid.encode("hex"),
+                                    "handle": f.metadata.handle,
+                                    "name": f.metadata.name,
+                                    "avatar_hash": f.metadata.avatar_hash.encode("hex"),
+                                    "nsfw": f.metadata.nsfw
+                                }
+                                response["followers"].append(follower_json)
+                            request.setHeader('content-type', "application/json")
+                            request.write(json.dumps(response, indent=4))
+                            request.finish()
+                        else:
+                            request.write(NoResource().render(request))
+                            request.finish()
                     self.mserver.get_followers(node).addCallback(parse_followers)
                 else:
                     request.write(NoResource().render(request))
@@ -181,3 +185,52 @@ class OpenBazaarAPI(APIResource):
             request.write(NoResource().render(request))
             request.finish()
         return server.NOT_DONE_YET
+
+    @GET('^/api/v1/get_following')
+    def get_following(self, request):
+        if "guid" in request.args:
+            def get_node(node):
+                if node is not None:
+                    def parse_following(following):
+                        if following is not None:
+                            response = {"following": []}
+                            for f in following.users:
+                                user_json = {
+                                    "guid": f.guid.encode("hex"),
+                                    "handle": f.metadata.handle,
+                                    "name": f.metadata.name,
+                                    "avatar_hash": f.metadata.avatar_hash.encode("hex"),
+                                    "nsfw": f.metadata.nsfw
+                                }
+                                response["following"].append(user_json)
+                            request.setHeader('content-type', "application/json")
+                            request.write(json.dumps(response, indent=4))
+                            request.finish()
+                        else:
+                            request.write(NoResource().render(request))
+                            request.finish()
+                    self.mserver.get_following(node).addCallback(parse_following)
+                else:
+                    request.write(NoResource().render(request))
+                    request.finish()
+            self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+        else:
+            request.write(NoResource().render(request))
+            request.finish()
+        return server.NOT_DONE_YET
+
+    @POST('^/api/v1/follow')
+    def follow(self, request):
+        if "guid" in request.args:
+            def get_node(node):
+                if node is not None:
+                    self.mserver.follow(node)
+            self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+
+    @POST('^/api/v1/unfollow')
+    def follow(self, request):
+        if "guid" in request.args:
+            def get_node(node):
+                if node is not None:
+                    self.mserver.unfollow(node)
+            self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
