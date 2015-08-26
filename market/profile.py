@@ -2,7 +2,6 @@ __author__ = 'chris'
 import gnupg
 from db.datastore import ProfileStore
 from protos import objects
-from keyutils.keys import KeyChain
 
 class Profile(object):
     """
@@ -17,14 +16,6 @@ class Profile(object):
         self.db = ProfileStore()
         if self.db.get_proto() is not None:
             self.profile.ParseFromString(self.db.get_proto())
-
-    def create(self, name, location, handle=None):
-        self.profile.name = name
-        self.profile.location = location
-        if handle is not None:
-            self.profile.handle = handle
-        self.profile.encryption_key = KeyChain().encryption_pubkey
-        self.db.set_proto(self.profile.SerializeToString())
 
     def get(self, serialized=False):
         if serialized:

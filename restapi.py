@@ -2,7 +2,7 @@ __author__ = 'chris'
 import json
 import os
 from txrestapi.resource import APIResource
-from txrestapi.methods import GET, POST
+from txrestapi.methods import GET, POST, DELETE
 from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
@@ -11,7 +11,11 @@ from binascii import unhexlify
 from constants import DATA_FOLDER
 from twisted.protocols.basic import FileSender
 from protos.countries import CountryCode
-from protos.objects import Profile
+from protos import objects
+from db.datastore import HashMap, FollowData, ListingsStore
+from keyutils.keys import KeyChain
+from dht.utils import digest
+from market.profile import Profile
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -68,155 +72,178 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/get_profile')
     def get_profile(self, request):
+        def parse_profile(profile):
+            if profile is not None:
+                profile_json = {
+                    "profile": {
+                        "name": profile.name,
+                        "location": str(CountryCode.Name(profile.location)),
+                        "enryption_key": profile.encryption_key.encode("hex"),
+                        "nsfw": profile.nsfw,
+                        "vendor": profile.vendor,
+                        "moderator": profile.moderator,
+                        "handle": profile.handle,
+                        "about": profile.about,
+                        "website": profile.website,
+                        "email": profile.email,
+                        "primary_color": profile.primary_color,
+                        "secondary_color": profile.secondary_color,
+                        "background_color": profile.background_color,
+                        "text_color": profile.text_color,
+                        "pgp_key": profile.pgp_key.publicKey,
+                        "avatar_hash": profile.avatar_hash.encode("hex"),
+                        "header_hash": profile.header_hash.encode("hex"),
+                        "social_accounts": {}
+                    }
+                }
+                if "guid" in request.args:
+                    profile_json["profile"]["guid"] = request.args["guid"][0]
+                else:
+                    profile_json["profile"]["guid"] = KeyChain().guid.encode("hex")
+                for account in profile.social:
+                    profile_json["profile"]["social_accounts"][str(
+                        objects.Profile.SocialAccount.SocialType.Name(account.type)).lower()] = {
+                            "username": account.username,
+                            "proof_url": account.proof_url
+                        }
+                request.setHeader('content-type', "application/json")
+                request.write(json.dumps(profile_json, indent=4))
+                request.finish()
+            else:
+                request.write(NoResource().render(request))
+                request.finish()
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    def parse_profile(profile):
-                        if profile is not None:
-                            profile_json = {
-                                "profile": {
-                                    "guid": request.args["guid"][0],
-                                    "name": profile.name,
-                                    "location": str(CountryCode.Name(profile.location)),
-                                    "enryption_key": profile.encryption_key.encode("hex"),
-                                    "nsfw": profile.nsfw,
-                                    "vendor": profile.vendor,
-                                    "moderator": profile.moderator,
-                                    "handle": profile.handle,
-                                    "about": profile.about,
-                                    "website": profile.website,
-                                    "email": profile.email,
-                                    "primary_color": profile.primary_color,
-                                    "secondary_color": profile.secondary_color,
-                                    "background_color": profile.background_color,
-                                    "text_color": profile.text_color,
-                                    "pgp_key": profile.pgp_key.publicKey,
-                                    "avatar_hash": profile.avatar_hash.encode("hex"),
-                                    "header_hash": profile.header_hash.encode("hex"),
-                                    "social_accounts": {}
-                                }
-                            }
-                            for account in profile.social:
-                                profile_json["profile"]["social_accounts"][str(
-                                    Profile.SocialAccount.SocialType.Name(account.type)).lower()] = {
-                                        "username": account.username,
-                                        "proof_url": account.proof_url
-                                    }
-                            request.setHeader('content-type', "application/json")
-                            request.write(json.dumps(profile_json, indent=4))
-                            request.finish()
-                        else:
-                            request.write(NoResource().render(request))
-                            request.finish()
                     self.mserver.get_profile(node).addCallback(parse_profile)
                 else:
                     request.write(NoResource().render(request))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            request.write(NoResource().render(request))
-            request.finish()
+            parse_profile(Profile().get())
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_listings')
     def get_listings(self, request):
+        def parse_listings(listings):
+            if listings is not None:
+                response = {"listings": []}
+                for l in listings.listing:
+                    listing_json = {
+                        "title": l.title,
+                        "contract_hash": l.contract_hash.encode("hex"),
+                        "thumbnail_hash": l.thumbnail_hash.encode("hex"),
+                        "category": l.category,
+                        "price": l.price,
+                        "currency_code": l.currency_code,
+                        "nsfw": l.nsfw,
+                        "origin": str(CountryCode.Name(l.origin)),
+                        "ships_to": []
+                    }
+                    for country in l.ships_to:
+                        listing_json["ships_to"].append(str(CountryCode.Name(country)))
+                    response["listings"].append(listing_json)
+                request.setHeader('content-type', "application/json")
+                request.write(json.dumps(response, indent=4))
+                request.finish()
+            else:
+                request.write(NoResource().render(request))
+                request.finish()
+
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    def parse_listings(listings):
-                        response = {"listings": []}
-                        for l in listings.listing:
-                            listing_json = {
-                                    "title": l.title,
-                                    "contract_hash": l.contract_hash.encode("hex"),
-                                    "thumbnail_hash": l.thumbnail_hash.encode("hex"),
-                                    "category": l.category,
-                                    "price": l.price,
-                                    "currency_code": l.currency_code,
-                                    "nsfw": l.nsfw,
-                                    "origin": str(CountryCode.Name(l.origin)),
-                                    "ships_to": []
-                            }
-                            for country in l.ships_to:
-                                listing_json["ships_to"].append(str(CountryCode.Name(country)))
-                            response["listings"].append(listing_json)
-                        request.setHeader('content-type', "application/json")
-                        request.write(json.dumps(response, indent=4))
-                        request.finish()
                     self.mserver.get_listings(node).addCallback(parse_listings)
                 else:
                     request.write(NoResource().render(request))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            request.write(NoResource().render(request))
-            request.finish()
+            ser = ListingsStore().get_proto()
+            if ser is not None:
+                l = objects.Listings()
+                l.ParseFromString(ser)
+                parse_listings(l)
+            else:
+                parse_listings(None)
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_followers')
     def get_followers(self, request):
+        def parse_followers(followers):
+            if followers is not None:
+                response = {"followers": []}
+                for f in followers.followers:
+                    follower_json = {
+                        "guid": f.guid.encode("hex"),
+                        "handle": f.metadata.handle,
+                        "name": f.metadata.name,
+                        "avatar_hash": f.metadata.avatar_hash.encode("hex"),
+                        "nsfw": f.metadata.nsfw
+                    }
+                    response["followers"].append(follower_json)
+                request.setHeader('content-type', "application/json")
+                request.write(json.dumps(response, indent=4))
+                request.finish()
+            else:
+                request.write(NoResource().render(request))
+                request.finish()
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    def parse_followers(followers):
-                        if followers is not None:
-                            response = {"followers": []}
-                            for f in followers.followers:
-                                follower_json = {
-                                    "guid": f.guid.encode("hex"),
-                                    "handle": f.metadata.handle,
-                                    "name": f.metadata.name,
-                                    "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                                    "nsfw": f.metadata.nsfw
-                                }
-                                response["followers"].append(follower_json)
-                            request.setHeader('content-type', "application/json")
-                            request.write(json.dumps(response, indent=4))
-                            request.finish()
-                        else:
-                            request.write(NoResource().render(request))
-                            request.finish()
                     self.mserver.get_followers(node).addCallback(parse_followers)
                 else:
                     request.write(NoResource().render(request))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            request.write(NoResource().render(request))
-            request.finish()
+            ser = FollowData().get_followers()
+            if ser is not None:
+                f = objects.Followers()
+                f.ParseFromString(ser)
+                parse_followers(f)
+            else:
+                parse_followers(None)
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_following')
     def get_following(self, request):
+        def parse_following(following):
+            if following is not None:
+                response = {"following": []}
+                for f in following.users:
+                    user_json = {
+                        "guid": f.guid.encode("hex"),
+                        "handle": f.metadata.handle,
+                        "name": f.metadata.name,
+                        "avatar_hash": f.metadata.avatar_hash.encode("hex"),
+                        "nsfw": f.metadata.nsfw
+                    }
+                    response["following"].append(user_json)
+                request.setHeader('content-type', "application/json")
+                request.write(json.dumps(response, indent=4))
+                request.finish()
+            else:
+                request.write(NoResource().render(request))
+                request.finish()
+
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    def parse_following(following):
-                        if following is not None:
-                            response = {"following": []}
-                            for f in following.users:
-                                user_json = {
-                                    "guid": f.guid.encode("hex"),
-                                    "handle": f.metadata.handle,
-                                    "name": f.metadata.name,
-                                    "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                                    "nsfw": f.metadata.nsfw
-                                }
-                                response["following"].append(user_json)
-                            request.setHeader('content-type', "application/json")
-                            request.write(json.dumps(response, indent=4))
-                            request.finish()
-                        else:
-                            request.write(NoResource().render(request))
-                            request.finish()
                     self.mserver.get_following(node).addCallback(parse_following)
                 else:
                     request.write(NoResource().render(request))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            request.write(NoResource().render(request))
-            request.finish()
+            ser = FollowData().get_following()
+            if ser is not None:
+                f = objects.Following()
+                f.ParseFromString(ser)
+                parse_following(f)
+            else:
+                parse_following(None)
         return server.NOT_DONE_YET
 
     @POST('^/api/v1/follow')
@@ -228,9 +255,68 @@ class OpenBazaarAPI(APIResource):
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
 
     @POST('^/api/v1/unfollow')
-    def follow(self, request):
+    def unfollow(self, request):
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
                     self.mserver.unfollow(node)
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+
+    # pylint: disable=R0201
+    @POST('^/api/v1/update_profile')
+    def update_profile(self, request):
+        p = Profile()
+        if not p.get().encryption_key \
+                and "name" not in request.args \
+                and "location" not in request.args:
+            return "False"
+        u = objects.Profile()
+        if "name" in request.args:
+            u.name = request.args["name"][0]
+        if "location" in request.args:
+            # This needs to be formatted. Either here or from the UI.
+            u.location = CountryCode.Value(request.args["location"][0].upper())
+        if "handle" in request.args:
+            u.handle = request.args["handle"][0]
+        if "about" in request.args:
+            u.handle = request.args["about"][0]
+        if "nsfw" in request.args:
+            u.nsfw = True
+        if "vendor" in request.args:
+            u.vendor = True
+        if "moderator" in request.args:
+            u.moderator = True
+        if "website" in request.args:
+            u.website = request.args["website"][0]
+        if "email" in request.args:
+            u.email = request.args["email"][0]
+        if "avatar" in request.args:
+            with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
+                outfile.write(request.args["avatar"][0])
+            avatar_hash = digest(request.args["avatar"][0])
+            HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
+            u.avatar_hash = avatar_hash
+        if "header" in request.args:
+            with open(DATA_FOLDER + "store/header", 'wb') as outfile:
+                outfile.write(request.args["header"][0])
+            header_hash = digest(request.args["header"][0])
+            HashMap().insert(header_hash, DATA_FOLDER + "store/header")
+            u.header_hash = header_hash
+        if "pgp_key" in request.args and "signature" in request.args:
+            p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
+                          KeyChain().guid.encode("hex"))
+        u.encryption_key = KeyChain().encryption_pubkey
+        p.update(u)
+
+    @POST('^/api/v1/social_accounts')
+    def add_social_account(self, request):
+        p = Profile()
+        if "account_type" in request.args and "username" in request.args and "proof" in request.args:
+            p.add_social_account(request.args["account_type"][0], request.args["username"][0],
+                                 request.args["proof"][0])
+
+    @DELETE('^/api/v1/social_accounts')
+    def delete_social_account(self, request):
+        p = Profile()
+        if "account_type" in request.args:
+            p.remove_social_account(request.args["account_type"][0])
