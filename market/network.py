@@ -50,7 +50,7 @@ class Server(object):
             if digest(result[1][0]) == contract_hash:
                 contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
                 try:
-                    signature = contract["vendor_offer"]["signatures"]["guid"]
+                    signature = contract["vendor_offer"]["signature"]
                     pubkey = node_to_ask.signed_pubkey[64:]
                     verify_key = nacl.signing.VerifyKey(pubkey)
                     verify_key.verify(json.dumps(contract["vendor_offer"]["listing"], indent=4),
@@ -58,8 +58,8 @@ class Server(object):
                 except Exception:
                     return None
                 self.cache(result[1][0])
-                if "image_hashes" in contract["vendor"]["listing"]["item"]:
-                    for image_hash in contract["vendor"]["listing"]["item"]["image_hashes"]:
+                if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
+                    for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
                         self.get_image(node_to_ask, unhexlify(image_hash))
                 return contract
             else:

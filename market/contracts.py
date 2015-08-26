@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import re
 import os
+import nacl.encoding
 from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
@@ -56,10 +57,10 @@ class Contract(object):
                price,
                process_time,
                nsfw,
+               shipping_origin,
+               shipping_regions,
                est_delivery_domestic=None,
                est_delivery_international=None,
-               shipping_origin=None,
-               shipping_regions=None,
                keywords=None,
                category=None,
                condition=None,
@@ -173,6 +174,9 @@ class Contract(object):
                 with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
                 HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+        listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
+        self.contract["vendor_offer"]["signature"] = \
+            keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:64]
         self.save()
 
     def update(self,

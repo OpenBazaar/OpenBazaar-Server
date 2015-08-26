@@ -45,7 +45,6 @@ if not os.path.isfile(DATABASE):
 
 # key generation
 keys = KeyChain()
-print keys.guid.encode("hex")
 
 def on_bootstrap_complete(resp):
     mlistener = MessageListenerImpl(ws_factory)

@@ -16,6 +16,8 @@ from db.datastore import HashMap, FollowData, ListingsStore
 from keyutils.keys import KeyChain
 from dht.utils import digest
 from market.profile import Profile
+from market.contracts import Contract
+from collections import OrderedDict
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -279,7 +281,7 @@ class OpenBazaarAPI(APIResource):
         if "handle" in request.args:
             u.handle = request.args["handle"][0]
         if "about" in request.args:
-            u.handle = request.args["about"][0]
+            u.about = request.args["about"][0]
         if "nsfw" in request.args:
             u.nsfw = True
         if "vendor" in request.args:
@@ -320,3 +322,74 @@ class OpenBazaarAPI(APIResource):
         p = Profile()
         if "account_type" in request.args:
             p.remove_social_account(request.args["account_type"][0])
+
+    @GET('^/api/v1/get_contract')
+    def get_contract(self, request):
+        def parse_contract(contract):
+            if contract is not None:
+                request.setHeader('content-type', "application/json")
+                request.write(json.dumps(contract, indent=4))
+                request.finish()
+            else:
+                request.write(NoResource().render(request))
+                request.finish()
+
+        if "id" in request.args:
+            if "guid" in request.args:
+                def get_node(node):
+                    if node is not None:
+                        self.mserver.get_contract(node, unhexlify(request.args["id"][0]))\
+                            .addCallback(parse_contract)
+                    else:
+                        request.write(NoResource().render(request))
+                        request.finish()
+                try:
+                    with open(DATA_FOLDER + "cache/" + request.args["id"][0], "r") as filename:
+                        contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
+                    parse_contract(contract)
+                except Exception:
+                    self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+            else:
+                try:
+                    with open(HashMap().get_file(unhexlify(request.args["id"][0])), "r") as filename:
+                        contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
+                    parse_contract(contract)
+                except Exception:
+                    parse_contract(None)
+        else:
+            request.write(NoResource().render(request))
+            request.finish()
+        return server.NOT_DONE_YET
+
+    @POST('^/api/v1/set_contract')
+    def set_contract(self, request):
+        print request
+        c = Contract()
+        c.create(
+            str(request.args["expiration_date"][0]),
+            request.args["metadata_category"][0],
+            request.args["title"][0],
+            request.args["description"][0],
+            request.args["currency_code"][0],
+            request.args["price"][0],
+            request.args["process_time"][0],
+            True if "nsfw" in request.args else False,
+            request.args["shipping_origin"][0],
+            request.args["ships_to"],
+            est_delivery_domestic=request.args["est_delivery_domestic"][0],
+            est_delivery_international=request.args["est_delivery_international"][0],
+            shipping_currency_code=request.args["shipping_currency_code"][0],
+            shipping_domestic=request.args["shipping_domestic"][0],
+            shipping_international=request.args["shipping_international"][0],
+            keywords=request.args["keywords"] if "keywords" in request.args else None,
+            category=request.args["category"][0] if request.args["category"][0] is not "" else None,
+            condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
+            sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
+            images=request.args["images"],
+            free_shipping=True if "free_shipping" in request.args else False)
+
+    @DELETE('^/api/v1/delete_contract')
+    def delete_contract(self, request):
+        if "id" in request.args:
+            c = Contract(hash_value=unhexlify(request.args["id"][0]))
+            c.delete()
