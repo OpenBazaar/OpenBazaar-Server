@@ -38,7 +38,7 @@ class BroadcastClientProtocol(WebSocketClientProtocol):
 
 if __name__ == '__main__':
 
-    factory = WebSocketClientFactory("ws://127.0.0.1:18466")
+    factory = WebSocketClientFactory("ws://seed.openbazaar.org:18466")
     factory.protocol = BroadcastClientProtocol
     connectWS(factory)
 

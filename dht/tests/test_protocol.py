@@ -9,7 +9,7 @@ import nacl.encoding
 import nacl.hash
 from txrudp import connection, rudp, packet, constants
 from twisted.trial import unittest
-from twisted.internet import task, reactor, address, udp
+from twisted.internet import task, reactor, address, udp, defer
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
@@ -419,23 +419,16 @@ class KademliaProtocolTest(unittest.TestCase):
 
         def handle_response(resp):
             self.assertTrue(resp[0])
-            self.assertEqual(resp[1][0], self.protocol.sourceNode.id)
+            self.assertEqual(resp[1][0], "test")
+            self.assertTrue(message_id not in self.protocol._outstanding)
+            self.assertFalse(timeout.active())
 
+        message_id = digest("msgid")
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
-        self.wire_protocol[self.addr1] = self.con
-        d = self.protocol.callPing(n)
-
-        self.clock.advance(1)
-        connection.REACTOR.runUntilCurrent()
-        sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
-        sent_message = sent_packet.payload
-
-        m = message.Message()
-        m.ParseFromString(sent_message)
-        timeout = reactor.callLater(5, self.protocol._timeout, m.messageID)
-        self.protocol._outstanding[m.messageID] = (d, timeout)
-        m.arguments.append(self.protocol.sourceNode.id)
-        self.handler.receive_message(m.SerializeToString())
+        d = defer.Deferred()
+        timeout = reactor.callLater(5, self.protocol._timeout, message_id)
+        self.protocol._outstanding[message_id] = (d, timeout)
+        self.protocol._acceptResponse(message_id, ["test"], n)
 
         return d.addCallback(handle_response)
 
