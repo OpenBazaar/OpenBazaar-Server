@@ -28,7 +28,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=5, noisy=True):
+    def __init__(self, proto, router, waitTimeout=5, noisy=True, testnet=False):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -37,6 +37,7 @@ class RPCProtocol:
             waitTimeout: Consider it a connetion failure if no response
                     within this time window.
             noisy: Whether or not to log the output for this class.
+            testnet: The network parameters to use.
 
         """
         self.proto = proto
@@ -44,6 +45,7 @@ class RPCProtocol:
         self._waitTimeout = waitTimeout
         self._outstanding = {}
         self.noisy = noisy
+        self.testnet = testnet
         self.log = Logger(system=self)
 
     def receive_message(self, datagram, connection):
@@ -54,6 +56,11 @@ class RPCProtocol:
         except Exception:
             # If message isn't formatted property then ignore
             self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
+            return False
+
+        if m.testnet != self.testnet:
+            self.log.warning("Received message from %s with incorrect network parameters." %
+                             str(connection.dest_addr))
             return False
 
         # Check that the GUID is valid. If not, ignore
@@ -163,6 +170,7 @@ class RPCProtocol:
             m.command = Command.Value(name.upper())
             for arg in args:
                 m.arguments.append(str(arg))
+            m.testnet = self.testnet
             data = m.SerializeToString()
             if self.noisy:
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))

@@ -15,6 +15,7 @@ message Message {
 	required Node sender            = 2;
 	required Command command        = 3;
 	repeated bytes arguments        = 4;
+	optional bool testnet           = 5 [default = false];
 }
 
 //A list of commands accepted by nodes
