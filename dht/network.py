@@ -324,6 +324,7 @@ class Server(object):
         data = {'ksize': self.ksize,
                 'alpha': self.alpha,
                 'id': self.node.id,
+                'vendor': self.node.vendor,
                 'signed_pubkey': self.node.signed_pubkey,
                 'neighbors': self.bootstrappableNeighbors()}
         if len(data['neighbors']) == 0:
@@ -340,7 +341,7 @@ class Server(object):
         """
         with open(fname, 'r') as f:
             data = pickle.load(f)
-        n = Node(data['id'], ip_address, port, data['signed_pubkey'])
+        n = Node(data['id'], ip_address, port, data['signed_pubkey'], data['vendor'])
         s = Server(n, data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
         if len(data['neighbors']) > 0:

@@ -1,5 +1,6 @@
 __author__ = 'chris'
 import json
+import random
 from twisted.internet import reactor
 from autobahn.twisted.websocket import WebSocketClientFactory, \
     WebSocketClientProtocol, \
@@ -15,8 +16,8 @@ class BroadcastClientProtocol(WebSocketClientProtocol):
         request = {
             "request": {
                 "api": "v1",
-                "id": digest("some_id").encode("hex"),
-                "command": "get_vendors",
+                "id": digest(random.getrandbits(128)).encode("hex"),
+                "command": "get_homepage_listings",
                 "keyword": "rustic",
                 "message": "Hello World!",
                 "subject": "yo!",

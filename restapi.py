@@ -56,7 +56,10 @@ class OpenBazaarAPI(APIResource):
             request.finish()
 
         if "hash" in request.args:
-            image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
+            if HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
+                image_path = HashMap().get_file(unhexlify(request.args["hash"][0]))
+            else:
+                image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
             if not os.path.exists(image_path) and "guid" in request.args:
                 def get_node(node):
                     if node is not None:
@@ -388,8 +391,14 @@ class OpenBazaarAPI(APIResource):
             images=request.args["images"],
             free_shipping=True if "free_shipping" in request.args else False)
 
+        for keyword in request.args["keywords"]:
+            self.kserver.set(keyword.lower(), c.get_contract_id(), self.kserver.node.getProto().SerializeToString())
+
     @DELETE('^/api/v1/delete_contract')
     def delete_contract(self, request):
         if "id" in request.args:
             c = Contract(hash_value=unhexlify(request.args["id"][0]))
+            for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                self.kserver.delete(keyword.lower(), c.get_contract_id(),
+                                    KeyChain().signing_key.sign(c.get_contract_id())[:64])
             c.delete()

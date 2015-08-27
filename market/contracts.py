@@ -174,9 +174,10 @@ class Contract(object):
                 with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
                 HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+
         listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
         self.contract["vendor_offer"]["signature"] = \
-            keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:64]
+            keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
         self.save()
 
     def update(self,
@@ -333,6 +334,10 @@ class Contract(object):
                     "international"] = est_delivery_international
 
         self.save()
+
+    def get_contract_id(self):
+        contract = json.dumps(self.contract, indent=4)
+        return digest(contract)
 
     def delete(self, delete_images=True):
         """
