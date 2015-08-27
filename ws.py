@@ -173,7 +173,7 @@ class WSProtocol(WebSocketServerProtocol):
                                                                    val.valueKey).addCallback(respond, node_to_ask)
                     except Exception:
                         pass
-        self.factory.kserver.get(keyword).addCallback(parse_results)
+        self.factory.kserver.get(keyword.lower()).addCallback(parse_results)
 
     def onMessage(self, payload, isBinary):
         try:
