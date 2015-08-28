@@ -3,6 +3,7 @@ import time
 import random
 from binascii import unhexlify
 
+import os
 import mock
 import nacl.signing
 import nacl.encoding
@@ -17,10 +18,13 @@ from dht.tests.utils import mknode
 from dht.node import Node
 from protos import message, objects
 from wireprotocol import OpenBazaarProtocol
+from db import datastore
 
 
 class KademliaProtocolTest(unittest.TestCase):
     def setUp(self):
+        datastore.create_database("test.db")
+        datastore.DATABASE = "test.db"
         self.public_ip = '123.45.67.89'
         self.port = 12345
         self.own_addr = (self.public_ip, self.port)
@@ -52,7 +56,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol])
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol)
         self.handler.connection = self.con
 
         transport = mock.Mock(spec_set=udp.Port)
@@ -63,6 +67,7 @@ class KademliaProtocolTest(unittest.TestCase):
     def tearDown(self):
         self.con.shutdown()
         self.wire_protocol.shutdown()
+        os.remove("test.db")
 
     def test_invalid_datagram(self):
         self.assertFalse(self.handler.receive_message("hi"))

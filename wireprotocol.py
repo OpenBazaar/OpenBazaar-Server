@@ -18,15 +18,16 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         """
         self.ip_address = ip_address
         self.processors = []
-        self.factory = self.ConnHandlerFactory(self.processors)
+        self.factory = self.ConnHandlerFactory(self.processors, self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
 
     class ConnHandler(Handler):
 
-        def __init__(self, processors, *args, **kwargs):
+        def __init__(self, processors, active_connections, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
             self.log = Logger(system=self)
             self.processors = processors
+            self.active_connections = active_connections
             self.connection = None
 
         def receive_message(self, datagram):
@@ -45,18 +46,21 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
+            del self.active_connections[self.connection.dest_addr]
             self.log.info(
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
-                                                         self.connection.dest_addr[1]))
+                                                         self.connection.dest_addr[1]))\
+
 
     class ConnHandlerFactory(HandlerFactory):
 
-        def __init__(self, processors):
+        def __init__(self, processors, active_connections):
             super(OpenBazaarProtocol.ConnHandlerFactory, self).__init__()
             self.processors = processors
+            self.active_connecitons = active_connections
 
         def make_new_handler(self, *args, **kwargs):
-            return OpenBazaarProtocol.ConnHandler(self.processors)
+            return OpenBazaarProtocol.ConnHandler(self.processors, self.active_connecitons)
 
     def register_processor(self, processor):
         """Add a new class which implements the `MessageProcessor` interface."""
@@ -82,3 +86,4 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         else:
             con = self[address]
         con.send_message(datagram)
+

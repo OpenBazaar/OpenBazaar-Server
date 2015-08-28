@@ -1,9 +1,4 @@
 __author__ = 'chris'
-"""
-Just using this class for testing the DHT for now.
-We will fit the actual implementation in where appropriate.
-"""
-
 import stun
 import os
 import sys
@@ -18,8 +13,6 @@ from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
 from constants import DATA_FOLDER, DATABASE
-from txjsonrpc.netstring import jsonrpc
-from networkcli import RPCCalls
 from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from ws import WSFactory, WSProtocol
@@ -34,7 +27,7 @@ log.startLogging(sys.stdout)
 
 # stun
 print "Finding NAT Type.."
-response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=0, stun_port=19302)
+response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=18467, stun_port=19302)
 print "%s on %s:%s" % (response[0], response[1], response[2])
 ip_address = response[1]
 port = response[2]
@@ -79,11 +72,7 @@ protocol.register_processor(mserver.protocol)
 
 reactor.listenUDP(port, protocol)
 
-# json-rpc server
-factory = jsonrpc.RPCFactory(RPCCalls(kserver, mserver, keys))
-reactor.listenTCP(18465, factory, interface="127.0.0.1")
-
-# web sockets
+# websockets api
 ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
 ws_factory.protocol = WSProtocol
 ws_factory.setProtocolOptions(allowHixie76=True)
@@ -93,8 +82,9 @@ web = Site(webdir)
 reactor.listenTCP(9000, web, interface="127.0.0.1")
 
 # rest api
-api = OpenBazaarAPI(mserver, kserver)
+api = OpenBazaarAPI(mserver, kserver, protocol)
 site = Site(api, timeout=None)
 reactor.listenTCP(18469, site, interface="127.0.0.1")
 
 reactor.run()
+

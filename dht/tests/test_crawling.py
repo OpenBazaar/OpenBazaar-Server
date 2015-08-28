@@ -51,7 +51,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol])
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
@@ -227,7 +227,7 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol])
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)

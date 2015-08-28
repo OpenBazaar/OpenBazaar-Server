@@ -6,7 +6,7 @@ from txrestapi.methods import GET, POST, DELETE
 from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from binascii import unhexlify
 from constants import DATA_FOLDER
 from twisted.protocols.basic import FileSender
@@ -29,9 +29,10 @@ class OpenBazaarAPI(APIResource):
     OpenBazaar daemon for use in a GUI or other application.
     """
 
-    def __init__(self, mserver, kserver):
+    def __init__(self, mserver, kserver, protocol):
         self.mserver = mserver
         self.kserver = kserver
+        self.protocol = protocol
         APIResource.__init__(self)
 
     @GET('^/api/v1/get_image')
@@ -402,3 +403,8 @@ class OpenBazaarAPI(APIResource):
                 self.kserver.delete(keyword.lower(), c.get_contract_id(),
                                     KeyChain().signing_key.sign(c.get_contract_id())[:64])
             c.delete()
+
+    @GET('^/api/v1/shutdown')
+    def shutdown(self, request):
+        self.protocol.shutdown()
+        reactor.stop()
