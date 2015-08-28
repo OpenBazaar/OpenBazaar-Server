@@ -329,8 +329,11 @@ class VendorStore(object):
 
     def save_vendor(self, guid, ip, port, signed_pubkey):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO vendors(guid, ip, port, signedPubkey)
+        try:
+            cursor.execute('''INSERT OR REPLACE INTO vendors(guid, ip, port, signedPubkey)
 VALUES (?,?,?,?)''', (guid, ip, port, signed_pubkey))
+        except Exception as e:
+            print e.message
         self.db.commit()
 
     def get_vendors(self):
