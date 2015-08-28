@@ -2,7 +2,7 @@ import os
 import unittest
 
 from db import datastore
-from protos.objects import Profile, Listings, Following, Metadata
+from protos.objects import Profile, Listings, Following, Metadata, Followers
 from protos.countries import CountryCode
 
 
@@ -39,6 +39,12 @@ class DatastoreTest(unittest.TestCase):
         self.m.avatar_hash = ''
         self.m.nsfw = False
         self.u.metadata.MergeFrom(self.m)
+
+        self.f = Followers.Follower()
+        self.f.guid = '0000000000000000000000000000000001'
+        self.f.following = ''
+        self.f.signed_pubkey = ''
+        self.f.metadata.MergeFrom(self.m)
 
         self.hm = datastore.HashMap()
         self.hm.delete_all()
@@ -129,6 +135,18 @@ class DatastoreTest(unittest.TestCase):
         following = self.fd.get_following()
         self.assertIsNotNone(following)
 
+        self.assertTrue(self.fd.is_following(self.u.guid))
+
         self.fd.unfollow(self.u.guid)
         following = self.fd.get_following()
         self.assertEqual(following, '')
+
+    def test_deleteFollower(self):
+        self.fd.set_follower(self.f)
+        f = self.fd.get_followers()
+        self.assertIsNotNone(f)
+        self.fd.delete_follower(self.f.guid)
+        f = self.fd.get_followers()
+        self.assertEqual(f, '')
+
+
