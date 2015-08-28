@@ -116,14 +116,14 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(profile_json, indent=4))
                 request.finish()
             else:
-                request.write(NoResource().render(request))
+                request.write(json.dumps({}))
                 request.finish()
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
                     self.mserver.get_profile(node).addCallback(parse_profile)
                 else:
-                    request.write(NoResource().render(request))
+                    request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
@@ -154,7 +154,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(response, indent=4))
                 request.finish()
             else:
-                request.write(NoResource().render(request))
+                request.write(json.dumps({}))
                 request.finish()
 
         if "guid" in request.args:
@@ -162,7 +162,7 @@ class OpenBazaarAPI(APIResource):
                 if node is not None:
                     self.mserver.get_listings(node).addCallback(parse_listings)
                 else:
-                    request.write(NoResource().render(request))
+                    request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
@@ -193,14 +193,14 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(response, indent=4))
                 request.finish()
             else:
-                request.write(NoResource().render(request))
+                request.write(json.dumps({}))
                 request.finish()
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
                     self.mserver.get_followers(node).addCallback(parse_followers)
                 else:
-                    request.write(NoResource().render(request))
+                    request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
@@ -231,7 +231,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(response, indent=4))
                 request.finish()
             else:
-                request.write(NoResource().render(request))
+                request.write(json.dumps({}))
                 request.finish()
 
         if "guid" in request.args:
@@ -239,7 +239,7 @@ class OpenBazaarAPI(APIResource):
                 if node is not None:
                     self.mserver.get_following(node).addCallback(parse_following)
                 else:
-                    request.write(NoResource().render(request))
+                    request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
@@ -335,7 +335,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(contract, indent=4))
                 request.finish()
             else:
-                request.write(NoResource().render(request))
+                request.write(json.dumps({}))
                 request.finish()
 
         if "id" in request.args:
@@ -345,7 +345,7 @@ class OpenBazaarAPI(APIResource):
                         self.mserver.get_contract(node, unhexlify(request.args["id"][0]))\
                             .addCallback(parse_contract)
                     else:
-                        request.write(NoResource().render(request))
+                        request.write(json.dumps({}))
                         request.finish()
                 try:
                     with open(DATA_FOLDER + "cache/" + request.args["id"][0], "r") as filename:
@@ -361,7 +361,7 @@ class OpenBazaarAPI(APIResource):
                 except Exception:
                     parse_contract(None)
         else:
-            request.write(NoResource().render(request))
+            request.write(json.dumps({}))
             request.finish()
         return server.NOT_DONE_YET
 
