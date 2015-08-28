@@ -1,7 +1,8 @@
-import unittest
 import os
+import unittest
+
 from db import datastore
-from protos.objects import Profile, Listings
+from protos.objects import Profile, Listings, Following, Metadata
 from protos.countries import CountryCode
 
 
@@ -28,12 +29,24 @@ class DatastoreTest(unittest.TestCase):
         self.lm.nsfw = False
         self.lm.origin = CountryCode.Value('ALL')
 
+        self.u = Following.User()
+        self.u.guid = '0000000000000000000000000000000000'
+        self.u.signed_pubkey = 'signed_pubkey'
+
+        self.m = Metadata()
+        self.m.name = 'Test User'
+        self.m.handle = '@TestUser'
+        self.m.avatar_hash = ''
+        self.m.nsfw = False
+        self.u.metadata.MergeFrom(self.m)
+
         self.hm = datastore.HashMap()
         self.hm.delete_all()
 
         self.ps = datastore.ProfileStore()
         self.ls = datastore.ListingsStore()
         self.ks = datastore.KeyStore()
+        self.fd = datastore.FollowData()
 
     def tearDown(self):
         os.remove("test.db")
@@ -41,8 +54,15 @@ class DatastoreTest(unittest.TestCase):
     def test_hashmapInsert(self):
         self.hm.insert(self.test_hash, self.test_file)
         f = self.hm.get_file(self.test_hash)
-
         self.assertEqual(f, self.test_file)
+
+    def test_hashmapDelete(self):
+        self.hm.insert(self.test_hash, self.test_file)
+        f = self.hm.get_file(self.test_hash)
+        self.assertEqual(f, self.test_file)
+        self.hm.delete(self.test_hash)
+        v = self.hm.get_file(self.test_hash)
+        self.assertIsNone(v)
 
     def test_hashmapGetEmpty(self):
         f = self.hm.get_file('87e0555568bf5c7e4debd6645fc3f41e88df6ca9')
@@ -103,3 +123,12 @@ class DatastoreTest(unittest.TestCase):
     def test_getKeyFromEmptyTable(self):
         self.ks.delete_all_keys()
         self.assertEqual(None, self.ks.get_key("guid"))
+
+    def test_follow_unfollow(self):
+        self.fd.follow(self.u)
+        following = self.fd.get_following()
+        self.assertIsNotNone(following)
+
+        self.fd.unfollow(self.u.guid)
+        following = self.fd.get_following()
+        self.assertEqual(following, '')

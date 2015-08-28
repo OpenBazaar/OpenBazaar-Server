@@ -5,8 +5,9 @@ from constants import DATABASE
 from protos.objects import Listings, Followers, Following
 from dht.node import Node
 
+
 def create_database(filepath=None):
-    if filepath == None:
+    if filepath is None:
         db = lite.connect(DATABASE)
     else:
         db = lite.connect(filepath)
