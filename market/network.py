@@ -8,17 +8,18 @@ import nacl.hash
 import nacl.encoding
 import nacl.utils
 import gnupg
+import bitcoin
 from nacl.public import PrivateKey, PublicKey, Box
-from dht import node
 from twisted.internet import defer, reactor, task
 from market.protocol import MarketProtocol
-from dht.utils import digest, deferredDict
+from dht.utils import digest
 from constants import DATA_FOLDER
 from protos import objects
 from db.datastore import FollowData
 from market.profile import Profile
 from collections import OrderedDict
 from binascii import hexlify, unhexlify
+from keyutils.keys import KeyChain
 
 
 class Server(object):
@@ -199,41 +200,17 @@ class Server(object):
         d = self.protocol.callGetContractMetadata(node_to_ask, contract_hash)
         return d.addCallback(get_result)
 
-    def get_moderators(self):
-        """
-        Retrieves moderator list from the dht. Each node is queried
-        to get metadata and ensure it's alive for usage.
-        """
-
-        def parse_response(moderators):
-            if moderators is None:
-                return None
-
-            def parse_profiles(responses):
-                for k, v in responses.items():
-                    if v is None:
-                        del responses[k]
-                return responses
-
-            ds = {}
-            for mod in moderators:
-                try:
-                    val = objects.Value()
-                    val.ParseFromString(mod)
-                    n = objects.Node()
-                    n.ParseFromString(val.serializedData)
-                    ds[val.serializedData] = self.get_profile(node.Node(n.guid, n.ip, n.port, n.signedPublicKey))
-                except Exception:
-                    pass
-            return deferredDict(ds).addCallback(parse_profiles)
-
-        return self.kserver.get("moderators").addCallback(parse_response)
-
     def make_moderator(self):
         """
         Set self as a moderator in the DHT.
         """
 
+        u = objects.Profile()
+        k = u.PublicKey()
+        k.public_key = bitcoin.bip32_deserialize(KeyChain().bitcoin_master_pubkey)[5]
+        k.signature = self.signing_key.sign(k.public_key)[:64]
+        u.bitcoin_key.MergeFrom(k)
+        Profile().update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
 

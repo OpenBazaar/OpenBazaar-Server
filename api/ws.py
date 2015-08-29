@@ -5,6 +5,7 @@ import os
 import time
 from constants import DATA_FOLDER
 from db.datastore import VendorStore, MessageStore, ListingsStore
+from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
@@ -93,12 +94,14 @@ class WSProtocol(WebSocketServerProtocol):
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
                         node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey)
-                        self.transport.mserver.get_profile(node_to_ask)\
-                            .addCallback(parse_profile, node_to_ask)
+                        if n.guid == KeyChain().guid:
+                            parse_profile(Profile().get(), node_to_ask)
+                        else:
+                            self.transport.mserver.get_profile(node_to_ask)\
+                                .addCallback(parse_profile, node_to_ask)
                     except Exception:
                         pass
-
-        self.kserver.get("moderators").addCallback(parse_response)
+        self.factory.kserver.get("moderators").addCallback(parse_response)
 
     def get_homepage_listings(self, message_id):
         if message_id not in self.factory.outstanding:

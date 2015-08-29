@@ -418,3 +418,11 @@ class OpenBazaarAPI(APIResource):
     def shutdown(self, request):
         self.protocol.shutdown()
         reactor.stop()
+
+    @POST('^/api/v1/make_moderator')
+    def make_moderator(self, request):
+        self.mserver.make_moderator()
+
+    @POST('^/api/v1/unmake_moderator')
+    def unmake_moderator(self, request):
+        self.mserver.unmake_moderator()
