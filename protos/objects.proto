@@ -36,18 +36,19 @@ message Profile {
         optional bool moderator           = 6 [default = false];
         optional string handle            = 7;
         optional string about             = 8;
-        optional string website           = 9;
-        optional string email             = 10;
-        repeated SocialAccount social     = 11;
-        optional uint32 primary_color     = 12 [default = 4868168];
-        optional uint32 secondary_color   = 13 [default = 5723734];
-        optional uint32 background_color  = 14 [default = 2763306];
-        optional uint32 text_color        = 15 [default = 16777215];
-        optional uint32 follower_count    = 16 [default = 0];
-        optional uint32 following_count   = 17 [default = 0];
-        optional PGPKey pgp_key           = 18;
-        optional bytes avatar_hash        = 19;
-        optional bytes header_hash        = 20;
+        optional string short_description = 9;
+        optional string website           = 10;
+        optional string email             = 11;
+        repeated SocialAccount social     = 12;
+        optional uint32 primary_color     = 13 [default = 4868168];
+        optional uint32 secondary_color   = 14 [default = 5723734];
+        optional uint32 background_color  = 15 [default = 2763306];
+        optional uint32 text_color        = 16 [default = 16777215];
+        optional uint32 follower_count    = 17 [default = 0];
+        optional uint32 following_count   = 18 [default = 0];
+        optional PGPKey pgp_key           = 19;
+        optional bytes avatar_hash        = 20;
+        optional bytes header_hash        = 21;
 
 	// Social media account for the profile
     message SocialAccount {
@@ -69,10 +70,11 @@ message Profile {
 }
 
 message Metadata {
-    required string name       = 1;
-    optional string handle     = 2;
-    required bytes avatar_hash = 3;
-    required bool nsfw         = 4;
+    required string name              = 1;
+    optional string handle            = 2;
+    optional string short_description = 3;
+    required bytes avatar_hash        = 4;
+    required bool nsfw                = 5;
 }
 
 message Listings {

@@ -81,6 +81,7 @@ class MarketProtocol(RPCProtocol):
             m = Metadata()
             m.name = proto.name
             m.handle = proto.handle
+            m.short_description = proto.short_description
             m.avatar_hash = proto.avatar_hash
             m.nsfw = proto.nsfw
             return [m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]

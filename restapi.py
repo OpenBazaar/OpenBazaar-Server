@@ -286,6 +286,8 @@ class OpenBazaarAPI(APIResource):
             u.handle = request.args["handle"][0]
         if "about" in request.args:
             u.about = request.args["about"][0]
+        if "short_description" in request.args:
+            u.short_description = request.args["short_description"][0]
         if "nsfw" in request.args:
             u.nsfw = True
         if "vendor" in request.args:
@@ -367,7 +369,10 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/set_contract')
     def set_contract(self, request):
-        print request
+        if "options" in request.args:
+            options = {}
+            for option in request.args["options"]:
+                options[option] = request.args[option]
         c = Contract()
         c.create(
             str(request.args["expiration_date"][0]),
@@ -391,7 +396,7 @@ class OpenBazaarAPI(APIResource):
             sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
             images=request.args["images"],
             free_shipping=True if "free_shipping" in request.args else False,
-            options=json.loads(request.args["options"])if "options" in request.args else None)
+            options=options if "options" in request.args else None)
 
         for keyword in request.args["keywords"]:
             self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
