@@ -140,6 +140,7 @@ class DatastoreTest(unittest.TestCase):
         self.fd.unfollow(self.u.guid)
         following = self.fd.get_following()
         self.assertEqual(following, '')
+        self.assertFalse(self.fd.is_following(self.u.guid))
 
     def test_deleteFollower(self):
         self.fd.set_follower(self.f)
