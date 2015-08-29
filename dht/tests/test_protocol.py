@@ -119,6 +119,10 @@ class KademliaProtocolTest(unittest.TestCase):
             self.storage.getSpecific(digest("Keyword"), "Key") ==
             self.protocol.sourceNode.getProto().SerializeToString())
 
+    def test_bad_rpc_store(self):
+        r = self.protocol.rpc_store(self.node, 'testkeyword', 'kw', 'val')
+        self.assertEqual(r, ['False'])
+
     def test_rpc_delete(self):
         self._connecting_to_connected()
 

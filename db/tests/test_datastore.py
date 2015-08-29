@@ -1,7 +1,8 @@
-import unittest
 import os
+import unittest
+
 from db import datastore
-from protos.objects import Profile, Listings
+from protos.objects import Profile, Listings, Following, Metadata, Followers
 from protos.countries import CountryCode
 
 
@@ -28,12 +29,33 @@ class DatastoreTest(unittest.TestCase):
         self.lm.nsfw = False
         self.lm.origin = CountryCode.Value('ALL')
 
+        self.u = Following.User()
+        self.u.guid = '0000000000000000000000000000000000'
+        self.u.signed_pubkey = 'signed_pubkey'
+
+        self.m = Metadata()
+        self.m.name = 'Test User'
+        self.m.handle = '@TestUser'
+        self.m.avatar_hash = ''
+        self.m.nsfw = False
+        self.u.metadata.MergeFrom(self.m)
+
+        self.f = Followers.Follower()
+        self.f.guid = '0000000000000000000000000000000001'
+        self.f.following = ''
+        self.f.signed_pubkey = ''
+        self.f.metadata.MergeFrom(self.m)
+
         self.hm = datastore.HashMap()
         self.hm.delete_all()
 
         self.ps = datastore.ProfileStore()
         self.ls = datastore.ListingsStore()
         self.ks = datastore.KeyStore()
+        self.fd = datastore.FollowData()
+        self.ms = datastore.MessageStore()
+        self.ns = datastore.NotificationStore()
+        self.vs = datastore.VendorStore()
 
     def tearDown(self):
         os.remove("test.db")
@@ -41,8 +63,15 @@ class DatastoreTest(unittest.TestCase):
     def test_hashmapInsert(self):
         self.hm.insert(self.test_hash, self.test_file)
         f = self.hm.get_file(self.test_hash)
-
         self.assertEqual(f, self.test_file)
+
+    def test_hashmapDelete(self):
+        self.hm.insert(self.test_hash, self.test_file)
+        f = self.hm.get_file(self.test_hash)
+        self.assertEqual(f, self.test_file)
+        self.hm.delete(self.test_hash)
+        v = self.hm.get_file(self.test_hash)
+        self.assertIsNone(v)
 
     def test_hashmapGetEmpty(self):
         f = self.hm.get_file('87e0555568bf5c7e4debd6645fc3f41e88df6ca9')
@@ -103,3 +132,56 @@ class DatastoreTest(unittest.TestCase):
     def test_getKeyFromEmptyTable(self):
         self.ks.delete_all_keys()
         self.assertEqual(None, self.ks.get_key("guid"))
+
+    def test_follow_unfollow(self):
+        self.fd.follow(self.u)
+        following = self.fd.get_following()
+        self.assertIsNotNone(following)
+
+        self.assertTrue(self.fd.is_following(self.u.guid))
+
+        self.fd.unfollow(self.u.guid)
+        following = self.fd.get_following()
+        self.assertEqual(following, '')
+        self.assertFalse(self.fd.is_following(self.u.guid))
+
+    def test_deleteFollower(self):
+        self.fd.set_follower(self.f)
+        f = self.fd.get_followers()
+        self.assertIsNotNone(f)
+        self.fd.delete_follower(self.f.guid)
+        f = self.fd.get_followers()
+        self.assertEqual(f, '')
+
+    def test_saveMessage(self):
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNone(msgs)
+        self.ms.save_message(self.u.guid, self.m.handle, self.u.signed_pubkey,
+                             '', 'SUBJECT', 'CHAT', 'MESSAGE', '0000-00-00 00:00:00',
+                             '', '', '')
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNotNone(msgs)
+        self.ms.delete_message(self.u.guid)
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNone(msgs)
+
+    def test_notificationStore(self):
+        n = self.ns.get_notifications()
+        self.assertIsNone(n)
+        self.ns.save_notification(self.u.guid, self.m.handle, 'NOTICE',
+                                  '0000-00-00 00:00:00', '')
+        n = self.ns.get_notifications()
+        self.assertIsNotNone(n)
+        self.ns.delete_notfication(self.u.guid, '0000-00-00 00:00:00')
+        n = self.ns.get_notifications()
+        self.assertIsNone(n)
+
+    def test_vendorStore(self):
+        v = self.vs.get_vendors()
+        self.assertEqual(v, [])
+        self.vs.save_vendor(self.u.guid, '127.0.0.1', '80', '')
+        v = self.vs.get_vendors()
+        self.assertIsNot(v, [])
+        self.vs.delete_vendor(self.u.guid)
+        v = self.vs.get_vendors()
+        self.assertEqual(v, [])
