@@ -235,7 +235,7 @@ class Server(object):
         """
 
         proto = self.kserver.node.getProto().SerializeToString()
-        self.kserver.set("moderators", digest(proto), proto)
+        self.kserver.set(digest("moderators"), digest(proto), proto)
 
     def unmake_moderator(self):
         """
@@ -441,7 +441,7 @@ class Server(object):
 
         def get_response(response):
             if not response[0]:
-                self.kserver.set(receiving_node.id, pkephem, ciphertext)
+                self.kserver.set(digest(receiving_node.id), pkephem, ciphertext)
         self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
 
     def get_messages(self, listener):

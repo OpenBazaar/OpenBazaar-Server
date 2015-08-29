@@ -224,8 +224,8 @@ class Server(object):
         pair will be appended to the dictionary.
 
         Args:
-            keyword: a `string` keyword. The SHA1 hash of which will be used as
-                the key when inserting in the DHT.
+            keyword: The keyword to use. Should be hashed with hash160 before
+                passing it in here.
             key: the 20 byte hash of the data.
             value: a serialized `protos.objects.Node` object which serves as a
                 pointer to the node storing the data.
@@ -233,21 +233,23 @@ class Server(object):
         Return: True if at least one peer responded. False if the store rpc
             completely failed.
         """
+        if len(keyword) != 20:
+            return defer.succeed(False)
+
         self.log.debug("setting '%s' = '%s':'%s' on network" % (keyword, hexlify(key), hexlify(value)))
-        dkey = digest(keyword)
 
         def store(nodes):
             self.log.info("setting '%s' on %s" % (keyword, [str(i) for i in nodes]))
-            ds = [self.protocol.callStore(node, dkey, key, value) for node in nodes]
+            ds = [self.protocol.callStore(node, keyword, key, value) for node in nodes]
 
-            keynode = Node(dkey)
+            keynode = Node(keyword)
             if self.node.distanceTo(keynode) < max([n.distanceTo(keynode) for n in nodes]):
-                self.storage[dkey] = (key, value)
+                self.storage[keyword] = (key, value)
                 self.log.debug("got a store request from %s, storing value" % str(self.node))
 
             return defer.DeferredList(ds).addCallback(_anyRespondSuccess)
 
-        node = Node(dkey)
+        node = Node(keyword)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to set key %s" % key)

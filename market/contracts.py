@@ -69,7 +69,8 @@ class Contract(object):
                free_shipping=None,
                shipping_currency_code=None,
                shipping_domestic=None,
-               shipping_international=None):
+               shipping_international=None,
+               options=None):
         """
         All parameters are strings except:
 
@@ -130,6 +131,8 @@ class Contract(object):
             self.contract["vendor_offer"]["listing"]["item"]["category"] = category
         if sku is not None:
             self.contract["vendor_offer"]["listing"]["item"]["sku"] = sku
+        if options is not None:
+            self.contract["vendor_offer"]["listing"]["item"]["options"] = options
         if metadata_category == "physical good":
             self.contract["vendor_offer"]["listing"]["shipping"] = {}
             shipping = self.contract["vendor_offer"]["listing"]["shipping"]

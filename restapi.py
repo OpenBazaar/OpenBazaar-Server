@@ -390,10 +390,12 @@ class OpenBazaarAPI(APIResource):
             condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
             sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
             images=request.args["images"],
-            free_shipping=True if "free_shipping" in request.args else False)
+            free_shipping=True if "free_shipping" in request.args else False,
+            options=json.loads(request.args["options"])if "options" in request.args else None)
 
         for keyword in request.args["keywords"]:
-            self.kserver.set(keyword.lower(), c.get_contract_id(), self.kserver.node.getProto().SerializeToString())
+            self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
+                             self.kserver.node.getProto().SerializeToString())
 
     @DELETE('^/api/v1/delete_contract')
     def delete_contract(self, request):
