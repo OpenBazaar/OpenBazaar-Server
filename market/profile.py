@@ -62,8 +62,8 @@ class Profile(object):
         gpg = gnupg.GPG()
         gpg.import_keys(public_key)
         if gpg.verify(signature) and guid in signature:
-            p = self.profile.PGPKey()
-            p.publicKey = public_key
+            p = self.profile.PublicKey()
+            p.public_key = public_key
             p.signature = signature
             self.profile.pgp_key.MergeFrom(p)
             self.db.set_proto(self.profile.SerializeToString())

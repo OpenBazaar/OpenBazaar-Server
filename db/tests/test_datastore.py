@@ -16,8 +16,11 @@ class DatastoreTest(unittest.TestCase):
         self.test_file2 = "Contents of test2.txt"
 
         self.sp = Profile()
+        self.key = Profile().PublicKey()
+        self.key.public_key = "Key"
+        self.key.signature = "Sig"
         self.sp.name = "Test User"
-        self.sp.encryption_key = "Key"
+        self.sp.encryption_key.MergeFrom(self.key)
         self.sp.location = CountryCode.Value('UNITED_STATES')
 
         self.serialized_listings = Listings()

@@ -1,13 +1,16 @@
 __author__ = 'chris'
-import stun
 import os
 import sys
-import dht.constants
-from db.datastore import create_database
 from twisted.internet import reactor
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
+
+import stun
+from autobahn.twisted.websocket import listenWS
+
+import dht.constants
+from db.datastore import create_database
 from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
@@ -15,9 +18,8 @@ from wireprotocol import OpenBazaarProtocol
 from constants import DATA_FOLDER, DATABASE
 from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
-from ws import WSFactory, WSProtocol
-from autobahn.twisted.websocket import listenWS
-from restapi import OpenBazaarAPI
+from api.ws import WSFactory, WSProtocol
+from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
 
 # logging

@@ -84,7 +84,7 @@ class OpenBazaarAPI(APIResource):
                     "profile": {
                         "name": profile.name,
                         "location": str(CountryCode.Name(profile.location)),
-                        "enryption_key": profile.encryption_key.encode("hex"),
+                        "enryption_key": profile.encryption_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
@@ -313,7 +313,10 @@ class OpenBazaarAPI(APIResource):
         if "pgp_key" in request.args and "signature" in request.args:
             p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                           KeyChain().guid.encode("hex"))
-        u.encryption_key = KeyChain().encryption_pubkey
+        enc = u.PublicKey()
+        enc.public_key = KeyChain().encryption_pubkey
+        enc.signature = KeyChain().signing_key.sign(enc.public_key)[:64]
+        u.encryption_key.MergeFrom(enc)
         p.update(u)
 
     @POST('^/api/v1/social_accounts')
