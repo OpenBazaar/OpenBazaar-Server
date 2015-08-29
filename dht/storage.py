@@ -145,18 +145,18 @@ class PersistentStorage(object):
         self.db.text_factory = str
         try:
             cursor = self.db.cursor()
-            cursor.execute('''CREATE TABLE data(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)''')
-            cursor.execute('''CREATE INDEX idx1 ON data(keyword);CREATE INDEX idx2 ON data(birthday);''')
+            cursor.execute('''CREATE TABLE dht(keyword BLOB, id BLOB, value BLOB, birthday FLOAT)''')
+            cursor.execute('''CREATE INDEX idx1 ON dht(keyword);CREATE INDEX idx2 ON dht(birthday);''')
             self.db.commit()
         except Exception:
             self.cull()
 
     def __setitem__(self, keyword, values):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT id, value FROM data WHERE keyword=? AND id=? AND value=?''',
+        cursor.execute('''SELECT id, value FROM dht WHERE keyword=? AND id=? AND value=?''',
                        (keyword, values[0], values[1]))
         if cursor.fetchone() is None:
-            cursor.execute('''INSERT OR IGNORE INTO data(keyword, id, value, birthday)
+            cursor.execute('''INSERT OR IGNORE INTO dht(keyword, id, value, birthday)
                           VALUES (?,?,?,?)''', (keyword, values[0], values[1], time.time()))
             self.db.commit()
         self.cull()
@@ -164,7 +164,7 @@ class PersistentStorage(object):
     def __getitem__(self, keyword):
         self.cull()
         cursor = self.db.cursor()
-        cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
+        cursor.execute('''SELECT id, value FROM dht WHERE keyword=?''', (keyword,))
         return cursor.fetchall()
 
     def get(self, keyword, default=None):
@@ -182,7 +182,7 @@ class PersistentStorage(object):
     def getSpecific(self, keyword, key):
         try:
             cursor = self.db.cursor()
-            cursor.execute('''SELECT value FROM data WHERE keyword=? AND id=?''', (keyword, key))
+            cursor.execute('''SELECT value FROM dht WHERE keyword=? AND id=?''', (keyword, key))
             return cursor.fetchone()[0]
         except Exception:
             return None
@@ -190,13 +190,13 @@ class PersistentStorage(object):
     def cull(self):
         expiration = time.time() - self.ttl
         cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM data WHERE birthday < ?''', (expiration,))
+        cursor.execute('''DELETE FROM dht WHERE birthday < ?''', (expiration,))
         self.db.commit()
 
     def delete(self, keyword, key):
         try:
             cursor = self.db.cursor()
-            cursor.execute('''DELETE FROM data WHERE keyword=? AND id=?''', (keyword, key))
+            cursor.execute('''DELETE FROM dht WHERE keyword=? AND id=?''', (keyword, key))
             self.db.commit()
         except Exception:
             pass
@@ -206,7 +206,7 @@ class PersistentStorage(object):
         self.cull()
         try:
             cursor = self.db.cursor()
-            cursor.execute('''SELECT keyword FROM data''')
+            cursor.execute('''SELECT keyword FROM dht''')
             keywords = cursor.fetchall()
             keyword_list = []
             for k in keywords:
@@ -220,14 +220,14 @@ class PersistentStorage(object):
         self.cull()
         try:
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, value FROM data WHERE keyword=?''', (keyword,))
+            cursor.execute('''SELECT id, value FROM dht WHERE keyword=?''', (keyword,))
             return cursor.fetchall().__iter__()
         except Exception:
             return None
 
     def get_ttl(self, keyword, key):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT birthday FROM data WHERE keyword=? AND id=?''', (keyword, key,))
+        cursor.execute('''SELECT birthday FROM dht WHERE keyword=? AND id=?''', (keyword, key,))
         return self.ttl - (time.time() - cursor.fetchall()[0][0])
 
 

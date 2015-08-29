@@ -84,7 +84,7 @@ class OpenBazaarAPI(APIResource):
                     "profile": {
                         "name": profile.name,
                         "location": str(CountryCode.Name(profile.location)),
-                        "enryption_key": profile.encryption_key.public_key.encode("hex"),
+                        "encryption_key": profile.encryption_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
@@ -96,7 +96,7 @@ class OpenBazaarAPI(APIResource):
                         "secondary_color": profile.secondary_color,
                         "background_color": profile.background_color,
                         "text_color": profile.text_color,
-                        "pgp_key": profile.pgp_key.publicKey,
+                        "pgp_key": profile.pgp_key.public_key,
                         "avatar_hash": profile.avatar_hash.encode("hex"),
                         "header_hash": profile.header_hash.encode("hex"),
                         "social_accounts": {}
