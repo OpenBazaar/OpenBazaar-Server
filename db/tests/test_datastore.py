@@ -53,6 +53,9 @@ class DatastoreTest(unittest.TestCase):
         self.ls = datastore.ListingsStore()
         self.ks = datastore.KeyStore()
         self.fd = datastore.FollowData()
+        self.ms = datastore.MessageStore()
+        self.ns = datastore.NotificationStore()
+        self.vs = datastore.VendorStore()
 
     def tearDown(self):
         os.remove("test.db")
@@ -150,4 +153,35 @@ class DatastoreTest(unittest.TestCase):
         f = self.fd.get_followers()
         self.assertEqual(f, '')
 
+    def test_saveMessage(self):
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNone(msgs)
+        self.ms.save_message(self.u.guid, self.m.handle, self.u.signed_pubkey,
+                             '', 'SUBJECT', 'CHAT', 'MESSAGE', '0000-00-00 00:00:00',
+                             '', '', '')
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNotNone(msgs)
+        self.ms.delete_message(self.u.guid)
+        msgs = self.ms.get_messages(self.u.guid, 'CHAT')
+        self.assertIsNone(msgs)
 
+    def test_notificationStore(self):
+        n = self.ns.get_notifications()
+        self.assertIsNone(n)
+        self.ns.save_notification(self.u.guid, self.m.handle, 'NOTICE',
+                                  '0000-00-00 00:00:00', '')
+        n = self.ns.get_notifications()
+        self.assertIsNotNone(n)
+        self.ns.delete_notfication(self.u.guid, '0000-00-00 00:00:00')
+        n = self.ns.get_notifications()
+        self.assertIsNone(n)
+
+    def test_vendorStore(self):
+        v = self.vs.get_vendors()
+        self.assertEqual(v, [])
+        self.vs.save_vendor(self.u.guid, '127.0.0.1', '80', '')
+        v = self.vs.get_vendors()
+        self.assertIsNot(v, [])
+        self.vs.delete_vendor(self.u.guid)
+        v = self.vs.get_vendors()
+        self.assertEqual(v, [])
