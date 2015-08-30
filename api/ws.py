@@ -70,10 +70,10 @@ class WSProtocol(WebSocketServerProtocol):
 
     def get_moderators(self, message_id):
         m = ModeratorStore()
-        m.clear_all()
 
         def parse_response(moderators):
             if moderators is not None:
+                m.clear_all()
                 def parse_profile(profile, node):
                     if profile is not None:
                         m.save_moderator(node.id, node.signed_pubkey, profile.encryption_key.public_key,

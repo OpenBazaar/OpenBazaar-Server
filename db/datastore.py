@@ -379,7 +379,7 @@ encryptionSignature, bitcoinKey, bitcoinSignature, handle) VALUES (?,?,?,?,?,?,?
         if not ret:
             return None
         else:
-            return ret
+            return ret[0]
 
     def delete_moderator(self, guid):
         cursor = self.db.cursor()

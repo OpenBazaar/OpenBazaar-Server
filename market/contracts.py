@@ -1,6 +1,7 @@
 __author__ = 'chris'
 
 import json
+import bitcoin
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
 
@@ -11,7 +12,7 @@ from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
 from constants import DATA_FOLDER
-from db.datastore import HashMap, ListingsStore
+from db.datastore import HashMap, ListingsStore, ModeratorStore
 from market.profile import Profile
 from keyutils.keys import KeyChain
 
@@ -61,6 +62,8 @@ class Contract(object):
                shipping_regions,
                est_delivery_domestic=None,
                est_delivery_international=None,
+               terms_conditions=None,
+               returns=None,
                keywords=None,
                category=None,
                condition=None,
@@ -70,7 +73,8 @@ class Contract(object):
                shipping_currency_code=None,
                shipping_domestic=None,
                shipping_international=None,
-               options=None):
+               options=None,
+               moderators=None):
         """
         All parameters are strings except:
 
@@ -81,6 +85,8 @@ class Contract(object):
         :param free_shipping: `boolean`
         :param shipping_origin: a 'string' formatted `CountryCode`
         :param shipping_regions: a 'list' of 'string' formatted `CountryCode`s
+        :param options: a 'dict' containing options as keys and 'list' as option values.
+        :param moderators: a 'list' of 'string' guids (hex encoded).
         """
 
         # TODO: import keys into the contract, import moderator information from db, sign contract.
@@ -100,7 +106,8 @@ class Contract(object):
                             "guid": keychain.guid.encode("hex"),
                             "pubkeys": {
                                 "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": keychain.bitcoin_master_pubkey
+                                "bitcoin": bitcoin.bip32_deserialize(
+                                    KeyChain().bitcoin_master_pubkey)[5].encode("hex")
                             }
                         },
                         "item": {
@@ -177,6 +184,37 @@ class Contract(object):
                 with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
                 HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+        if terms_conditions is not None or returns is not None:
+            self.contract["vendor_offer"]["listing"]["policy"] = {}
+            if terms_conditions is not None:
+                self.contract["vendor_offer"]["listing"]["policy"]["terms_conditions"] = terms_conditions
+            if returns is not None:
+                self.contract["vendor_offer"]["listing"]["policy"]["returns"] = returns
+        if moderators is not None:
+            self.contract["vendor_offer"]["listing"]["moderators"] = []
+            for mod in moderators:
+                mod_info = ModeratorStore().get_moderator(unhexlify(mod))
+                print mod_info
+                if mod_info is not None:
+                    moderator = {
+                        "guid": mod,
+                        "blockchain_id": mod_info[6],
+                        "pubkeys": {
+                            "signing": {
+                                "key": mod_info[1][64:].encode("hex"),
+                                "signature": mod_info[1][:64].encode("hex")
+                            },
+                            "encryption": {
+                                "key": mod_info[2].encode("hex"),
+                                "signature": mod_info[3].encode("hex")
+                            },
+                            "bitcoin": {
+                                "key": mod_info[4].encode("hex"),
+                                "signature": mod_info[5].encode("hex")
+                            }
+                        }
+                    }
+                    self.contract["vendor_offer"]["listing"]["moderators"].append(moderator)
 
         listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
         self.contract["vendor_offer"]["signature"] = \

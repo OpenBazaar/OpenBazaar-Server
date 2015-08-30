@@ -56,6 +56,22 @@ class Server(object):
                     verify_key = nacl.signing.VerifyKey(pubkey)
                     verify_key.verify(json.dumps(contract["vendor_offer"]["listing"], indent=4),
                                       unhexlify(signature))
+                    for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+                        guid = moderator["guid"]
+                        guid_key = moderator["pubkeys"]["signing"]["key"]
+                        guid_sig = moderator["pubkeys"]["signing"]["signature"]
+                        enc_key = moderator["pubkeys"]["encryption"]["key"]
+                        enc_sig = moderator["pubkeys"]["encryption"]["signature"]
+                        bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
+                        bitcoin_sig = moderator["pubkeys"]["bitcoin"]["signature"]
+                        h = nacl.hash.sha512(unhexlify(guid_sig) + unhexlify(guid_key))
+                        pow_hash = h[64:128]
+                        if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
+                            raise Exception('Invalid GUID')
+                        verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
+                        verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
+                        verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
+                        # should probably also validate the handle here.
                 except Exception:
                     return None
                 self.cache(result[1][0])
