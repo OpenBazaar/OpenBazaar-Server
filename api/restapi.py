@@ -84,7 +84,7 @@ class OpenBazaarAPI(APIResource):
                     "profile": {
                         "name": profile.name,
                         "location": str(CountryCode.Name(profile.location)),
-                        "enryption_key": profile.encryption_key.encode("hex"),
+                        "encryption_key": profile.encryption_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
@@ -96,7 +96,7 @@ class OpenBazaarAPI(APIResource):
                         "secondary_color": profile.secondary_color,
                         "background_color": profile.background_color,
                         "text_color": profile.text_color,
-                        "pgp_key": profile.pgp_key.publicKey,
+                        "pgp_key": profile.pgp_key.public_key,
                         "avatar_hash": profile.avatar_hash.encode("hex"),
                         "header_hash": profile.header_hash.encode("hex"),
                         "social_accounts": {}
@@ -286,6 +286,8 @@ class OpenBazaarAPI(APIResource):
             u.handle = request.args["handle"][0]
         if "about" in request.args:
             u.about = request.args["about"][0]
+        if "short_description" in request.args:
+            u.short_description = request.args["short_description"][0]
         if "nsfw" in request.args:
             u.nsfw = True
         if "vendor" in request.args:
@@ -311,7 +313,10 @@ class OpenBazaarAPI(APIResource):
         if "pgp_key" in request.args and "signature" in request.args:
             p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                           KeyChain().guid.encode("hex"))
-        u.encryption_key = KeyChain().encryption_pubkey
+        enc = u.PublicKey()
+        enc.public_key = KeyChain().encryption_pubkey
+        enc.signature = KeyChain().signing_key.sign(enc.public_key)[:64]
+        u.encryption_key.MergeFrom(enc)
         p.update(u)
 
     @POST('^/api/v1/social_accounts')
@@ -367,7 +372,10 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/set_contract')
     def set_contract(self, request):
-        print request
+        if "options" in request.args:
+            options = {}
+            for option in request.args["options"]:
+                options[option] = request.args[option]
         c = Contract()
         c.create(
             str(request.args["expiration_date"][0]),
@@ -382,6 +390,8 @@ class OpenBazaarAPI(APIResource):
             request.args["ships_to"],
             est_delivery_domestic=request.args["est_delivery_domestic"][0],
             est_delivery_international=request.args["est_delivery_international"][0],
+            terms_conditions=request.args["terms_conditions"][0] if "terms_conditions" in request.args else None,
+            returns=request.args["returns"][0] if "returns" in request.args else None,
             shipping_currency_code=request.args["shipping_currency_code"][0],
             shipping_domestic=request.args["shipping_domestic"][0],
             shipping_international=request.args["shipping_international"][0],
@@ -391,7 +401,8 @@ class OpenBazaarAPI(APIResource):
             sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
             images=request.args["images"],
             free_shipping=True if "free_shipping" in request.args else False,
-            options=json.loads(request.args["options"])if "options" in request.args else None)
+            options=options if "options" in request.args else None,
+            moderators=request.args["moderators"] if "moderators" in request.args else None)
 
         for keyword in request.args["keywords"]:
             self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
@@ -410,3 +421,11 @@ class OpenBazaarAPI(APIResource):
     def shutdown(self, request):
         self.protocol.shutdown()
         reactor.stop()
+
+    @POST('^/api/v1/make_moderator')
+    def make_moderator(self, request):
+        self.mserver.make_moderator()
+
+    @POST('^/api/v1/unmake_moderator')
+    def unmake_moderator(self, request):
+        self.mserver.unmake_moderator()

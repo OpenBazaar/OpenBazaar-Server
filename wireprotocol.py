@@ -4,8 +4,9 @@ from txrudp.rudp import ConnectionMultiplexer
 from txrudp.connection import HandlerFactory, Handler
 from txrudp.crypto_connection import CryptoConnectionFactory
 from interfaces import MessageProcessor
-from protos.message import Message
+from protos.message import Message, FIND_VALUE
 from log import Logger
+from dht.node import Node
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -29,6 +30,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.processors = processors
             self.active_connections = active_connections
             self.connection = None
+            self.node = None
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
@@ -37,6 +39,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             m = Message()
             try:
                 m.ParseFromString(datagram)
+                self.node = Node(m.sender.guid, m.sender.ip, m.sender.port,
+                                 m.sender.signedPublicKey, m.sender.vendor)
                 for processor in self.processors:
                     if m.command in processor:
                         processor.receive_message(datagram, self.connection)
@@ -47,6 +51,10 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def handle_shutdown(self):
             del self.active_connections[self.connection.dest_addr]
+            if self.node is not None:
+                for processor in self.processors:
+                    if FIND_VALUE in processor:
+                        processor.router.removeContact(self.node)
             self.log.info(
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
                                                          self.connection.dest_addr[1]))\

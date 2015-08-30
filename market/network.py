@@ -8,17 +8,18 @@ import nacl.hash
 import nacl.encoding
 import nacl.utils
 import gnupg
+import bitcoin
 from nacl.public import PrivateKey, PublicKey, Box
-from dht import node
 from twisted.internet import defer, reactor, task
 from market.protocol import MarketProtocol
-from dht.utils import digest, deferredDict
+from dht.utils import digest
 from constants import DATA_FOLDER
 from protos import objects
 from db.datastore import FollowData
 from market.profile import Profile
 from collections import OrderedDict
 from binascii import hexlify, unhexlify
+from keyutils.keys import KeyChain
 
 
 class Server(object):
@@ -55,6 +56,22 @@ class Server(object):
                     verify_key = nacl.signing.VerifyKey(pubkey)
                     verify_key.verify(json.dumps(contract["vendor_offer"]["listing"], indent=4),
                                       unhexlify(signature))
+                    for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+                        guid = moderator["guid"]
+                        guid_key = moderator["pubkeys"]["signing"]["key"]
+                        guid_sig = moderator["pubkeys"]["signing"]["signature"]
+                        enc_key = moderator["pubkeys"]["encryption"]["key"]
+                        enc_sig = moderator["pubkeys"]["encryption"]["signature"]
+                        bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
+                        bitcoin_sig = moderator["pubkeys"]["bitcoin"]["signature"]
+                        h = nacl.hash.sha512(unhexlify(guid_sig) + unhexlify(guid_key))
+                        pow_hash = h[64:128]
+                        if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
+                            raise Exception('Invalid GUID')
+                        verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
+                        verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
+                        verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
+                        # should probably also validate the handle here.
                 except Exception:
                     return None
                 self.cache(result[1][0])
@@ -199,41 +216,18 @@ class Server(object):
         d = self.protocol.callGetContractMetadata(node_to_ask, contract_hash)
         return d.addCallback(get_result)
 
-    def get_moderators(self):
-        """
-        Retrieves moderator list from the dht. Each node is queried
-        to get metadata and ensure it's alive for usage.
-        """
-
-        def parse_response(moderators):
-            if moderators is None:
-                return None
-
-            def parse_profiles(responses):
-                for k, v in responses.items():
-                    if v is None:
-                        del responses[k]
-                return responses
-
-            ds = {}
-            for mod in moderators:
-                try:
-                    val = objects.Value()
-                    val.ParseFromString(mod)
-                    n = objects.Node()
-                    n.ParseFromString(val.serializedData)
-                    ds[val.serializedData] = self.get_profile(node.Node(n.guid, n.ip, n.port, n.signedPublicKey))
-                except Exception:
-                    pass
-            return deferredDict(ds).addCallback(parse_profiles)
-
-        return self.kserver.get("moderators").addCallback(parse_response)
-
     def make_moderator(self):
         """
         Set self as a moderator in the DHT.
         """
 
+        u = objects.Profile()
+        k = u.PublicKey()
+        k.public_key = bitcoin.bip32_deserialize(KeyChain().bitcoin_master_pubkey)[5]
+        k.signature = self.signing_key.sign(k.public_key)[:64]
+        u.bitcoin_key.MergeFrom(k)
+        u.moderator = True
+        Profile().update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
 
@@ -245,6 +239,7 @@ class Server(object):
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
+        Profile().remove_field("moderator")
 
     def follow(self, node_to_follow):
         """

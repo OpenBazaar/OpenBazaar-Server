@@ -4,11 +4,13 @@ import json
 import os
 import time
 from constants import DATA_FOLDER
-from db.datastore import VendorStore, MessageStore
+from db.datastore import VendorStore, MessageStore, ListingsStore, ModeratorStore
+from market.profile import Profile
+from keyutils.keys import KeyChain
 from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from protos.countries import CountryCode
-from protos.objects import Plaintext_Message, Value
+from protos.objects import Plaintext_Message, Value, Listings
 from protos import objects
 from twisted.internet import defer
 from binascii import unhexlify
@@ -47,6 +49,7 @@ class WSProtocol(WebSocketServerProtocol):
                         {
                             "guid": node.id.encode("hex"),
                             "name": metadata.name,
+                            "short_description": metadata.short_description,
                             "handle": metadata.handle,
                             "avatar_hash": metadata.avatar_hash.encode("hex"),
                             "nsfw": metadata.nsfw
@@ -64,6 +67,48 @@ class WSProtocol(WebSocketServerProtocol):
         for node in vendors[:30]:
             dl.append(self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node))
         defer.gatherResults(dl).addCallback(count_results)
+
+    def get_moderators(self, message_id):
+        m = ModeratorStore()
+
+        def parse_response(moderators):
+            if moderators is not None:
+                m.clear_all()
+                def parse_profile(profile, node):
+                    if profile is not None:
+                        m.save_moderator(node.id, node.signed_pubkey, profile.encryption_key.public_key,
+                                         profile.encryption_key.signature, profile.bitcoin_key.public_key,
+                                         profile.bitcoin_key.signature, profile.handle)
+                        moderator = {
+                            "id": message_id,
+                            "moderator":
+                                {
+                                    "guid": node.id.encode("hex"),
+                                    "name": profile.name,
+                                    "handle": profile.handle,
+                                    "short_description": profile.short_description,
+                                    "avatar_hash": profile.avatar_hash.encode("hex"),
+                                    "about": profile.about
+                                }
+                        }
+                        self.sendMessage(json.dumps(moderator, indent=4), False)
+                    else:
+                        m.delete_moderator(node.guid)
+                for mod in moderators:
+                    try:
+                        val = objects.Value()
+                        val.ParseFromString(mod)
+                        n = objects.Node()
+                        n.ParseFromString(val.serializedData)
+                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                        if n.guid == KeyChain().guid:
+                            parse_profile(Profile().get(), node_to_ask)
+                        else:
+                            self.transport.mserver.get_profile(node_to_ask)\
+                                .addCallback(parse_profile, node_to_ask)
+                    except Exception:
+                        pass
+        self.factory.kserver.get("moderators").addCallback(parse_response)
 
     def get_homepage_listings(self, message_id):
         if message_id not in self.factory.outstanding:
@@ -169,8 +214,16 @@ class WSProtocol(WebSocketServerProtocol):
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
                         node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey, True)
-                        self.factory.mserver.get_contract_metadata(node_to_ask,
-                                                                   val.valueKey).addCallback(respond, node_to_ask)
+                        if n.guid == KeyChain().guid:
+                            proto = ListingsStore().get_proto()
+                            l = Listings()
+                            l.ParseFromString(proto)
+                            for listing in l.listing:
+                                if listing.contract_hash == val.valueKey:
+                                    respond(listing, node_to_ask)
+                        else:
+                            self.factory.mserver.get_contract_metadata(node_to_ask, val.valueKey)\
+                                .addCallback(respond, node_to_ask)
                     except Exception:
                         pass
         self.factory.kserver.get(keyword.lower()).addCallback(parse_results)
@@ -182,6 +235,9 @@ class WSProtocol(WebSocketServerProtocol):
 
             if request_json["request"]["command"] == "get_vendors":
                 self.get_vendors(message_id)
+
+            if request_json["request"]["command"] == "get_moderators":
+                self.get_moderators(message_id)
 
             elif request_json["request"]["command"] == "get_homepage_listings":
                 self.get_homepage_listings(message_id)
