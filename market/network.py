@@ -210,6 +210,7 @@ class Server(object):
         k.public_key = bitcoin.bip32_deserialize(KeyChain().bitcoin_master_pubkey)[5]
         k.signature = self.signing_key.sign(k.public_key)[:64]
         u.bitcoin_key.MergeFrom(k)
+        u.moderator = True
         Profile().update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
@@ -222,6 +223,7 @@ class Server(object):
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
+        Profile().remove_field("moderator")
 
     def follow(self, node_to_follow):
         """

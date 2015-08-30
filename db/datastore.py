@@ -15,7 +15,7 @@ def create_database(filepath=None):
     cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')
     cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
     cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
-    cursor.execute('''CREATE TABLE keystore(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
+    cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
     cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
     cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
     cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
@@ -25,6 +25,9 @@ avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
 timestamp INTEGER, avatar_hash BLOB)''')
     cursor.execute('''CREATE TABLE vendors(guid BLOB UNIQUE, ip TEXT, port INTEGER, signedPubkey BLOB)''')
     cursor.execute('''CREATE INDEX idx1 ON vendors(guid);''')
+    cursor.execute('''CREATE TABLE moderators(guid BLOB UNIQUE, signedPubkey BLOB, encryptionKey BLOB,
+encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
+    cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
     db.commit()
     return db
 
@@ -163,13 +166,13 @@ class KeyStore(object):
 
     def set_key(self, key_type, privkey, pubkey):
         cursor = self.db.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO keystore(type, privkey, pubkey)
+        cursor.execute('''INSERT OR REPLACE INTO keys(type, privkey, pubkey)
                       VALUES (?,?,?)''', (key_type, privkey, pubkey))
         self.db.commit()
 
     def get_key(self, key_type):
         cursor = self.db.cursor()
-        cursor.execute('''SELECT privkey, pubkey FROM keystore WHERE type=?''', (key_type,))
+        cursor.execute('''SELECT privkey, pubkey FROM keys WHERE type=?''', (key_type,))
         ret = cursor.fetchone()
         if not ret:
             return None
@@ -178,7 +181,7 @@ class KeyStore(object):
 
     def delete_all_keys(self):
         cursor = self.db.cursor()
-        cursor.execute('''DELETE FROM keystore''')
+        cursor.execute('''DELETE FROM keys''')
         self.db.commit()
 
 
@@ -350,4 +353,40 @@ VALUES (?,?,?,?)''', (guid, ip, port, signed_pubkey))
     def delete_vendor(self, guid):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM vendors WHERE guid=?''', (guid,))
+        self.db.commit()
+
+class ModeratorStore(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+
+    def save_moderator(self, guid, signed_pubkey, encryption_key, encription_sig,
+                       bitcoin_key, bicoin_sig, handle=""):
+        cursor = self.db.cursor()
+        try:
+            cursor.execute('''INSERT OR REPLACE INTO moderators(guid, signedPubkey, encryptionKey,
+encryptionSignature, bitcoinKey, bitcoinSignature, handle) VALUES (?,?,?,?,?,?,?)''',
+                           (guid, signed_pubkey, encryption_key, encription_sig, bitcoin_key, bicoin_sig, handle))
+        except Exception as e:
+            print e.message
+        self.db.commit()
+
+    def get_moderator(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT guid, signedPubkey, encryptionKey, encryptionSignature, bitcoinKey,
+ bitcoinSignature, handle FROM moderators WHERE guid=?''', (guid,))
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret
+
+    def delete_moderator(self, guid):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM moderators WHERE guid=?''', (guid,))
+        self.db.commit()
+
+    def clear_all(self):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM moderators''')
         self.db.commit()

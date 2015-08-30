@@ -4,7 +4,7 @@ import json
 import os
 import time
 from constants import DATA_FOLDER
-from db.datastore import VendorStore, MessageStore, ListingsStore
+from db.datastore import VendorStore, MessageStore, ListingsStore, ModeratorStore
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
@@ -69,10 +69,16 @@ class WSProtocol(WebSocketServerProtocol):
         defer.gatherResults(dl).addCallback(count_results)
 
     def get_moderators(self, message_id):
+        m = ModeratorStore()
+        m.clear_all()
+
         def parse_response(moderators):
             if moderators is not None:
                 def parse_profile(profile, node):
                     if profile is not None:
+                        m.save_moderator(node.id, node.signed_pubkey, profile.encryption_key.public_key,
+                                         profile.encryption_key.signature, profile.bitcoin_key.public_key,
+                                         profile.bitcoin_key.signature, profile.handle)
                         moderator = {
                             "id": message_id,
                             "moderator":
@@ -86,7 +92,8 @@ class WSProtocol(WebSocketServerProtocol):
                                 }
                         }
                         self.sendMessage(json.dumps(moderator, indent=4), False)
-
+                    else:
+                        m.delete_moderator(node.guid)
                 for mod in moderators:
                     try:
                         val = objects.Value()
