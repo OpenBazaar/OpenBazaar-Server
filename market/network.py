@@ -122,7 +122,7 @@ class Server(object):
                 verify_key.verify(result[1][1] + result[1][0])
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
-                if p.pgp_key:
+                if p.pgp_key.public_key:
                     gpg = gnupg.GPG()
                     gpg.import_keys(p.pgp_key.publicKey)
                     if not gpg.verify(p.pgp_key.signature) or \

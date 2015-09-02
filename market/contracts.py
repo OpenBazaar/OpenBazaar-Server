@@ -385,6 +385,7 @@ class Contract(object):
         Deletes the contract json from the OpenBazaar directory as well as the listing
         metadata from the db and all the related images in the file system.
         """
+
         # build the file_name from the contract
         file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
         file_name = re.sub(r"[^\w\s]", '', file_name)
@@ -406,9 +407,11 @@ class Contract(object):
         # delete the contract from disk
         if os.path.exists(file_path):
             os.remove(file_path)
+
         # delete the listing metadata from the db
         contract_hash = digest(json.dumps(self.contract, indent=4))
         ListingsStore().delete_listing(contract_hash)
+
         # remove the pointer to the contract from the HashMap
         h.delete(contract_hash)
 
@@ -440,7 +443,8 @@ class Contract(object):
         data.title = vendor_item["title"]
         if "image_hashes" in vendor_item:
             data.thumbnail_hash = unhexlify(vendor_item["image_hashes"][0])
-        data.category = vendor_item["category"]
+        if "category" in vendor_item:
+            data.category = vendor_item["category"]
         if "bitcoin" not in vendor_item["price_per_unit"]:
             data.price = float(vendor_item["price_per_unit"]["fiat"]["price"])
             data.currency_code = vendor_item["price_per_unit"]["fiat"][

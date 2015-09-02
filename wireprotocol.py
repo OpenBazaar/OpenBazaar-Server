@@ -8,8 +8,14 @@ from protos.message import Message, FIND_VALUE
 from log import Logger
 from dht.node import Node
 
-
 class OpenBazaarProtocol(ConnectionMultiplexer):
+    """
+    A protocol extending the txrudp datagram protocol. This is the main protocol
+    which gets passed into the twisted UDPServer. It handles the setup and tear down
+    of all connections, parses messages coming off the wire and passes them off to
+    the appropriate classes for processing.
+    """
+
     def __init__(self, ip_address):
         """
         Initialize the new protocol with the connection handler factory.

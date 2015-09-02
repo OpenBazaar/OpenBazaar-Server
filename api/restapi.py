@@ -390,8 +390,9 @@ class OpenBazaarAPI(APIResource):
             request.args["ships_to"],
             est_delivery_domestic=request.args["est_delivery_domestic"][0],
             est_delivery_international=request.args["est_delivery_international"][0],
-            terms_conditions=request.args["terms_conditions"][0] if "terms_conditions" in request.args else None,
-            returns=request.args["returns"][0] if "returns" in request.args else None,
+            terms_conditions=request.args["terms_conditions"][0]
+            if request.args["terms_conditions"][0] is not "" else None,
+            returns=request.args["returns"][0] if request.args["returns"][0] is not "" else None,
             shipping_currency_code=request.args["shipping_currency_code"][0],
             shipping_domestic=request.args["shipping_domestic"][0],
             shipping_international=request.args["shipping_international"][0],

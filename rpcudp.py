@@ -143,7 +143,7 @@ class RPCProtocol:
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
-        A method for handling an incoming HOLE_PUNCH method. Relay the message
+        A method for handling an incoming HOLE_PUNCH message. Relay the message
         to the correct node if it's not for us. Otherwise sent a datagram to allow
         the other node to punch through our NAT.
         """

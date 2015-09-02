@@ -93,7 +93,7 @@ class WSProtocol(WebSocketServerProtocol):
                         }
                         self.sendMessage(json.dumps(moderator, indent=4), False)
                     else:
-                        m.delete_moderator(node.guid)
+                        m.delete_moderator(node.id)
                 for mod in moderators:
                     try:
                         val = objects.Value()
@@ -104,7 +104,7 @@ class WSProtocol(WebSocketServerProtocol):
                         if n.guid == KeyChain().guid:
                             parse_profile(Profile().get(), node_to_ask)
                         else:
-                            self.transport.mserver.get_profile(node_to_ask)\
+                            self.factory.mserver.get_profile(node_to_ask)\
                                 .addCallback(parse_profile, node_to_ask)
                     except Exception:
                         pass
