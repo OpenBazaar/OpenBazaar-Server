@@ -2,6 +2,8 @@ __author__ = 'chris'
 
 import json
 import bitcoin
+import random
+from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
 
@@ -15,6 +17,7 @@ from constants import DATA_FOLDER
 from db.datastore import HashMap, ListingsStore, ModeratorStore
 from market.profile import Profile
 from keyutils.keys import KeyChain
+from keyutils.bip32utils import derive_childkey
 
 
 class Contract(object):
@@ -106,8 +109,7 @@ class Contract(object):
                             "guid": keychain.guid.encode("hex"),
                             "pubkeys": {
                                 "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": bitcoin.bip32_deserialize(
-                                    KeyChain().bitcoin_master_pubkey)[5].encode("hex")
+                                "bitcoin": bitcoin.bip32_extract_key(KeyChain().bitcoin_master_pubkey)
                             }
                         },
                         "item": {
@@ -221,160 +223,79 @@ class Contract(object):
             keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
         self.save()
 
-    def update(self,
-               expiration_date=None,
-               metadata_category=None,
-               title=None,
-               description=None,
-               currency_code=None,
-               price=None,
-               process_time=None,
-               nsfw=None,
-               est_delivery_domestic=None,
-               est_delivery_international=None,
-               shipping_origin=None,
-               shipping_regions=None,
-               keywords=None,
-               category=None,
-               condition=None,
-               sku=None,
-               image_hashes=None,  # if intending to delete an image, pass in
-                                   # the hashes that are staying.
-               images=None,  # to add new images pass in a list of image files.
-               free_shipping=None,
-               shipping_currency_code=None,
-               shipping_domestic=None,
-               shipping_international=None):
+    def purchase(self,
+                 quantity,
+                 ship_to=None,
+                 shipping_address=None,
+                 city=None,
+                 state=None,
+                 postal_code=None,
+                 country=None,
+                 options=None,
+                 moderator=None):
+        """
+        Use this method to puchase this contract. It will update it will the buyer information
+        then save it to the file system.
+        """
+        keychain = KeyChain()
+        profile = Profile().get()
+        order_json = {
+            "buyer_order": {
+                "order": {
+                    "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "quantity": quantity,
+                    "id": {
+                        "guid": keychain.guid.encode("hex"),
+                        "pubkeys": {
+                            "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
+                            "bitcoin": bitcoin.bip32_deserialize(
+                                KeyChain().bitcoin_master_pubkey)[5].encode("hex")
+                        }
+                    },
+                    "payment": {}
+                }
+            }
+        }
+        if profile.HasField("handle"):
+            order_json["buyer_order"]["order"]["id"]["blockchain_id"] = profile.handle
+        if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
+            order_json["buyer_order"]["order"]["shipping"] = {}
+            order_json["buyer_order"]["order"]["shipping"]["ship_to"] = ship_to
+            order_json["buyer_order"]["order"]["shipping"]["address"] = shipping_address
+            order_json["buyer_order"]["order"]["shipping"]["city"] = city
+            order_json["buyer_order"]["order"]["shipping"]["state"] = state
+            order_json["buyer_order"]["order"]["shipping"]["postal_code"] = postal_code
+            order_json["buyer_order"]["order"]["shipping"]["country"] = country
+        if options is not None:
+            order_json["buyer_order"]["order"]["options"] = options
+        if moderator:
+            chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
+            order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
+            for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
+                if mod["guid"] == moderator:
+                    order_json["buyer_order"]["order"]["moderator"] = moderator
+                    masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
 
-        self.delete(False)
-        vendor_listing = self.contract["vendor_offer"]["listing"]
-        if expiration_date is not None:
-            vendor_listing["item"]["expiry"] = expiration_date
-        if metadata_category is not None:
-            vendor_listing["metadata"]["category"] = metadata_category
-        if metadata_category != "physical good" and vendor_listing["metadata"][
-                "category"] == "physical good":
-            del vendor_listing["shipping"]
-        elif metadata_category == "physical good" and vendor_listing["metadata"][
-                "category"] != "physical good":
-            vendor_listing["shipping"] = {}
-            vendor_listing["shipping"]["est_delivery"] = {}
-            vendor_listing["shipping"]["free"] = False
-        if title is not None:
-            vendor_listing["item"]["title"] = title
-        if description is not None:
-            vendor_listing["item"]["description"] = description
-        if currency_code is not None:
-            if currency_code.upper() != "BTC" and "bitcoin" \
-                    in vendor_listing["item"]["price_per_unit"]:
-                p = vendor_listing["item"]["price_per_unit"]["bitcoin"]
-                del vendor_listing["item"]["price_per_unit"]["bitcoin"]
-                vendor_listing["item"]["price_per_unit"]["fiat"] = {}
-                vendor_listing["item"]["price_per_unit"]["fiat"][
-                    "currency_code"] = currency_code
-                vendor_listing["item"]["price_per_unit"]["fiat"]["price"] = p
-            elif currency_code.upper() == "BTC" and "fiat" in \
-                    vendor_listing["item"]["price_per_unit"]:
-                p = vendor_listing["item"]["price_per_unit"]["fiat"]["price"]
-                del vendor_listing["item"]["price_per_unit"]["fiat"]
-                vendor_listing["item"]["price_per_unit"]["bitcoin"] = p
-        if price is not None:
-            if "bitcoin" in vendor_listing["item"]["price_per_unit"]:
-                vendor_listing["item"]["price_per_unit"]["bitcoin"] = price
-            else:
-                vendor_listing["item"]["price_per_unit"]["fiat"]["price"] = price
-        if process_time is not None:
-            vendor_listing["item"]["process_time"] = process_time
-        if nsfw is not None:
-            vendor_listing["item"]["nsfw"] = nsfw
-        if keywords is not None:
-            vendor_listing["item"]["keywords"] = []
-            vendor_listing["item"]["keywords"].extend(keywords)
-        if category is not None:
-            vendor_listing["item"]["category"] = category
-        if image_hashes is not None:
-            to_delete = list(set(vendor_listing["item"]["image_hashes"]) - set(image_hashes))
-            for image_hash in to_delete:
-                # delete from disk
-                h = HashMap()
-                image_path = h.get_file(unhexlify(image_hash))
-                if os.path.exists(image_path):
-                    os.remove(image_path)
-                # remove pointer to the image from the HashMap
-                h.delete(unhexlify(image_hash))
-            vendor_listing["item"]["image_hashes"] = []
-            vendor_listing["item"]["image_hashes"].extend(image_hashes)
-        if images is not None:
-            if "image_hashes" not in vendor_listing["item"]:
-                vendor_listing["item"]["image_hashes"] = []
-            for image in images:
-                hash_value = digest(image).encode("hex")
-                vendor_listing["item"]["image_hashes"].append(hash_value)
-                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
-                    outfile.write(image)
-                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
-        if vendor_listing["metadata"]["category"] == "physical good" and condition is not None:
-            vendor_listing["item"]["condition"] = condition
-        if sku is not None:
-            vendor_listing["item"]["sku"] = sku
-        if vendor_listing["metadata"]["category"] == "physical good":
-            if shipping_origin is not None:
-                vendor_listing["shipping"]["shipping_origin"] = shipping_origin
-            if free_shipping is not None:
-                if free_shipping is True and vendor_listing["shipping"]["free"] is False:
-                    vendor_listing["shipping"]["free"] = True
-                    del vendor_listing["shipping"]["flat_fee"]
-                elif free_shipping is False and vendor_listing["shipping"]["free"] is True:
-                    vendor_listing["shipping"]["flat_fee"] = {}
-                    vendor_listing["shipping"]["flat_fee"]["bitcoin"] = {}
-                    vendor_listing["shipping"]["free"] = False
-            if shipping_currency_code is not None and vendor_listing["shipping"]["free"] is False:
-                if shipping_currency_code == "BTC" and "bitcoin" not in \
-                        vendor_listing["shipping"]["flat_fee"]:
-                    vendor_listing["shipping"]["flat_fee"]["bitcoin"] = {}
-                    d = vendor_listing["shipping"]["flat_fee"]["fiat"]["price"]["domestic"]
-                    i = vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
-                        "international"]
-                    vendor_listing["shipping"]["flat_fee"]["bitcoin"]["domestic"] = d
-                    vendor_listing["shipping"]["flat_fee"]["bitcoin"]["international"] = i
-                    del vendor_listing["shipping"]["flat_fee"]["fiat"]
-                elif shipping_currency_code != "BTC" and "bitcoin" in \
-                        vendor_listing["shipping"]["flat_fee"]:
-                    d = vendor_listing["shipping"]["flat_fee"]["bitcoin"]["domestic"]
-                    i = vendor_listing["shipping"]["flat_fee"]["bitcoin"]["international"]
-                    vendor_listing["shipping"]["flat_fee"]["fiat"] = {}
-                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"] = {}
-                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"]["domestic"] = d
-                    vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
-                        "international"] = i
-                    vendor_listing["shipping"]["flat_fee"]["fiat"][
-                        "currency_code"] = shipping_currency_code
-                    del vendor_listing["shipping"]["flat_fee"]["bitcoin"]
-            if shipping_domestic is not None and "bitcoin" not in \
-                    vendor_listing["shipping"]["flat_fee"]:
-                vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
-                    "domestic"] = shipping_domestic
-            if shipping_international is not None and "bitcoin" not in \
-                    vendor_listing["shipping"]["flat_fee"]:
-                vendor_listing["shipping"]["flat_fee"]["fiat"]["price"][
-                    "international"] = shipping_international
-            if shipping_domestic is not None and "bitcoin" in \
-                    vendor_listing["shipping"]["flat_fee"]:
-                vendor_listing["shipping"]["flat_fee"]["bitcoin"][
-                    "domestic"] = shipping_domestic
-            if shipping_international is not None and "bitcoin" in \
-                    vendor_listing["shipping"]["flat_fee"]:
-                vendor_listing["shipping"]["flat_fee"]["bitcoin"][
-                    "international"] = shipping_international
-            if shipping_regions is not None:
-                vendor_listing["shipping"]["shipping_regions"] = shipping_regions
-            if est_delivery_domestic is not None:
-                vendor_listing["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
-            if est_delivery_international is not None:
-                vendor_listing["shipping"]["est_delivery"][
-                    "international"] = est_delivery_international
+            masterkey_b = bitcoin.bip32_extract_key(keychain.bitcoin_master_pubkey)
+            masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
+            buyer_key = derive_childkey(masterkey_b, chaincode)
+            vendor_key = derive_childkey(masterkey_v, chaincode)
+            moderator_key = derive_childkey(masterkey_m, chaincode)
 
-        self.save()
+            redeem_script = '75' + bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+            order_json["buyer_order"]["order"]["payment"]["redeem_script"] = redeem_script
+            order_json["buyer_order"]["order"]["payment"]["address"] = bitcoin.p2sh_scriptaddr(redeem_script)
+            self.contract["buyer_order"] = order_json["buyer_order"]
+
+        order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
+        self.contract["buyer_order"]["signature"] = \
+            keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
+
+        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
+        return json.dumps(self.contract, indent=4)
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)
