@@ -3,6 +3,7 @@ __author__ = 'chris'
 import json
 import bitcoin
 import random
+import time
 from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
@@ -16,7 +17,7 @@ from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
 from constants import DATA_FOLDER
-from db.datastore import HashMap, ListingsStore, ModeratorStore
+from db.datastore import HashMap, ListingsStore, ModeratorStore, Purchases
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
@@ -323,7 +324,7 @@ class Contract(object):
 
         return self.contract["buyer_order"]["order"]["payment"]["address"]
 
-    def await_funding(self, websocket_server, libbitcoin_client):
+    def await_funding(self, websocket_server, libbitcoin_client, proofSig):
         """
         Saves the contract to the file system and db as an unfunded contract.
         Listens on the libbitcoin server for the multisig address to be funded.
@@ -334,10 +335,29 @@ class Contract(object):
         self.ws = websocket_server
         self.blockchain = libbitcoin_client
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
         payment_address = self.contract["buyer_order"]["order"]["payment"]["address"]
+        vendor_item = self.contract["vendor_offer"]["listing"]["item"]
+        if "image_hashes" in vendor_item:
+            thumbnail_hash = vendor_item["image_hashes"][0]
+        else:
+            thumbnail_hash = ""
+        if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+            vendor = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+        else:
+            vendor = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+        Purchases().new_purchase(order_id,
+                                 self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                 time.time(),
+                                 self.contract["buyer_order"]["order"]["payment"]["amount"],
+                                 payment_address,
+                                 0,
+                                 thumbnail_hash,
+                                 vendor,
+                                 proofSig)
+
         self.timeout = reactor.callLater(600, self._delete_unfunded)
         self.blockchain.subscribe_address(payment_address, notification_cb=self._on_tx_received)
 
@@ -347,9 +367,10 @@ class Contract(object):
         the file system and db.
         """
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
         if os.path.exists(file_path):
             os.remove(file_path)
+        Purchases().delete_purchase(order_id)
 
     def _on_tx_received(self, address_version, address_hash, height, block_hash, tx):
         """
@@ -375,16 +396,18 @@ class Contract(object):
                 self.timeout.cancel()
                 self.blockchain.unsubscribe_address(
                     self.contract["buyer_order"]["order"]["payment"]["address"], self._on_tx_received)
+                order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
                 message_json = {
                     "payment_received": {
                         "address": self.contract["buyer_order"]["order"]["payment"]["address"],
-                        "order_id": digest(json.dumps(self.contract, indent=4)).encode("hex")
+                        "order_id": order_id
                         }
                 }
                 # push funding message over websockets
                 self.ws.push(json.dumps(message_json, indent=4))
 
                 # update the db
+                Purchases().update_status(order_id, 1)
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)

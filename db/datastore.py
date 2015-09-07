@@ -29,7 +29,7 @@ timestamp INTEGER, avatar_hash BLOB)''')
 encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
     cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
     cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
-address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
+address TEXT, status INTEGER, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
     cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
     cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
 address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
@@ -395,4 +395,50 @@ encryptionSignature, bitcoinKey, bitcoinSignature, handle) VALUES (?,?,?,?,?,?,?
     def clear_all(self):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM moderators''')
+        self.db.commit()
+
+class Purchases(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+
+    def new_purchase(self, order_id, title, timestamp, btc,
+                     address, status, thumbnail, seller, proofSig):
+        cursor = self.db.cursor()
+        try:
+            cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, timestamp, btc, address, status,
+thumbnail, seller, proofSig) VALUES (?,?,?,?,?,?,?,?,?)''',
+                           (order_id, title, timestamp, btc, address, status, thumbnail, seller, proofSig))
+        except Exception as e:
+            print e.message
+        self.db.commit()
+
+    def get_purchase(self, order_id):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, title, timestamp, btc, address, status,
+ thumbnail, seller, proofSig FROM purchases WHERE id=?''', (order_id,))
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret[0]
+
+    def delete_purchase(self, order_id):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM purchases WHERE id=?''', (order_id,))
+        self.db.commit()
+
+    def get_all(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, title, timestamp, btc, address, status,
+ thumbnail, seller, proofSig FROM purchases ''')
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret
+
+    def update_status(self, order_id, status):
+        cursor = self.db.cursor()
+        cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
         self.db.commit()

@@ -437,7 +437,7 @@ class OpenBazaarAPI(APIResource):
     def purchase_contract(self, request):
         def handle_response(resp, contract):
             if resp is not None:
-                contract.await_funding(self.ws, self.libbitcoin_client)
+                contract.await_funding(self.ws, self.libbitcoin_client, digest("some proof"))
                 request.write(payment_address)
                 request.finish()
         options = None

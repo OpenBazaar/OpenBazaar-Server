@@ -12,3 +12,5 @@ if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER + "store/listings/in progress/")
     os.makedirs(DATA_FOLDER + "store/listings/trade receipts/")
     os.makedirs(DATA_FOLDER + "store/media/")
+    os.makedirs(DATA_FOLDER + "purchases/in progress/")
+    os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
