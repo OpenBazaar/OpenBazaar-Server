@@ -1,7 +1,7 @@
 __author__ = 'chris'
 
 # pylint: disable=import-error
-import guidc
+#import guidc
 from binascii import hexlify, unhexlify
 
 import nacl.signing
@@ -14,8 +14,9 @@ class GUID(object):
     # pylint: disable=W0633
     def __init__(self, keys=None, use_C_lib=False):
         if keys is None:
-            if use_C_lib:
-                self.privkey = unhexlify(guidc.generate())
+            if use_C_lib:  # disabled for now
+                # self.privkey = unhexlify(guidc.generate())
+                self.privkey = None
                 self.signing_key = nacl.signing.SigningKey(self.privkey)
                 verify_key = self.signing_key.verify_key
                 signed = self.signing_key.sign(str(verify_key))

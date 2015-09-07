@@ -10,6 +10,7 @@ import stun
 from autobahn.twisted.websocket import listenWS
 
 import dht.constants
+import obelisk
 from db.datastore import create_database
 from keyutils.keys import KeyChain
 from dht.network import Server
@@ -21,6 +22,8 @@ from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
+
+TESTNET = True
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -48,7 +51,7 @@ def on_bootstrap_complete(resp):
     nlistener = NotificationListenerImpl(ws_factory)
     mserver.protocol.add_listener(nlistener)
 
-protocol = OpenBazaarProtocol((ip_address, port))
+protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
 # kademlia
 node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
@@ -83,8 +86,14 @@ webdir = File(".")
 web = Site(webdir)
 reactor.listenTCP(9000, web, interface="127.0.0.1")
 
+# blockchain
+if TESTNET:
+    libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://testnet-baltic.airbitz.co:9091")
+else:
+    libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin1.openbazaar.org:9091")
+
 # rest api
-api = OpenBazaarAPI(mserver, kserver, protocol)
+api = OpenBazaarAPI(mserver, kserver, protocol, ws_factory, libbitcoin_client)
 site = Site(api, timeout=None)
 reactor.listenTCP(18469, site, interface="127.0.0.1")
 

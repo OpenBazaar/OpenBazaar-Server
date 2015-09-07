@@ -29,10 +29,12 @@ class OpenBazaarAPI(APIResource):
     OpenBazaar daemon for use in a GUI or other application.
     """
 
-    def __init__(self, mserver, kserver, protocol):
+    def __init__(self, mserver, kserver, protocol, ws, libbitcoin_client):
         self.mserver = mserver
         self.kserver = kserver
         self.protocol = protocol
+        self.ws = ws
+        self.libbitcoin_client = libbitcoin_client
         APIResource.__init__(self)
 
     @GET('^/api/v1/get_image')
@@ -430,3 +432,29 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/unmake_moderator')
     def unmake_moderator(self, request):
         self.mserver.unmake_moderator()
+
+    @POST('^/api/v1/purchase_contract')
+    def purchase_contract(self, request):
+        def handle_response(resp, contract):
+            if resp is not None:
+                contract.await_funding(self.ws, self.libbitcoin_client)
+                request.write(payment_address)
+                request.finish()
+        options = None
+        if "options" in request.args:
+            options = {}
+            for option in request.args["options"]:
+                options[option] = request.args[option]
+        c = Contract(hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
+        payment_address = c.\
+            add_purchase_info(request.args["quantity"][0],
+                              request.args["ships_to"][0] if "ships_to" in request.args else None,
+                              request.args["address"][0] if "address" in request.args else None,
+                              request.args["city"][0] if "city" in request.args else None,
+                              request.args["state"][0] if "state" in request.args else None,
+                              request.args["postal_code"][0] if "postal_code" in request.args else None,
+                              request.args["country"][0] if "country" in request.args else None,
+                              request.args["moderator"][0] if "moderator" in request.args else None,
+                              options)
+        handle_response(True, c)
+        return server.NOT_DONE_YET

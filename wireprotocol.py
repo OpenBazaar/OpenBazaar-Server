@@ -16,7 +16,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     the appropriate classes for processing.
     """
 
-    def __init__(self, ip_address):
+    def __init__(self, ip_address, testnet=False):
         """
         Initialize the new protocol with the connection handler factory.
 
@@ -24,6 +24,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 ip_address: a `tuple` of the (ip address, port) of ths node.
         """
         self.ip_address = ip_address
+        self.testnet = testnet
         self.processors = []
         self.factory = self.ConnHandlerFactory(self.processors, self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])

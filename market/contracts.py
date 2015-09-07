@@ -6,10 +6,12 @@ import random
 from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
+from urllib2 import Request, urlopen, URLError
 
 import re
 import os
 import nacl.encoding
+from twisted.internet import reactor
 from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
@@ -25,7 +27,7 @@ class Contract(object):
     A class for creating and interacting with OpenBazaar Ricardian contracts.
     """
 
-    def __init__(self, contract=None, hash_value=None):
+    def __init__(self, contract=None, hash_value=None, testnet=False):
         """
         This class can be instantiated with either an `OrderedDict` or a hash
         of a contract. If a hash is used, we will load the contract from either
@@ -36,7 +38,8 @@ class Contract(object):
 
         Args:
             contract: an `OrderedDict` containing a filled out json contract
-            hash: a hash (in raw bytes) of a contract
+            hash: a hash160 (in raw bytes) of a contract
+            testnet: is this contract on the testnet
         """
         if contract is not None:
             self.contract = contract
@@ -51,6 +54,14 @@ class Contract(object):
                 self.contract = {}
         else:
             self.contract = {}
+
+        # used when purchasing this contract
+        self.testnet = testnet
+        self.ws = None
+        self.blockchain = None
+        self.amount_funded = 0
+        self.received_txs = []
+        self.timeout = None
 
     def create(self,
                expiration_date,
@@ -92,7 +103,6 @@ class Contract(object):
         :param moderators: a 'list' of 'string' guids (hex encoded).
         """
 
-        # TODO: import keys into the contract, import moderator information from db, sign contract.
         profile = Profile().get()
         keychain = KeyChain()
         self.contract = OrderedDict(
@@ -223,20 +233,20 @@ class Contract(object):
             keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
         self.save()
 
-    def purchase(self,
-                 quantity,
-                 ship_to=None,
-                 shipping_address=None,
-                 city=None,
-                 state=None,
-                 postal_code=None,
-                 country=None,
-                 options=None,
-                 moderator=None):
+    def add_purchase_info(self,
+                          quantity,
+                          ship_to=None,
+                          shipping_address=None,
+                          city=None,
+                          state=None,
+                          postal_code=None,
+                          country=None,
+                          moderator=None,
+                          options=None):
         """
-        Use this method to puchase this contract. It will update it will the buyer information
-        then save it to the file system.
+        Update the contract with the buyer's purchase information.
         """
+
         keychain = KeyChain()
         profile = Profile().get()
         order_json = {
@@ -248,8 +258,7 @@ class Contract(object):
                         "guid": keychain.guid.encode("hex"),
                         "pubkeys": {
                             "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
-                            "bitcoin": bitcoin.bip32_deserialize(
-                                KeyChain().bitcoin_master_pubkey)[5].encode("hex")
+                            "bitcoin": bitcoin.bip32_extract_key(keychain.bitcoin_master_pubkey)
                         }
                     },
                     "payment": {}
@@ -275,6 +284,8 @@ class Contract(object):
                 if mod["guid"] == moderator:
                     order_json["buyer_order"]["order"]["moderator"] = moderator
                     masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
+                else:
+                    return False
 
             masterkey_b = bitcoin.bip32_extract_key(keychain.bitcoin_master_pubkey)
             masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
@@ -284,18 +295,96 @@ class Contract(object):
 
             redeem_script = '75' + bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
             order_json["buyer_order"]["order"]["payment"]["redeem_script"] = redeem_script
-            order_json["buyer_order"]["order"]["payment"]["address"] = bitcoin.p2sh_scriptaddr(redeem_script)
-            self.contract["buyer_order"] = order_json["buyer_order"]
+            if self.testnet:
+                payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
+            else:
+                payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
+            order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
 
+        price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
+        if "bitcoin" in price_json:
+            order_json["buyer_order"]["order"]["payment"]["amount"] = price_json["bitcoin"]
+        else:
+            currency_code = price_json["fiat"]["currency_code"]
+            fiat_price = price_json["fiat"]["price"]
+            try:
+                request = Request('https://api.bitcoinaverage.com/ticker/' + currency_code.upper() + '/last')
+                response = urlopen(request)
+                conversion_rate = response.read()
+            except URLError:
+                return False
+            order_json["buyer_order"]["order"]["payment"]["amount"] = float(
+                "{0:.8f}".format(float(fiat_price) / float(conversion_rate)))
+
+        self.contract["buyer_order"] = order_json["buyer_order"]
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
         self.contract["buyer_order"]["signature"] = \
             keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
 
+        return self.contract["buyer_order"]["order"]["payment"]["address"]
+
+    def await_funding(self, websocket_server, libbitcoin_client):
+        """
+        Saves the contract to the file system and db as an unfunded contract.
+        Listens on the libbitcoin server for the multisig address to be funded.
+        Deletes the unfunded contract from the file system and db if it goes
+        unfunded for more than 10 minutes.
+        """
+
+        self.ws = websocket_server
+        self.blockchain = libbitcoin_client
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
-        return json.dumps(self.contract, indent=4)
+        payment_address = self.contract["buyer_order"]["order"]["payment"]["address"]
+        self.timeout = reactor.callLater(600, self._delete_unfunded)
+        self.blockchain.subscribe_address(payment_address, notification_cb=self._on_tx_received)
+
+    def _delete_unfunded(self):
+        """
+        The user failed to fund the contract in the 10 minute window. Remove it from
+        the file system and db.
+        """
+        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    def _on_tx_received(self, address_version, address_hash, height, block_hash, tx):
+        """
+        Fire when the libbitcoin server tells us we received a payment to this funding address.
+        While unlikely, a user may send multiple transactions to the funding address reach the
+        funding level. We need to keep a running balance and increment it when a new transaction
+        is received. If the contract is fully funded, we push a notification to the websockets.
+        """
+        # decode the transaction
+        transaction = bitcoin.deserialize(tx.encode("hex"))
+
+        # get the amount (in satoshi) the user is expected to pay
+        amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
+        if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
+            output_script = 'a914' + digest(unhexlify(
+                self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
+            for output in transaction["outs"]:
+                if output["script"] == output_script:
+                    self.amount_funded += output["value"]
+                    if tx not in self.received_txs:
+                        self.received_txs.append(tx)
+            if self.amount_funded >= amount_to_pay:  # if fully funded
+                self.timeout.cancel()
+                self.blockchain.unsubscribe_address(
+                    self.contract["buyer_order"]["order"]["payment"]["address"], self._on_tx_received)
+                message_json = {
+                    "payment_received": {
+                        "address": self.contract["buyer_order"]["order"]["payment"]["address"],
+                        "order_id": digest(json.dumps(self.contract, indent=4)).encode("hex")
+                        }
+                }
+                # push funding message over websockets
+                self.ws.push(json.dumps(message_json, indent=4))
+
+                # update the db
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)

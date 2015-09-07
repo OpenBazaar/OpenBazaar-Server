@@ -28,6 +28,12 @@ timestamp INTEGER, avatar_hash BLOB)''')
     cursor.execute('''CREATE TABLE moderators(guid BLOB UNIQUE, signedPubkey BLOB, encryptionKey BLOB,
 encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
     cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
+    cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
+address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
+    cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
+    cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
+address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
+    cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
     db.commit()
     return db
 
