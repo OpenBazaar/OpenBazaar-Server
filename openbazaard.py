@@ -93,8 +93,10 @@ else:
     libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin1.openbazaar.org:9091")
 
 # rest api
-api = OpenBazaarAPI(mserver, kserver, protocol, ws_factory, libbitcoin_client)
+api = OpenBazaarAPI(mserver, kserver, protocol)
 site = Site(api, timeout=None)
 reactor.listenTCP(18469, site, interface="127.0.0.1")
+
+protocol.set_servers(ws_factory, libbitcoin_client)
 
 reactor.run()

@@ -1,5 +1,6 @@
 __author__ = 'chris'
 
+import json
 import nacl.signing
 import nacl.utils
 import nacl.encoding
@@ -13,12 +14,14 @@ from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, \
     GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE
 from db.datastore import HashMap, ListingsStore, FollowData
+from market.contracts import Contract
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
 from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
+from collections import OrderedDict
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -220,6 +223,17 @@ class MarketProtocol(RPCProtocol):
             self.log.error("Received invalid message from %s" % sender)
             return ["False"]
 
+    def rpc_order(self, sender, order):
+        c = Contract(contract=json.loads(order, object_pairs_hook=OrderedDict), testnet=self.multiplexer.testnet)
+        if c.verify(sender.signed_pubkey):
+            self.router.addContact(sender)
+            payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
+            signature = self.signing_key.sign(payment_address)[:64]
+            c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
+            return [signature]
+        else:
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -278,6 +292,11 @@ class MarketProtocol(RPCProtocol):
     def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.message(address, ehemeral_pubkey, ciphertext)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callOrder(self, nodeToAsk, contract_json):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.order(address, contract_json)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

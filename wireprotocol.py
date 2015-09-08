@@ -25,6 +25,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         """
         self.ip_address = ip_address
         self.testnet = testnet
+        self.ws = None
+        self.blockchain = None
         self.processors = []
         self.factory = self.ConnHandlerFactory(self.processors, self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
@@ -86,6 +88,10 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         """Unregister the given processor."""
         if processor in self.processors:
             self.processors.remove(processor)
+
+    def set_servers(self, ws, blockchain):
+        self.ws = ws
+        self.blockchain = blockchain
 
     def send_message(self, datagram, address):
         """

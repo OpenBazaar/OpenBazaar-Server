@@ -442,3 +442,50 @@ thumbnail, seller, proofSig) VALUES (?,?,?,?,?,?,?,?,?)''',
         cursor = self.db.cursor()
         cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
         self.db.commit()
+
+class Sales(object):
+    def __init__(self):
+        self.db = lite.connect(DATABASE)
+        self.db.text_factory = str
+
+    def new_sale(self, order_id, title, timestamp, btc,
+                 address, status, thumbnail, seller):
+        cursor = self.db.cursor()
+        try:
+            cursor.execute('''INSERT OR REPLACE INTO sales(id, title, timestamp, btc, address, status,
+thumbnail, seller) VALUES (?,?,?,?,?,?,?,?)''',
+                           (order_id, title, timestamp, btc, address, status, thumbnail, seller))
+        except Exception as e:
+            print e.message
+        self.db.commit()
+
+    def get_sale(self, order_id):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, title, timestamp, btc, address, status,
+ thumbnail, seller FROM sales WHERE id=?''', (order_id,))
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret[0]
+
+    def delete_sale(self, order_id):
+        cursor = self.db.cursor()
+        cursor.execute('''DELETE FROM sales WHERE id=?''', (order_id,))
+        self.db.commit()
+
+    def get_all(self):
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT id, title, timestamp, btc, address, status,
+ thumbnail, seller FROM sales ''')
+        ret = cursor.fetchall()
+        if not ret:
+            return None
+        else:
+            return ret
+
+    def update_status(self, order_id, status):
+        cursor = self.db.cursor()
+        cursor.execute('''UPDATE sales SET status=? WHERE id=?;''', (status, order_id))
+        self.db.commit()
+

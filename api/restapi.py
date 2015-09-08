@@ -29,12 +29,10 @@ class OpenBazaarAPI(APIResource):
     OpenBazaar daemon for use in a GUI or other application.
     """
 
-    def __init__(self, mserver, kserver, protocol, ws, libbitcoin_client):
+    def __init__(self, mserver, kserver, protocol):
         self.mserver = mserver
         self.kserver = kserver
         self.protocol = protocol
-        self.ws = ws
-        self.libbitcoin_client = libbitcoin_client
         APIResource.__init__(self)
 
     @GET('^/api/v1/get_image')
@@ -436,9 +434,12 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/purchase_contract')
     def purchase_contract(self, request):
         def handle_response(resp, contract):
-            if resp is not None:
-                contract.await_funding(self.ws, self.libbitcoin_client, digest("some proof"))
+            if resp is not False:
+                contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
                 request.write(payment_address)
+                request.finish()
+            else:
+                request.write("False")
                 request.finish()
         options = None
         if "options" in request.args:
@@ -457,4 +458,13 @@ class OpenBazaarAPI(APIResource):
                               request.args["moderator"][0] if "moderator" in request.args else None,
                               options)
         handle_response(True, c)
+
+        def get_node(node):
+            if node is not None:
+                self.mserver.purchase(node, c).addCallback(handle_response, c)
+            else:
+                request.write("False")
+                request.finish()
+        seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
+        self.kserver.resolve(seller_guid).addCallback(get_node)
         return server.NOT_DONE_YET

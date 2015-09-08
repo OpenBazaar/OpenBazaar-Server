@@ -474,6 +474,27 @@ class Server(object):
                         pass
         self.kserver.get(self.kserver.node.id).addCallback(parse_messages)
 
+    def purchase(self, node_to_ask, contract):
+        """
+        Send an order message to the vendor.
+
+        Args:
+            node_to_ask: a `dht.node.Node` object
+            contract: a complete `Contract` object containing the buyer's order
+        """
+
+        def parse_response(response):
+            try:
+                address = contract.contract["buyer_order"]["order"]["payment"]["address"]
+                verify_key = nacl.signing.VerifyKey(node_to_ask.signed_pubkey[64:])
+                verify_key.verify(address, response[1][0])
+                return response[1][0]
+            except Exception:
+                return False
+
+        d = self.protocol.callOrder(node_to_ask, json.dumps(contract.contract, indent=4))
+        return d.addCallback(parse_response)
+
     @staticmethod
     def cache(filename):
         """
