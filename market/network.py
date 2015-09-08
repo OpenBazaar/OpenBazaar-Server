@@ -487,7 +487,7 @@ class Server(object):
             try:
                 address = contract.contract["buyer_order"]["order"]["payment"]["address"]
                 verify_key = nacl.signing.VerifyKey(node_to_ask.signed_pubkey[64:])
-                verify_key.verify(address, response[1][0])
+                verify_key.verify(str(address), response[1][0])
                 return response[1][0]
             except Exception:
                 return False

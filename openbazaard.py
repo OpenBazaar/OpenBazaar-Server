@@ -23,7 +23,7 @@ from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
 
-TESTNET = True
+TESTNET = False
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")

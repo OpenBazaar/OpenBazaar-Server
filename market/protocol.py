@@ -225,13 +225,15 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_order(self, sender, order):
         c = Contract(contract=json.loads(order, object_pairs_hook=OrderedDict), testnet=self.multiplexer.testnet)
-        if c.verify(sender.signed_pubkey):
+        if c.verify(sender.signed_pubkey[64:]):
             self.router.addContact(sender)
+            self.log.info("Received an order from %s" % sender)
             payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
-            signature = self.signing_key.sign(payment_address)[:64]
+            signature = self.signing_key.sign(str(payment_address))[:64]
             c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
             return [signature]
         else:
+            self.log.error("Received invalid order from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):

@@ -340,7 +340,6 @@ class Contract(object):
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
         payment_address = self.contract["buyer_order"]["order"]["payment"]["address"]
         vendor_item = self.contract["vendor_offer"]["listing"]["item"]
         if "image_hashes" in vendor_item:

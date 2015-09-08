@@ -434,7 +434,7 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/purchase_contract')
     def purchase_contract(self, request):
         def handle_response(resp, contract):
-            if resp is not False:
+            if resp:
                 contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
                 request.write(payment_address)
                 request.finish()
@@ -449,7 +449,7 @@ class OpenBazaarAPI(APIResource):
         c = Contract(hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
         payment_address = c.\
             add_purchase_info(request.args["quantity"][0],
-                              request.args["ships_to"][0] if "ships_to" in request.args else None,
+                              request.args["ship_to"][0] if "ship_to" in request.args else None,
                               request.args["address"][0] if "address" in request.args else None,
                               request.args["city"][0] if "city" in request.args else None,
                               request.args["state"][0] if "state" in request.args else None,
@@ -457,7 +457,6 @@ class OpenBazaarAPI(APIResource):
                               request.args["country"][0] if "country" in request.args else None,
                               request.args["moderator"][0] if "moderator" in request.args else None,
                               options)
-        handle_response(True, c)
 
         def get_node(node):
             if node is not None:
