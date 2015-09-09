@@ -23,8 +23,6 @@ from db import datastore
 
 class KademliaProtocolTest(unittest.TestCase):
     def setUp(self):
-        datastore.create_database("test.db")
-        datastore.DATABASE = "test.db"
         self.public_ip = '123.45.67.89'
         self.port = 12345
         self.own_addr = (self.public_ip, self.port)
@@ -50,7 +48,8 @@ class KademliaProtocolTest(unittest.TestCase):
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
-        self.protocol = KademliaProtocol(self.node, self.storage, 20)
+        self.db = datastore.Database(filepath="test.db")
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr)
         self.wire_protocol.register_processor(self.protocol)

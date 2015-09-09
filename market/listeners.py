@@ -3,15 +3,14 @@ import json
 import time
 from interfaces import MessageListener, NotificationListener
 from zope.interface import implements
-from db.datastore import MessageStore, NotificationStore, FollowData
 from protos.objects import Plaintext_Message, Following
 
 class MessageListenerImpl(object):
     implements(MessageListener)
 
-    def __init__(self, web_socket_factory):
+    def __init__(self, web_socket_factory, database):
         self.ws = web_socket_factory
-        self.db = MessageStore()
+        self.db = database.MessageStore()
 
     def notify(self, plaintext, signature):
 
@@ -40,13 +39,14 @@ class MessageListenerImpl(object):
 class NotificationListenerImpl(object):
     implements(NotificationListener)
 
-    def __init__(self, web_socket_factory):
+    def __init__(self, web_socket_factory, database):
         self.ws = web_socket_factory
+        self.db = database
 
     def notify(self, guid, message):
         # pull the metadata for this node from the db
         f = Following()
-        ser = FollowData().get_following()
+        ser = self.db.FollowData().get_following()
         if ser is not None:
             f.ParseFromString(ser)
             for user in f.users:
@@ -54,7 +54,7 @@ class NotificationListenerImpl(object):
                     avatar_hash = user.metadata.avatar_hash
                     handle = user.metadata.handle
         timestamp = int(time.time())
-        NotificationStore().save_notification(guid, handle, message, timestamp, avatar_hash)
+        self.db.NotificationStore().save_notification(guid, handle, message, timestamp, avatar_hash)
         notification_json = {
             "notification": {
                 "guid": guid.encode("hex"),

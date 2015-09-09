@@ -11,19 +11,19 @@ from autobahn.twisted.websocket import listenWS
 
 import dht.constants
 import obelisk
-from db.datastore import create_database
+from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, DATABASE
+from constants import DATA_FOLDER
 from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
 
-TESTNET = False
+TESTNET = True
 
 # logging
 logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
@@ -38,17 +38,16 @@ ip_address = response[1]
 port = response[2]
 
 # database
-if not os.path.isfile(DATABASE):
-    create_database()
+db = Database(TESTNET)
 
 # key generation
-keys = KeyChain()
+keys = KeyChain(db)
 
 def on_bootstrap_complete(resp):
-    mlistener = MessageListenerImpl(ws_factory)
+    mlistener = MessageListenerImpl(ws_factory, db)
     mserver.get_messages(mlistener)
     mserver.protocol.add_listener(mlistener)
-    nlistener = NotificationListenerImpl(ws_factory)
+    nlistener = NotificationListenerImpl(ws_factory, db)
     mserver.protocol.add_listener(nlistener)
 
 protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
@@ -57,10 +56,10 @@ protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 
 if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
-    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol,
-                               on_bootstrap_complete, storage=PersistentStorage(DATABASE))
+    kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
+                               on_bootstrap_complete, storage=PersistentStorage(db.DATABASE))
 else:
-    kserver = Server(node, dht.constants.KSIZE, dht.constants.ALPHA, storage=PersistentStorage(DATABASE))
+    kserver = Server(node, db, dht.constants.KSIZE, dht.constants.ALPHA, storage=PersistentStorage(db.DATABASE))
     kserver.protocol.connect_multiplexer(protocol)
     kserver.bootstrap(
         kserver.querySeed("162.213.253.147:8080",
@@ -71,7 +70,7 @@ kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
 protocol.register_processor(kserver.protocol)
 
 # market
-mserver = network.Server(kserver, keys.signing_key)
+mserver = network.Server(kserver, keys.signing_key, db)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 

@@ -4,7 +4,6 @@ import json
 import os
 import time
 from constants import DATA_FOLDER
-from db.datastore import VendorStore, MessageStore, ListingsStore, ModeratorStore
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
@@ -28,7 +27,7 @@ class WSProtocol(WebSocketServerProtocol):
         if message_id in self.factory.outstanding:
             vendors = self.factory.outstanding[message_id]
         else:
-            vendors = VendorStore().get_vendors()
+            vendors = self.factory.db.VendorStore().get_vendors()
             shuffle(vendors)
             self.factory.outstanding[message_id] = vendors
 
@@ -59,7 +58,7 @@ class WSProtocol(WebSocketServerProtocol):
                 vendors.remove(node)
                 return True
             else:
-                VendorStore().delete_vendor(node.id)
+                self.factory.db.VendorStore().delete_vendor(node.id)
                 vendors.remove(node)
                 return False
 
@@ -69,11 +68,12 @@ class WSProtocol(WebSocketServerProtocol):
         defer.gatherResults(dl).addCallback(count_results)
 
     def get_moderators(self, message_id):
-        m = ModeratorStore()
+        m = self.factory.db.ModeratorStore()
 
         def parse_response(moderators):
             if moderators is not None:
                 m.clear_all()
+
                 def parse_profile(profile, node):
                     if profile is not None:
                         m.save_moderator(node.id, node.signed_pubkey, profile.encryption_key.public_key,
@@ -101,8 +101,8 @@ class WSProtocol(WebSocketServerProtocol):
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
                         node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey)
-                        if n.guid == KeyChain().guid:
-                            parse_profile(Profile().get(), node_to_ask)
+                        if n.guid == KeyChain(self.factory.db).guid:
+                            parse_profile(Profile(self.factory.db).get(), node_to_ask)
                         else:
                             self.factory.mserver.get_profile(node_to_ask)\
                                 .addCallback(parse_profile, node_to_ask)
@@ -113,7 +113,7 @@ class WSProtocol(WebSocketServerProtocol):
     def get_homepage_listings(self, message_id):
         if message_id not in self.factory.outstanding:
             self.factory.outstanding[message_id] = []
-        vendors = VendorStore().get_vendors()
+        vendors = self.factory.db.VendorStore().get_vendors()
         shuffle(vendors)
 
         def count_results(results):
@@ -162,7 +162,7 @@ class WSProtocol(WebSocketServerProtocol):
                             return count
                 vendors.remove(node)
             else:
-                VendorStore().delete_vendor(node.id)
+                self.factory.db.VendorStore().delete_vendor(node.id)
                 vendors.remove(node)
             return count
 
@@ -172,8 +172,8 @@ class WSProtocol(WebSocketServerProtocol):
         defer.gatherResults(dl).addCallback(count_results)
 
     def send_message(self, guid, handle, message, subject, message_type, recipient_encryption_key):
-        MessageStore().save_message(guid, handle, "", recipient_encryption_key, subject,
-                                    message_type, message, "", time.time(), "", True)
+        self.factory.db.MessageStore().save_message(guid, handle, "", recipient_encryption_key, subject,
+                                                    message_type, message, "", time.time(), "", True)
 
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
@@ -214,8 +214,8 @@ class WSProtocol(WebSocketServerProtocol):
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
                         node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey, True)
-                        if n.guid == KeyChain().guid:
-                            proto = ListingsStore().get_proto()
+                        if n.guid == KeyChain(self.factory.db).guid:
+                            proto = self.factory.db.ListingsStore().get_proto()
                             l = Listings()
                             l.ParseFromString(proto)
                             for listing in l.listing:
@@ -272,6 +272,7 @@ class WSFactory(WebSocketServerFactory):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.mserver = mserver
         self.kserver = kserver
+        self.db = mserver.db
         self.outstanding = {}
         self.clients = []
 

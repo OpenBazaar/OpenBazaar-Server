@@ -18,7 +18,6 @@ from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
 from constants import DATA_FOLDER
-from db.datastore import HashMap, ListingsStore, ModeratorStore, Purchases, Sales
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
@@ -29,7 +28,7 @@ class Contract(object):
     A class for creating and interacting with OpenBazaar Ricardian contracts.
     """
 
-    def __init__(self, contract=None, hash_value=None, testnet=False):
+    def __init__(self, database, contract=None, hash_value=None, testnet=False):
         """
         This class can be instantiated with either an `OrderedDict` or a hash
         of a contract. If a hash is used, we will load the contract from either
@@ -43,11 +42,13 @@ class Contract(object):
             hash: a hash160 (in raw bytes) of a contract
             testnet: is this contract on the testnet
         """
+        self.db = database
+        self.keychain = KeyChain(self.db)
         if contract is not None:
             self.contract = contract
         elif hash_value is not None:
             try:
-                file_path = HashMap().get_file(hash_value)
+                file_path = self.db.HashMap().get_file(hash_value)
                 if file_path is None:
                     file_path = DATA_FOLDER + "cache/" + hexlify(hash_value)
                 with open(file_path, 'r') as filename:
@@ -106,8 +107,7 @@ class Contract(object):
         :param moderators: a 'list' of 'string' guids (hex encoded).
         """
 
-        profile = Profile().get()
-        keychain = KeyChain()
+        profile = Profile(self.db).get()
         self.contract = OrderedDict(
             {
                 "vendor_offer": {
@@ -119,10 +119,10 @@ class Contract(object):
                             "category_sub": "fixed price"
                         },
                         "id": {
-                            "guid": keychain.guid.encode("hex"),
+                            "guid": self.keychain.guid.encode("hex"),
                             "pubkeys": {
-                                "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": bitcoin.bip32_extract_key(KeyChain().bitcoin_master_pubkey)
+                                "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
+                                "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
                             }
                         },
                         "item": {
@@ -198,7 +198,7 @@ class Contract(object):
                 self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(hash_value)
                 with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
                     outfile.write(image)
-                HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+                self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
         if terms_conditions is not None or returns is not None:
             self.contract["vendor_offer"]["listing"]["policy"] = {}
             if terms_conditions is not None:
@@ -208,7 +208,7 @@ class Contract(object):
         if moderators is not None:
             self.contract["vendor_offer"]["listing"]["moderators"] = []
             for mod in moderators:
-                mod_info = ModeratorStore().get_moderator(unhexlify(mod))
+                mod_info = self.db.ModeratorStore().get_moderator(unhexlify(mod))
                 print mod_info
                 if mod_info is not None:
                     moderator = {
@@ -233,7 +233,7 @@ class Contract(object):
 
         listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
         self.contract["vendor_offer"]["signature"] = \
-            keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
+            self.keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
         self.save()
 
     def add_purchase_info(self,
@@ -250,19 +250,18 @@ class Contract(object):
         Update the contract with the buyer's purchase information.
         """
 
-        keychain = KeyChain()
-        profile = Profile().get()
+        profile = Profile(self.db).get()
         order_json = {
             "buyer_order": {
                 "order": {
                     "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
                     "quantity": quantity,
                     "id": {
-                        "guid": keychain.guid.encode("hex"),
+                        "guid": self.keychain.guid.encode("hex"),
                         "pubkeys": {
-                            "guid": keychain.guid_signed_pubkey[64:].encode("hex"),
-                            "bitcoin": bitcoin.bip32_extract_key(keychain.bitcoin_master_pubkey),
-                            "encryption": keychain.encryption_pubkey.encode("hex")
+                            "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
+                            "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
+                            "encryption": self.keychain.encryption_pubkey.encode("hex")
                         }
                     },
                     "payment": {}
@@ -292,7 +291,7 @@ class Contract(object):
                     valid_mod = True
             if not valid_mod:
                 return False
-            masterkey_b = bitcoin.bip32_extract_key(keychain.bitcoin_master_pubkey)
+            masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
             masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
             vendor_key = derive_childkey(masterkey_v, chaincode)
@@ -324,7 +323,7 @@ class Contract(object):
         self.contract["buyer_order"] = order_json["buyer_order"]
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
         self.contract["buyer_order"]["signature"] = \
-            keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
+            self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
 
         return self.contract["buyer_order"]["order"]["payment"]["address"]
 
@@ -352,25 +351,25 @@ class Contract(object):
             vendor = self.contract["vendor_offer"]["listing"]["id"]["guid"]
         if is_purchase:
             file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-            Purchases().new_purchase(order_id,
+            self.db.Purchases().new_purchase(order_id,
+                                             self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                             time.time(),
+                                             self.contract["buyer_order"]["order"]["payment"]["amount"],
+                                             payment_address,
+                                             0,
+                                             thumbnail_hash,
+                                             vendor,
+                                             proofSig)
+        else:
+            file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+            self.db.Sales().new_sale(order_id,
                                      self.contract["vendor_offer"]["listing"]["item"]["title"],
                                      time.time(),
                                      self.contract["buyer_order"]["order"]["payment"]["amount"],
                                      payment_address,
                                      0,
                                      thumbnail_hash,
-                                     vendor,
-                                     proofSig)
-        else:
-            file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
-            Sales().new_sale(order_id,
-                             self.contract["vendor_offer"]["listing"]["item"]["title"],
-                             time.time(),
-                             self.contract["buyer_order"]["order"]["payment"]["amount"],
-                             payment_address,
-                             0,
-                             thumbnail_hash,
-                             vendor)
+                                     vendor)
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -385,10 +384,10 @@ class Contract(object):
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         if self.is_purchase:
             file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-            Purchases().delete_purchase(order_id)
+            self.db.Purchases().delete_purchase(order_id)
         else:
             file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
-            Sales().delete_sale(order_id)
+            self.db.Sales().delete_sale(order_id)
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -426,7 +425,7 @@ class Contract(object):
                     }
 
                     # update the db
-                    Purchases().update_status(order_id, 1)
+                    self.db.Purchases().update_status(order_id, 1)
                 else:
                     message_json = {
                         "new_order": {
@@ -434,7 +433,7 @@ class Contract(object):
                             "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
                             }
                     }
-                    Sales().update_status(order_id, 1)
+                    self.db.Sales().update_status(order_id, 1)
 
                 # push the message over websockets
                 self.ws.push(json.dumps(message_json, indent=4))
@@ -455,7 +454,7 @@ class Contract(object):
         file_name = re.sub(r"\s+", '_', file_name)
         file_path = DATA_FOLDER + "store/listings/contracts/" + file_name + ".json"
 
-        h = HashMap()
+        h = self.db.HashMap()
 
         # maybe delete the images from disk
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"] and delete_images:
@@ -473,7 +472,7 @@ class Contract(object):
 
         # delete the listing metadata from the db
         contract_hash = digest(json.dumps(self.contract, indent=4))
-        ListingsStore().delete_listing(contract_hash)
+        self.db.ListingsStore().delete_listing(contract_hash)
 
         # remove the pointer to the contract from the HashMap
         h.delete(contract_hash)
@@ -525,10 +524,10 @@ class Contract(object):
                 data.ships_to.append(CountryCode.Value(region.upper()))
 
         # save the mapping of the contract file path and contract hash in the database
-        HashMap().insert(data.contract_hash, file_path)
+        self.db.HashMap().insert(data.contract_hash, file_path)
 
         # save the `ListingMetadata` protobuf to the database as well
-        ListingsStore().add_listing(data)
+        self.db.ListingsStore().add_listing(data)
 
     def verify(self, sender_key):
         try:
@@ -539,7 +538,7 @@ class Contract(object):
             ref_hash = unhexlify(self.contract["buyer_order"]["order"]["ref_hash"])
 
             # verify that the reference hash matches the contract and that the contract actually exists
-            if contract_hash != ref_hash or not HashMap().get_file(ref_hash):
+            if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash):
                 raise Exception("Order for contract that doesn't exist")
 
             # verify the signature on the order
@@ -590,7 +589,7 @@ class Contract(object):
                 if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
                     masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
 
-            masterkey_v = bitcoin.bip32_extract_key(KeyChain().bitcoin_master_pubkey)
+            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
             masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
             vendor_key = derive_childkey(masterkey_v, chaincode)

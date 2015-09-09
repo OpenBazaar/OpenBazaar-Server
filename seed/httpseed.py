@@ -25,13 +25,18 @@ from protos import objects
 from wireprotocol import OpenBazaarProtocol
 from market import network
 from keyutils.keys import KeyChain
+from db.datastore import Database
 
 sys.path.append(os.path.dirname(__file__))
 application = service.Application("OpenBazaar_seed_server")
 application.setComponent(ILogObserver, log.FileLogObserver(sys.stdout, log.INFO).emit)
 
+# Create the database
+db = Database()
+
 # Load the keys
-keychain = KeyChain()
+keychain = KeyChain(db)
+
 if os.path.isfile('keys.pickle'):
     keys = pickle.load(open("keys.pickle", "r"))
     signing_key_hex = keys["signing_privkey"]
@@ -54,16 +59,16 @@ this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey)
 protocol = OpenBazaarProtocol((ip_address, port))
 
 if os.path.isfile('cache.pickle'):
-    kserver = Server.loadState('cache.pickle', ip_address, port, protocol)
+    kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)
 else:
-    kserver = Server(this_node)
+    kserver = Server(this_node, db)
     kserver.protocol.connect_multiplexer(protocol)
 
 protocol.register_processor(kserver.protocol)
 kserver.saveStateRegularly('cache.pickle', 10)
 
 # start the market server
-mserver = network.Server(kserver, keychain.signing_key)
+mserver = network.Server(kserver, keychain.signing_key, db)
 mserver.protocol.connect_multiplexer(protocol)
 protocol.register_processor(mserver.protocol)
 

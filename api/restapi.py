@@ -12,7 +12,6 @@ from constants import DATA_FOLDER
 from twisted.protocols.basic import FileSender
 from protos.countries import CountryCode
 from protos import objects
-from db.datastore import HashMap, FollowData, ListingsStore
 from keyutils.keys import KeyChain
 from dht.utils import digest
 from market.profile import Profile
@@ -33,6 +32,8 @@ class OpenBazaarAPI(APIResource):
         self.mserver = mserver
         self.kserver = kserver
         self.protocol = protocol
+        self.db = mserver.db
+        self.keychain = KeyChain(self.db)
         APIResource.__init__(self)
 
     @GET('^/api/v1/get_image')
@@ -57,8 +58,8 @@ class OpenBazaarAPI(APIResource):
             request.finish()
 
         if "hash" in request.args:
-            if HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
-                image_path = HashMap().get_file(unhexlify(request.args["hash"][0]))
+            if self.db.HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
+                image_path = self.db.HashMap().get_file(unhexlify(request.args["hash"][0]))
             else:
                 image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
             if not os.path.exists(image_path) and "guid" in request.args:
@@ -105,7 +106,7 @@ class OpenBazaarAPI(APIResource):
                 if "guid" in request.args:
                     profile_json["profile"]["guid"] = request.args["guid"][0]
                 else:
-                    profile_json["profile"]["guid"] = KeyChain().guid.encode("hex")
+                    profile_json["profile"]["guid"] = self.keychain.guid.encode("hex")
                 for account in profile.social:
                     profile_json["profile"]["social_accounts"][str(
                         objects.Profile.SocialAccount.SocialType.Name(account.type)).lower()] = {
@@ -127,7 +128,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            parse_profile(Profile().get())
+            parse_profile(Profile(self.db).get())
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_listings')
@@ -166,7 +167,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = ListingsStore().get_proto()
+            ser = self.db.ListingsStore().get_proto()
             if ser is not None:
                 l = objects.Listings()
                 l.ParseFromString(ser)
@@ -204,7 +205,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = FollowData().get_followers()
+            ser = self.db.FollowData().get_followers()
             if ser is not None:
                 f = objects.Followers()
                 f.ParseFromString(ser)
@@ -243,7 +244,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = FollowData().get_following()
+            ser = self.db.FollowData().get_following()
             if ser is not None:
                 f = objects.Following()
                 f.ParseFromString(ser)
@@ -271,7 +272,7 @@ class OpenBazaarAPI(APIResource):
     # pylint: disable=R0201
     @POST('^/api/v1/update_profile')
     def update_profile(self, request):
-        p = Profile()
+        p = Profile(self.db)
         if not p.get().encryption_key \
                 and "name" not in request.args \
                 and "location" not in request.args:
@@ -302,33 +303,33 @@ class OpenBazaarAPI(APIResource):
             with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                 outfile.write(request.args["avatar"][0])
             avatar_hash = digest(request.args["avatar"][0])
-            HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
+            self.db.HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
             u.avatar_hash = avatar_hash
         if "header" in request.args:
             with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                 outfile.write(request.args["header"][0])
             header_hash = digest(request.args["header"][0])
-            HashMap().insert(header_hash, DATA_FOLDER + "store/header")
+            self.db.HashMap().insert(header_hash, DATA_FOLDER + "store/header")
             u.header_hash = header_hash
         if "pgp_key" in request.args and "signature" in request.args:
             p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
-                          KeyChain().guid.encode("hex"))
+                          self.keychain.guid.encode("hex"))
         enc = u.PublicKey()
-        enc.public_key = KeyChain().encryption_pubkey
-        enc.signature = KeyChain().signing_key.sign(enc.public_key)[:64]
+        enc.public_key = self.keychain.encryption_pubkey
+        enc.signature = self.keychain.signing_key.sign(enc.public_key)[:64]
         u.encryption_key.MergeFrom(enc)
         p.update(u)
 
     @POST('^/api/v1/social_accounts')
     def add_social_account(self, request):
-        p = Profile()
+        p = Profile(self.db)
         if "account_type" in request.args and "username" in request.args and "proof" in request.args:
             p.add_social_account(request.args["account_type"][0], request.args["username"][0],
                                  request.args["proof"][0])
 
     @DELETE('^/api/v1/social_accounts')
     def delete_social_account(self, request):
-        p = Profile()
+        p = Profile(self.db)
         if "account_type" in request.args:
             p.remove_social_account(request.args["account_type"][0])
 
@@ -360,7 +361,7 @@ class OpenBazaarAPI(APIResource):
                     self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
             else:
                 try:
-                    with open(HashMap().get_file(unhexlify(request.args["id"][0])), "r") as filename:
+                    with open(self.db.HashMap().get_file(unhexlify(request.args["id"][0])), "r") as filename:
                         contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
                     parse_contract(contract)
                 except Exception:
@@ -376,7 +377,7 @@ class OpenBazaarAPI(APIResource):
             options = {}
             for option in request.args["options"]:
                 options[option] = request.args[option]
-        c = Contract()
+        c = Contract(self.db)
         c.create(
             str(request.args["expiration_date"][0]),
             request.args["metadata_category"][0],
@@ -412,10 +413,10 @@ class OpenBazaarAPI(APIResource):
     @DELETE('^/api/v1/delete_contract')
     def delete_contract(self, request):
         if "id" in request.args:
-            c = Contract(hash_value=unhexlify(request.args["id"][0]))
+            c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]))
             for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
                 self.kserver.delete(keyword.lower(), c.get_contract_id(),
-                                    KeyChain().signing_key.sign(c.get_contract_id())[:64])
+                                    self.keychain.signing_key.sign(c.get_contract_id())[:64])
             c.delete()
 
     @GET('^/api/v1/shutdown')
@@ -446,7 +447,7 @@ class OpenBazaarAPI(APIResource):
             options = {}
             for option in request.args["options"]:
                 options[option] = request.args[option]
-        c = Contract(hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
+        c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
         payment_address = c.\
             add_purchase_info(request.args["quantity"][0],
                               request.args["ship_to"][0] if "ship_to" in request.args else None,

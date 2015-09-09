@@ -15,6 +15,7 @@ from dht.storage import ForgetfulStorage
 from dht.protocol import KademliaProtocol
 from protos.objects import Value
 from wireprotocol import OpenBazaarProtocol
+from db.datastore import Database
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
@@ -45,7 +46,8 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
-        self.protocol = KademliaProtocol(self.node, self.storage, 20)
+        self.db = Database(filepath=":memory:")
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr)
         self.wire_protocol.register_processor(self.protocol)
@@ -221,7 +223,8 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
-        self.protocol = KademliaProtocol(self.node, self.storage, 20)
+        self.db = Database(filepath=":memory:")
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr)
         self.wire_protocol.register_processor(self.protocol)

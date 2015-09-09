@@ -15,7 +15,6 @@ from market.protocol import MarketProtocol
 from dht.utils import digest
 from constants import DATA_FOLDER
 from protos import objects
-from db.datastore import FollowData
 from market.profile import Profile
 from collections import OrderedDict
 from binascii import hexlify, unhexlify
@@ -23,7 +22,7 @@ from keyutils.keys import KeyChain
 
 
 class Server(object):
-    def __init__(self, kserver, signing_key):
+    def __init__(self, kserver, signing_key, database):
         """
         A high level class for sending direct, market messages to other nodes.
         A node will need one of these to participate in buying and selling.
@@ -32,7 +31,9 @@ class Server(object):
         self.kserver = kserver
         self.signing_key = signing_key
         self.router = kserver.protocol.router
-        self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key)
+        self.db = database
+        self.profile = Profile(self.db)
+        self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key, database)
 
     def get_contract(self, node_to_ask, contract_hash):
         """
@@ -223,11 +224,11 @@ class Server(object):
 
         u = objects.Profile()
         k = u.PublicKey()
-        k.public_key = bitcoin.bip32_deserialize(KeyChain().bitcoin_master_pubkey)[5]
+        k.public_key = bitcoin.bip32_deserialize(KeyChain(self.db).bitcoin_master_pubkey)[5]
         k.signature = self.signing_key.sign(k.public_key)[:64]
         u.bitcoin_key.MergeFrom(k)
         u.moderator = True
-        Profile().update(u)
+        self.profile.update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
 
@@ -239,7 +240,7 @@ class Server(object):
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
-        Profile().remove_field("moderator")
+        self.profile.remove_field("moderator")
 
     def follow(self, node_to_follow):
         """
@@ -263,14 +264,14 @@ class Server(object):
                     pubkey = node_to_follow.signed_pubkey[64:]
                     verify_key = nacl.signing.VerifyKey(pubkey)
                     verify_key.verify(result[1][1], result[1][2])
-                    FollowData().follow(u)
+                    self.db.FollowData().follow(u)
                     return True
                 except Exception:
                     return False
             else:
                 return False
 
-        proto = Profile().get(False)
+        proto = self.profile.get(False)
         m = objects.Metadata()
         m.name = proto.name
         m.handle = proto.handle
@@ -292,7 +293,7 @@ class Server(object):
 
         def save_to_db(result):
             if result[0] and result[1][0] == "True":
-                FollowData().unfollow(node_to_unfollow.id)
+                self.db.FollowData().unfollow(node_to_unfollow.id)
                 return True
             else:
                 return False
@@ -399,7 +400,7 @@ class Server(object):
             return defer.DeferredList(ds).addCallback(how_many_reached)
         dl = []
         f = objects.Followers()
-        f.ParseFromString(FollowData().get_followers())
+        f.ParseFromString(self.db.FollowData().get_followers())
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
@@ -409,7 +410,7 @@ class Server(object):
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
         """
-        pro = Profile().get()
+        pro = self.profile.get()
         if len(message) > 1500:
             return
         p = objects.Plaintext_Message()
