@@ -21,6 +21,7 @@ from constants import DATA_FOLDER
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
+from log import Logger
 
 
 class Contract(object):
@@ -57,6 +58,7 @@ class Contract(object):
                 self.contract = {}
         else:
             self.contract = {}
+        self.log = Logger(system=self)
 
         # used when purchasing this contract
         self.testnet = testnet
@@ -374,7 +376,7 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
         self.timeout = reactor.callLater(600, self._delete_unfunded)
-        self.blockchain.subscribe_address(payment_address, notification_cb=self._on_tx_received)
+        self.blockchain.subscribe_address(payment_address, notification_cb=self.on_tx_received)
 
     def _delete_unfunded(self):
         """
@@ -391,7 +393,7 @@ class Contract(object):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-    def _on_tx_received(self, address_version, address_hash, height, block_hash, tx):
+    def on_tx_received(self, address_version, address_hash, height, block_hash, tx):
         """
         Fire when the libbitcoin server tells us we received a payment to this funding address.
         While unlikely, a user may send multiple transactions to the funding address reach the
@@ -414,7 +416,7 @@ class Contract(object):
             if self.amount_funded >= amount_to_pay:  # if fully funded
                 self.timeout.cancel()
                 self.blockchain.unsubscribe_address(
-                    self.contract["buyer_order"]["order"]["payment"]["address"], self._on_tx_received)
+                    self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
                 order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
                 if self.is_purchase:
                     message_json = {
@@ -426,6 +428,7 @@ class Contract(object):
 
                     # update the db
                     self.db.Purchases().update_status(order_id, 1)
+                    self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                 else:
                     message_json = {
                         "new_order": {
@@ -434,6 +437,7 @@ class Contract(object):
                             }
                     }
                     self.db.Sales().update_status(order_id, 1)
+                    self.log.info("Received new order %s" % order_id)
 
                 # push the message over websockets
                 self.ws.push(json.dumps(message_json, indent=4))

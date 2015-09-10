@@ -32,7 +32,6 @@ class Server(object):
         self.signing_key = signing_key
         self.router = kserver.protocol.router
         self.db = database
-        self.profile = Profile(self.db)
         self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key, database)
 
     def get_contract(self, node_to_ask, contract_hash):
@@ -228,7 +227,7 @@ class Server(object):
         k.signature = self.signing_key.sign(k.public_key)[:64]
         u.bitcoin_key.MergeFrom(k)
         u.moderator = True
-        self.profile.update(u)
+        Profile(self.db).update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
 
@@ -240,7 +239,7 @@ class Server(object):
         key = digest(self.kserver.node.getProto().SerializeToString())
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
-        self.profile.remove_field("moderator")
+        Profile(self.db).remove_field("moderator")
 
     def follow(self, node_to_follow):
         """
@@ -271,7 +270,7 @@ class Server(object):
             else:
                 return False
 
-        proto = self.profile.get(False)
+        proto = Profile(self.db).get(False)
         m = objects.Metadata()
         m.name = proto.name
         m.handle = proto.handle
@@ -410,7 +409,7 @@ class Server(object):
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
         """
-        pro = self.profile.get()
+        pro = Profile(self.db).get()
         if len(message) > 1500:
             return
         p = objects.Plaintext_Message()
