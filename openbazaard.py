@@ -10,6 +10,7 @@ from twisted.web.static import File
 from daemon import Daemon
 
 import stun
+import requests
 from autobahn.twisted.websocket import listenWS
 
 import dht.constants
@@ -166,6 +167,10 @@ commands:
                 usage='''usage:
         python openbazaard.py stop''')
             print "OpenBazaar server stopping..."
+            try:
+                requests.get("http://localhost:18469/api/v1/shutdown")
+            except Exception:
+                pass
             self.daemon.stop()
 
         def restart(self):

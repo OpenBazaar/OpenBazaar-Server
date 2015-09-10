@@ -421,6 +421,8 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
+        request.write("Success")
+        request.finish()
         self.protocol.shutdown()
         reactor.stop()
 
