@@ -38,7 +38,7 @@ def run(*args):
     log.startLogging(sys.stdout)
 
     # Create the database
-    db = Database()
+    db = Database(testnet=TESTNET)
 
     # Load the keys
     keychain = KeyChain(db)
@@ -65,7 +65,7 @@ def run(*args):
 
     # Start the kademlia server
     this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey)
-    protocol = OpenBazaarProtocol((ip_address, port))
+    protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
     if os.path.isfile('cache.pickle'):
         kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)
@@ -202,6 +202,8 @@ def run(*args):
 
     server_protocol = server.Site(WebResource(kserver))
     reactor.listenTCP(8080, server_protocol)
+
+    reactor.run()
 
 if __name__ == "__main__":
     # pylint: disable=anomalous-backslash-in-string

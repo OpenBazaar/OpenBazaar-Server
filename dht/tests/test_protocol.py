@@ -79,6 +79,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("PING")
+        m.testnet = False
         data = m.SerializeToString()
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
         expected_message = m.SerializeToString()
@@ -100,6 +101,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         del m.arguments[-3:]
@@ -130,6 +132,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         del m.arguments[-3:]
@@ -145,6 +148,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
+        m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", "Bad Signature"])
         data = m.SerializeToString()
         del m.arguments[-3:]
@@ -170,6 +174,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
+        m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
         del m.arguments[-3:]
@@ -188,6 +193,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STUN")
+        m.testnet = False
         data = m.SerializeToString()
         m.arguments.extend([self.public_ip, str(self.port)])
         expected_message = m.SerializeToString()
@@ -216,6 +222,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_NODE")
+        m.testnet = False
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
         del m.arguments[-1]
@@ -254,6 +261,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_VALUE")
+        m.testnet = False
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
         self.handler.receive_message(data)
@@ -291,6 +299,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_VALUE")
+        m.testnet = False
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
         self.handler.receive_message(data)

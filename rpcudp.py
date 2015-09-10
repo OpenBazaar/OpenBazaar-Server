@@ -116,6 +116,7 @@ class RPCProtocol:
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
         m.command = Command.Value(funcname.upper())
+        m.testnet = self.multiplexer.testnet
         for arg in response:
             m.arguments.append(str(arg))
         data = m.SerializeToString()
