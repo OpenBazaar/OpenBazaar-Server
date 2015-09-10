@@ -2,14 +2,13 @@ __author__ = 'chris'
 import bitcoin
 import nacl.signing
 import nacl.encoding
-from db.datastore import KeyStore
 from keyutils.guid import GUID
 from nacl.public import PrivateKey
 
 class KeyChain(object):
 
-    def __init__(self):
-        self.db = KeyStore()
+    def __init__(self, database):
+        self.db = database.KeyStore()
         guid_keys = self.db.get_key("guid")
         if guid_keys is None:
             self.create_keychain()

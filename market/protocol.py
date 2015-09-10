@@ -1,5 +1,6 @@
 __author__ = 'chris'
 
+import json
 import nacl.signing
 import nacl.utils
 import nacl.encoding
@@ -11,29 +12,30 @@ from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, \
-    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE
-from db.datastore import HashMap, ListingsStore, FollowData
+    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE, ORDER
+from market.contracts import Contract
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
 from binascii import hexlify
 from zope.interface.verify import verifyObject
 from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
+from collections import OrderedDict
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, node_proto, router, signing_key):
+    def __init__(self, node_proto, router, signing_key, database):
         self.router = router
         RPCProtocol.__init__(self, node_proto, router)
         self.log = Logger(system=self)
         self.multiplexer = None
-        self.hashmap = HashMap()
+        self.db = database
         self.signing_key = signing_key
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY, MESSAGE]
+                                 NOTIFY, MESSAGE, ORDER]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -45,7 +47,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up contract ID %s" % contract_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(self.hashmap.get_file(contract_hash), "r") as filename:
+            with open(self.db.HashMap().get_file(contract_hash), "r") as filename:
                 contract = filename.read()
             return [contract]
         except Exception:
@@ -56,7 +58,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up image with hash %s" % image_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(self.hashmap.get_file(image_hash), "r") as filename:
+            with open(self.db.HashMap().get_file(image_hash), "r") as filename:
                 image = filename.read()
             return [image]
         except Exception:
@@ -67,7 +69,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching profile")
         self.router.addContact(sender)
         try:
-            proto = Profile().get(True)
+            proto = Profile(self.db).get(True)
             return [proto, self.signing_key.sign(proto)[:64]]
         except Exception:
             self.log.error("Unable to load the profile")
@@ -77,7 +79,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching metadata")
         self.router.addContact(sender)
         try:
-            proto = Profile().get(False)
+            proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
             m.handle = proto.handle
@@ -93,9 +95,9 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching listings")
         self.router.addContact(sender)
         try:
-            p = Profile().get()
+            p = Profile(self.db).get()
             l = Listings()
-            l.ParseFromString(ListingsStore().get_proto())
+            l.ParseFromString(self.db.ListingsStore().get_proto())
             l.handle = p.handle
             l.avatar_hash = p.avatar_hash
             return [l.SerializeToString(), self.signing_key.sign(l.SerializeToString())[:64]]
@@ -107,7 +109,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Fetching metadata for contract %s" % hexlify(contract_hash))
         self.router.addContact(sender)
         try:
-            proto = ListingsStore().get_proto()
+            proto = self.db.ListingsStore().get_proto()
             l = Listings()
             l.ParseFromString(proto)
             for listing in l.listing:
@@ -131,8 +133,8 @@ class MarketProtocol(RPCProtocol):
             if f.following != self.proto.guid:
                 raise Exception('Following wrong node')
             f.signature = signature
-            FollowData().set_follower(f)
-            proto = Profile().get(False)
+            self.db.FollowData().set_follower(f)
+            proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
             m.handle = proto.handle
@@ -149,7 +151,7 @@ class MarketProtocol(RPCProtocol):
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
             verify_key.verify("unfollow:" + self.proto.guid, signature)
-            f = FollowData()
+            f = self.db.FollowData()
             f.delete_follower(sender.id)
             return ["True"]
         except Exception:
@@ -159,7 +161,7 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_followers(self, sender):
         self.log.info("Fetching followers list from db")
         self.router.addContact(sender)
-        ser = FollowData().get_followers()
+        ser = self.db.FollowData().get_followers()
         if ser is None:
             return ["None"]
         else:
@@ -168,14 +170,14 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_following(self, sender):
         self.log.info("Fetching following list from db")
         self.router.addContact(sender)
-        ser = FollowData().get_following()
+        ser = self.db.FollowData().get_following()
         if ser is None:
             return ["None"]
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
     def rpc_notify(self, sender, message, signature):
-        if len(message) <= 140 and FollowData().is_following(sender.id):
+        if len(message) <= 140 and self.db.FollowData().is_following(sender.id):
             try:
                 verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
                 verify_key.verify(message, signature)
@@ -218,6 +220,20 @@ class MarketProtocol(RPCProtocol):
             return ["True"]
         except Exception:
             self.log.error("Received invalid message from %s" % sender)
+            return ["False"]
+
+    def rpc_order(self, sender, order):
+        c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                     testnet=self.multiplexer.testnet)
+        if c.verify(sender.signed_pubkey[64:]):
+            self.router.addContact(sender)
+            self.log.info("Received an order from %s" % sender)
+            payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
+            signature = self.signing_key.sign(str(payment_address))[:64]
+            c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
+            return [signature]
+        else:
+            self.log.error("Received invalid order from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
@@ -278,6 +294,11 @@ class MarketProtocol(RPCProtocol):
     def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.message(address, ehemeral_pubkey, ciphertext)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callOrder(self, nodeToAsk, contract_json):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.order(address, contract_json)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

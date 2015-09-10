@@ -20,12 +20,13 @@ from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOL
 class KademliaProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, sourceNode, storage, ksize):
+    def __init__(self, sourceNode, storage, ksize, database):
         self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage
         self.sourceNode = sourceNode
         self.multiplexer = None
+        self.db = database
         self.log = Logger(system=self)
         self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH]
         RPCProtocol.__init__(self, sourceNode.getProto(), self.router)

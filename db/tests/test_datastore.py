@@ -1,15 +1,14 @@
 import os
 import unittest
 
-from db import datastore
+from db.datastore import Database
 from protos.objects import Profile, Listings, Following, Metadata, Followers
 from protos.countries import CountryCode
 
 
 class DatastoreTest(unittest.TestCase):
     def setUp(self):
-        datastore.create_database("test.db")
-        datastore.DATABASE = "test.db"
+        self.db = Database(filepath="test.db")
         self.test_hash = "87e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_hash2 = "97e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_file = "Contents of test.txt"
@@ -49,16 +48,16 @@ class DatastoreTest(unittest.TestCase):
         self.f.signed_pubkey = ''
         self.f.metadata.MergeFrom(self.m)
 
-        self.hm = datastore.HashMap()
+        self.hm = self.db.HashMap()
         self.hm.delete_all()
 
-        self.ps = datastore.ProfileStore()
-        self.ls = datastore.ListingsStore()
-        self.ks = datastore.KeyStore()
-        self.fd = datastore.FollowData()
-        self.ms = datastore.MessageStore()
-        self.ns = datastore.NotificationStore()
-        self.vs = datastore.VendorStore()
+        self.ps = self.db.ProfileStore()
+        self.ls = self.db.ListingsStore()
+        self.ks = self.db.KeyStore()
+        self.fd = self.db.FollowData()
+        self.ms = self.db.MessageStore()
+        self.ns = self.db.NotificationStore()
+        self.vs = self.db.VendorStore()
 
     def tearDown(self):
         os.remove("test.db")

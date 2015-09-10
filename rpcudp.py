@@ -17,7 +17,6 @@ from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import SEED_NODE
-from db.datastore import VendorStore
 
 
 class RPCProtocol:
@@ -28,7 +27,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=5, noisy=True, testnet=False):
+    def __init__(self, proto, router, waitTimeout=5, noisy=True):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -45,7 +44,6 @@ class RPCProtocol:
         self._waitTimeout = waitTimeout
         self._outstanding = {}
         self.noisy = noisy
-        self.testnet = testnet
         self.log = Logger(system=self)
 
     def receive_message(self, datagram, connection):
@@ -58,7 +56,7 @@ class RPCProtocol:
             self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
             return False
 
-        if m.testnet != self.testnet:
+        if m.testnet != self.multiplexer.testnet:
             self.log.warning("Received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
             return False
@@ -79,7 +77,7 @@ class RPCProtocol:
                 return False
 
         if m.sender.vendor:
-            VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
+            self.db.VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
 
         msgID = m.messageID
         data = tuple(m.arguments)
@@ -118,6 +116,7 @@ class RPCProtocol:
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
         m.command = Command.Value(funcname.upper())
+        m.testnet = self.multiplexer.testnet
         for arg in response:
             m.arguments.append(str(arg))
         data = m.SerializeToString()
@@ -143,7 +142,7 @@ class RPCProtocol:
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
-        A method for handling an incoming HOLE_PUNCH method. Relay the message
+        A method for handling an incoming HOLE_PUNCH message. Relay the message
         to the correct node if it's not for us. Otherwise sent a datagram to allow
         the other node to punch through our NAT.
         """
@@ -170,7 +169,7 @@ class RPCProtocol:
             m.command = Command.Value(name.upper())
             for arg in args:
                 m.arguments.append(str(arg))
-            m.testnet = self.testnet
+            m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
             if self.noisy:
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))

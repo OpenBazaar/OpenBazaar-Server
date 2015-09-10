@@ -9,3 +9,4 @@ gnupg==2.0.2
 pynacl==0.3.0
 txrestapi==0.2
 autobahn==0.10.5-2
+python-obelisk

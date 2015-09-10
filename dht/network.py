@@ -45,7 +45,7 @@ class Server(object):
     to start listening as an active node on the network.
     """
 
-    def __init__(self, node, ksize=20, alpha=3, storage=None):
+    def __init__(self, node, db, ksize=20, alpha=3, storage=None):
         """
         Create a server instance.  This will start listening on the given port.
 
@@ -61,7 +61,7 @@ class Server(object):
         self.log = Logger(system=self)
         self.storage = storage or ForgetfulStorage()
         self.node = node
-        self.protocol = KademliaProtocol(self.node, self.storage, ksize)
+        self.protocol = KademliaProtocol(self.node, self.storage, ksize, db)
         self.refreshLoop = LoopingCall(self.refreshTable).start(3600)
 
     def listen(self, port):
@@ -328,7 +328,8 @@ class Server(object):
                 'id': self.node.id,
                 'vendor': self.node.vendor,
                 'signed_pubkey': self.node.signed_pubkey,
-                'neighbors': self.bootstrappableNeighbors()}
+                'neighbors': self.bootstrappableNeighbors(),
+                'testnet': self.protocol.multiplexer.testnet}
         if len(data['neighbors']) == 0:
             self.log.warning("No known neighbors, so not writing to cache.")
             return
@@ -336,15 +337,17 @@ class Server(object):
             pickle.dump(data, f)
 
     @classmethod
-    def loadState(cls, fname, ip_address, port, multiplexer, callback=None, storage=None):
+    def loadState(cls, fname, ip_address, port, multiplexer, db, callback=None, storage=None):
         """
         Load the state of this node (the alpha/ksize/id/immediate neighbors)
         from a cache file with the given fname.
         """
         with open(fname, 'r') as f:
             data = pickle.load(f)
+        if data['testnet'] != multiplexer.testnet:
+            raise Exception('Cache uses wrong network parameters')
         n = Node(data['id'], ip_address, port, data['signed_pubkey'], data['vendor'])
-        s = Server(n, data['ksize'], data['alpha'], storage=storage)
+        s = Server(n, db, data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
         if len(data['neighbors']) > 0:
             if callback is not None:
