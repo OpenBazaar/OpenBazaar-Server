@@ -67,9 +67,9 @@ def run(*args):
     this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey)
     protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
-    if os.path.isfile('cache.pickle'):
+    try:
         kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)
-    else:
+    except Exception:
         kserver = Server(this_node, db)
         kserver.protocol.connect_multiplexer(protocol)
 

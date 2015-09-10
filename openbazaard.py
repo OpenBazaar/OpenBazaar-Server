@@ -1,5 +1,4 @@
 __author__ = 'chris'
-import os
 import sys
 import argparse
 import platform
@@ -61,10 +60,10 @@ def run(*args):
     # kademlia
     node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
 
-    if os.path.isfile(DATA_FOLDER + 'cache.pickle'):
+    try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
                                    on_bootstrap_complete, storage=PersistentStorage(db.DATABASE))
-    else:
+    except Exception:
         kserver = Server(node, db, dht.constants.KSIZE, dht.constants.ALPHA, storage=PersistentStorage(db.DATABASE))
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(

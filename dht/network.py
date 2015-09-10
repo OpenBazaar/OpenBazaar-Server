@@ -328,7 +328,8 @@ class Server(object):
                 'id': self.node.id,
                 'vendor': self.node.vendor,
                 'signed_pubkey': self.node.signed_pubkey,
-                'neighbors': self.bootstrappableNeighbors()}
+                'neighbors': self.bootstrappableNeighbors(),
+                'testnet': self.protocol.multiplexer.testnet}
         if len(data['neighbors']) == 0:
             self.log.warning("No known neighbors, so not writing to cache.")
             return
@@ -343,6 +344,8 @@ class Server(object):
         """
         with open(fname, 'r') as f:
             data = pickle.load(f)
+        if data['testnet'] != multiplexer.testnet:
+            raise Exception('Cache uses wrong network parameters')
         n = Node(data['id'], ip_address, port, data['signed_pubkey'], data['vendor'])
         s = Server(n, db, data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
