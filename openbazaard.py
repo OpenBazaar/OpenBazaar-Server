@@ -67,8 +67,8 @@ def run(*args):
         kserver = Server(node, db, dht.constants.KSIZE, dht.constants.ALPHA, storage=PersistentStorage(db.DATABASE))
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(
-            kserver.querySeed("162.213.253.147:8080",
-                              "5b56c8daeb3b37c8a9b47be6102fa43b9f069f58dcb57475984041b26c99e389"))\
+            kserver.querySeed("seed.openbazaar.org:8080",
+                              "4b953c89a9e698e0cbff18811f849a4625c5895f6cc6b9c06d95d43f1c00959b"))\
             .addCallback(on_bootstrap_complete)
 
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)

@@ -77,7 +77,7 @@ class OpenBazaarAPI(APIResource):
 
         return server.NOT_DONE_YET
 
-    @GET('^/api/v1/get_profile')
+    @GET('^/api/v1/profile')
     def get_profile(self, request):
         def parse_profile(profile):
             if profile is not None:
@@ -259,7 +259,13 @@ class OpenBazaarAPI(APIResource):
             def get_node(node):
                 if node is not None:
                     self.mserver.follow(node)
+                    request.write(json.dumps({"success": True}))
+                    request.finish()
+                else:
+                    request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
+                    request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+            return server.NOT_DONE_YET
 
     @POST('^/api/v1/unfollow')
     def unfollow(self, request):
@@ -267,73 +273,103 @@ class OpenBazaarAPI(APIResource):
             def get_node(node):
                 if node is not None:
                     self.mserver.unfollow(node)
+                    request.write(json.dumps({"success": True}))
+                    request.finish()
+                else:
+                    request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
+                    request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+            return server.NOT_DONE_YET
 
     # pylint: disable=R0201
-    @POST('^/api/v1/update_profile')
+    @POST('^/api/v1/profile')
     def update_profile(self, request):
-        p = Profile(self.db)
-        if not p.get().encryption_key \
-                and "name" not in request.args \
-                and "location" not in request.args:
-            return "False"
-        u = objects.Profile()
-        if "name" in request.args:
-            u.name = request.args["name"][0]
-        if "location" in request.args:
-            # This needs to be formatted. Either here or from the UI.
-            u.location = CountryCode.Value(request.args["location"][0].upper())
-        if "handle" in request.args:
-            u.handle = request.args["handle"][0]
-        if "about" in request.args:
-            u.about = request.args["about"][0]
-        if "short_description" in request.args:
-            u.short_description = request.args["short_description"][0]
-        if "nsfw" in request.args:
-            u.nsfw = True
-        if "vendor" in request.args:
-            u.vendor = True
-        if "moderator" in request.args:
-            u.moderator = True
-        if "website" in request.args:
-            u.website = request.args["website"][0]
-        if "email" in request.args:
-            u.email = request.args["email"][0]
-        if "avatar" in request.args:
-            with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
-                outfile.write(request.args["avatar"][0])
-            avatar_hash = digest(request.args["avatar"][0])
-            self.db.HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
-            u.avatar_hash = avatar_hash
-        if "header" in request.args:
-            with open(DATA_FOLDER + "store/header", 'wb') as outfile:
-                outfile.write(request.args["header"][0])
-            header_hash = digest(request.args["header"][0])
-            self.db.HashMap().insert(header_hash, DATA_FOLDER + "store/header")
-            u.header_hash = header_hash
-        if "pgp_key" in request.args and "signature" in request.args:
-            p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
-                          self.keychain.guid.encode("hex"))
-        enc = u.PublicKey()
-        enc.public_key = self.keychain.encryption_pubkey
-        enc.signature = self.keychain.signing_key.sign(enc.public_key)[:64]
-        u.encryption_key.MergeFrom(enc)
-        p.update(u)
+        try:
+            p = Profile(self.db)
+            if not p.get().encryption_key \
+                    and "name" not in request.args \
+                    and "location" not in request.args:
+                return "False"
+            u = objects.Profile()
+            if "name" in request.args:
+                u.name = request.args["name"][0]
+            if "location" in request.args:
+                # This needs to be formatted. Either here or from the UI.
+                u.location = CountryCode.Value(request.args["location"][0].upper())
+            if "handle" in request.args:
+                u.handle = request.args["handle"][0]
+            if "about" in request.args:
+                u.about = request.args["about"][0]
+            if "short_description" in request.args:
+                u.short_description = request.args["short_description"][0]
+            if "nsfw" in request.args:
+                u.nsfw = True
+            if "vendor" in request.args:
+                u.vendor = True
+            if "moderator" in request.args:
+                u.moderator = True
+            if "website" in request.args:
+                u.website = request.args["website"][0]
+            if "email" in request.args:
+                u.email = request.args["email"][0]
+            if "avatar" in request.args:
+                with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
+                    outfile.write(request.args["avatar"][0])
+                avatar_hash = digest(request.args["avatar"][0])
+                self.db.HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
+                u.avatar_hash = avatar_hash
+            if "header" in request.args:
+                with open(DATA_FOLDER + "store/header", 'wb') as outfile:
+                    outfile.write(request.args["header"][0])
+                header_hash = digest(request.args["header"][0])
+                self.db.HashMap().insert(header_hash, DATA_FOLDER + "store/header")
+                u.header_hash = header_hash
+            if "pgp_key" in request.args and "signature" in request.args:
+                p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
+                              self.keychain.guid.encode("hex"))
+            enc = u.PublicKey()
+            enc.public_key = self.keychain.encryption_pubkey
+            enc.signature = self.keychain.signing_key.sign(enc.public_key)[:64]
+            u.encryption_key.MergeFrom(enc)
+            p.update(u)
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
     @POST('^/api/v1/social_accounts')
     def add_social_account(self, request):
-        p = Profile(self.db)
-        if "account_type" in request.args and "username" in request.args and "proof" in request.args:
-            p.add_social_account(request.args["account_type"][0], request.args["username"][0],
-                                 request.args["proof"][0])
+        try:
+            p = Profile(self.db)
+            if "account_type" in request.args and "username" in request.args and "proof" in request.args:
+                p.add_social_account(request.args["account_type"][0], request.args["username"][0],
+                                     request.args["proof"][0])
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
     @DELETE('^/api/v1/social_accounts')
     def delete_social_account(self, request):
-        p = Profile(self.db)
-        if "account_type" in request.args:
-            p.remove_social_account(request.args["account_type"][0])
+        try:
+            p = Profile(self.db)
+            if "account_type" in request.args:
+                p.remove_social_account(request.args["account_type"][0])
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
-    @GET('^/api/v1/get_contract')
+    @GET('^/api/v1/contracts')
     def get_contract(self, request):
         def parse_contract(contract):
             if contract is not None:
@@ -371,102 +407,136 @@ class OpenBazaarAPI(APIResource):
             request.finish()
         return server.NOT_DONE_YET
 
-    @POST('^/api/v1/set_contract')
+    @POST('^/api/v1/contracts')
     def set_contract(self, request):
-        if "options" in request.args:
-            options = {}
-            for option in request.args["options"]:
-                options[option] = request.args[option]
-        c = Contract(self.db)
-        c.create(
-            str(request.args["expiration_date"][0]),
-            request.args["metadata_category"][0],
-            request.args["title"][0],
-            request.args["description"][0],
-            request.args["currency_code"][0],
-            request.args["price"][0],
-            request.args["process_time"][0],
-            True if "nsfw" in request.args else False,
-            request.args["shipping_origin"][0],
-            request.args["ships_to"],
-            est_delivery_domestic=request.args["est_delivery_domestic"][0],
-            est_delivery_international=request.args["est_delivery_international"][0],
-            terms_conditions=request.args["terms_conditions"][0]
-            if request.args["terms_conditions"][0] is not "" else None,
-            returns=request.args["returns"][0] if request.args["returns"][0] is not "" else None,
-            shipping_currency_code=request.args["shipping_currency_code"][0],
-            shipping_domestic=request.args["shipping_domestic"][0],
-            shipping_international=request.args["shipping_international"][0],
-            keywords=request.args["keywords"] if "keywords" in request.args else None,
-            category=request.args["category"][0] if request.args["category"][0] is not "" else None,
-            condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
-            sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
-            images=request.args["images"],
-            free_shipping=True if "free_shipping" in request.args else False,
-            options=options if "options" in request.args else None,
-            moderators=request.args["moderators"] if "moderators" in request.args else None)
+        try:
+            if "options" in request.args:
+                options = {}
+                for option in request.args["options"]:
+                    options[option] = request.args[option]
+            c = Contract(self.db)
+            c.create(
+                str(request.args["expiration_date"][0]),
+                request.args["metadata_category"][0],
+                request.args["title"][0],
+                request.args["description"][0],
+                request.args["currency_code"][0],
+                request.args["price"][0],
+                request.args["process_time"][0],
+                True if "nsfw" in request.args else False,
+                request.args["shipping_origin"][0],
+                request.args["ships_to"],
+                est_delivery_domestic=request.args["est_delivery_domestic"][0],
+                est_delivery_international=request.args["est_delivery_international"][0],
+                terms_conditions=request.args["terms_conditions"][0]
+                if request.args["terms_conditions"][0] is not "" else None,
+                returns=request.args["returns"][0] if request.args["returns"][0] is not "" else None,
+                shipping_currency_code=request.args["shipping_currency_code"][0],
+                shipping_domestic=request.args["shipping_domestic"][0],
+                shipping_international=request.args["shipping_international"][0],
+                keywords=request.args["keywords"] if "keywords" in request.args else None,
+                category=request.args["category"][0] if request.args["category"][0] is not "" else None,
+                condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
+                sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
+                images=request.args["images"],
+                free_shipping=True if "free_shipping" in request.args else False,
+                options=options if "options" in request.args else None,
+                moderators=request.args["moderators"] if "moderators" in request.args else None)
+            #for keyword in request.args["keywords"]:
+                    #self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
+                                     #self.kserver.node.getProto().SerializeToString())
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": str(e)}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
-        for keyword in request.args["keywords"]:
-            self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
-                             self.kserver.node.getProto().SerializeToString())
-
-    @DELETE('^/api/v1/delete_contract')
+    @DELETE('^/api/v1/contracts')
     def delete_contract(self, request):
-        if "id" in request.args:
-            c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]))
-            for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
-                self.kserver.delete(keyword.lower(), c.get_contract_id(),
-                                    self.keychain.signing_key.sign(c.get_contract_id())[:64])
-            c.delete()
+        try:
+            if "id" in request.args:
+                c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]))
+                for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                    self.kserver.delete(keyword.lower(), c.get_contract_id(),
+                                        self.keychain.signing_key.sign(c.get_contract_id())[:64])
+                c.delete()
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
-        request.write("Success")
-        request.finish()
         self.protocol.shutdown()
         reactor.stop()
 
     @POST('^/api/v1/make_moderator')
     def make_moderator(self, request):
-        self.mserver.make_moderator()
+        try:
+            self.mserver.make_moderator()
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
     @POST('^/api/v1/unmake_moderator')
     def unmake_moderator(self, request):
-        self.mserver.unmake_moderator()
+        try:
+            self.mserver.unmake_moderator()
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
     @POST('^/api/v1/purchase_contract')
     def purchase_contract(self, request):
-        def handle_response(resp, contract):
-            if resp:
-                contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
-                request.write(payment_address)
-                request.finish()
-            else:
-                request.write("False")
-                request.finish()
-        options = None
-        if "options" in request.args:
-            options = {}
-            for option in request.args["options"]:
-                options[option] = request.args[option]
-        c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
-        payment_address = c.\
-            add_purchase_info(request.args["quantity"][0],
-                              request.args["ship_to"][0] if "ship_to" in request.args else None,
-                              request.args["address"][0] if "address" in request.args else None,
-                              request.args["city"][0] if "city" in request.args else None,
-                              request.args["state"][0] if "state" in request.args else None,
-                              request.args["postal_code"][0] if "postal_code" in request.args else None,
-                              request.args["country"][0] if "country" in request.args else None,
-                              request.args["moderator"][0] if "moderator" in request.args else None,
-                              options)
+        try:
+            def handle_response(resp, contract):
+                if resp:
+                    contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
+                    request.write(json.dumps({"success": True, "payment_address": payment_address}, indent=4))
+                    request.finish()
+                else:
+                    request.write(json.dumps({"success": False, "reason": "seller rejected contract"}, indent=4))
+                    request.finish()
+            options = None
+            if "options" in request.args:
+                options = {}
+                for option in request.args["options"]:
+                    options[option] = request.args[option]
+            c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
+            payment_address = c.\
+                add_purchase_info(request.args["quantity"][0],
+                                  request.args["ship_to"][0] if "ship_to" in request.args else None,
+                                  request.args["address"][0] if "address" in request.args else None,
+                                  request.args["city"][0] if "city" in request.args else None,
+                                  request.args["state"][0] if "state" in request.args else None,
+                                  request.args["postal_code"][0] if "postal_code" in request.args else None,
+                                  request.args["country"][0] if "country" in request.args else None,
+                                  request.args["moderator"][0] if "moderator" in request.args else None,
+                                  options)
 
-        def get_node(node):
-            if node is not None:
-                self.mserver.purchase(node, c).addCallback(handle_response, c)
-            else:
-                request.write("False")
-                request.finish()
-        seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
-        self.kserver.resolve(seller_guid).addCallback(get_node)
-        return server.NOT_DONE_YET
+            def get_node(node):
+                if node is not None:
+                    self.mserver.purchase(node, c).addCallback(handle_response, c)
+                else:
+                    request.write("False")
+                    request.finish()
+            seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
+            self.kserver.resolve(seller_guid).addCallback(get_node)
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET

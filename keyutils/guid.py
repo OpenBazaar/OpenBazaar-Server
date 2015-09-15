@@ -11,6 +11,11 @@ def _testpow(pow_hash):
     return True if int(pow_hash, 16) < 50 else False
 
 class GUID(object):
+    """
+    Class for generating the guid. It can be generated using C code for a modest
+    speed boost but it is currently disabled to make it easier to compile the app.
+    """
+
     # pylint: disable=W0633
     def __init__(self, keys=None, use_C_lib=False):
         if keys is None:
