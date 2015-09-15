@@ -124,7 +124,8 @@ class Contract(object):
                             "guid": self.keychain.guid.encode("hex"),
                             "pubkeys": {
                                 "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+                                "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
+                                "encryption": self.keychain.encryption_pubkey.encode("hex")
                             }
                         },
                         "item": {

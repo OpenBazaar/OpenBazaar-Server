@@ -492,7 +492,13 @@ class Server(object):
             except Exception:
                 return False
 
-        d = self.protocol.callOrder(node_to_ask, json.dumps(contract.contract, indent=4))
+        public_key = contract.contract["vendor_offer"]["listing"]["id"]["encryption"]
+        skephem = PrivateKey.generate()
+        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+        box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+        nonce = nacl.utils.random(Box.NONCE_SIZE)
+        ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
+        d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
         return d.addCallback(parse_response)
 
     @staticmethod

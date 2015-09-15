@@ -37,7 +37,7 @@ def run(*args):
     # stun
     port = 18467 if not TESTNET else 28467
     print "Finding NAT Type.."
-    response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=port, stun_port=19302)
+    response = stun.get_ip_info(stun_host="seed.openbazaar.org", source_port=port)
     print "%s on %s:%s" % (response[0], response[1], response[2])
     ip_address = response[1]
     port = response[2]

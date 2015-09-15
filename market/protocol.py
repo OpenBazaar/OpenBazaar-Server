@@ -222,18 +222,24 @@ class MarketProtocol(RPCProtocol):
             self.log.error("Received invalid message from %s" % sender)
             return ["False"]
 
-    def rpc_order(self, sender, order):
-        c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
-                     testnet=self.multiplexer.testnet)
-        if c.verify(sender.signed_pubkey[64:]):
-            self.router.addContact(sender)
-            self.log.info("Received an order from %s" % sender)
-            payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
-            signature = self.signing_key.sign(str(payment_address))[:64]
-            c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
-            return [signature]
-        else:
-            self.log.error("Received invalid order from %s" % sender)
+    def rpc_order(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                         testnet=self.multiplexer.testnet)
+            if c.verify(sender.signed_pubkey[64:]):
+                self.router.addContact(sender)
+                self.log.info("Received an order from %s" % sender)
+                payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
+                signature = self.signing_key.sign(str(payment_address))[:64]
+                c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
+                return [signature]
+            else:
+                self.log.error("Received invalid order from %s" % sender)
+                return ["False"]
+        except Exception:
+            self.log.error("Unable to decrypt order from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
@@ -296,9 +302,9 @@ class MarketProtocol(RPCProtocol):
         d = self.message(address, ehemeral_pubkey, ciphertext)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callOrder(self, nodeToAsk, contract_json):
+    def callOrder(self, nodeToAsk, ephem_pubkey, encrypted_contract):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.order(address, contract_json)
+        d = self.order(address, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):
