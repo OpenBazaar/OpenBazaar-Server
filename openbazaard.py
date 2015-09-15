@@ -68,7 +68,7 @@ def run(*args):
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(
             kserver.querySeed("seed.openbazaar.org:8080",
-                              "4b953c89a9e698e0cbff18811f849a4625c5895f6cc6b9c06d95d43f1c00959b"))\
+                              "ddd862778e3ed71af06db0e3619a4c6269ec7468c745132dbb73982b319fc572"))\
             .addCallback(on_bootstrap_complete)
 
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
@@ -169,8 +169,7 @@ commands:
             try:
                 requests.get("http://localhost:18469/api/v1/shutdown")
             except Exception:
-                pass
-            self.daemon.stop()
+                self.daemon.stop()
 
         def restart(self):
             # pylint: disable=W0612

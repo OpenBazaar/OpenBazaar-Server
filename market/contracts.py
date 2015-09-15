@@ -117,7 +117,7 @@ class Contract(object):
                         "metadata": {
                             "version": "0.1",
                             "expiry": expiration_date + " UTC",
-                            "category": metadata_category,
+                            "category": metadata_category.lower(),
                             "category_sub": "fixed price"
                         },
                         "id": {
@@ -329,6 +329,45 @@ class Contract(object):
             self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
 
         return self.contract["buyer_order"]["order"]["payment"]["address"]
+
+    def add_order_confirmation(self,
+                               payout_address,
+                               comments=None,
+                               shipper=None,
+                               tracking_number=None,
+                               est_delivery=None,
+                               url=None,
+                               password=None):
+        """
+        Add the vendor's order confirmation to the contract.
+        """
+        conf_json = {
+            "vendor_order_confirmation": {
+                "invoice": {
+                    "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "payout_address": payout_address
+                }
+            }
+        }
+        if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
+            shipping = {"shipper": shipper, "tracking_number": tracking_number, "est_delivery": est_delivery}
+            conf_json["vendor_order_confirmation"]["invoice"]["shipping"] = shipping
+        elif self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "digital good":
+            content_source = {"url": url, "password": password}
+            conf_json["vendor_order_confirmation"]["invoice"]["content_source"] = content_source
+        if comments:
+            conf_json["vendor_order_confirmation"]["invoice"]["comments"] = comments
+        confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
+        conf_json["vendor_order_confirmation"]["signature"] = \
+            self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
+        self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
+        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+        del contract_dict["vendor_order_confirmation"]
+        order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+        self.db.Sales(order_id, 2)
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """

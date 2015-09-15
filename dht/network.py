@@ -104,15 +104,15 @@ class Server(object):
            seed: A `string` consisting of "ip:port" or "hostname:port"
            pubkey: The hex encoded public key to verify the signature on the response
         """
-        nodes = []
-        c = httplib.HTTPConnection(seed)
-        c.request("GET", "/")
-        response = c.getresponse()
-        self.log.info("Https response from %s: %s, %s" % (seed, response.status, response.reason))
-        data = response.read()
-        reread_data = data.decode("zlib")
-        proto = peers.PeerSeeds()
         try:
+            nodes = []
+            c = httplib.HTTPConnection(seed)
+            c.request("GET", "/")
+            response = c.getresponse()
+            self.log.info("Https response from %s: %s, %s" % (seed, response.status, response.reason))
+            data = response.read()
+            reread_data = data.decode("zlib")
+            proto = peers.PeerSeeds()
             proto.ParseFromString(reread_data)
             for peer in proto.peer_data:
                 p = peers.PeerData()
@@ -120,11 +120,10 @@ class Server(object):
                 tup = (str(p.ip_address), p.port)
                 nodes.append(tup)
             verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-            verify_key.verify(proto.signature + "".join(proto.peer_data))
+            verify_key.verify("".join(proto.peer_data), proto.signature)
             return nodes
-        except Exception:
-            self.log.error("Error parsing seed response.")
-        return nodes
+        except Exception, e:
+            self.log.error("Failed to query seed: %s" % str(e))
 
     def bootstrappableNeighbors(self):
         """

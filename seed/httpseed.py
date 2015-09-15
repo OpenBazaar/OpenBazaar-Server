@@ -43,8 +43,8 @@ def run(*args):
     # Load the keys
     keychain = KeyChain(db)
 
-    if os.path.isfile('keys.pickle'):
-        keys = pickle.load(open("keys.pickle", "r"))
+    if os.path.isfile(DATA_FOLDER + 'keys.pickle'):
+        keys = pickle.load(open(DATA_FOLDER + "keys.pickle", "r"))
         signing_key_hex = keys["signing_privkey"]
         signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
     else:
@@ -53,7 +53,7 @@ def run(*args):
             'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
             'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
         }
-        pickle.dump(keys, open("keys.pickle", "wb"))
+        pickle.dump(keys, open(DATA_FOLDER + "keys.pickle", "wb"))
 
     # Stun
     port = 18467 if not TESTNET else 28467
@@ -265,4 +265,4 @@ commands:
             print "Restarting OpenBazaar server..."
             self.daemon.restart()
 
-    Parser(OpenBazaard('/tmp/daemon-example.pid'))
+    Parser(OpenBazaard('/tmp/httpseed.pid'))
