@@ -336,7 +336,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -351,7 +351,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -365,7 +365,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -449,7 +449,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": str(e)}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -466,7 +466,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -483,7 +483,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -495,7 +495,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
 
@@ -537,6 +537,30 @@ class OpenBazaarAPI(APIResource):
             self.kserver.resolve(seller_guid).addCallback(get_node)
             return server.NOT_DONE_YET
         except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e}, indent=4))
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
+    @POST('^/api/v1/confirm_order')
+    def confirm_order(self, request):
+        try:
+            file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["id"][0] + ".json"
+            with open(file_path, 'r') as filename:
+                order = json.load(filename, object_pairs_hook=OrderedDict)
+            c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
+            c.add_order_confirmation(request.args["payout_address"][0],
+                                     comments=request.args["comments"][0] if "comments" in request.args else None,
+                                     shipper=request.args["shipper"][0] if "shipper" in request.args else None,
+                                     tracking_number=request.args["tracking_number"][0]
+                                     if "tracking_number" in request.args else None,
+                                     est_delivery=request.args["est_delivery"][0]
+                                     if "est_delivery" in request.args else None,
+                                     url=request.args["url"][0] if "url" in request.args else None,
+                                     password=request.args["password"][0] if "password" in request.args else None)
+            request.write(json.dumps({"success": True}))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET

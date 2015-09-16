@@ -342,7 +342,7 @@ class Contract(object):
         Add the vendor's order confirmation to the contract.
         """
 
-        if not self.testnet and not (payout_address[:1] == "1" or "3"):
+        if not self.testnet and not (payout_address[:1] == "1" or payout_address[:1] == "3"):
             raise Exception("Bitcoin address is not a mainnet address")
         elif self.testnet and not \
                 (payout_address[:1] == "n" or payout_address[:1] == "m" or payout_address[:1] == "2"):
@@ -370,14 +370,36 @@ class Contract(object):
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
             self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
+        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
-        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-        del contract_dict["vendor_order_confirmation"]
-        order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         self.db.Sales().update_status(order_id, 2)
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
+
+    def accept_order_confirmation(self):
+        try:
+            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            del contract_dict["vendor_order_confirmation"]
+            contract_hash = digest(json.dumps(contract_dict, indent=4))
+            ref_hash = unhexlify(self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"])
+            if ref_hash != contract_hash:
+                raise Exception("Order number doesn't match")
+            if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
+                shipping = self.contract["vendor_order_confirmation"]["invoice"]["shipping"]
+                if "tracking_number" not in shipping or "shipper" not in shipping:
+                    raise Exception("No shipping information")
+            order_id = contract_hash.encode("hex")
+            self.db.Purchases().update_status(order_id, 2)
+            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(self.contract, indent=4))
+
+            # TODO: push confirmation to websocket
+
+            return order_id
+        except Exception:
+            return False
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """
