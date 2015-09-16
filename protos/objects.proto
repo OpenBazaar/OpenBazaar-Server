@@ -134,5 +134,6 @@ message Plaintext_Message {
     enum Type {
         CHAT    = 1;
         DISPUTE = 2;
+        ORDER   = 3;
     }
 }

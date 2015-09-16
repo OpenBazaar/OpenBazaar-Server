@@ -341,6 +341,16 @@ class Contract(object):
         """
         Add the vendor's order confirmation to the contract.
         """
+
+        if not self.testnet and not (payout_address[:1] == "1" or "3"):
+            raise Exception("Bitcoin address is not a mainnet address")
+        elif self.testnet and not \
+                (payout_address[:1] == "n" or payout_address[:1] == "m" or payout_address[:1] == "2"):
+            raise Exception("Bitcoin address is not a testnet address")
+        try:
+            bitcoin.b58check_to_hex(payout_address)
+        except AssertionError:
+            raise Exception("Invalid Bitcoin address")
         conf_json = {
             "vendor_order_confirmation": {
                 "invoice": {
@@ -364,7 +374,7 @@ class Contract(object):
         contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
         del contract_dict["vendor_order_confirmation"]
         order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
-        self.db.Sales(order_id, 2)
+        self.db.Sales().update_status(order_id, 2)
         file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))

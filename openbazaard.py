@@ -180,4 +180,4 @@ commands:
             print "Restarting OpenBazaar server..."
             self.daemon.restart()
 
-    Parser(OpenBazaard('/tmp/daemon-example.pid'))
+    Parser(OpenBazaard('/tmp/openbazaard.pid'))
