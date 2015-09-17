@@ -544,6 +544,13 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/confirm_order')
     def confirm_order(self, request):
         try:
+            def respond(success):
+                if success:
+                    request.write(json.dumps({"success": True}))
+                    request.finish()
+                else:
+                    request.write(json.dumps({"success": False, "reason": "Failed to send order confirmation"}))
+                    request.finish()
             file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["id"][0] + ".json"
             with open(file_path, 'r') as filename:
                 order = json.load(filename, object_pairs_hook=OrderedDict)
@@ -557,8 +564,8 @@ class OpenBazaarAPI(APIResource):
                                      if "est_delivery" in request.args else None,
                                      url=request.args["url"][0] if "url" in request.args else None,
                                      password=request.args["password"][0] if "password" in request.args else None)
-            request.write(json.dumps({"success": True}))
-            request.finish()
+            guid = c.contract["buyer_order"]["order"]["id"]["guid"]
+            self.mserver.confirm_order(guid, c).addCallback(respond)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

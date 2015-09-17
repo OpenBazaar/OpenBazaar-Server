@@ -20,7 +20,6 @@ from collections import OrderedDict
 from binascii import hexlify, unhexlify
 from keyutils.keys import KeyChain
 
-
 class Server(object):
     def __init__(self, kserver, signing_key, database):
         """
@@ -404,7 +403,7 @@ class Server(object):
             dl.append(self.kserver.resolve(follower.guid))
         return defer.DeferredList(dl).addCallback(send)
 
-    def send_message(self, receiving_node, public_key, message_type, message, subject=None):
+    def send_message(self, receiving_node, public_key, message_type, message, subject=None, store_only=False):
         """
         Sends a message to another node. If the node isn't online it
         will be placed in the dht for the node to pick up later.
@@ -437,7 +436,10 @@ class Server(object):
         def get_response(response):
             if not response[0]:
                 self.kserver.set(digest(receiving_node.id), pkephem, ciphertext)
-        self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
+        if not store_only:
+            self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
+        else:
+            get_response([False])
 
     def get_messages(self, listener):
         # if the transport hasn't been initialized yet, wait a second
@@ -500,6 +502,43 @@ class Server(object):
         ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
         d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
         return d.addCallback(parse_response)
+
+    def confirm_order(self, guid, contract):
+        """
+        Send the order confirmation over to the buyer. If the buyer isn't
+        online we will stick it in the DHT temporarily.
+        """
+
+        def get_node(node_to_ask):
+            def parse_response(response):
+                if response[0] and response[1][0] == "True":
+                    return True
+                elif not response[0]:
+                    contract_dict = json.loads(json.dumps(contract.contract, indent=4),
+                                               object_pairs_hook=OrderedDict)
+                    del contract_dict["vendor_order_confirmation"]
+                    order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+                    self.send_message(node_to_ask,
+                                      contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"],
+                                      objects.Plaintext_Message.Type.Value("ORDER"),
+                                      json.dumps(contract.contract["vendor_order_confirmation"]),
+                                      order_id,
+                                      store_only=True)
+                    return True
+                else:
+                    return False
+
+            if node_to_ask:
+                public_key = contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+                skephem = PrivateKey.generate()
+                pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+                box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                nonce = nacl.utils.random(Box.NONCE_SIZE)
+                ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
+                self.protocol.callOrderConfirmation(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
+            else:
+                parse_response([False])
+        return self.kserver.resolve(unhexlify(guid)).addCallback(get_node)
 
     @staticmethod
     def cache(filename):
