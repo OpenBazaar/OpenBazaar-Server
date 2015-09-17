@@ -492,7 +492,7 @@ class Server(object):
             except Exception:
                 return False
 
-        public_key = contract.contract["vendor_offer"]["listing"]["id"]["encryption"]
+        public_key = contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
         skephem = PrivateKey.generate()
         pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
         box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))

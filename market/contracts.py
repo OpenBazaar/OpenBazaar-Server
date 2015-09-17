@@ -1,10 +1,10 @@
 __author__ = 'chris'
 
 import json
-import bitcoin
 import random
 import time
 import nacl.signing
+import bitcoin
 from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
@@ -283,7 +283,7 @@ class Contract(object):
             order_json["buyer_order"]["order"]["shipping"]["country"] = country
         if options is not None:
             order_json["buyer_order"]["order"]["options"] = options
-        if moderator:
+        if moderator:  # TODO: Handle direct payments
             chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
             order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
             valid_mod = False
@@ -421,6 +421,7 @@ class Contract(object):
         unfunded for more than 10 minutes.
         """
 
+        # TODO: Handle direct payments
         self.ws = websocket_server
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
@@ -656,6 +657,7 @@ class Contract(object):
                 raise Exception("Insuffient Payment")
 
             # verify a valid moderator was selected
+            # TODO: handle direct payments
             valid_mod = False
             for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
                 if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
