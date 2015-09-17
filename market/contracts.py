@@ -377,7 +377,11 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
-    def accept_order_confirmation(self):
+    def accept_order_confirmation(self, ws):
+        """
+        Validate the order confirmation sent over from the seller and update our node accordingly.
+        """
+        self.ws = ws
         try:
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
             del contract_dict["vendor_order_confirmation"]
@@ -390,13 +394,21 @@ class Contract(object):
                 if "tracking_number" not in shipping or "shipper" not in shipping:
                     raise Exception("No shipping information")
             order_id = contract_hash.encode("hex")
+            # update the order status in the db
             self.db.Purchases().update_status(order_id, 2)
             file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+
+            # update the contract in the file system
             with open(file_path, 'w') as outfile:
                 outfile.write(json.dumps(self.contract, indent=4))
-
-            # TODO: push confirmation to websocket
-
+            message_json = {
+                "order_confirmation": {
+                    "order_id": order_id,
+                    "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
+                }
+            }
+            # push the message over websockets
+            self.ws.push(json.dumps(message_json, indent=4))
             return order_id
         except Exception:
             return False
@@ -455,6 +467,7 @@ class Contract(object):
         The user failed to fund the contract in the 10 minute window. Remove it from
         the file system and db.
         """
+
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         if self.is_purchase:
             file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
@@ -472,6 +485,7 @@ class Contract(object):
         funding level. We need to keep a running balance and increment it when a new transaction
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
+
         # decode the transaction
         transaction = bitcoin.deserialize(tx.encode("hex"))
 
@@ -563,6 +577,7 @@ class Contract(object):
         Additionally, the contract metadata (sent in response to the GET_LISTINGS query)
         is saved in the db for fast access.
         """
+
         # get the contract title to use as the file name and format it
         file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
         file_name = re.sub(r"[^\w\s]", '', file_name)
@@ -606,6 +621,10 @@ class Contract(object):
         self.db.ListingsStore().add_listing(data)
 
     def verify(self, sender_key):
+        """
+        Validate that an order sent over by a buyer is filled out correctly.
+        """
+
         try:
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
             del contract_dict["buyer_order"]

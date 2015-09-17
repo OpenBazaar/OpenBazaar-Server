@@ -248,7 +248,7 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            contract_id = c.accept_order_confirmation()
+            contract_id = c.accept_order_confirmation(self.multiplexer.ws)
             if contract_id:
                 self.router.addContact(sender)
                 self.log.info("Received confirmation for order %s" % contract_id)

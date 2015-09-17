@@ -442,9 +442,9 @@ class OpenBazaarAPI(APIResource):
                 free_shipping=True if "free_shipping" in request.args else False,
                 options=options if "options" in request.args else None,
                 moderators=request.args["moderators"] if "moderators" in request.args else None)
-            #for keyword in request.args["keywords"]:
-                    #self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
-                                     #self.kserver.node.getProto().SerializeToString())
+            for keyword in request.args["keywords"]:
+                self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
+                                 self.kserver.node.getProto().SerializeToString())
             request.write(json.dumps({"success": True}))
             request.finish()
             return server.NOT_DONE_YET
