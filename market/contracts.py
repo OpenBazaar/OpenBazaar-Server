@@ -78,8 +78,8 @@ class Contract(object):
                price,
                process_time,
                nsfw,
-               shipping_origin,
-               shipping_regions,
+               shipping_origin=None,
+               shipping_regions=None,
                est_delivery_domestic=None,
                est_delivery_international=None,
                terms_conditions=None,
@@ -116,7 +116,6 @@ class Contract(object):
                     "listing": {
                         "metadata": {
                             "version": "0.1",
-                            "expiry": expiration_date + " UTC",
                             "category": metadata_category.lower(),
                             "category_sub": "fixed price"
                         },
@@ -139,6 +138,10 @@ class Contract(object):
                 }
             }
         )
+        if expiration_date.lower() == "never":
+            self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = "never"
+        else:
+            self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = expiration_date + " UTC"
         if metadata_category == "physical good" and condition is not None:
             self.contract["vendor_offer"]["listing"]["item"]["condition"] = condition
         if currency_code.upper() == "BTC":
@@ -384,9 +387,9 @@ class Contract(object):
         self.ws = ws
         try:
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            ref_hash = unhexlify(self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"])
             del contract_dict["vendor_order_confirmation"]
             contract_hash = digest(json.dumps(contract_dict, indent=4))
-            ref_hash = unhexlify(self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"])
             if ref_hash != contract_hash:
                 raise Exception("Order number doesn't match")
             if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":

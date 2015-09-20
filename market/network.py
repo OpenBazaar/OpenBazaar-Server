@@ -9,6 +9,7 @@ import nacl.encoding
 import nacl.utils
 import gnupg
 import bitcoin
+from dht.node import Node
 from nacl.public import PrivateKey, PublicKey, Box
 from twisted.internet import defer, reactor, task
 from market.protocol import MarketProtocol
@@ -518,7 +519,7 @@ class Server(object):
                                                object_pairs_hook=OrderedDict)
                     del contract_dict["vendor_order_confirmation"]
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
-                    self.send_message(node_to_ask,
+                    self.send_message(Node(guid),
                                       contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"],
                                       objects.Plaintext_Message.Type.Value("ORDER"),
                                       json.dumps(contract.contract["vendor_order_confirmation"]),
