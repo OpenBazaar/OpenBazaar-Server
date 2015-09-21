@@ -20,8 +20,6 @@ class Database(object):
         self.DATABASE = DATABASE
         if filepath:
             DATABASE = filepath
-        if not os.path.isfile(DATABASE):
-            self.create_database()
         if not os.path.exists(DATA_FOLDER):
             os.makedirs(DATA_FOLDER + "cache/")
             os.makedirs(DATA_FOLDER + "store/listings/contracts/")
@@ -30,6 +28,8 @@ class Database(object):
             os.makedirs(DATA_FOLDER + "store/media/")
             os.makedirs(DATA_FOLDER + "purchases/in progress/")
             os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
+        if not os.path.isfile(DATABASE):
+            self.create_database()
 
     @staticmethod
     def create_database(filepath=None):

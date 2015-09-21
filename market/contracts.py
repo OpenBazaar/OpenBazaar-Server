@@ -387,32 +387,31 @@ class Contract(object):
         self.ws = ws
         try:
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-            ref_hash = unhexlify(self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"])
+            ref_hash = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             del contract_dict["vendor_order_confirmation"]
-            contract_hash = digest(json.dumps(contract_dict, indent=4))
+            contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
             if ref_hash != contract_hash:
                 raise Exception("Order number doesn't match")
             if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
                 shipping = self.contract["vendor_order_confirmation"]["invoice"]["shipping"]
                 if "tracking_number" not in shipping or "shipper" not in shipping:
                     raise Exception("No shipping information")
-            order_id = contract_hash.encode("hex")
             # update the order status in the db
-            self.db.Purchases().update_status(order_id, 2)
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            self.db.Purchases().update_status(contract_hash, 2)
+            file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
 
             # update the contract in the file system
             with open(file_path, 'w') as outfile:
                 outfile.write(json.dumps(self.contract, indent=4))
             message_json = {
                 "order_confirmation": {
-                    "order_id": order_id,
+                    "order_id": contract_hash,
                     "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
                 }
             }
             # push the message over websockets
             self.ws.push(json.dumps(message_json, indent=4))
-            return order_id
+            return contract_hash
         except Exception:
             return False
 

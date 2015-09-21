@@ -536,9 +536,10 @@ class Server(object):
                 box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
                 nonce = nacl.utils.random(Box.NONCE_SIZE)
                 ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
-                self.protocol.callOrderConfirmation(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
+                d = self.protocol.callOrderConfirmation(node_to_ask, pkephem, ciphertext)
+                return d.addCallback(parse_response)
             else:
-                parse_response([False])
+                return parse_response([False])
         return self.kserver.resolve(unhexlify(guid)).addCallback(get_node)
 
     @staticmethod

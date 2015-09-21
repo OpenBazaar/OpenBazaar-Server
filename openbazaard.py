@@ -29,6 +29,12 @@ from dht.storage import PersistentStorage
 def run(*args):
     TESTNET = args[0]
 
+    # database
+    db = Database(TESTNET)
+
+    # key generation
+    keys = KeyChain(db)
+
     # logging
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
     log.addObserver(log.FileLogObserver(logFile).emit)
@@ -41,12 +47,6 @@ def run(*args):
     print "%s on %s:%s" % (response[0], response[1], response[2])
     ip_address = response[1]
     port = response[2]
-
-    # database
-    db = Database(TESTNET)
-
-    # key generation
-    keys = KeyChain(db)
 
     def on_bootstrap_complete(resp):
         mlistener = MessageListenerImpl(ws_factory, db)
