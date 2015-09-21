@@ -29,6 +29,12 @@ from dht.storage import PersistentStorage
 def run(*args):
     TESTNET = args[0]
 
+    # database
+    db = Database(TESTNET)
+
+    # key generation
+    keys = KeyChain(db)
+
     # logging
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
     log.addObserver(log.FileLogObserver(logFile).emit)
@@ -41,12 +47,6 @@ def run(*args):
     print "%s on %s:%s" % (response[0], response[1], response[2])
     ip_address = response[1]
     port = response[2]
-
-    # database
-    db = Database(TESTNET)
-
-    # key generation
-    keys = KeyChain(db)
 
     def on_bootstrap_complete(resp):
         mlistener = MessageListenerImpl(ws_factory, db)
@@ -96,10 +96,20 @@ def run(*args):
     reactor.listenTCP(18469, site, interface="127.0.0.1")
 
     # blockchain
+    def height_fetched(ec, height):
+        print "Libbitcoin server online"
+        timeout.cancel()
+
+    def timeout(client):
+        print "Libbitcoin server offline"
+        client = None
+
     if TESTNET:
-        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://testnet-baltic.airbitz.co:9091")
+        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://obelisk-testnet.airbitz.co:9091")
     else:
         libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin1.openbazaar.org:9091")
+    libbitcoin_client.fetch_last_height(height_fetched)
+    timeout = reactor.callLater(5, timeout, libbitcoin_client)
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 

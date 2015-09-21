@@ -1,10 +1,10 @@
 __author__ = 'chris'
 
 import json
-import bitcoin
 import random
 import time
 import nacl.signing
+import bitcoin
 from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
@@ -78,8 +78,8 @@ class Contract(object):
                price,
                process_time,
                nsfw,
-               shipping_origin,
-               shipping_regions,
+               shipping_origin=None,
+               shipping_regions=None,
                est_delivery_domestic=None,
                est_delivery_international=None,
                terms_conditions=None,
@@ -116,7 +116,6 @@ class Contract(object):
                     "listing": {
                         "metadata": {
                             "version": "0.1",
-                            "expiry": expiration_date + " UTC",
                             "category": metadata_category.lower(),
                             "category_sub": "fixed price"
                         },
@@ -139,6 +138,10 @@ class Contract(object):
                 }
             }
         )
+        if expiration_date.lower() == "never":
+            self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = "never"
+        else:
+            self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = expiration_date + " UTC"
         if metadata_category == "physical good" and condition is not None:
             self.contract["vendor_offer"]["listing"]["item"]["condition"] = condition
         if currency_code.upper() == "BTC":
@@ -283,7 +286,7 @@ class Contract(object):
             order_json["buyer_order"]["order"]["shipping"]["country"] = country
         if options is not None:
             order_json["buyer_order"]["order"]["options"] = options
-        if moderator:
+        if moderator:  # TODO: Handle direct payments
             chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
             order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
             valid_mod = False
@@ -342,7 +345,7 @@ class Contract(object):
         Add the vendor's order confirmation to the contract.
         """
 
-        if not self.testnet and not (payout_address[:1] == "1" or "3"):
+        if not self.testnet and not (payout_address[:1] == "1" or payout_address[:1] == "3"):
             raise Exception("Bitcoin address is not a mainnet address")
         elif self.testnet and not \
                 (payout_address[:1] == "n" or payout_address[:1] == "m" or payout_address[:1] == "2"):
@@ -370,14 +373,47 @@ class Contract(object):
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
             self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
+        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
-        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-        del contract_dict["vendor_order_confirmation"]
-        order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         self.db.Sales().update_status(order_id, 2)
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
+
+    def accept_order_confirmation(self, ws):
+        """
+        Validate the order confirmation sent over from the seller and update our node accordingly.
+        """
+        self.ws = ws
+        try:
+            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            ref_hash = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+            del contract_dict["vendor_order_confirmation"]
+            contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+            if ref_hash != contract_hash:
+                raise Exception("Order number doesn't match")
+            if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
+                shipping = self.contract["vendor_order_confirmation"]["invoice"]["shipping"]
+                if "tracking_number" not in shipping or "shipper" not in shipping:
+                    raise Exception("No shipping information")
+            # update the order status in the db
+            self.db.Purchases().update_status(contract_hash, 2)
+            file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
+
+            # update the contract in the file system
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(self.contract, indent=4))
+            message_json = {
+                "order_confirmation": {
+                    "order_id": contract_hash,
+                    "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
+                }
+            }
+            # push the message over websockets
+            self.ws.push(json.dumps(message_json, indent=4))
+            return contract_hash
+        except Exception:
+            return False
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """
@@ -387,6 +423,7 @@ class Contract(object):
         unfunded for more than 10 minutes.
         """
 
+        # TODO: Handle direct payments
         self.ws = websocket_server
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
@@ -433,6 +470,7 @@ class Contract(object):
         The user failed to fund the contract in the 10 minute window. Remove it from
         the file system and db.
         """
+
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         if self.is_purchase:
             file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
@@ -450,6 +488,7 @@ class Contract(object):
         funding level. We need to keep a running balance and increment it when a new transaction
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
+
         # decode the transaction
         transaction = bitcoin.deserialize(tx.encode("hex"))
 
@@ -541,6 +580,7 @@ class Contract(object):
         Additionally, the contract metadata (sent in response to the GET_LISTINGS query)
         is saved in the db for fast access.
         """
+
         # get the contract title to use as the file name and format it
         file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
         file_name = re.sub(r"[^\w\s]", '', file_name)
@@ -584,6 +624,10 @@ class Contract(object):
         self.db.ListingsStore().add_listing(data)
 
     def verify(self, sender_key):
+        """
+        Validate that an order sent over by a buyer is filled out correctly.
+        """
+
         try:
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
             del contract_dict["buyer_order"]
@@ -615,6 +659,7 @@ class Contract(object):
                 raise Exception("Insuffient Payment")
 
             # verify a valid moderator was selected
+            # TODO: handle direct payments
             valid_mod = False
             for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
                 if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:

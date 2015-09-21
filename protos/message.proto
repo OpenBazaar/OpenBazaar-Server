@@ -30,16 +30,17 @@ enum Command {
 	FOLLOW                  = 8;
 	UNFOLLOW                = 9;
 	ORDER                   = 10;
-	FIND_NODE               = 11;
-	FIND_VALUE              = 12;
-	GET_CONTRACT            = 13;
-	GET_IMAGE               = 14;
-	GET_PROFILE             = 15;
-	GET_LISTINGS            = 16;
-	GET_USER_METADATA       = 17;
-	GET_CONTRACT_METADATA   = 18;
-	GET_FOLLOWING           = 19;
-	GET_FOLLOWERS           = 20;
+	ORDER_CONFIRMATION      = 11;
+	FIND_NODE               = 12;
+	FIND_VALUE              = 13;
+	GET_CONTRACT            = 14;
+	GET_IMAGE               = 15;
+	GET_PROFILE             = 16;
+	GET_LISTINGS            = 17;
+	GET_USER_METADATA       = 18;
+	GET_CONTRACT_METADATA   = 19;
+	GET_FOLLOWING           = 20;
+	GET_FOLLOWERS           = 21;
 
 	// Error responses
 	BAD_REQUEST             = 400;

@@ -11,8 +11,8 @@ from rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
-    GET_USER_METADATA, FOLLOW, UNFOLLOW, \
-    GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, GET_CONTRACT_METADATA, MESSAGE, ORDER
+    GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, \
+    GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION
 from market.contracts import Contract
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
@@ -35,7 +35,7 @@ class MarketProtocol(RPCProtocol):
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY, MESSAGE, ORDER]
+                                 NOTIFY, MESSAGE, ORDER, ORDER_CONFIRMATION]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -242,6 +242,24 @@ class MarketProtocol(RPCProtocol):
             self.log.error("Unable to decrypt order from %s" % sender)
             return ["False"]
 
+    def rpc_order_confirmation(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                         testnet=self.multiplexer.testnet)
+            contract_id = c.accept_order_confirmation(self.multiplexer.ws)
+            if contract_id:
+                self.router.addContact(sender)
+                self.log.info("Received confirmation for order %s" % contract_id)
+                return ["True"]
+            else:
+                self.log.error("Received invalid order confirmation from %s" % sender)
+                return ["False"]
+        except Exception:
+            self.log.error("Unable to decrypt order confirmation from %s" % sender)
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.get_contract(address, contract_hash)
@@ -305,6 +323,11 @@ class MarketProtocol(RPCProtocol):
     def callOrder(self, nodeToAsk, ephem_pubkey, encrypted_contract):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.order(address, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callOrderConfirmation(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.order_confirmation(address, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):
