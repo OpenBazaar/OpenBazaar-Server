@@ -199,12 +199,8 @@ class Contract(object):
             self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"] = profile.handle
         if images is not None:
             self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
-            for image in images:
-                hash_value = digest(image).encode("hex")
-                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(hash_value)
-                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
-                    outfile.write(image)
-                self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+            for image_hash in images:
+                self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(image_hash)
         if terms_conditions is not None or returns is not None:
             self.contract["vendor_offer"]["listing"]["policy"] = {}
             if terms_conditions is not None:

@@ -573,3 +573,14 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/upload_image')
+    def upload_image(self, request):
+        image = request.args["id"][0]
+        hash_value = digest(image).encode("hex")
+        with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
+            outfile.write(image)
+        self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+        request.write(hash_value)
+        request.finish()
+        return server.NOT_DONE_YET

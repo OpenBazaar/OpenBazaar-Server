@@ -467,6 +467,7 @@ class Server(object):
                             pow_hash = h[64:128]
                             if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40]:
                                 raise Exception('Invalid guid')
+                            # TODO: parse the message to see if it is a contract message
                             listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
                                             objects.Plaintext_Message.Type.Name(p.type), p.message)
                         except Exception:
