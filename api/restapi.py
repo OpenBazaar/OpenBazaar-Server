@@ -427,7 +427,7 @@ class OpenBazaarAPI(APIResource):
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
                 est_delivery_domestic=request.args["est_delivery_domestic"][0]
-                if "est_delivery_domestic" in request.ags else None,
+                if "est_delivery_domestic" in request.args else None,
                 est_delivery_international=request.args["est_delivery_international"][0]
                 if "est_delivery_international" in request.args else None,
                 terms_conditions=request.args["terms_conditions"][0]
