@@ -381,7 +381,7 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
-    def accept_order_confirmation(self, ws, confirmation_json=False):
+    def accept_order_confirmation(self, ws, confirmation_json=None):
         """
         Validate the order confirmation sent over from the seller and update our node accordingly.
         """

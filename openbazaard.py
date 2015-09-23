@@ -98,7 +98,10 @@ def run(*args):
     # blockchain
     def height_fetched(ec, height):
         print "Libbitcoin server online"
-        timeout.cancel()
+        try:
+            timeout.cancel()
+        except Exception:
+            pass
 
     def timeout(client):
         print "Libbitcoin server offline"

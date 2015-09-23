@@ -577,12 +577,14 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/upload_image')
     def upload_image(self, request):
         try:
-            image = request.args["image"][0]
-            hash_value = digest(image).encode("hex")
-            with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
-                outfile.write(image)
-            self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
-            request.write(hash_value)
+            ret = []
+            for image in request.args["image"]:
+                hash_value = digest(image).encode("hex")
+                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
+                    outfile.write(image)
+                self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+                ret.append(hash_value)
+            request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
