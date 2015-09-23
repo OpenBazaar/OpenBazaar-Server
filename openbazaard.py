@@ -105,7 +105,7 @@ def run(*args):
         client = None
 
     if TESTNET:
-        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://obelisk-testnet.airbitz.co:9091")
+        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin2.openbazaar.org:9091")
     else:
         libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin1.openbazaar.org:9091")
     libbitcoin_client.fetch_last_height(height_fetched)

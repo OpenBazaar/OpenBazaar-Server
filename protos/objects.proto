@@ -132,8 +132,9 @@ message Plaintext_Message {
     optional bytes signature         = 10;
 
     enum Type {
-        CHAT    = 1;
-        DISPUTE = 2;
-        ORDER   = 3;
+        CHAT                 = 1;
+        DISPUTE              = 2;
+        ORDER_CONFIRMATION   = 3;
+        RECEIPT              = 4;
     }
 }

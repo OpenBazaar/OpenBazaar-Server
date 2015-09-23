@@ -17,6 +17,7 @@ from dht.utils import digest
 from constants import DATA_FOLDER
 from protos import objects
 from market.profile import Profile
+from market.contracts import Contract
 from collections import OrderedDict
 from binascii import hexlify, unhexlify
 from keyutils.keys import KeyChain
@@ -467,9 +468,13 @@ class Server(object):
                             pow_hash = h[64:128]
                             if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40]:
                                 raise Exception('Invalid guid')
-                            # TODO: parse the message to see if it is a contract message
-                            listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
-                                            objects.Plaintext_Message.Type.Name(p.type), p.message)
+                            if p.type == objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"):
+                                c = Contract(self.db, hash_value=unhexlify(p.subject))
+                                c.accept_order_confirmation(self.protocol.multiplexer.ws,
+                                                            confirmation_json=p.message)
+                            else:
+                                listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
+                                                objects.Plaintext_Message.Type.Name(p.type), p.message)
                         except Exception:
                             pass
                         signature = self.signing_key.sign(value.valueKey)[:64]
@@ -520,9 +525,9 @@ class Server(object):
                                                object_pairs_hook=OrderedDict)
                     del contract_dict["vendor_order_confirmation"]
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
-                    self.send_message(Node(guid),
+                    self.send_message(Node(unhexlify(guid)),
                                       contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"],
-                                      objects.Plaintext_Message.Type.Value("ORDER"),
+                                      objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"),
                                       json.dumps(contract.contract["vendor_order_confirmation"]),
                                       order_id,
                                       store_only=True)

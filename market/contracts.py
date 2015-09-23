@@ -55,7 +55,12 @@ class Contract(object):
                 with open(file_path, 'r') as filename:
                     self.contract = json.load(filename, object_pairs_hook=OrderedDict)
             except Exception:
-                self.contract = {}
+                try:
+                    file_path = DATA_FOLDER + "purchases/in progress/" + hexlify(hash_value) + ".json"
+                    with open(file_path, 'r') as filename:
+                        self.contract = json.load(filename, object_pairs_hook=OrderedDict)
+                except Exception:
+                    self.contract = {}
         else:
             self.contract = {}
         self.log = Logger(system=self)
@@ -376,16 +381,20 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
-    def accept_order_confirmation(self, ws):
+    def accept_order_confirmation(self, ws, confirmation_json=False):
         """
         Validate the order confirmation sent over from the seller and update our node accordingly.
         """
         self.ws = ws
         try:
+            if confirmation_json:
+                self.contract["vendor_order_confirmation"] = json.loads(confirmation_json,
+                                                                        object_pairs_hook=OrderedDict)
+
             contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-            ref_hash = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             del contract_dict["vendor_order_confirmation"]
             contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+            ref_hash = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             if ref_hash != contract_hash:
                 raise Exception("Order number doesn't match")
             if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
