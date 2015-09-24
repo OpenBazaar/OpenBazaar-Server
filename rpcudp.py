@@ -16,7 +16,7 @@ from twisted.internet import defer
 from log import Logger
 from protos.message import Message, Command
 from dht import node
-from constants import SEED_NODE
+from constants import SEED_NODE, SEED_NODE_TESTNET
 
 
 class RPCProtocol:
@@ -131,7 +131,8 @@ class RPCProtocol:
         """
         if address is not None:
             self.log.warning("Did not receive reply for msg id %s, trying hole punching" % (b64encode(msgID)))
-            self.hole_punch(SEED_NODE, address[0], address[1], "True")
+            seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
+            self.hole_punch(seed, address[0], address[1], "True")
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID)
             self._outstanding[msgID][1] = timeout
         else:

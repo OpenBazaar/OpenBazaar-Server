@@ -26,6 +26,7 @@ from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
 
+
 def run(*args):
     TESTNET = args[0]
 
