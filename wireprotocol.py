@@ -8,6 +8,7 @@ from protos.message import Message, FIND_VALUE
 from log import Logger
 from dht.node import Node
 
+
 class OpenBazaarProtocol(ConnectionMultiplexer):
     """
     A protocol extending the txrudp datagram protocol. This is the main protocol
@@ -59,7 +60,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            del self.active_connections[self.connection.dest_addr]
+            self.connection.unregister()
             if self.node is not None:
                 for processor in self.processors:
                     if FIND_VALUE in processor:

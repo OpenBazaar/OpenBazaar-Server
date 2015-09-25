@@ -1,7 +1,6 @@
 __author__ = 'chris'
 from binascii import unhexlify
 
-import dht.constants
 import mock
 import nacl.signing
 import nacl.hash
@@ -16,6 +15,7 @@ from dht.protocol import KademliaProtocol
 from protos.objects import Value
 from wireprotocol import OpenBazaarProtocol
 from db.datastore import Database
+from constants import ALPHA, KSIZE
 
 
 class ValueSpiderCrawlTest(unittest.TestCase):
@@ -80,8 +80,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest,
-                                  dht.constants.KSIZE, dht.constants.ALPHA)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
         spider.find()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -101,7 +100,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         # test resonse with uncontacted nodes
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
@@ -111,7 +110,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         # test all been contacted
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
         for peer in spider.nearest.getUncontacted():
             spider.nearest.markContacted(peer)
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
@@ -121,7 +120,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.assertTrue(resp is None)
 
         # test didn't happen
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
         response = (False, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                             self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
@@ -148,7 +147,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
 
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, dht.constants.KSIZE, dht.constants.ALPHA)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
         val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.node1.getProto().SerializeToString()

@@ -353,6 +353,8 @@ class Server(object):
                 s.bootstrap(data['neighbors']).addCallback(callback)
             else:
                 s.bootstrap(data['neighbors'])
+
+        # TODO: if bootstrapping fails because all our cached nodes are dead, then query the seed again
         return s
 
     def saveStateRegularly(self, fname, frequency=600):
