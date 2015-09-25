@@ -55,7 +55,7 @@ def run(*args):
 
     # TODO: maintain open connection to seed node if STUN/UPnP fail
 
-    # TODO: use TURN of symmetric NAT
+    # TODO: use TURN if symmetric NAT
 
     def on_bootstrap_complete(resp):
         mlistener = MessageListenerImpl(ws_factory, db)

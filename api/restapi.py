@@ -289,7 +289,9 @@ class OpenBazaarAPI(APIResource):
             if not p.get().encryption_key \
                     and "name" not in request.args \
                     and "location" not in request.args:
-                return "False"
+                request.write(json.dumps({"success": False, "reason": "name or location not included"}, indent=4))
+                request.finish()
+                return False
             u = objects.Profile()
             if "name" in request.args:
                 u.name = request.args["name"][0]
@@ -312,6 +314,14 @@ class OpenBazaarAPI(APIResource):
                 u.website = request.args["website"][0]
             if "email" in request.args:
                 u.email = request.args["email"][0]
+            if "primary_color" in request.args:
+                u.primary_color = int(request.args["primary_color"][0])
+            if "secondary_color" in request.args:
+                u.secondary_color = int(request.args["secondary_color"][0])
+            if "background_color" in request.args:
+                u.background_color = int(request.args["background_color"][0])
+            if "text_color" in request.args:
+                u.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(request.args["avatar"][0])
