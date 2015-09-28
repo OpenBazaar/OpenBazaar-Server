@@ -323,17 +323,9 @@ class OpenBazaarAPI(APIResource):
             if "text_color" in request.args:
                 u.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
-                with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
-                    outfile.write(request.args["avatar"][0])
-                avatar_hash = digest(request.args["avatar"][0])
-                self.db.HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
-                u.avatar_hash = avatar_hash
+                u.avatar_hash = request.args["avatar"][0]
             if "header" in request.args:
-                with open(DATA_FOLDER + "store/header", 'wb') as outfile:
-                    outfile.write(request.args["header"][0])
-                header_hash = digest(request.args["header"][0])
-                self.db.HashMap().insert(header_hash, DATA_FOLDER + "store/header")
-                u.header_hash = header_hash
+                u.header_hash = request.args["header"][0]
             if "pgp_key" in request.args and "signature" in request.args:
                 p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                               self.keychain.guid.encode("hex"))
@@ -543,7 +535,7 @@ class OpenBazaarAPI(APIResource):
                 if node is not None:
                     self.mserver.purchase(node, c).addCallback(handle_response, c)
                 else:
-                    request.write(json.dumps({"success": False, "reason": "un1=able to reach vendor"}, indent=4))
+                    request.write(json.dumps({"success": False, "reason": "unable to reach vendor"}, indent=4))
                     request.finish()
             seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
             self.kserver.resolve(seller_guid).addCallback(get_node)
