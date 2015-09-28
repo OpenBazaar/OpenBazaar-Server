@@ -543,7 +543,7 @@ class OpenBazaarAPI(APIResource):
                 if node is not None:
                     self.mserver.purchase(node, c).addCallback(handle_response, c)
                 else:
-                    request.write(json.dumps({"success": False, "reason": "unable to reach vendor"}, indent=4))
+                    request.write(json.dumps({"success": False, "reason": "un1=able to reach vendor"}, indent=4))
                     request.finish()
             seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
             self.kserver.resolve(seller_guid).addCallback(get_node)

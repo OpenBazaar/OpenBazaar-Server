@@ -598,7 +598,7 @@ class Contract(object):
                     self.amount_funded += output["value"]
                     if tx not in self.received_txs:
                         self.received_txs.append(tx)
-                    self.outpoints.append({"output": bitcoin.txhash(transaction) + ":" + index,
+                    self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) + ":" + str(index),
                                            "value": output["value"]})
                     index += 1
             if self.amount_funded >= amount_to_pay:  # if fully funded
