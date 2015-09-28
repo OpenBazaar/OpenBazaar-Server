@@ -323,9 +323,9 @@ class OpenBazaarAPI(APIResource):
             if "text_color" in request.args:
                 u.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
-                u.avatar_hash = request.args["avatar"][0]
+                u.avatar_hash = unhexlify(request.args["avatar"][0])
             if "header" in request.args:
-                u.header_hash = request.args["header"][0]
+                u.header_hash = unhexlify(request.args["header"][0])
             if "pgp_key" in request.args and "signature" in request.args:
                 p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                               self.keychain.guid.encode("hex"))
@@ -580,11 +580,24 @@ class OpenBazaarAPI(APIResource):
     def upload_image(self, request):
         try:
             ret = []
-            for image in request.args["image"]:
-                hash_value = digest(image).encode("hex")
-                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
-                    outfile.write(image)
-                self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+            if "image" in request.args:
+                for image in request.args["image"]:
+                    hash_value = digest(image).encode("hex")
+                    with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
+                        outfile.write(image)
+                    self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+                    ret.append(hash_value)
+            elif "avatar" in request.args:
+                hash_value = digest(request.args["avatar"][0]).encode("hex")
+                with open(DATA_FOLDER + "store/avatar", 'w') as outfile:
+                    outfile.write(request.args["avatar"][0])
+                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/avatar")
+                ret.append(hash_value)
+            elif "header" in request.args:
+                hash_value = digest(request.args["header"][0]).encode("hex")
+                with open(DATA_FOLDER + "store/header", 'w') as outfile:
+                    outfile.write(request.args["header"][0])
+                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
