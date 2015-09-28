@@ -11,17 +11,23 @@ You will need Python and pip installed on your system.
 
 To install all python requirements, run:
 
-# pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
 After that, run:
 
-# make
+
+```bash
+make
+```
 
 If everything has installed fine, you should get a message that everything went OK.
 
 You can now start the server with:
 
-# python openbazaard.py start
-
+```bash
+python openbazaard.py start
+```
 
 
