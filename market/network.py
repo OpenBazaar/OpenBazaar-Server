@@ -52,6 +52,7 @@ class Server(object):
             if digest(result[1][0]) == contract_hash:
                 contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
                 try:
+                    # TODO: verify the guid in the contract matches this node's guid
                     signature = contract["vendor_offer"]["signature"]
                     pubkey = node_to_ask.signed_pubkey[64:]
                     verify_key = nacl.signing.VerifyKey(pubkey)

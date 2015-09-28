@@ -64,6 +64,9 @@ def run(*args):
         nlistener = NotificationListenerImpl(ws_factory, db)
         mserver.protocol.add_listener(nlistener)
 
+        # TODO: after bootstrap run through any pending contracts and see if the bitcoin address
+        # has been funded, if not listen on the address and start the 10 minute delete timer.
+
     protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
     # kademlia

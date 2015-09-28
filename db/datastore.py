@@ -55,10 +55,10 @@ class Database(object):
     encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
         cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
         cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
-    address TEXT, status INTEGER, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
+    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
         cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
         cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
-    address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
+    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''')
         cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
         db.commit()
         return db
@@ -467,6 +467,19 @@ class Database(object):
             cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
 
+        def update_outpoint(self, order_id, outpoint):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
+            self.db.commit()
+
+        def get_outpoint(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT outpoint FROM purchases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
     class Sales(object):
         def __init__(self):
             self.db = lite.connect(DATABASE)
@@ -511,5 +524,10 @@ class Database(object):
         def update_status(self, order_id, status):
             cursor = self.db.cursor()
             cursor.execute('''UPDATE sales SET status=? WHERE id=?;''', (status, order_id))
+            self.db.commit()
+
+        def update_outpoint(self, order_id, outpoint):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
             self.db.commit()
 

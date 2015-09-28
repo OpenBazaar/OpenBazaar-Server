@@ -3,6 +3,7 @@ __author__ = 'chris'
 import json
 import random
 import time
+import pickle
 import nacl.signing
 import bitcoin
 from hashlib import sha256
@@ -22,6 +23,7 @@ from market.profile import Profile
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
 from log import Logger
+from constants import TRANSACTION_FEE
 
 
 class Contract(object):
@@ -73,6 +75,7 @@ class Contract(object):
         self.received_txs = []
         self.timeout = None
         self.is_purchase = False
+        self.outpoints = []
 
     def create(self,
                expiration_date,
@@ -299,12 +302,11 @@ class Contract(object):
             if not valid_mod:
                 return False
             masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
-            masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
-            vendor_key = derive_childkey(masterkey_v, chaincode)
+            vendor_key = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
             moderator_key = derive_childkey(masterkey_m, chaincode)
 
-            redeem_script = '75' + bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+            redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
             order_json["buyer_order"]["order"]["payment"]["redeem_script"] = redeem_script
             if self.testnet:
                 payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
@@ -329,6 +331,8 @@ class Contract(object):
 
         self.contract["buyer_order"] = order_json["buyer_order"]
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
+        # TODO: This should also be signed with the bitcoin key. It's the only way a moderator
+        # will have to link this contract to a bitcoin transaction.
         self.contract["buyer_order"]["signature"] = \
             self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
 
@@ -401,6 +405,9 @@ class Contract(object):
                 shipping = self.contract["vendor_order_confirmation"]["invoice"]["shipping"]
                 if "tracking_number" not in shipping or "shipper" not in shipping:
                     raise Exception("No shipping information")
+
+            # TODO: verify signature
+
             # update the order status in the db
             self.db.Purchases().update_status(contract_hash, 2)
             file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
@@ -419,6 +426,89 @@ class Contract(object):
             return contract_hash
         except Exception:
             return False
+
+    def add_receipt(self,
+                    received,
+                    feedback=None,
+                    quality=None,
+                    description=None,
+                    delivery_time=None,
+                    customer_service=None,
+                    review=None,
+                    dispute=False,
+                    claim=None,
+                    payout=True):
+
+        """
+        Add the final piece of the contract that appends the review and payout transaction.
+        """
+        receipt_json = {
+            "buyer_receipt": {
+                "receipt": {
+                    "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "listing": {
+                        "received": received
+                    },
+                    "dispute": {
+                        "dispute": dispute
+                    }
+                }
+            }
+        }
+        if None in (feedback, quality, description, delivery_time, customer_service):
+            rating = False
+        else:
+            rating = True
+            receipt_json["buyer_receipt"]["receipt"]["rating"] = {}
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["feedback"] = feedback
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["quality"] = quality
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["description"] = description
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["delivery_time"] = delivery_time
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
+            if review:
+                receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
+        if payout:
+            vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+            contract_id = self.contract["buyer_order"]["order"]["ref_hash"]
+            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+            outpoints = pickle.load(self.db.Purchases().get_outpoint(order_id))
+            payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout_address"]
+            redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
+            value = 0
+            for output in outpoints:
+                value += output["value"]
+                del output["value"]
+            value -= TRANSACTION_FEE
+            if rating:
+                while True:
+                    op_return = "6a" + "0B0" + str(feedback) + str(quality) + str(description) \
+                                + str(delivery_time) + str(customer_service) + vendor_guid + contract_id + \
+                                digest(review).encode("hex") + \
+                                sha256(random.getrandbits(255)).digest().encode("hex")[:8]
+                    if sha256(sha256(op_return).digest()).digest().encode("hex")[:4] == vendor_guid[:4]:
+                        break
+            outs = [{'value': value, 'address': payout_address}]
+            tx = bitcoin.mktx(outpoints, outs)
+            if rating:
+                deserialized_tx = bitcoin.deserialize(tx)
+                deserialized_tx["outs"].append({'value': 0, 'script': op_return})
+                tx = bitcoin.serialize(deserialized_tx)
+            signatures = []
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            buyer_priv = derive_childkey(masterkey_b, chaincode)
+            for index in range(0, len(outpoints)):
+                sig = bitcoin.multisign(tx, index, redeem_script, buyer_priv)
+                signatures.append({"input_index": index, "signature": sig})
+
+            receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
+            if rating:
+                receipt_json["buyer_receipt"]["receipt"]["payout"]["op_return"] = op_return
+        if claim:
+            receipt_json["buyer_receipt"]["receipt"]["dispute"]["claim"] = claim
+
+
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """
@@ -489,7 +579,7 @@ class Contract(object):
     def on_tx_received(self, address_version, address_hash, height, block_hash, tx):
         """
         Fire when the libbitcoin server tells us we received a payment to this funding address.
-        While unlikely, a user may send multiple transactions to the funding address reach the
+        While unlikely, a user may send multiple transactions to the funding address to reach the
         funding level. We need to keep a running balance and increment it when a new transaction
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
@@ -502,11 +592,15 @@ class Contract(object):
         if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
             output_script = 'a914' + digest(unhexlify(
                 self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
+            index = 0
             for output in transaction["outs"]:
                 if output["script"] == output_script:
                     self.amount_funded += output["value"]
                     if tx not in self.received_txs:
                         self.received_txs.append(tx)
+                    self.outpoints.append({"output": bitcoin.txhash(transaction) + ":" + index,
+                                           "value": output["value"]})
+                    index += 1
             if self.amount_funded >= amount_to_pay:  # if fully funded
                 self.timeout.cancel()
                 self.blockchain.unsubscribe_address(
@@ -522,6 +616,7 @@ class Contract(object):
 
                     # update the db
                     self.db.Purchases().update_status(order_id, 1)
+                    self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                 else:
                     message_json = {
@@ -531,6 +626,7 @@ class Contract(object):
                             }
                     }
                     self.db.Sales().update_status(order_id, 1)
+                    self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Received new order %s" % order_id)
 
                 # push the message over websockets
@@ -649,6 +745,8 @@ class Contract(object):
             verify_key.verify(json.dumps(self.contract["buyer_order"]["order"], indent=4),
                               unhexlify(self.contract["buyer_order"]["signature"]))
 
+            # TODO: verify the bitcoin signature after we add it
+
             # verify buyer included the correct bitcoin amount for payment
             price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
             if "bitcoin" in price_json:
@@ -693,13 +791,12 @@ class Contract(object):
                 if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
                     masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
 
-            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
             masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
-            vendor_key = derive_childkey(masterkey_v, chaincode)
+            vendor_key = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
             moderator_key = derive_childkey(masterkey_m, chaincode)
 
-            redeem_script = '75' + bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+            redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
             if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
                 raise Exception("Invalid redeem script")
 
