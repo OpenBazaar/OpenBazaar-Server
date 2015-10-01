@@ -2,102 +2,1042 @@
 # source: countries.proto
 
 import sys
-
-_b = sys.version_info[0] < 3 and (lambda x: x) or (lambda x: x.encode('latin1'))
+_b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
 from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from google.protobuf import reflection as _reflection
 from google.protobuf import symbol_database as _symbol_database
+from google.protobuf import descriptor_pb2
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
+
+
+
 DESCRIPTOR = _descriptor.FileDescriptor(
-    name='countries.proto',
-    package='',
-    serialized_pb=_b(
-        '\n\x0f\x63ountries.proto*\xed\x01\n\x0b\x43ountryCode\x12\x06\n\x02NA\x10\x00\x12\x07\n\x03\x41LL\x10\x01\x12\x11\n\rNORTH_AMERICA\x10\x02\x12\x11\n\rSOUTH_AMERICA\x10\x03\x12\n\n\x06\x45UROPE\x10\x04\x12\n\n\x06\x41\x46RICA\x10\x05\x12\x08\n\x04\x41SIA\x10\x06\x12\r\n\tAUSTRALIA\x10\x07\x12\x11\n\rUNITED_STATES\x10\x08\x12\t\n\x05\x43HINA\x10\t\x12\t\n\x05JAPAN\x10\n\x12\x0b\n\x07GERMANY\x10\x0b\x12\x12\n\x0eUNITED_KINGDOM\x10\x0c\x12\n\n\x06\x46RANCE\x10\r\x12\n\n\x06\x42RAZIL\x10\x0e\x12\t\n\x05ITALY\x10\x0f\x12\t\n\x05INDIA\x10\x10')
+  name='countries.proto',
+  package='',
+  serialized_pb=_b('\n\x0f\x63ountries.proto*\xa2\x1e\n\x0b\x43ountryCode\x12\x06\n\x02NA\x10\x00\x12\x07\n\x03\x41LL\x10\x01\x12\x11\n\rNORTH_AMERICA\x10\x02\x12\x11\n\rSOUTH_AMERICA\x10\x03\x12\n\n\x06\x45UROPE\x10\x04\x12\n\n\x06\x41\x46RICA\x10\x05\x12\x08\n\x04\x41SIA\x10\x06\x12\x0b\n\x07\x41LBANIA\x10\x07\x12\x0b\n\x07\x41LGERIA\x10\x08\x12\x12\n\x0e\x41MERICAN_SAMOA\x10\t\x12\x0b\n\x07\x41NDORRA\x10\n\x12\n\n\x06\x41NGOLA\x10\x0b\x12\x0c\n\x08\x41NGUILLA\x10\x0c\x12\x0b\n\x07\x41NTIGUA\x10\r\x12\r\n\tARGENTINA\x10\x0e\x12\x0b\n\x07\x41RMENIA\x10\x0f\x12\t\n\x05\x41RUBA\x10\x10\x12\r\n\tAUSTRALIA\x10\x11\x12\x0b\n\x07\x41USTRIA\x10\x12\x12\x0e\n\nAZERBAIJAN\x10\x13\x12\x0b\n\x07\x42\x41HAMAS\x10\x14\x12\x0b\n\x07\x42\x41HRAIN\x10\x15\x12\x0e\n\nBANGLADESH\x10\x16\x12\x0c\n\x08\x42\x41RBADOS\x10\x17\x12\x0b\n\x07\x42\x45LARUS\x10\x18\x12\x0b\n\x07\x42\x45LGIUM\x10\x19\x12\n\n\x06\x42\x45LIZE\x10\x1a\x12\t\n\x05\x42\x45NIN\x10\x1b\x12\x0b\n\x07\x42\x45RMUDA\x10\x1c\x12\n\n\x06\x42HUTAN\x10\x1d\x12\x0b\n\x07\x42OLIVIA\x10\x1e\x12\x1f\n\x1b\x42ONAIRE_SINT_EUSTATIUS_SABA\x10\x1f\x12\n\n\x06\x42OSNIA\x10 \x12\x0c\n\x08\x42OTSWANA\x10!\x12\x11\n\rBOUVET_ISLAND\x10\"\x12\n\n\x06\x42RAZIL\x10#\x12\"\n\x1e\x42RITISH_INDIAN_OCEAN_TERRITORY\x10$\x12\x15\n\x11\x42RUNEI_DARUSSALAM\x10%\x12\x0c\n\x08\x42ULGARIA\x10&\x12\x10\n\x0c\x42URKINA_FASO\x10\'\x12\x0b\n\x07\x42URUNDI\x10(\x12\x0e\n\nCABO_VERDE\x10)\x12\x0c\n\x08\x43\x41MBODIA\x10*\x12\x0c\n\x08\x43\x41MEROON\x10+\x12\n\n\x06\x43\x41NADA\x10,\x12\x12\n\x0e\x43\x41YMAN_ISLANDS\x10-\x12\x1c\n\x18\x43\x45NTRAL_AFRICAN_REPUBLIC\x10.\x12\x08\n\x04\x43HAD\x10/\x12\t\n\x05\x43HILE\x10\x30\x12\t\n\x05\x43HINA\x10\x31\x12\x14\n\x10\x43HRISTMAS_ISLAND\x10\x32\x12\x11\n\rCOCOS_ISLANDS\x10\x33\x12\x0c\n\x08\x43OLOMBIA\x10\x34\x12\x0b\n\x07\x43OMOROS\x10\x35\x12\x12\n\x0e\x43ONGO_REPUBLIC\x10\x36\x12\t\n\x05\x43ONGO\x10\x37\x12\x10\n\x0c\x43OOK_ISLANDS\x10\x38\x12\x0e\n\nCOSTA_RICA\x10\x39\x12\x10\n\x0c\x43OTE_DIVOIRE\x10:\x12\x0b\n\x07\x43ROATIA\x10;\x12\x08\n\x04\x43UBA\x10<\x12\x0b\n\x07\x43URACAO\x10=\x12\n\n\x06\x43YPRUS\x10>\x12\x12\n\x0e\x43ZECH_REPUBLIC\x10?\x12\x0b\n\x07\x44\x45NMARK\x10@\x12\x0c\n\x08\x44JIBOUTI\x10\x41\x12\x0c\n\x08\x44OMINICA\x10\x42\x12\x16\n\x12\x44OMINICAN_REPUBLIC\x10\x43\x12\x0b\n\x07\x45\x43UADOR\x10\x44\x12\t\n\x05\x45GYPT\x10\x45\x12\x0f\n\x0b\x45L_SALVADOR\x10\x46\x12\x15\n\x11\x45QUATORIAL_GUINEA\x10G\x12\x0b\n\x07\x45RITREA\x10H\x12\x0b\n\x07\x45STONIA\x10I\x12\x0c\n\x08\x45THIOPIA\x10J\x12\x14\n\x10\x46\x41LKLAND_ISLANDS\x10K\x12\x11\n\rFAROE_ISLANDS\x10L\x12\x08\n\x04\x46IJI\x10M\x12\x0b\n\x07\x46INLAND\x10N\x12\n\n\x06\x46RANCE\x10O\x12\x11\n\rFRENCH_GUIANA\x10P\x12\x14\n\x10\x46RENCH_POLYNESIA\x10Q\x12\x1f\n\x1b\x46RENCH_SOUTHERN_TERRITORIES\x10R\x12\t\n\x05GABON\x10S\x12\n\n\x06GAMBIA\x10T\x12\x0b\n\x07GEORGIA\x10U\x12\x0b\n\x07GERMANY\x10V\x12\t\n\x05GHANA\x10W\x12\r\n\tGIBRALTAR\x10X\x12\n\n\x06GREECE\x10Y\x12\r\n\tGreenland\x10Z\x12\x0b\n\x07GRENADA\x10[\x12\x0e\n\nGUADELOUPE\x10\\\x12\x08\n\x04GUAM\x10]\x12\r\n\tGUATEMALA\x10^\x12\x0c\n\x08GUERNSEY\x10_\x12\n\n\x06GUINEA\x10`\x12\x11\n\rGUINEA_BISSAU\x10\x61\x12\n\n\x06GUYANA\x10\x62\x12\t\n\x05HAITI\x10\x63\x12\x10\n\x0cHEARD_ISLAND\x10\x64\x12\x0c\n\x08HOLY_SEE\x10\x65\x12\x0c\n\x08HONDURAS\x10\x66\x12\r\n\tHONG_KONG\x10g\x12\x0b\n\x07HUNGARY\x10h\x12\x0b\n\x07ICELAND\x10i\x12\t\n\x05INDIA\x10j\x12\r\n\tINDONESIA\x10k\x12\x08\n\x04IRAN\x10l\x12\x08\n\x04IRAQ\x10m\x12\x0b\n\x07IRELAND\x10n\x12\x0f\n\x0bISLE_OF_MAN\x10o\x12\n\n\x06ISRAEL\x10p\x12\t\n\x05ITALY\x10q\x12\x0b\n\x07JAMAICA\x10r\x12\t\n\x05JAPAN\x10s\x12\n\n\x06JERSEY\x10t\x12\n\n\x06JORDAN\x10u\x12\x0e\n\nKAZAKHSTAN\x10v\x12\t\n\x05KENYA\x10w\x12\x0c\n\x08KIRIBATI\x10x\x12\x0f\n\x0bNORTH_KOREA\x10y\x12\x0f\n\x0bSOUTH_KOREA\x10z\x12\n\n\x06KUWAIT\x10{\x12\x0e\n\nKYRGYZSTAN\x10|\x12\x07\n\x03LAO\x10}\x12\n\n\x06LATVIA\x10~\x12\x0b\n\x07LEBANON\x10\x7f\x12\x0c\n\x07LESOTHO\x10\x80\x01\x12\x0c\n\x07LIBERIA\x10\x81\x01\x12\n\n\x05LIBYA\x10\x82\x01\x12\x12\n\rLIECHTENSTEIN\x10\x83\x01\x12\x0e\n\tLITHUANIA\x10\x84\x01\x12\x0f\n\nLUXEMBOURG\x10\x85\x01\x12\n\n\x05MACAO\x10\x86\x01\x12\x0e\n\tMACEDONIA\x10\x87\x01\x12\x0f\n\nMADAGASCAR\x10\x88\x01\x12\x0b\n\x06MALAWI\x10\x89\x01\x12\r\n\x08MALAYSIA\x10\x8a\x01\x12\r\n\x08MALDIVES\x10\x8b\x01\x12\t\n\x04MALI\x10\x8c\x01\x12\n\n\x05MALTA\x10\x8d\x01\x12\x15\n\x10MARSHALL_ISLANDS\x10\x8e\x01\x12\x0f\n\nMARTINIQUE\x10\x8f\x01\x12\x0f\n\nMAURITANIA\x10\x90\x01\x12\x0e\n\tMAURITIUS\x10\x91\x01\x12\x0c\n\x07MAYOTTE\x10\x92\x01\x12\x0b\n\x06MEXICO\x10\x93\x01\x12\x0f\n\nMICRONESIA\x10\x94\x01\x12\x0c\n\x07MOLDOVA\x10\x95\x01\x12\x0b\n\x06MONACO\x10\x96\x01\x12\r\n\x08MONGOLIA\x10\x97\x01\x12\x0f\n\nMONTENEGRO\x10\x98\x01\x12\x0f\n\nMONTSERRAT\x10\x99\x01\x12\x0c\n\x07MOROCCO\x10\x9a\x01\x12\x0f\n\nMOZAMBIQUE\x10\x9b\x01\x12\x0c\n\x07MYANMAR\x10\x9c\x01\x12\x0c\n\x07NAMIBIA\x10\x9d\x01\x12\n\n\x05NAURU\x10\x9e\x01\x12\n\n\x05NEPAL\x10\x9f\x01\x12\x10\n\x0bNETHERLANDS\x10\xa0\x01\x12\x12\n\rNEW_CALEDONIA\x10\xa1\x01\x12\x10\n\x0bNEW_ZEALAND\x10\xa2\x01\x12\x0e\n\tNICARAGUA\x10\xa3\x01\x12\n\n\x05NIGER\x10\xa4\x01\x12\x0c\n\x07NIGERIA\x10\xa5\x01\x12\t\n\x04NIUE\x10\xa6\x01\x12\x13\n\x0eNORFOLK_ISLAND\x10\xa7\x01\x12\x1d\n\x18Northern_Mariana_Islands\x10\xa8\x01\x12\x0b\n\x06NORWAY\x10\xa9\x01\x12\t\n\x04OMAN\x10\xaa\x01\x12\r\n\x08PAKISTAN\x10\xab\x01\x12\n\n\x05PALAU\x10\xac\x01\x12\x0b\n\x06PANAMA\x10\xad\x01\x12\x15\n\x10PAPUA_NEW_GUINEA\x10\xae\x01\x12\r\n\x08PARAGUAY\x10\xaf\x01\x12\t\n\x04PERU\x10\xb0\x01\x12\x10\n\x0bPHILIPPINES\x10\xb1\x01\x12\r\n\x08PITCAIRN\x10\xb2\x01\x12\x0b\n\x06POLAND\x10\xb3\x01\x12\r\n\x08PORTUGAL\x10\xb4\x01\x12\x10\n\x0bPUERTO_RICO\x10\xb5\x01\x12\n\n\x05QATAR\x10\xb6\x01\x12\x0c\n\x07REUNION\x10\xb7\x01\x12\x0c\n\x07ROMANIA\x10\xb8\x01\x12\x0b\n\x06RUSSIA\x10\xb9\x01\x12\x0b\n\x06RWANDA\x10\xba\x01\x12\x15\n\x10SAINT_BARTHELEMY\x10\xbb\x01\x12\x11\n\x0cSAINT_HELENA\x10\xbc\x01\x12\x10\n\x0bSAINT_KITTS\x10\xbd\x01\x12\x10\n\x0bSAINT_LUCIA\x10\xbe\x01\x12\x11\n\x0cSAINT_MARTIN\x10\xbf\x01\x12\x11\n\x0cSAINT_PIERRE\x10\xc0\x01\x12\x12\n\rSAINT_VINCENT\x10\xc1\x01\x12\n\n\x05SAMOA\x10\xc2\x01\x12\x0f\n\nSAN_MARINO\x10\xc3\x01\x12\r\n\x08SAO_TOME\x10\xc4\x01\x12\x11\n\x0cSAUDI_ARABIA\x10\xc5\x01\x12\x0c\n\x07SENEGAL\x10\xc6\x01\x12\x0b\n\x06SERBIA\x10\xc7\x01\x12\x0f\n\nSEYCHELLES\x10\xc8\x01\x12\x11\n\x0cSIERRA_LEONE\x10\xc9\x01\x12\x0e\n\tSINGAPORE\x10\xca\x01\x12\x11\n\x0cSINT_MAARTEN\x10\xcb\x01\x12\n\n\x05SUCRE\x10\xcc\x01\x12\r\n\x08SLOVAKIA\x10\xcd\x01\x12\r\n\x08SLOVENIA\x10\xce\x01\x12\x14\n\x0fSOLOMON_ISLANDS\x10\xcf\x01\x12\x0c\n\x07SOMALIA\x10\xd0\x01\x12\x11\n\x0cSOUTH_AFRICA\x10\xd1\x01\x12\x10\n\x0bSOUTH_SUDAN\x10\xd2\x01\x12\n\n\x05SPAIN\x10\xd3\x01\x12\x0e\n\tSRI_LANKA\x10\xd4\x01\x12\n\n\x05SUDAN\x10\xd5\x01\x12\r\n\x08SURINAME\x10\xd6\x01\x12\r\n\x08SVALBARD\x10\xd7\x01\x12\x0e\n\tSWAZILAND\x10\xd8\x01\x12\x0b\n\x06SWEDEN\x10\xd9\x01\x12\x10\n\x0bSWITZERLAND\x10\xda\x01\x12\x19\n\x14SYRIAN_ARAB_REPUBLIC\x10\xdb\x01\x12\x0b\n\x06TAIWAN\x10\xdc\x01\x12\x0f\n\nTAJIKISTAN\x10\xdd\x01\x12\r\n\x08TANZANIA\x10\xde\x01\x12\r\n\x08THAILAND\x10\xdf\x01\x12\x10\n\x0bTIMOR_LESTE\x10\xe0\x01\x12\t\n\x04TOGO\x10\xe1\x01\x12\x0c\n\x07TOKELAU\x10\xe2\x01\x12\n\n\x05TONGA\x10\xe3\x01\x12\r\n\x08TRINIDAD\x10\xe4\x01\x12\x0c\n\x07TUNISIA\x10\xe5\x01\x12\x0b\n\x06TURKEY\x10\xe6\x01\x12\x11\n\x0cTURKMENISTAN\x10\xe7\x01\x12\x1d\n\x18TURKS_AND_CAICOS_ISLANDS\x10\xe8\x01\x12\x0b\n\x06TUVALU\x10\xe9\x01\x12\x0b\n\x06UGANDA\x10\xea\x01\x12\x0c\n\x07UKRAINE\x10\xeb\x01\x12\x19\n\x14UNITED_ARAB_EMIRATES\x10\xec\x01\x12\x13\n\x0eUNITED_KINGDOM\x10\xed\x01\x12\x12\n\rUNITED_STATES\x10\xee\x01\x12\x0c\n\x07URUGUAY\x10\xef\x01\x12\x0f\n\nUZBEKISTAN\x10\xf0\x01\x12\x0c\n\x07VANUATU\x10\xf1\x01\x12\x0e\n\tVENEZUELA\x10\xf2\x01\x12\x0c\n\x07VIETNAM\x10\xf3\x01\x12\x1b\n\x16VIRGIN_ISLANDS_BRITISH\x10\xf4\x01\x12\x16\n\x11VIRGIN_ISLANDS_US\x10\xf5\x01\x12\x16\n\x11WALLIS_AND_FUTUNA\x10\xf6\x01\x12\x13\n\x0eWESTERN_SAHARA\x10\xf7\x01\x12\n\n\x05YEMEN\x10\xf8\x01\x12\x0b\n\x06ZAMBIA\x10\xf9\x01\x12\r\n\x08ZIMBABWE\x10\xfa\x01')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 _COUNTRYCODE = _descriptor.EnumDescriptor(
-    name='CountryCode',
-    full_name='CountryCode',
-    filename=None,
-    file=DESCRIPTOR,
-    values=[
-        _descriptor.EnumValueDescriptor(
-            name='NA', index=0, number=0,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='ALL', index=1, number=1,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='NORTH_AMERICA', index=2, number=2,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='SOUTH_AMERICA', index=3, number=3,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='EUROPE', index=4, number=4,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='AFRICA', index=5, number=5,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='ASIA', index=6, number=6,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='AUSTRALIA', index=7, number=7,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='UNITED_STATES', index=8, number=8,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='CHINA', index=9, number=9,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='JAPAN', index=10, number=10,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='GERMANY', index=11, number=11,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='UNITED_KINGDOM', index=12, number=12,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='FRANCE', index=13, number=13,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='BRAZIL', index=14, number=14,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='ITALY', index=15, number=15,
-            options=None,
-            type=None),
-        _descriptor.EnumValueDescriptor(
-            name='INDIA', index=16, number=16,
-            options=None,
-            type=None),
-    ],
-    containing_type=None,
-    options=None,
-    serialized_start=20,
-    serialized_end=257,
+  name='CountryCode',
+  full_name='CountryCode',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='NA', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ALL', index=1, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NORTH_AMERICA', index=2, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOUTH_AMERICA', index=3, number=3,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='EUROPE', index=4, number=4,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AFRICA', index=5, number=5,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ASIA', index=6, number=6,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ALBANIA', index=7, number=7,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ALGERIA', index=8, number=8,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AMERICAN_SAMOA', index=9, number=9,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ANDORRA', index=10, number=10,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ANGOLA', index=11, number=11,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ANGUILLA', index=12, number=12,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ANTIGUA', index=13, number=13,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ARGENTINA', index=14, number=14,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ARMENIA', index=15, number=15,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ARUBA', index=16, number=16,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AUSTRALIA', index=17, number=17,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AUSTRIA', index=18, number=18,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='AZERBAIJAN', index=19, number=19,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BAHAMAS', index=20, number=20,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BAHRAIN', index=21, number=21,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BANGLADESH', index=22, number=22,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BARBADOS', index=23, number=23,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BELARUS', index=24, number=24,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BELGIUM', index=25, number=25,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BELIZE', index=26, number=26,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BENIN', index=27, number=27,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BERMUDA', index=28, number=28,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BHUTAN', index=29, number=29,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BOLIVIA', index=30, number=30,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BONAIRE_SINT_EUSTATIUS_SABA', index=31, number=31,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BOSNIA', index=32, number=32,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BOTSWANA', index=33, number=33,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BOUVET_ISLAND', index=34, number=34,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BRAZIL', index=35, number=35,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BRITISH_INDIAN_OCEAN_TERRITORY', index=36, number=36,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BRUNEI_DARUSSALAM', index=37, number=37,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BULGARIA', index=38, number=38,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BURKINA_FASO', index=39, number=39,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='BURUNDI', index=40, number=40,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CABO_VERDE', index=41, number=41,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CAMBODIA', index=42, number=42,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CAMEROON', index=43, number=43,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CANADA', index=44, number=44,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CAYMAN_ISLANDS', index=45, number=45,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CENTRAL_AFRICAN_REPUBLIC', index=46, number=46,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CHAD', index=47, number=47,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CHILE', index=48, number=48,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CHINA', index=49, number=49,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CHRISTMAS_ISLAND', index=50, number=50,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COCOS_ISLANDS', index=51, number=51,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COLOMBIA', index=52, number=52,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COMOROS', index=53, number=53,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CONGO_REPUBLIC', index=54, number=54,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CONGO', index=55, number=55,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COOK_ISLANDS', index=56, number=56,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COSTA_RICA', index=57, number=57,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='COTE_DIVOIRE', index=58, number=58,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CROATIA', index=59, number=59,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CUBA', index=60, number=60,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CURACAO', index=61, number=61,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CYPRUS', index=62, number=62,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CZECH_REPUBLIC', index=63, number=63,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='DENMARK', index=64, number=64,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='DJIBOUTI', index=65, number=65,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='DOMINICA', index=66, number=66,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='DOMINICAN_REPUBLIC', index=67, number=67,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ECUADOR', index=68, number=68,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='EGYPT', index=69, number=69,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='EL_SALVADOR', index=70, number=70,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='EQUATORIAL_GUINEA', index=71, number=71,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ERITREA', index=72, number=72,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ESTONIA', index=73, number=73,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ETHIOPIA', index=74, number=74,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FALKLAND_ISLANDS', index=75, number=75,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FAROE_ISLANDS', index=76, number=76,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FIJI', index=77, number=77,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FINLAND', index=78, number=78,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FRANCE', index=79, number=79,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FRENCH_GUIANA', index=80, number=80,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FRENCH_POLYNESIA', index=81, number=81,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FRENCH_SOUTHERN_TERRITORIES', index=82, number=82,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GABON', index=83, number=83,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GAMBIA', index=84, number=84,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GEORGIA', index=85, number=85,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GERMANY', index=86, number=86,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GHANA', index=87, number=87,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GIBRALTAR', index=88, number=88,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GREECE', index=89, number=89,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Greenland', index=90, number=90,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GRENADA', index=91, number=91,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUADELOUPE', index=92, number=92,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUAM', index=93, number=93,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUATEMALA', index=94, number=94,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUERNSEY', index=95, number=95,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUINEA', index=96, number=96,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUINEA_BISSAU', index=97, number=97,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='GUYANA', index=98, number=98,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HAITI', index=99, number=99,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HEARD_ISLAND', index=100, number=100,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HOLY_SEE', index=101, number=101,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HONDURAS', index=102, number=102,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HONG_KONG', index=103, number=103,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HUNGARY', index=104, number=104,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ICELAND', index=105, number=105,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='INDIA', index=106, number=106,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='INDONESIA', index=107, number=107,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='IRAN', index=108, number=108,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='IRAQ', index=109, number=109,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='IRELAND', index=110, number=110,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ISLE_OF_MAN', index=111, number=111,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ISRAEL', index=112, number=112,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ITALY', index=113, number=113,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='JAMAICA', index=114, number=114,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='JAPAN', index=115, number=115,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='JERSEY', index=116, number=116,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='JORDAN', index=117, number=117,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KAZAKHSTAN', index=118, number=118,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KENYA', index=119, number=119,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KIRIBATI', index=120, number=120,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NORTH_KOREA', index=121, number=121,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOUTH_KOREA', index=122, number=122,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KUWAIT', index=123, number=123,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KYRGYZSTAN', index=124, number=124,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LAO', index=125, number=125,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LATVIA', index=126, number=126,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LEBANON', index=127, number=127,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LESOTHO', index=128, number=128,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LIBERIA', index=129, number=129,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LIBYA', index=130, number=130,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LIECHTENSTEIN', index=131, number=131,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LITHUANIA', index=132, number=132,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='LUXEMBOURG', index=133, number=133,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MACAO', index=134, number=134,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MACEDONIA', index=135, number=135,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MADAGASCAR', index=136, number=136,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MALAWI', index=137, number=137,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MALAYSIA', index=138, number=138,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MALDIVES', index=139, number=139,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MALI', index=140, number=140,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MALTA', index=141, number=141,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MARSHALL_ISLANDS', index=142, number=142,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MARTINIQUE', index=143, number=143,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MAURITANIA', index=144, number=144,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MAURITIUS', index=145, number=145,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MAYOTTE', index=146, number=146,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MEXICO', index=147, number=147,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MICRONESIA', index=148, number=148,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MOLDOVA', index=149, number=149,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MONACO', index=150, number=150,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MONGOLIA', index=151, number=151,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MONTENEGRO', index=152, number=152,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MONTSERRAT', index=153, number=153,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MOROCCO', index=154, number=154,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MOZAMBIQUE', index=155, number=155,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MYANMAR', index=156, number=156,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NAMIBIA', index=157, number=157,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NAURU', index=158, number=158,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NEPAL', index=159, number=159,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NETHERLANDS', index=160, number=160,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NEW_CALEDONIA', index=161, number=161,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NEW_ZEALAND', index=162, number=162,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NICARAGUA', index=163, number=163,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NIGER', index=164, number=164,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NIGERIA', index=165, number=165,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NIUE', index=166, number=166,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NORFOLK_ISLAND', index=167, number=167,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Northern_Mariana_Islands', index=168, number=168,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NORWAY', index=169, number=169,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='OMAN', index=170, number=170,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PAKISTAN', index=171, number=171,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PALAU', index=172, number=172,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PANAMA', index=173, number=173,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PAPUA_NEW_GUINEA', index=174, number=174,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PARAGUAY', index=175, number=175,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PERU', index=176, number=176,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PHILIPPINES', index=177, number=177,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PITCAIRN', index=178, number=178,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='POLAND', index=179, number=179,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PORTUGAL', index=180, number=180,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PUERTO_RICO', index=181, number=181,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='QATAR', index=182, number=182,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='REUNION', index=183, number=183,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ROMANIA', index=184, number=184,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='RUSSIA', index=185, number=185,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='RWANDA', index=186, number=186,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_BARTHELEMY', index=187, number=187,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_HELENA', index=188, number=188,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_KITTS', index=189, number=189,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_LUCIA', index=190, number=190,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_MARTIN', index=191, number=191,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_PIERRE', index=192, number=192,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAINT_VINCENT', index=193, number=193,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAMOA', index=194, number=194,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAN_MARINO', index=195, number=195,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAO_TOME', index=196, number=196,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SAUDI_ARABIA', index=197, number=197,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SENEGAL', index=198, number=198,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SERBIA', index=199, number=199,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SEYCHELLES', index=200, number=200,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SIERRA_LEONE', index=201, number=201,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SINGAPORE', index=202, number=202,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SINT_MAARTEN', index=203, number=203,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SUCRE', index=204, number=204,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SLOVAKIA', index=205, number=205,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SLOVENIA', index=206, number=206,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOLOMON_ISLANDS', index=207, number=207,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOMALIA', index=208, number=208,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOUTH_AFRICA', index=209, number=209,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SOUTH_SUDAN', index=210, number=210,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SPAIN', index=211, number=211,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SRI_LANKA', index=212, number=212,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SUDAN', index=213, number=213,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SURINAME', index=214, number=214,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SVALBARD', index=215, number=215,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SWAZILAND', index=216, number=216,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SWEDEN', index=217, number=217,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SWITZERLAND', index=218, number=218,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SYRIAN_ARAB_REPUBLIC', index=219, number=219,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TAIWAN', index=220, number=220,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TAJIKISTAN', index=221, number=221,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TANZANIA', index=222, number=222,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='THAILAND', index=223, number=223,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TIMOR_LESTE', index=224, number=224,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TOGO', index=225, number=225,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TOKELAU', index=226, number=226,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TONGA', index=227, number=227,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TRINIDAD', index=228, number=228,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TUNISIA', index=229, number=229,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TURKEY', index=230, number=230,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TURKMENISTAN', index=231, number=231,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TURKS_AND_CAICOS_ISLANDS', index=232, number=232,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TUVALU', index=233, number=233,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UGANDA', index=234, number=234,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UKRAINE', index=235, number=235,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNITED_ARAB_EMIRATES', index=236, number=236,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNITED_KINGDOM', index=237, number=237,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UNITED_STATES', index=238, number=238,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='URUGUAY', index=239, number=239,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='UZBEKISTAN', index=240, number=240,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='VANUATU', index=241, number=241,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='VENEZUELA', index=242, number=242,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='VIETNAM', index=243, number=243,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='VIRGIN_ISLANDS_BRITISH', index=244, number=244,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='VIRGIN_ISLANDS_US', index=245, number=245,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='WALLIS_AND_FUTUNA', index=246, number=246,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='WESTERN_SAHARA', index=247, number=247,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='YEMEN', index=248, number=248,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ZAMBIA', index=249, number=249,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ZIMBABWE', index=250, number=250,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=20,
+  serialized_end=3894,
 )
 _sym_db.RegisterEnumDescriptor(_COUNTRYCODE)
 
@@ -109,16 +1049,251 @@ SOUTH_AMERICA = 3
 EUROPE = 4
 AFRICA = 5
 ASIA = 6
-AUSTRALIA = 7
-UNITED_STATES = 8
-CHINA = 9
-JAPAN = 10
-GERMANY = 11
-UNITED_KINGDOM = 12
-FRANCE = 13
-BRAZIL = 14
-ITALY = 15
-INDIA = 16
+ALBANIA = 7
+ALGERIA = 8
+AMERICAN_SAMOA = 9
+ANDORRA = 10
+ANGOLA = 11
+ANGUILLA = 12
+ANTIGUA = 13
+ARGENTINA = 14
+ARMENIA = 15
+ARUBA = 16
+AUSTRALIA = 17
+AUSTRIA = 18
+AZERBAIJAN = 19
+BAHAMAS = 20
+BAHRAIN = 21
+BANGLADESH = 22
+BARBADOS = 23
+BELARUS = 24
+BELGIUM = 25
+BELIZE = 26
+BENIN = 27
+BERMUDA = 28
+BHUTAN = 29
+BOLIVIA = 30
+BONAIRE_SINT_EUSTATIUS_SABA = 31
+BOSNIA = 32
+BOTSWANA = 33
+BOUVET_ISLAND = 34
+BRAZIL = 35
+BRITISH_INDIAN_OCEAN_TERRITORY = 36
+BRUNEI_DARUSSALAM = 37
+BULGARIA = 38
+BURKINA_FASO = 39
+BURUNDI = 40
+CABO_VERDE = 41
+CAMBODIA = 42
+CAMEROON = 43
+CANADA = 44
+CAYMAN_ISLANDS = 45
+CENTRAL_AFRICAN_REPUBLIC = 46
+CHAD = 47
+CHILE = 48
+CHINA = 49
+CHRISTMAS_ISLAND = 50
+COCOS_ISLANDS = 51
+COLOMBIA = 52
+COMOROS = 53
+CONGO_REPUBLIC = 54
+CONGO = 55
+COOK_ISLANDS = 56
+COSTA_RICA = 57
+COTE_DIVOIRE = 58
+CROATIA = 59
+CUBA = 60
+CURACAO = 61
+CYPRUS = 62
+CZECH_REPUBLIC = 63
+DENMARK = 64
+DJIBOUTI = 65
+DOMINICA = 66
+DOMINICAN_REPUBLIC = 67
+ECUADOR = 68
+EGYPT = 69
+EL_SALVADOR = 70
+EQUATORIAL_GUINEA = 71
+ERITREA = 72
+ESTONIA = 73
+ETHIOPIA = 74
+FALKLAND_ISLANDS = 75
+FAROE_ISLANDS = 76
+FIJI = 77
+FINLAND = 78
+FRANCE = 79
+FRENCH_GUIANA = 80
+FRENCH_POLYNESIA = 81
+FRENCH_SOUTHERN_TERRITORIES = 82
+GABON = 83
+GAMBIA = 84
+GEORGIA = 85
+GERMANY = 86
+GHANA = 87
+GIBRALTAR = 88
+GREECE = 89
+Greenland = 90
+GRENADA = 91
+GUADELOUPE = 92
+GUAM = 93
+GUATEMALA = 94
+GUERNSEY = 95
+GUINEA = 96
+GUINEA_BISSAU = 97
+GUYANA = 98
+HAITI = 99
+HEARD_ISLAND = 100
+HOLY_SEE = 101
+HONDURAS = 102
+HONG_KONG = 103
+HUNGARY = 104
+ICELAND = 105
+INDIA = 106
+INDONESIA = 107
+IRAN = 108
+IRAQ = 109
+IRELAND = 110
+ISLE_OF_MAN = 111
+ISRAEL = 112
+ITALY = 113
+JAMAICA = 114
+JAPAN = 115
+JERSEY = 116
+JORDAN = 117
+KAZAKHSTAN = 118
+KENYA = 119
+KIRIBATI = 120
+NORTH_KOREA = 121
+SOUTH_KOREA = 122
+KUWAIT = 123
+KYRGYZSTAN = 124
+LAO = 125
+LATVIA = 126
+LEBANON = 127
+LESOTHO = 128
+LIBERIA = 129
+LIBYA = 130
+LIECHTENSTEIN = 131
+LITHUANIA = 132
+LUXEMBOURG = 133
+MACAO = 134
+MACEDONIA = 135
+MADAGASCAR = 136
+MALAWI = 137
+MALAYSIA = 138
+MALDIVES = 139
+MALI = 140
+MALTA = 141
+MARSHALL_ISLANDS = 142
+MARTINIQUE = 143
+MAURITANIA = 144
+MAURITIUS = 145
+MAYOTTE = 146
+MEXICO = 147
+MICRONESIA = 148
+MOLDOVA = 149
+MONACO = 150
+MONGOLIA = 151
+MONTENEGRO = 152
+MONTSERRAT = 153
+MOROCCO = 154
+MOZAMBIQUE = 155
+MYANMAR = 156
+NAMIBIA = 157
+NAURU = 158
+NEPAL = 159
+NETHERLANDS = 160
+NEW_CALEDONIA = 161
+NEW_ZEALAND = 162
+NICARAGUA = 163
+NIGER = 164
+NIGERIA = 165
+NIUE = 166
+NORFOLK_ISLAND = 167
+Northern_Mariana_Islands = 168
+NORWAY = 169
+OMAN = 170
+PAKISTAN = 171
+PALAU = 172
+PANAMA = 173
+PAPUA_NEW_GUINEA = 174
+PARAGUAY = 175
+PERU = 176
+PHILIPPINES = 177
+PITCAIRN = 178
+POLAND = 179
+PORTUGAL = 180
+PUERTO_RICO = 181
+QATAR = 182
+REUNION = 183
+ROMANIA = 184
+RUSSIA = 185
+RWANDA = 186
+SAINT_BARTHELEMY = 187
+SAINT_HELENA = 188
+SAINT_KITTS = 189
+SAINT_LUCIA = 190
+SAINT_MARTIN = 191
+SAINT_PIERRE = 192
+SAINT_VINCENT = 193
+SAMOA = 194
+SAN_MARINO = 195
+SAO_TOME = 196
+SAUDI_ARABIA = 197
+SENEGAL = 198
+SERBIA = 199
+SEYCHELLES = 200
+SIERRA_LEONE = 201
+SINGAPORE = 202
+SINT_MAARTEN = 203
+SUCRE = 204
+SLOVAKIA = 205
+SLOVENIA = 206
+SOLOMON_ISLANDS = 207
+SOMALIA = 208
+SOUTH_AFRICA = 209
+SOUTH_SUDAN = 210
+SPAIN = 211
+SRI_LANKA = 212
+SUDAN = 213
+SURINAME = 214
+SVALBARD = 215
+SWAZILAND = 216
+SWEDEN = 217
+SWITZERLAND = 218
+SYRIAN_ARAB_REPUBLIC = 219
+TAIWAN = 220
+TAJIKISTAN = 221
+TANZANIA = 222
+THAILAND = 223
+TIMOR_LESTE = 224
+TOGO = 225
+TOKELAU = 226
+TONGA = 227
+TRINIDAD = 228
+TUNISIA = 229
+TURKEY = 230
+TURKMENISTAN = 231
+TURKS_AND_CAICOS_ISLANDS = 232
+TUVALU = 233
+UGANDA = 234
+UKRAINE = 235
+UNITED_ARAB_EMIRATES = 236
+UNITED_KINGDOM = 237
+UNITED_STATES = 238
+URUGUAY = 239
+UZBEKISTAN = 240
+VANUATU = 241
+VENEZUELA = 242
+VIETNAM = 243
+VIRGIN_ISLANDS_BRITISH = 244
+VIRGIN_ISLANDS_US = 245
+WALLIS_AND_FUTUNA = 246
+WESTERN_SAHARA = 247
+YEMEN = 248
+ZAMBIA = 249
+ZIMBABWE = 250
+
 
 DESCRIPTOR.enum_types_by_name['CountryCode'] = _COUNTRYCODE
 
