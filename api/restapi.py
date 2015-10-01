@@ -1,6 +1,7 @@
 __author__ = 'chris'
 import json
 import os
+import pickle
 from txrestapi.resource import APIResource
 from txrestapi.methods import GET, POST, DELETE
 from twisted.web import server
@@ -601,3 +602,68 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/settings')
+    def set_settings(self, request):
+        try:
+            settings = self.db.Settings()
+            settings.update(
+                request.args["refund_address"][0],
+                request.args["currency_code"][0],
+                request.args["country"][0],
+                request.args["language"][0],
+                request.args["time_zone"][0],
+                1 if bool(request.args["notifications"][0]) else 0,
+                request.args["ship_to_name"][0],
+                request.args["ship_to_street"][0],
+                request.args["ship_to_city"][0],
+                request.args["ship_to_state"][0],
+                request.args["ship_to_postal_code"][0],
+                request.args["ship_to_country"][0],
+                pickle.dumps(request.args["blocked"]),
+                request.args["libbitcoin_server"][0],
+                1 if bool(request.args["ssl"][0]) else 0,
+                KeyChain(self.db).guid_privkey.encode("hex"),
+                request.args["server_url"][0],
+                request.args["terms_conditions"][0],
+                request.args["refund_policy"][0]
+            )
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
+    @GET('^/api/v1/settings')
+    def get_settings(self, request):
+        settings = self.db.Settings().get()
+        if settings is None:
+            request.write(json.dumps({}, indent=4))
+            request.finish()
+        else:
+            settings_json = {
+                "refund_address": settings[1],
+                "currency_code": settings[2],
+                "country": settings[3],
+                "language": settings[4],
+                "time_zone": settings[5],
+                "notifications": True if settings[6] == 1 else False,
+                "ship_to_name": settings[7],
+                "ship_to_street": settings[8],
+                "ship_to_city": settings[9],
+                "ship_to_state": settings[10],
+                "ship_to_postal_code": settings[11],
+                "ship_to_country": settings[12],
+                "blocked_guids": pickle.loads(settings[13]),
+                "libbitcoin_server": settings[14],
+                "ssl": True if settings[15] == 1 else False,
+                "seed": settings[16],
+                "server_url": settings[17],
+                "terms_conditions": settings[18],
+                "refund_policy": settings[19]
+            }
+            request.write(json.dumps(settings_json, indent=4))
+            request.finish()
+        return server.NOT_DONE_YET
