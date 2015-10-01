@@ -146,7 +146,7 @@ class Contract(object):
                 }
             }
         )
-        if expiration_date.lower() == "never":
+        if expiration_date == "":
             self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = "never"
         else:
             self.contract["vendor_offer"]["listing"]["metadata"]["expiry"] = expiration_date + " UTC"
@@ -208,6 +208,8 @@ class Contract(object):
         if images is not None:
             self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
             for image_hash in images:
+                if len(image_hash) != 40:
+                    raise Exception("Invalid image hash")
                 self.contract["vendor_offer"]["listing"]["item"]["image_hashes"].append(image_hash)
         if terms_conditions is not None or returns is not None:
             self.contract["vendor_offer"]["listing"]["policy"] = {}
@@ -336,7 +338,8 @@ class Contract(object):
         self.contract["buyer_order"]["signature"] = \
             self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
 
-        return self.contract["buyer_order"]["order"]["payment"]["address"]
+        return (self.contract["buyer_order"]["order"]["payment"]["address"],
+                order_json["buyer_order"]["order"]["payment"]["amount"])
 
     def add_order_confirmation(self,
                                payout_address,
@@ -434,7 +437,7 @@ class Contract(object):
                     description=None,
                     delivery_time=None,
                     customer_service=None,
-                    review=None,
+                    review="",
                     dispute=False,
                     claim=None,
                     payout=True):
@@ -447,7 +450,8 @@ class Contract(object):
                 "receipt": {
                     "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
                     "listing": {
-                        "received": received
+                        "received": received,
+                        "listing_hash": self.contract["buyer_order"]["order"]["ref_hash"]
                     },
                     "dispute": {
                         "dispute": dispute
@@ -465,13 +469,12 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["description"] = description
             receipt_json["buyer_receipt"]["receipt"]["rating"]["delivery_time"] = delivery_time
             receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
-            if review:
-                receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
         if payout:
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             contract_id = self.contract["buyer_order"]["order"]["ref_hash"]
             order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
-            outpoints = pickle.load(self.db.Purchases().get_outpoint(order_id))
+            outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout_address"]
             redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
             value = 0
@@ -479,24 +482,23 @@ class Contract(object):
                 value += output["value"]
                 del output["value"]
             value -= TRANSACTION_FEE
-            if rating:
-                while True:
-                    op_return = "6a" + "0B0" + str(feedback) + str(quality) + str(description) \
-                                + str(delivery_time) + str(customer_service) + vendor_guid + contract_id + \
-                                digest(review).encode("hex") + \
-                                sha256(random.getrandbits(255)).digest().encode("hex")[:8]
-                    if sha256(sha256(op_return).digest()).digest().encode("hex")[:4] == vendor_guid[:4]:
-                        break
             outs = [{'value': value, 'address': payout_address}]
             tx = bitcoin.mktx(outpoints, outs)
             if rating:
+                while True:
+                    op_return = "6a44" + "0b0" + str(feedback) + str(quality) + str(description) \
+                                + str(delivery_time) + str(customer_service) + vendor_guid + contract_id + \
+                                digest(review).encode("hex") + \
+                                sha256(str(random.getrandbits(255))).digest().encode("hex")[:8]
+                    if sha256(sha256(op_return).digest()).digest().encode("hex")[:4] == vendor_guid[:4]:
+                        break
                 deserialized_tx = bitcoin.deserialize(tx)
                 deserialized_tx["outs"].append({'value': 0, 'script': op_return})
                 tx = bitcoin.serialize(deserialized_tx)
             signatures = []
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
-            buyer_priv = derive_childkey(masterkey_b, chaincode)
+            buyer_priv = derive_childkey(masterkey_b, chaincode, bitcoin.MAINNET_PRIVATE)
             for index in range(0, len(outpoints)):
                 sig = bitcoin.multisign(tx, index, redeem_script, buyer_priv)
                 signatures.append({"input_index": index, "signature": sig})
@@ -505,10 +507,34 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
             if rating:
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["op_return"] = op_return
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["tx_fee"] = TRANSACTION_FEE
         if claim:
             receipt_json["buyer_receipt"]["receipt"]["dispute"]["claim"] = claim
+        receipt = json.dumps(receipt_json["buyer_receipt"]["receipt"], indent=4)
+        receipt_json["buyer_receipt"]["signature"] = \
+            self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
+        self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
 
+    def accept_receipt(self, ws, receipt_json=None):
+        """
+        Process the final receipt sent over by the buyer. If valid, broadcast the transaction
+        to the bitcoin network.
+        """
+        self.ws = ws
+        try:
+            if receipt_json:
+                self.contract["buyer_receipt"] = json.loads(receipt_json,
+                                                            object_pairs_hook=OrderedDict)
+            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            del contract_dict["buyer_receipt"]
+            contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+            ref_hash = self.contract["buyer_receipt"]["receipt"]["ref_hash"]
+            if ref_hash != contract_hash:
+                raise Exception("Order number doesn't match")
+            return True
 
+        except Exception:
+            return False
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """
@@ -636,19 +662,15 @@ class Contract(object):
         contract = json.dumps(self.contract, indent=4)
         return digest(contract)
 
-    def delete(self, delete_images=True):
+    def delete(self, delete_images=False):
         """
         Deletes the contract json from the OpenBazaar directory as well as the listing
         metadata from the db and all the related images in the file system.
         """
 
-        # build the file_name from the contract
-        file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
-        file_name = re.sub(r"[^\w\s]", '', file_name)
-        file_name = re.sub(r"\s+", '_', file_name)
-        file_path = DATA_FOLDER + "store/listings/contracts/" + file_name + ".json"
-
+        # get the file path
         h = self.db.HashMap()
+        file_path = h.get_file(digest(json.dumps(self.contract, indent=4)))
 
         # maybe delete the images from disk
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"] and delete_images:
@@ -686,6 +708,7 @@ class Contract(object):
         file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
         file_name = re.sub(r"[^\w\s]", '', file_name)
         file_name = re.sub(r"\s+", '_', file_name)
+        file_name += digest(json.dumps(self.contract, indent=4)).encode("hex")[:8]
 
         # save the json contract to the file system
         file_path = DATA_FOLDER + "store/listings/contracts/" + file_name + ".json"
@@ -812,3 +835,6 @@ class Contract(object):
 
         except Exception:
             return False
+
+    def __repr__(self):
+        return json.dumps(self.contract, indent=4)

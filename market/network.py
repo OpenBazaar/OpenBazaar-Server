@@ -35,6 +35,10 @@ class Server(object):
         self.db = database
         self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key, database)
 
+        # TODO: we need a loop here that republishes keywords when they are about to expire
+
+        # TODO: we also need a loop here to delete expiring contract (if they are set to expire)
+
     def get_contract(self, node_to_ask, contract_hash):
         """
         Will query the given node to fetch a contract given its hash.
@@ -544,6 +548,45 @@ class Server(object):
                 nonce = nacl.utils.random(Box.NONCE_SIZE)
                 ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
                 d = self.protocol.callOrderConfirmation(node_to_ask, pkephem, ciphertext)
+                return d.addCallback(parse_response)
+            else:
+                return parse_response([False])
+        return self.kserver.resolve(unhexlify(guid)).addCallback(get_node)
+
+    def complete_order(self, guid, contract):
+        """
+        Send the receipt, including the payout signatures and ratings, over to the vendor.
+        If the vendor isn't online we will stick it in the DHT temporarily.
+        """
+
+        def get_node(node_to_ask):
+            def parse_response(response):
+                if response[0] and response[1][0] == "True":
+                    return True
+                elif not response[0]:
+                    contract_dict = json.loads(json.dumps(contract.contract, indent=4),
+                                               object_pairs_hook=OrderedDict)
+                    del contract_dict["vendor_order_confirmation"]
+                    del contract_dict["buyer_receipt"]
+                    order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+                    self.send_message(Node(unhexlify(guid)),
+                                      contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"],
+                                      objects.Plaintext_Message.Type.Value("RECEIPT"),
+                                      json.dumps(contract.contract["buyer_receipt"]),
+                                      order_id,
+                                      store_only=True)
+                    return True
+                else:
+                    return False
+
+            if node_to_ask:
+                public_key = contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+                skephem = PrivateKey.generate()
+                pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+                box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                nonce = nacl.utils.random(Box.NONCE_SIZE)
+                ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
+                d = self.protocol.callCompleteOrder(node_to_ask, pkephem, ciphertext)
                 return d.addCallback(parse_response)
             else:
                 return parse_response([False])
