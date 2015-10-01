@@ -60,6 +60,10 @@ class Database(object):
         cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
     address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''')
         cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
+        cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
+country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,
+shipToCity TEXT, shipToState TEXT, shipToPostalCode TEXT, shipToCountry TEXT, blocked BLOB, libbitcoinServer TEXT,
+SSL INTEGER, seed TEXT, server TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         db.commit()
         return db
 
@@ -499,7 +503,7 @@ class Database(object):
         def get_sale(self, order_id):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-     thumbnail, seller FROM sales WHERE id=?''', (order_id,))
+    thumbnail, seller FROM sales WHERE id=?''', (order_id,))
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -514,7 +518,7 @@ class Database(object):
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-     thumbnail, seller FROM sales ''')
+    thumbnail, seller FROM sales ''')
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -531,3 +535,33 @@ class Database(object):
             cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
             self.db.commit()
 
+    class Settings(object):
+        def __init__(self):
+            self.db = lite.connect(DATABASE)
+            self.db.text_factory = str
+
+        def update(self, refundAddress, currencyCode, country, language, timeZone, notifications, shipToName,
+                   shipToStreet, shipToCity, shipToState, shipToPostalCode, shipToCountry, blocked,
+                   libbitcoinServer, ssl, seed, server, terms_conditions, refund_policy):
+            cursor = self.db.cursor()
+            try:
+                cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
+language, timeZone, notifications, shipToName, shipToStreet, shipToCity, shipToState, shipToPostalCode, shipToCountry,
+blocked, libbitcoinServer, ssl, seed, server, terms_conditions, refund_policy)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (1, refundAddress, currencyCode, country, language, timeZone,
+                                                      notifications, shipToName, shipToStreet, shipToCity,
+                                                      shipToState, shipToPostalCode, shipToCountry, blocked,
+                                                      libbitcoinServer, ssl, seed, server, terms_conditions,
+                                                      refund_policy))
+            except Exception as e:
+                print e.message
+            self.db.commit()
+
+        def get(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT * FROM settings WHERE id=1''')
+            ret = cursor.fetchall()
+            if not ret:
+                return None
+            else:
+                return ret[0]
