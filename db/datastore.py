@@ -484,6 +484,7 @@ SSL INTEGER, seed TEXT, server TEXT, terms_conditions TEXT, refund_policy TEXT)'
                 return None
             else:
                 return ret[0]
+
     class Sales(object):
         def __init__(self):
             self.db = lite.connect(DATABASE)

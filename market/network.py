@@ -21,6 +21,7 @@ from market.contracts import Contract
 from collections import OrderedDict
 from binascii import hexlify, unhexlify
 from keyutils.keys import KeyChain
+from keyutils.bip32utils import derive_childkey
 
 class Server(object):
     def __init__(self, kserver, signing_key, database):
@@ -500,8 +501,14 @@ class Server(object):
         def parse_response(response):
             try:
                 address = contract.contract["buyer_order"]["order"]["payment"]["address"]
+                chaincode = contract.contract["buyer_order"]["order"]["payment"]["chaincode"]
+                masterkey_b = contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+                buyer_key = derive_childkey(masterkey_b, chaincode)
+                amount = contract.contract["buyer_order"]["order"]["payment"]["amount"]
+                listing_hash = contract.contract["buyer_order"]["order"]["ref_hash"]
                 verify_key = nacl.signing.VerifyKey(node_to_ask.signed_pubkey[64:])
-                verify_key.verify(str(address), response[1][0])
+                verify_key.verify(
+                    str(address) + str(amount) + str(listing_hash) + str(buyer_key), response[1][0])
                 return response[1][0]
             except Exception:
                 return False

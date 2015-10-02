@@ -21,6 +21,7 @@ from zope.interface.verify import verifyObject
 from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
 from collections import OrderedDict
+from keyutils.bip32utils import derive_childkey
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -232,7 +233,13 @@ class MarketProtocol(RPCProtocol):
                 self.router.addContact(sender)
                 self.log.info("Received an order from %s" % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
-                signature = self.signing_key.sign(str(payment_address))[:64]
+                chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+                masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+                buyer_key = derive_childkey(masterkey_b, chaincode)
+                amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
+                listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+                signature = self.signing_key.sign(
+                    str(payment_address) + str(amount) + str(listing_hash) + str(buyer_key))[:64]
                 c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
                 return [signature]
             else:

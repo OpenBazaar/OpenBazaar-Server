@@ -308,7 +308,7 @@ class OpenBazaarAPI(APIResource):
             if "nsfw" in request.args:
                 u.nsfw = request.args["nsfw"][0]
             if "vendor" in request.args:
-                u.vendor = request.ags["vendor"][0]
+                u.vendor = request.args["vendor"][0]
             if "moderator" in request.args:
                 u.moderator = request.args["moderator"][0]
             if "website" in request.args:
