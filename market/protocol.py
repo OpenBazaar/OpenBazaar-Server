@@ -233,11 +233,11 @@ class MarketProtocol(RPCProtocol):
                 self.router.addContact(sender)
                 self.log.info("Received an order from %s" % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
-                chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-                masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+                chaincode = c.contract["buyer_order"]["order"]["payment"]["chaincode"]
+                masterkey_b = c.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
                 buyer_key = derive_childkey(masterkey_b, chaincode)
-                amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
-                listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+                amount = c.contract["buyer_order"]["order"]["payment"]["amount"]
+                listing_hash = c.contract["buyer_order"]["order"]["ref_hash"]
                 signature = self.signing_key.sign(
                     str(payment_address) + str(amount) + str(listing_hash) + str(buyer_key))[:64]
                 c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)

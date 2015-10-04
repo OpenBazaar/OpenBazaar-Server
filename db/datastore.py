@@ -533,8 +533,17 @@ SSL INTEGER, seed TEXT, server TEXT, terms_conditions TEXT, refund_policy TEXT)'
 
         def update_outpoint(self, order_id, outpoint):
             cursor = self.db.cursor()
-            cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
+            cursor.execute('''UPDATE sales SET outpoint=? WHERE id=?;''', (outpoint, order_id))
             self.db.commit()
+
+        def get_outpoint(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT outpoint FROM sales WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
 
     class Settings(object):
         def __init__(self):

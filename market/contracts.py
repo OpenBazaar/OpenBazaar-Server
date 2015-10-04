@@ -10,6 +10,7 @@ from hashlib import sha256
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
 from urllib2 import Request, urlopen, URLError
+from market.utils import deserialize
 
 import re
 import os
@@ -338,7 +339,6 @@ class Contract(object):
         # will have to link this contract to a bitcoin transaction.
         self.contract["buyer_order"]["signature"] = \
             self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
-
         return (self.contract["buyer_order"]["order"]["payment"]["address"],
                 order_json["buyer_order"]["order"]["payment"]["amount"])
 
@@ -383,7 +383,7 @@ class Contract(object):
             self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         # apply signatures
-        outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
+        outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
         redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
         value = 0
         for output in outpoints:
@@ -494,7 +494,7 @@ class Contract(object):
             order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-            redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
+            redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             value = 0
             for output in outpoints:
                 value += output["value"]
@@ -515,15 +515,15 @@ class Contract(object):
                 for s in self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]:
                     if s["input_index"] == index:
                         if bitcoin.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
-                            bitcoin.apply_multisignatures(tx, index, redeem_script, sig, s["signature"])
+                            bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig, str(s["signature"]))
                             valid_inputs += 1
+            receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             if valid_inputs == len(outpoints):
                 # broadcast tx to network and include txid
                 self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["tx"] = tx
             else:
                 # seller sent an invalid signature for some reason so we can't broadcast the completed tx
-                receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = value
         if claim:
@@ -602,7 +602,7 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
         self.timeout = reactor.callLater(600, self._delete_unfunded)
-        self.blockchain.subscribe_address(payment_address, notification_cb=self.on_tx_received)
+        self.blockchain.subscribe_address(str(payment_address), notification_cb=self.on_tx_received)
 
     def _delete_unfunded(self):
         """
@@ -629,22 +629,20 @@ class Contract(object):
         """
 
         # decode the transaction
-        transaction = bitcoin.deserialize(tx.encode("hex"))
+        transaction = deserialize(tx.encode("hex"))
 
         # get the amount (in satoshi) the user is expected to pay
         amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
         if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
             output_script = 'a914' + digest(unhexlify(
                 self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
-            index = 0
             for output in transaction["outs"]:
                 if output["script"] == output_script:
                     self.amount_funded += output["value"]
                     if tx not in self.received_txs:
                         self.received_txs.append(tx)
-                    self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) + ":" + str(index),
+                    self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) + ":" + str(output["index"]),
                                            "value": output["value"]})
-                    index += 1
             if self.amount_funded >= amount_to_pay:  # if fully funded
                 self.timeout.cancel()
                 self.blockchain.unsubscribe_address(
