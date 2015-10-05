@@ -455,6 +455,7 @@ class Contract(object):
 
     def add_receipt(self,
                     received,
+                    libbitcoin_client,
                     feedback=None,
                     quality=None,
                     description=None,
@@ -468,6 +469,7 @@ class Contract(object):
         """
         Add the final piece of the contract that appends the review and payout transaction.
         """
+        self.blockchain = libbitcoin_client
         receipt_json = {
             "buyer_receipt": {
                 "receipt": {
@@ -515,12 +517,13 @@ class Contract(object):
                 for s in self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]:
                     if s["input_index"] == index:
                         if bitcoin.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
-                            bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig, str(s["signature"]))
+                            tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script),
+                                                               sig, str(s["signature"]))
                             valid_inputs += 1
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             if valid_inputs == len(outpoints):
-                # broadcast tx to network and include txid
                 self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+                self.blockchain.broadcast(tx)
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["tx"] = tx
             else:
                 # seller sent an invalid signature for some reason so we can't broadcast the completed tx

@@ -635,6 +635,7 @@ class OpenBazaarAPI(APIResource):
                 order = json.load(filename, object_pairs_hook=OrderedDict)
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
             c.add_receipt(True,
+                          self.protocol.blockchain,
                           feedback=request.args["feedback"][0] if "feedback" in request.args else None,
                           quality=request.args["quality"][0] if "quality" in request.args else None,
                           description=request.args["description"][0] if "description" in request.args else None,
