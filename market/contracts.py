@@ -401,7 +401,7 @@ class Contract(object):
             signatures.append({"input_index": index, "signature": sig})
         conf_json["vendor_order_confirmation"]["invoice"]["payout"] = {}
         conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
-        conf_json["vendor_order_confirmation"]["invoice"]["payout"]["tx_fee"] = TRANSACTION_FEE
+        conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = value
         conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = signatures
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
@@ -497,11 +497,9 @@ class Contract(object):
             outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
-            value = 0
             for output in outpoints:
-                value += output["value"]
                 del output["value"]
-            value -= self.contract["vendor_order_confirmation"]["invoice"]["payout"]["tx_fee"]
+            value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
             outs = [{'value': value, 'address': payout_address}]
             tx = bitcoin.mktx(outpoints, outs)
             signatures = []
@@ -524,11 +522,9 @@ class Contract(object):
             if valid_inputs == len(outpoints):
                 self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
                 self.blockchain.broadcast(tx)
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["tx"] = tx
-            else:
-                # seller sent an invalid signature for some reason so we can't broadcast the completed tx
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = value
+                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = bitcoin.txhash(tx)
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = value
         if claim:
             receipt_json["buyer_receipt"]["receipt"]["dispute"]["claim"] = claim
         receipt = json.dumps(receipt_json["buyer_receipt"]["receipt"], indent=4)
