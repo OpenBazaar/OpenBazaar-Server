@@ -11,6 +11,7 @@ from binascii import unhexlify, hexlify
 from collections import OrderedDict
 from urllib2 import Request, urlopen, URLError
 from market.utils import deserialize
+from twisted.internet import defer
 
 import re
 import os
@@ -531,13 +532,15 @@ class Contract(object):
         receipt_json["buyer_receipt"]["signature"] = \
             self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
+        # TODO: update file system and db
 
-    def accept_receipt(self, ws, receipt_json=None):
+    def accept_receipt(self, ws, blockchain, receipt_json=None):
         """
         Process the final receipt sent over by the buyer. If valid, broadcast the transaction
         to the bitcoin network.
         """
         self.ws = ws
+        self.blockchain = blockchain
         try:
             if receipt_json:
                 self.contract["buyer_receipt"] = json.loads(receipt_json,
@@ -548,10 +551,81 @@ class Contract(object):
             ref_hash = self.contract["buyer_receipt"]["receipt"]["ref_hash"]
             if ref_hash != contract_hash:
                 raise Exception("Order number doesn't match")
-            return True
+
+            # The buyer may have sent over this whole contract, make sure the data we added wasn't manipulated.
+            verify_key = self.keychain.signing_key.verify_key
+            verify_key.verify(json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4),
+                              unhexlify(self.contract["vendor_order_confirmation"]["signature"]))
+
+            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+            payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
+            for output in outpoints:
+                del output["value"]
+            value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
+            outs = [{'value': value, 'address': payout_address}]
+            tx = bitcoin.mktx(outpoints, outs)
+
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+            buyer_key = derive_childkey(masterkey_b, chaincode)
+
+            vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
+            buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
+            for index in range(0, len(outpoints)):
+                for s in vendor_sigs:
+                    if s["input_index"] == index:
+                        sig1 = str(s["signature"])
+                for s in buyer_sigs:
+                    if s["input_index"] == index:
+                        sig2 = str(s["signature"])
+
+                if bitcoin.verify_tx_input(tx, index, redeem_script, sig2, buyer_key):
+                    tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
+                else:
+                    raise Exception("Buyer sent invalid signature")
+
+            d = defer.Deferred()
+
+            def on_broadcast_complete(success):
+                if success:
+                    d.callback(order_id)
+                else:
+                    d.callback(False)
+
+            def on_validate(success):
+                def on_fetch(ec, result):
+                    if ec:
+                        # if it's not in the blockchain, let's try broadcasting it.
+                        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+                        self.blockchain.broadcast(tx, cb=on_broadcast_complete)
+                    else:
+                        d.callback(order_id)
+
+                if success:
+                    # broadcast anyway but don't wait for callback
+                    self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+                    self.blockchain.broadcast(tx)
+                    d.callback(order_id)
+                else:
+                    # check to see if the tx is already in the blockchain
+                    self.blockchain.fetch_transaction(unhexlify(bitcoin.txhash(tx)), on_fetch)
+
+            if bitcoin.txhash(tx) == self.contract["buyer_receipt"]["receipt"]["payout"]["txid"]:
+                # check mempool and blockchain for tx
+                self.blockchain.validate(tx, cb=on_validate)
+            else:
+                # try broadcasting
+                self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+                self.blockchain.broadcast(tx, cb=on_broadcast_complete)
+
+            # TODO: update db and file system if successful
+            # TODO: broadcast over websocket
+            return d
 
         except Exception:
-            return False
+            return defer.succeed(False)
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """

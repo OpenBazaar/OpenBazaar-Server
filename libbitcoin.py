@@ -44,7 +44,7 @@ class LibbitcoinClient(obelisk.ObeliskOfLightClient):
             return error_code.error_code.name_from_id(value)
         return (unpack_error(data), data)
 
-    def broadcast(self, tx, retries=0):
+    def broadcast(self, tx, cb=None, retries=0):
         """
         A transaction broadcast function. After getting the response for the
         broadcast we will query the mempool to make sure it broadcast
@@ -58,9 +58,23 @@ class LibbitcoinClient(obelisk.ObeliskOfLightClient):
                 if error:
                     if retries < 10:
                         print "Broadcast failure. Trying again in 6 seconds."
-                        reactor.callLater(6, self.broadcast, tx, retries+1)
+                        reactor.callLater(6, self.broadcast, tx, cb, retries+1)
+                    elif cb:
+                        cb(False)
                 else:
                     print "Broadcast Complete"
+                    if cb:
+                        cb(True)
 
             self.send_command("transaction_pool.validate", unhexlify(tx), cb=parse_result)
         self.send_command("protocol.broadcast_transaction", unhexlify(tx), cb=on_broadcast)
+
+    def validate(self, tx, cb=None):
+        def parse_result(error, result):
+            if error:
+                if cb:
+                    cb(False)
+            else:
+                if cb:
+                    cb(True)
+        self.send_command("transaction_pool.validate", unhexlify(tx), cb=parse_result)
