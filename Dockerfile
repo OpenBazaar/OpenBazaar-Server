@@ -13,10 +13,11 @@ RUN pip install pyopenssl ndg-httpsclient pyasn1
 RUN pip install --upgrade pip virtualenv
 RUN pip install mock coverage nose pylint
 RUN git clone https://github.com/OpenBazaar/OpenBazaar-Server.git
-
 WORKDIR /OpenBazaar-Server/
-
 RUN pip install -r requirements.txt
 RUN make
+RUN adduser --disabled-password --gecos \"\" openbazaar
+RUN chown -R openbazaar:openbazaar /OpenBazaar-Server
 
+USER openbazaar
 CMD python openbazaard.py start $flags
