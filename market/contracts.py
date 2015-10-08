@@ -612,7 +612,8 @@ class Contract(object):
                     # check to see if the tx is already in the blockchain
                     self.blockchain.fetch_transaction(unhexlify(bitcoin.txhash(tx)), on_fetch)
 
-            if bitcoin.txhash(tx) == self.contract["buyer_receipt"]["receipt"]["payout"]["txid"]:
+            if "txid" in self.contract["buyer_receipt"]["receipt"]["payout"] \
+                    and bitcoin.txhash(tx) == self.contract["buyer_receipt"]["receipt"]["payout"]["txid"]:
                 # check mempool and blockchain for tx
                 self.blockchain.validate(tx, cb=on_validate)
             else:

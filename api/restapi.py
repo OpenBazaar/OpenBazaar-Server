@@ -306,11 +306,11 @@ class OpenBazaarAPI(APIResource):
             if "short_description" in request.args:
                 u.short_description = request.args["short_description"][0]
             if "nsfw" in request.args:
-                u.nsfw = request.args["nsfw"][0]
+                u.nsfw = bool(request.args["nsfw"][0])
             if "vendor" in request.args:
-                u.vendor = request.args["vendor"][0]
+                u.vendor = bool(request.args["vendor"][0])
             if "moderator" in request.args:
-                u.moderator = request.args["moderator"][0]
+                u.moderator = bool(request.args["moderator"][0])
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -622,35 +622,30 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/complete_order')
     def complete_order(self, request):
-        try:
-            def respond(success):
-                if success:
-                    request.write(json.dumps({"success": True}))
-                    request.finish()
-                else:
-                    request.write(json.dumps({"success": False, "reason": "Failed to send receipt to vendor"}))
-                    request.finish()
-            file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["id"][0] + ".json"
-            with open(file_path, 'r') as filename:
-                order = json.load(filename, object_pairs_hook=OrderedDict)
-            c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
-            c.add_receipt(True,
-                          self.protocol.blockchain,
-                          feedback=request.args["feedback"][0] if "feedback" in request.args else None,
-                          quality=request.args["quality"][0] if "quality" in request.args else None,
-                          description=request.args["description"][0] if "description" in request.args else None,
-                          delivery_time=request.args["delivery_time"][0]
-                          if "delivery_time" in request.args else None,
-                          customer_service=request.args["customer_server"][0]
-                          if "customer_service" in request.args else None,
-                          review=request.args["review"][0] if "review" in request.args else "")
-            guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
-            self.mserver.complete_order(guid, c).addCallback(respond)
-            return server.NOT_DONE_YET
-        except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
-            request.finish()
-            return server.NOT_DONE_YET
+        def respond(success):
+            if success:
+                request.write(json.dumps({"success": True}))
+                request.finish()
+            else:
+                request.write(json.dumps({"success": False, "reason": "Failed to send receipt to vendor"}))
+                request.finish()
+        file_path = DATA_FOLDER + "purchases/in progress/" + request.args["id"][0] + ".json"
+        with open(file_path, 'r') as filename:
+            order = json.load(filename, object_pairs_hook=OrderedDict)
+        c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
+        c.add_receipt(True,
+                      self.protocol.blockchain,
+                      feedback=request.args["feedback"][0] if "feedback" in request.args else None,
+                      quality=request.args["quality"][0] if "quality" in request.args else None,
+                      description=request.args["description"][0] if "description" in request.args else None,
+                      delivery_time=request.args["delivery_time"][0]
+                      if "delivery_time" in request.args else None,
+                      customer_service=request.args["customer_service"][0]
+                      if "customer_service" in request.args else None,
+                      review=request.args["review"][0] if "review" in request.args else "")
+        guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
+        self.mserver.complete_order(guid, c).addCallback(respond)
+        return server.NOT_DONE_YET
 
     @POST('^/api/v1/settings')
     def set_settings(self, request):
