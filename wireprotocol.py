@@ -42,6 +42,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.connection = None
             self.node = None
 
+            # TODO: should send ping message at regular intervals to catch an improperly closed connection.
+
         def receive_message(self, datagram):
             if len(datagram) < 166:
                 self.log.warning("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))

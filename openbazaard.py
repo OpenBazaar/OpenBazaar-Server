@@ -12,7 +12,7 @@ import stun
 import requests
 from autobahn.twisted.websocket import listenWS
 
-import obelisk
+from libbitcoin import LibbitcoinClient
 from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
@@ -64,6 +64,9 @@ def run(*args):
         nlistener = NotificationListenerImpl(ws_factory, db)
         mserver.protocol.add_listener(nlistener)
 
+        # TODO: after bootstrap run through any pending contracts and see if the bitcoin address
+        # has been funded, if not listen on the address and start the 10 minute delete timer.
+
     protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
     # kademlia
@@ -109,6 +112,7 @@ def run(*args):
     # blockchain
     # TODO: listen on the libbitcoin heartbeat port instead fetching height
     def height_fetched(ec, height):
+        # TODO: re-broadcast any unconfirmed txs in the db using height to find confirmation status
         print "Libbitcoin server online"
         try:
             timeout.cancel()
@@ -120,9 +124,9 @@ def run(*args):
         client = None
 
     if TESTNET:
-        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin2.openbazaar.org:9091")
+        libbitcoin_client = LibbitcoinClient("tcp://libbitcoin2.openbazaar.org:9091")
     else:
-        libbitcoin_client = obelisk.ObeliskOfLightClient("tcp://libbitcoin1.openbazaar.org:9091")
+        libbitcoin_client = LibbitcoinClient("tcp://libbitcoin1.openbazaar.org:9091")
 
     # TODO: load libbitcoin server url from config file
 

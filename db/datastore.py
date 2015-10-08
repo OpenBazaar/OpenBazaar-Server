@@ -55,10 +55,10 @@ class Database(object):
     encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
         cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
         cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
-    address TEXT, status INTEGER, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
+    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
         cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
         cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
-    address TEXT, status INTEGER, thumbnail BLOB, seller TEXT)''')
+    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''')
         cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,
@@ -471,6 +471,20 @@ SSL INTEGER, seed TEXT, server TEXT, terms_conditions TEXT, refund_policy TEXT)'
             cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
 
+        def update_outpoint(self, order_id, outpoint):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
+            self.db.commit()
+
+        def get_outpoint(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT outpoint FROM purchases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
     class Sales(object):
         def __init__(self):
             self.db = lite.connect(DATABASE)
@@ -517,6 +531,20 @@ SSL INTEGER, seed TEXT, server TEXT, terms_conditions TEXT, refund_policy TEXT)'
             cursor.execute('''UPDATE sales SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
 
+        def update_outpoint(self, order_id, outpoint):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE sales SET outpoint=? WHERE id=?;''', (outpoint, order_id))
+            self.db.commit()
+
+        def get_outpoint(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT outpoint FROM sales WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
     class Settings(object):
         def __init__(self):
             self.db = lite.connect(DATABASE)
@@ -547,4 +575,3 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (1, refundAddress, currency
                 return None
             else:
                 return ret[0]
-

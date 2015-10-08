@@ -61,6 +61,7 @@ message Profile {
 			FACEBOOK  = 1;
 			TWITTER   = 2;
 			INSTAGRAM = 3;
+			SNAPCHAT  = 4;
     	}
     }
 

@@ -12,7 +12,7 @@ from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, \
-    GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION
+    GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER
 from market.contracts import Contract
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
@@ -21,6 +21,7 @@ from zope.interface.verify import verifyObject
 from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
 from collections import OrderedDict
+from keyutils.bip32utils import derive_childkey
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -35,7 +36,7 @@ class MarketProtocol(RPCProtocol):
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY, MESSAGE, ORDER, ORDER_CONFIRMATION]
+                                 NOTIFY, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -232,7 +233,13 @@ class MarketProtocol(RPCProtocol):
                 self.router.addContact(sender)
                 self.log.info("Received an order from %s" % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
-                signature = self.signing_key.sign(str(payment_address))[:64]
+                chaincode = c.contract["buyer_order"]["order"]["payment"]["chaincode"]
+                masterkey_b = c.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+                buyer_key = derive_childkey(masterkey_b, chaincode)
+                amount = c.contract["buyer_order"]["order"]["payment"]["amount"]
+                listing_hash = c.contract["buyer_order"]["order"]["ref_hash"]
+                signature = self.signing_key.sign(
+                    str(payment_address) + str(amount) + str(listing_hash) + str(buyer_key))[:64]
                 c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
                 return [signature]
             else:
@@ -258,6 +265,27 @@ class MarketProtocol(RPCProtocol):
                 return ["False"]
         except Exception:
             self.log.error("Unable to decrypt order confirmation from %s" % sender)
+            return ["False"]
+
+    def rpc_complete_order(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                         testnet=self.multiplexer.testnet)
+
+            def handle_result(contract_id):
+                if contract_id:
+                    self.router.addContact(sender)
+                    self.log.info("Received receipt for order %s" % contract_id)
+                    return ["True"]
+                else:
+                    self.log.error("Received invalid receipt from %s" % sender)
+                    return ["False"]
+            d = c.accept_receipt(self.multiplexer.ws, self.multiplexer.blockchain)
+            d.addCallback(handle_result)
+        except Exception:
+            self.log.error("Unable to decrypt order receipt from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
@@ -328,6 +356,11 @@ class MarketProtocol(RPCProtocol):
     def callOrderConfirmation(self, nodeToAsk, ephem_pubkey, encrypted_contract):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.order_confirmation(address, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callCompleteOrder(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.complete_order(address, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

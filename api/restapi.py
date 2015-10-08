@@ -306,11 +306,11 @@ class OpenBazaarAPI(APIResource):
             if "short_description" in request.args:
                 u.short_description = request.args["short_description"][0]
             if "nsfw" in request.args:
-                u.nsfw = True
+                u.nsfw = bool(request.args["nsfw"][0])
             if "vendor" in request.args:
-                u.vendor = True
+                u.vendor = bool(request.args["vendor"][0])
             if "moderator" in request.args:
-                u.moderator = True
+                u.moderator = bool(request.args["moderator"][0])
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -324,17 +324,9 @@ class OpenBazaarAPI(APIResource):
             if "text_color" in request.args:
                 u.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
-                with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
-                    outfile.write(request.args["avatar"][0])
-                avatar_hash = digest(request.args["avatar"][0])
-                self.db.HashMap().insert(avatar_hash, DATA_FOLDER + "store/avatar")
-                u.avatar_hash = avatar_hash
+                u.avatar_hash = unhexlify(request.args["avatar"][0])
             if "header" in request.args:
-                with open(DATA_FOLDER + "store/header", 'wb') as outfile:
-                    outfile.write(request.args["header"][0])
-                header_hash = digest(request.args["header"][0])
-                self.db.HashMap().insert(header_hash, DATA_FOLDER + "store/header")
-                u.header_hash = header_hash
+                u.header_hash = unhexlify(request.args["header"][0])
             if "pgp_key" in request.args and "signature" in request.args:
                 p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                               self.keychain.guid.encode("hex"))
@@ -358,6 +350,8 @@ class OpenBazaarAPI(APIResource):
             if "account_type" in request.args and "username" in request.args and "proof" in request.args:
                 p.add_social_account(request.args["account_type"][0], request.args["username"][0],
                                      request.args["proof"][0])
+            else:
+                raise Exception("Missing required fields")
             request.write(json.dumps({"success": True}))
             request.finish()
             return server.NOT_DONE_YET
@@ -434,7 +428,7 @@ class OpenBazaarAPI(APIResource):
                 request.args["currency_code"][0],
                 request.args["price"][0],
                 request.args["process_time"][0],
-                True if "nsfw" in request.args else False,
+                bool(request.args["nsfw"][0]),
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
                 est_delivery_domestic=request.args["est_delivery_domestic"][0]
@@ -452,13 +446,13 @@ class OpenBazaarAPI(APIResource):
                 condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
                 sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
                 images=request.args["images"],
-                free_shipping=True if "free_shipping" in request.args else False,
+                free_shipping=bool(request.args["free_shipping"][0]) if "free_shipping" in request.args else False,
                 options=options if "options" in request.args else None,
                 moderators=request.args["moderators"] if "moderators" in request.args else None)
             for keyword in request.args["keywords"]:
                 self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
                                  self.kserver.node.getProto().SerializeToString())
-            request.write(json.dumps({"success": True}))
+            request.write(json.dumps({"success": True, "id": c.get_contract_id().encode("hex")}))
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
@@ -470,11 +464,18 @@ class OpenBazaarAPI(APIResource):
     def delete_contract(self, request):
         try:
             if "id" in request.args:
-                c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]))
-                for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
-                    self.kserver.delete(keyword.lower(), c.get_contract_id(),
-                                        self.keychain.signing_key.sign(c.get_contract_id())[:64])
-                c.delete()
+                file_path = self.db.HashMap().get_file(unhexlify(request.args["id"][0]))
+                with open(file_path, 'r') as filename:
+                    contract = json.load(filename, object_pairs_hook=OrderedDict)
+                c = Contract(self.db, contract=contract)
+                if "keywords" in c.contract["vendor_offer"]["listing"]["item"]:
+                    for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                        self.kserver.delete(keyword.lower(), c.get_contract_id(),
+                                            self.keychain.signing_key.sign(c.get_contract_id())[:64])
+                if "delete_images" in request.args:
+                    c.delete(delete_images=True)
+                else:
+                    c.delete()
             request.write(json.dumps({"success": True}))
             request.finish()
             return server.NOT_DONE_YET
@@ -518,7 +519,10 @@ class OpenBazaarAPI(APIResource):
             def handle_response(resp, contract):
                 if resp:
                     contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
-                    request.write(json.dumps({"success": True, "payment_address": payment_address}, indent=4))
+                    request.write(json.dumps({"success": True, "payment_address": payment[0],
+                                              "amount": payment[1],
+                                              "order_id": c.get_contract_id().encode("hex")},
+                                             indent=4))
                     request.finish()
                 else:
                     request.write(json.dumps({"success": False, "reason": "seller rejected contract"}, indent=4))
@@ -527,9 +531,9 @@ class OpenBazaarAPI(APIResource):
             if "options" in request.args:
                 options = {}
                 for option in request.args["options"]:
-                    options[option] = request.args[option]
+                    options[option] = request.args[option][0]
             c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
-            payment_address = c.\
+            payment = c.\
                 add_purchase_info(request.args["quantity"][0],
                                   request.args["ship_to"][0] if "ship_to" in request.args else None,
                                   request.args["address"][0] if "address" in request.args else None,
@@ -544,7 +548,7 @@ class OpenBazaarAPI(APIResource):
                 if node is not None:
                     self.mserver.purchase(node, c).addCallback(handle_response, c)
                 else:
-                    request.write("False")
+                    request.write(json.dumps({"success": False, "reason": "unable to reach vendor"}, indent=4))
                     request.finish()
             seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
             self.kserver.resolve(seller_guid).addCallback(get_node)
@@ -589,11 +593,24 @@ class OpenBazaarAPI(APIResource):
     def upload_image(self, request):
         try:
             ret = []
-            for image in request.args["image"]:
-                hash_value = digest(image).encode("hex")
-                with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
-                    outfile.write(image)
-                self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+            if "image" in request.args:
+                for image in request.args["image"]:
+                    hash_value = digest(image).encode("hex")
+                    with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
+                        outfile.write(image)
+                    self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+                    ret.append(hash_value)
+            elif "avatar" in request.args:
+                hash_value = digest(request.args["avatar"][0]).encode("hex")
+                with open(DATA_FOLDER + "store/avatar", 'w') as outfile:
+                    outfile.write(request.args["avatar"][0])
+                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/avatar")
+                ret.append(hash_value)
+            elif "header" in request.args:
+                hash_value = digest(request.args["header"][0]).encode("hex")
+                with open(DATA_FOLDER + "store/header", 'w') as outfile:
+                    outfile.write(request.args["header"][0])
+                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
@@ -602,6 +619,33 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/complete_order')
+    def complete_order(self, request):
+        def respond(success):
+            if success:
+                request.write(json.dumps({"success": True}))
+                request.finish()
+            else:
+                request.write(json.dumps({"success": False, "reason": "Failed to send receipt to vendor"}))
+                request.finish()
+        file_path = DATA_FOLDER + "purchases/in progress/" + request.args["id"][0] + ".json"
+        with open(file_path, 'r') as filename:
+            order = json.load(filename, object_pairs_hook=OrderedDict)
+        c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
+        c.add_receipt(True,
+                      self.protocol.blockchain,
+                      feedback=request.args["feedback"][0] if "feedback" in request.args else None,
+                      quality=request.args["quality"][0] if "quality" in request.args else None,
+                      description=request.args["description"][0] if "description" in request.args else None,
+                      delivery_time=request.args["delivery_time"][0]
+                      if "delivery_time" in request.args else None,
+                      customer_service=request.args["customer_service"][0]
+                      if "customer_service" in request.args else None,
+                      review=request.args["review"][0] if "review" in request.args else "")
+        guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
+        self.mserver.complete_order(guid, c).addCallback(respond)
+        return server.NOT_DONE_YET
 
     @POST('^/api/v1/settings')
     def set_settings(self, request):
