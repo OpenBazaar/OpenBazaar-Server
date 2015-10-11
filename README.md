@@ -13,6 +13,7 @@ To install all python requirements, run:
 
 ```bash
 pip install -r requirements.txt
+pip install -r test_requirements.txt
 ```
 
 After that, run:
