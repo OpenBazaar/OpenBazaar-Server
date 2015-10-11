@@ -16,6 +16,8 @@ pip install -r requirements.txt
 pip install -r test_requirements.txt
 ```
 
+Depending on your configuration, you may need to install python-dev and libffi-dev. If you're on linux, you can do so using your operating system's standard package manager (ex. `sudo apt-get install python-dev`)
+
 After that, run:
 
 
