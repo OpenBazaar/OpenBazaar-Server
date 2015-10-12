@@ -100,12 +100,12 @@ class KademliaProtocol(RPCProtocol):
             ret.append(n.getProto().SerializeToString())
         return ret
 
-    def rpc_find_value(self, sender, key):
+    def rpc_find_value(self, sender, keyword):
         self.addToRouter(sender)
         ret = ["value"]
-        value = self.storage.get(key, None)
+        value = self.storage.get(keyword, None)
         if value is None:
-            return self.rpc_find_node(sender, key)
+            return self.rpc_find_node(sender, keyword)
         ret.extend(value)
         return ret
 
