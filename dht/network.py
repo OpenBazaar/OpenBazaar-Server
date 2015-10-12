@@ -210,7 +210,7 @@ class Server(object):
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to get key %s" % keyword)
+            self.log.warning("There are no known neighbors to get key %s" % dkey.encode('hex'))
             return defer.succeed(None)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
@@ -235,10 +235,10 @@ class Server(object):
         if len(keyword) != 20:
             return defer.succeed(False)
 
-        self.log.debug("setting '%s' = '%s':'%s' on network" % (keyword, hexlify(key), hexlify(value)))
+        self.log.debug("setting '%s' on network" % keyword.encode("hex"))
 
         def store(nodes):
-            self.log.info("setting '%s' on %s" % (keyword, [str(i) for i in nodes]))
+            self.log.info("setting '%s' on %s" % (keyword.encode("hex"), [str(i) for i in nodes]))
             ds = [self.protocol.callStore(node, keyword, key, value) for node in nodes]
 
             keynode = Node(keyword)
@@ -251,7 +251,7 @@ class Server(object):
         node = Node(keyword)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to set key %s" % key)
+            self.log.warning("There are no known neighbors to set keyword %s" % keyword.encode("hex"))
             return defer.succeed(False)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(store)
@@ -270,11 +270,11 @@ class Server(object):
             signature: a signature covering the key.
 
         """
-        self.log.info("deleting '%s':'%s' from the network" % (keyword, hexlify(key)))
+        self.log.info("deleting '%s':'%s' from the network" % (keyword.encode("hex"), key.encode("hex")))
         dkey = digest(keyword)
 
         def delete(nodes):
-            self.log.debug("deleting '%s' on %s" % (key, [str(i) for i in nodes]))
+            self.log.debug("deleting '%s' on %s" % (key.encode("hex"), [str(i) for i in nodes]))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
             if self.storage.getSpecific(dkey, key) is not None:
@@ -285,7 +285,7 @@ class Server(object):
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to delete key %s" % key)
+            self.log.warning("There are no known neighbors to delete key %s" % key.encode("hex"))
             return defer.succeed(False)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.ksize)
         return spider.find().addCallback(delete)
