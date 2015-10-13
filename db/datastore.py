@@ -37,8 +37,10 @@ class Database(object):
             db = lite.connect(DATABASE)
         else:
             db = lite.connect(filepath)
+
+        # FIXME: change row types as noted below. BLOBs cannot be indexed.
         cursor = db.cursor()
-        cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')
+        cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')  # change hash to TEXT
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
         cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
@@ -46,19 +48,20 @@ class Database(object):
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
         cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
     encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
-    avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
+    avatar_hash BLOB, signature BLOB, outgoing INTEGER)''') # change guid to TEXT, index guid
         cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
     timestamp INTEGER, avatar_hash BLOB)''')
         cursor.execute('''CREATE TABLE vendors(guid BLOB UNIQUE, ip TEXT, port INTEGER, signedPubkey BLOB)''')
+        # ^ change guid to TEXT
         cursor.execute('''CREATE INDEX idx1 ON vendors(guid);''')
         cursor.execute('''CREATE TABLE moderators(guid BLOB UNIQUE, signedPubkey BLOB, encryptionKey BLOB,
-    encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''')
+    encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''') # change guid to TEXT
         cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
         cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
-    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
+    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''') # change id to TEXT
         cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
         cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
-    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''')
+    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''') # change id to TEXT
         cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,

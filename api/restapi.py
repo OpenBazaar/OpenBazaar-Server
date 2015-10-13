@@ -23,6 +23,15 @@ DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
 
 
+def str_to_bool(s):
+    if s.lower() == 'true':
+        return True
+    elif s.lower() == 'false':
+        return False
+    else:
+        raise ValueError
+
+
 class OpenBazaarAPI(APIResource):
     """
     This RESTful API allows clients to pull relevant data from the
@@ -306,11 +315,11 @@ class OpenBazaarAPI(APIResource):
             if "short_description" in request.args:
                 u.short_description = request.args["short_description"][0]
             if "nsfw" in request.args:
-                u.nsfw = bool(request.args["nsfw"][0])
+                u.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
-                u.vendor = bool(request.args["vendor"][0])
+                u.vendor = str_to_bool(request.args["vendor"][0])
             if "moderator" in request.args:
-                u.moderator = bool(request.args["moderator"][0])
+                u.moderator = str_to_bool(request.args["moderator"][0])
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -428,7 +437,7 @@ class OpenBazaarAPI(APIResource):
                 request.args["currency_code"][0],
                 request.args["price"][0],
                 request.args["process_time"][0],
-                bool(request.args["nsfw"][0]),
+                str_to_bool(request.args["nsfw"][0]),
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
                 est_delivery_domestic=request.args["est_delivery_domestic"][0]
@@ -446,7 +455,7 @@ class OpenBazaarAPI(APIResource):
                 condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
                 sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
                 images=request.args["images"],
-                free_shipping=bool(request.args["free_shipping"][0]) if "free_shipping" in request.args else False,
+                free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
                 moderators=request.args["moderators"] if "moderators" in request.args else None)
             for keyword in request.args["keywords"]:
@@ -657,7 +666,7 @@ class OpenBazaarAPI(APIResource):
                 request.args["country"][0],
                 request.args["language"][0],
                 request.args["time_zone"][0],
-                1 if bool(request.args["notifications"][0]) else 0,
+                1 if str_to_bool(request.args["notifications"][0]) else 0,
                 request.args["ship_to_name"][0],
                 request.args["ship_to_street"][0],
                 request.args["ship_to_city"][0],
@@ -666,7 +675,7 @@ class OpenBazaarAPI(APIResource):
                 request.args["ship_to_country"][0],
                 pickle.dumps(request.args["blocked"]),
                 request.args["libbitcoin_server"][0],
-                1 if bool(request.args["ssl"][0]) else 0,
+                1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
                 request.args["server_url"][0],
                 request.args["terms_conditions"][0],

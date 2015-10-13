@@ -2,6 +2,7 @@ __author__ = 'chris'
 import gnupg
 from protos import objects
 
+
 class Profile(object):
     """
     This is a class which handles creating an updating the user profile.
@@ -74,4 +75,3 @@ class Profile(object):
         if field is not "name":
             self.profile.ClearField(field)
             self.db.set_proto(self.profile.SerializeToString())
-
