@@ -11,7 +11,6 @@ from binascii import unhexlify, hexlify
 from collections import OrderedDict
 from urllib2 import Request, urlopen, URLError
 from market.utils import deserialize
-from twisted.internet import defer
 
 import re
 import os
@@ -379,9 +378,6 @@ class Contract(object):
             conf_json["vendor_order_confirmation"]["invoice"]["content_source"] = content_source
         if comments:
             conf_json["vendor_order_confirmation"]["invoice"]["comments"] = comments
-        confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
-        conf_json["vendor_order_confirmation"]["signature"] = \
-            self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         # apply signatures
         outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
@@ -404,6 +400,10 @@ class Contract(object):
         conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
         conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = value
         conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = signatures
+
+        confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
+        conf_json["vendor_order_confirmation"]["signature"] = \
+            self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
         self.db.Sales().update_status(order_id, 2)
@@ -493,8 +493,8 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["delivery_time"] = delivery_time
             receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
             receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
+        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout:
-            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -532,7 +532,13 @@ class Contract(object):
         receipt_json["buyer_receipt"]["signature"] = \
             self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
-        # TODO: update file system and db
+        self.db.Purchases().update_status(order_id, 3)
+        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
     def accept_receipt(self, ws, blockchain, receipt_json=None):
         """
@@ -541,92 +547,72 @@ class Contract(object):
         """
         self.ws = ws
         self.blockchain = blockchain
-        try:
-            if receipt_json:
-                self.contract["buyer_receipt"] = json.loads(receipt_json,
-                                                            object_pairs_hook=OrderedDict)
-            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-            del contract_dict["buyer_receipt"]
-            contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
-            ref_hash = self.contract["buyer_receipt"]["receipt"]["ref_hash"]
-            if ref_hash != contract_hash:
-                raise Exception("Order number doesn't match")
+        if receipt_json:
+            self.contract["buyer_receipt"] = json.loads(receipt_json,
+                                                        object_pairs_hook=OrderedDict)
+        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+        del contract_dict["buyer_receipt"]
+        contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+        ref_hash = self.contract["buyer_receipt"]["receipt"]["ref_hash"]
+        if ref_hash != contract_hash:
+            raise Exception("Order number doesn't match")
 
-            # The buyer may have sent over this whole contract, make sure the data we added wasn't manipulated.
-            verify_key = self.keychain.signing_key.verify_key
-            verify_key.verify(json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4),
-                              unhexlify(self.contract["vendor_order_confirmation"]["signature"]))
+        # The buyer may have sent over this whole contract, make sure the data we added wasn't manipulated.
+        verify_key = self.keychain.signing_key.verify_key
+        verify_key.verify(json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4),
+                          unhexlify(self.contract["vendor_order_confirmation"]["signature"]))
 
-            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
-            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
-            payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-            redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
-            for output in outpoints:
-                del output["value"]
-            value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
-            outs = [{'value': value, 'address': payout_address}]
-            tx = bitcoin.mktx(outpoints, outs)
+        # TODO: verify buyer signature
+        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+        outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+        payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+        redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
+        for output in outpoints:
+            del output["value"]
+        value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
+        outs = [{'value': value, 'address': payout_address}]
+        tx = bitcoin.mktx(outpoints, outs)
 
-            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
-            buyer_key = derive_childkey(masterkey_b, chaincode)
+        chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+        masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+        buyer_key = derive_childkey(masterkey_b, chaincode)
 
-            vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
-            buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
-            for index in range(0, len(outpoints)):
-                for s in vendor_sigs:
-                    if s["input_index"] == index:
-                        sig1 = str(s["signature"])
-                for s in buyer_sigs:
-                    if s["input_index"] == index:
-                        sig2 = str(s["signature"])
+        vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
+        buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
+        for index in range(0, len(outpoints)):
+            for s in vendor_sigs:
+                if s["input_index"] == index:
+                    sig2 = str(s["signature"])
+            for s in buyer_sigs:
+                if s["input_index"] == index:
+                    sig1 = str(s["signature"])
 
-                if bitcoin.verify_tx_input(tx, index, redeem_script, sig2, buyer_key):
-                    tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
-                else:
-                    raise Exception("Buyer sent invalid signature")
-
-            d = defer.Deferred()
-
-            def on_broadcast_complete(success):
-                if success:
-                    d.callback(order_id)
-                else:
-                    d.callback(False)
-
-            def on_validate(success):
-                def on_fetch(ec, result):
-                    if ec:
-                        # if it's not in the blockchain, let's try broadcasting it.
-                        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                        self.blockchain.broadcast(tx, cb=on_broadcast_complete)
-                    else:
-                        d.callback(order_id)
-
-                if success:
-                    # broadcast anyway but don't wait for callback
-                    self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                    self.blockchain.broadcast(tx)
-                    d.callback(order_id)
-                else:
-                    # check to see if the tx is already in the blockchain
-                    self.blockchain.fetch_transaction(unhexlify(bitcoin.txhash(tx)), on_fetch)
-
-            if "txid" in self.contract["buyer_receipt"]["receipt"]["payout"] \
-                    and bitcoin.txhash(tx) == self.contract["buyer_receipt"]["receipt"]["payout"]["txid"]:
-                # check mempool and blockchain for tx
-                self.blockchain.validate(tx, cb=on_validate)
+            if bitcoin.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
+                tx_signed = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
             else:
-                # try broadcasting
-                self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                self.blockchain.broadcast(tx, cb=on_broadcast_complete)
+                raise Exception("Buyer sent invalid signature")
 
-            # TODO: update db and file system if successful
-            # TODO: broadcast over websocket
-            return d
+        self.db.Sales().update_status(order_id, 3)
+        file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
+        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-        except Exception:
-            return defer.succeed(False)
+        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
+        self.blockchain.broadcast(tx_signed)
+        self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
+
+        message_json = {
+            "payment_received": {
+                "order_id": order_id,
+                "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
+            }
+        }
+        # push the message over websockets
+        self.ws.push(json.dumps(message_json, indent=4))
+        return order_id
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
         """

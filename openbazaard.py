@@ -80,7 +80,7 @@ def run(*args):
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(
             kserver.querySeed("seed.openbazaar.org:8080",
-                              "ddd862778e3ed71af06db0e3619a4c6269ec7468c745132dbb73982b319fc572"))\
+                              "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))\
             .addCallback(on_bootstrap_complete)
         # TODO: load seeds from config file
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)

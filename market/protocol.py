@@ -274,18 +274,12 @@ class MarketProtocol(RPCProtocol):
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
 
-            def handle_result(contract_id):
-                if contract_id:
-                    self.router.addContact(sender)
-                    self.log.info("Received receipt for order %s" % contract_id)
-                    return ["True"]
-                else:
-                    self.log.error("Received invalid receipt from %s" % sender)
-                    return ["False"]
-            d = c.accept_receipt(self.multiplexer.ws, self.multiplexer.blockchain)
-            d.addCallback(handle_result)
+            contract_id = c.accept_receipt(self.multiplexer.ws, self.multiplexer.blockchain)
+            self.router.addContact(sender)
+            self.log.info("Received receipt for order %s" % contract_id)
+            return ["True"]
         except Exception:
-            self.log.error("Unable to decrypt order receipt from %s" % sender)
+            self.log.error("Unable to parse receipt from %s" % sender)
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):

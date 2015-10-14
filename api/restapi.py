@@ -93,7 +93,7 @@ class OpenBazaarAPI(APIResource):
             if profile is not None:
                 mods = []
                 for mod in profile.moderator_list:
-                    mods.apend(mod.encode("hex"))
+                    mods.append(mod.encode("hex"))
                 profile_json = {
                     "profile": {
                         "name": profile.name,
