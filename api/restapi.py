@@ -99,6 +99,7 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
+                        "moderator_list": profile.moderator_list,
                         "handle": profile.handle,
                         "about": profile.about,
                         "website": profile.website,
@@ -320,6 +321,9 @@ class OpenBazaarAPI(APIResource):
                 u.vendor = str_to_bool(request.args["vendor"][0])
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
+            if "moderator_list" in request.args:
+                for moderator in request.args["moderator_list"]:
+                    u.moderator_list.append(moderator)
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -358,7 +362,7 @@ class OpenBazaarAPI(APIResource):
             p = Profile(self.db)
             if "account_type" in request.args and "username" in request.args and "proof" in request.args:
                 p.add_social_account(request.args["account_type"][0], request.args["username"][0],
-                                     request.args["proof"][0])
+                                     request.args["proof"][0] if "proof" in request.args else None)
             else:
                 raise Exception("Missing required fields")
             request.write(json.dumps({"success": True}))

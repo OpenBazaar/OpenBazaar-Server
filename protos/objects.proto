@@ -35,27 +35,28 @@ message Profile {
         optional bool nsfw                = 5 [default = false];
         optional bool vendor              = 6 [default = false];
         optional bool moderator           = 7 [default = false];
-        optional string handle            = 8;
-        optional string about             = 9;
-        optional string short_description = 10;
-        optional string website           = 11;
-        optional string email             = 12;
-        repeated SocialAccount social     = 13;
-        optional uint32 primary_color     = 14 [default = 4868168];
-        optional uint32 secondary_color   = 15 [default = 5723734];
-        optional uint32 background_color  = 16 [default = 2763306];
-        optional uint32 text_color        = 17 [default = 16777215];
-        optional uint32 follower_count    = 18 [default = 0];
-        optional uint32 following_count   = 19 [default = 0];
-        optional PublicKey pgp_key        = 20; // pgp signature covers guid
-        optional bytes avatar_hash        = 21;
-        optional bytes header_hash        = 22;
+        repeated bytes moderator_list     = 8;
+        optional string handle            = 9;
+        optional string about             = 10;
+        optional string short_description = 11;
+        optional string website           = 12;
+        optional string email             = 13;
+        repeated SocialAccount social     = 14;
+        optional uint32 primary_color     = 15 [default = 4868168];
+        optional uint32 secondary_color   = 16 [default = 5723734];
+        optional uint32 background_color  = 17 [default = 2763306];
+        optional uint32 text_color        = 18 [default = 16777215];
+        optional uint32 follower_count    = 19 [default = 0];
+        optional uint32 following_count   = 20 [default = 0];
+        optional PublicKey pgp_key        = 21; // pgp signature covers guid
+        optional bytes avatar_hash        = 22;
+        optional bytes header_hash        = 23;
 
 	// Social media account for the profile
     message SocialAccount {
     	required SocialType type  = 1;
     	required string username  = 2;
-    	required string proof_url = 3;
+    	optional string proof_url = 3;
 
     	enum SocialType {
 			FACEBOOK  = 1;

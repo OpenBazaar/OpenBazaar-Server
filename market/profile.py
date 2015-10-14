@@ -35,14 +35,15 @@ class Profile(object):
         self.profile.MergeFrom(user_info)
         self.db.set_proto(self.profile.SerializeToString())
 
-    def add_social_account(self, account_type, username, proof):
+    def add_social_account(self, account_type, username, proof=None):
         s = self.profile.SocialAccount()
         for social_account in self.profile.social:
             if social_account.type == s.SocialType.Value(account_type.upper()):
                 self.profile.social.remove(social_account)
         s.type = s.SocialType.Value(account_type.upper())
         s.username = username
-        s.proof_url = proof
+        if proof:
+            s.proof_url = proof
         self.profile.social.extend([s])
         self.db.set_proto(self.profile.SerializeToString())
 
