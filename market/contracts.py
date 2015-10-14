@@ -582,13 +582,13 @@ class Contract(object):
         for index in range(0, len(outpoints)):
             for s in vendor_sigs:
                 if s["input_index"] == index:
-                    sig1 = str(s["signature"])
+                    sig2 = str(s["signature"])
             for s in buyer_sigs:
                 if s["input_index"] == index:
-                    sig2 = str(s["signature"])
+                    sig1 = str(s["signature"])
 
-            if bitcoin.verify_tx_input(tx, index, redeem_script, sig2, buyer_key):
-                tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
+            if bitcoin.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
+                tx_signed = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
             else:
                 raise Exception("Buyer sent invalid signature")
 
@@ -600,9 +600,9 @@ class Contract(object):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-        self.blockchain.broadcast(tx)
-        self.db.Sales().update_payment_tx(bitcoin.txhash(tx))
+        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
+        self.blockchain.broadcast(tx_signed)
+        self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
 
         # TODO: broadcast over websocket
         return order_id
