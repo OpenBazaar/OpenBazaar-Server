@@ -32,13 +32,13 @@ from constants import DATA_FOLDER
 def run(*args):
     TESTNET = args[0]
 
+    # Create the database
+    db = Database(testnet=TESTNET)
+
     # logging
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
     log.addObserver(log.FileLogObserver(logFile).emit)
     log.startLogging(sys.stdout)
-
-    # Create the database
-    db = Database(testnet=TESTNET)
 
     # Load the keys
     keychain = KeyChain(db)

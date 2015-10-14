@@ -493,8 +493,8 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["delivery_time"] = delivery_time
             receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
             receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
+        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout:
-            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
             outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -532,7 +532,7 @@ class Contract(object):
         receipt_json["buyer_receipt"]["signature"] = \
             self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
-        self.db.Purchases().update_status(self.contract["buyer_order"]["order"]["ref_hash"], 3)
+        self.db.Purchases().update_status(order_id, 3)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -592,56 +592,20 @@ class Contract(object):
                 else:
                     raise Exception("Buyer sent invalid signature")
 
-            d = defer.Deferred()
+            self.db.Sales().update_status(order_id, 3)
+            file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(self.contract, indent=4))
+            file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
-            def save_contract():
-                self.db.Sales().update_status(self.contract["buyer_order"]["order"]["ref_hash"], 3)
-                file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
-                with open(file_path, 'w') as outfile:
-                    outfile.write(json.dumps(self.contract, indent=4))
-                file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
-                if os.path.exists(file_path):
-                    os.remove(file_path)
+            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+            self.blockchain.broadcast(tx)
+            self.db.Sales().update_payment_tx(bitcoin.txhash(tx))
 
-            def on_broadcast_complete(success):
-                if success:
-                    save_contract()
-                    d.callback(order_id)
-                else:
-                    d.callback(False)
-
-            def on_validate(success):
-                def on_fetch(ec, result):
-                    if ec:
-                        # if it's not in the blockchain, let's try broadcasting it.
-                        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                        self.blockchain.broadcast(tx, cb=on_broadcast_complete)
-                    else:
-                        save_contract()
-                        d.callback(order_id)
-
-                if success:
-                    # broadcast anyway but don't wait for callback
-                    self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                    self.blockchain.broadcast(tx)
-                    save_contract()
-                    d.callback(order_id)
-                else:
-                    # check to see if the tx is already in the blockchain
-                    self.blockchain.fetch_transaction(unhexlify(bitcoin.txhash(tx)), on_fetch)
-
-            if "txid" in self.contract["buyer_receipt"]["receipt"]["payout"] \
-                    and bitcoin.txhash(tx) == self.contract["buyer_receipt"]["receipt"]["payout"]["txid"]:
-                # check mempool and blockchain for tx
-                self.blockchain.validate(tx, cb=on_validate)
-            else:
-                # try broadcasting
-                self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-                self.blockchain.broadcast(tx, cb=on_broadcast_complete)
-
-            # TODO: update db and file system if successful
             # TODO: broadcast over websocket
-            return d
+            return order_id
 
         except Exception:
             return defer.succeed(False)

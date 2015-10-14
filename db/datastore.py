@@ -61,7 +61,7 @@ class Database(object):
     address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''') # change id to TEXT
         cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
         cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
-    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT)''') # change id to TEXT
+    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT, paymentTX TEXT)''') # change id to TEXT
         cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,
@@ -522,7 +522,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-    thumbnail, seller FROM sales ''')
+    thumbnail, seller, paymentTX FROM sales ''')
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -537,6 +537,11 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         def update_outpoint(self, order_id, outpoint):
             cursor = self.db.cursor()
             cursor.execute('''UPDATE sales SET outpoint=? WHERE id=?;''', (outpoint, order_id))
+            self.db.commit()
+
+        def update_payment_tx(self, order_id, txid):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE sales SET paymentTX=? WHERE id=?;''', (txid, order_id))
             self.db.commit()
 
         def get_outpoint(self, order_id):
