@@ -91,6 +91,9 @@ class OpenBazaarAPI(APIResource):
     def get_profile(self, request):
         def parse_profile(profile):
             if profile is not None:
+                mods = []
+                for mod in profile.moderator_list:
+                    mods.apend(mod.encode("hex"))
                 profile_json = {
                     "profile": {
                         "name": profile.name,
@@ -99,7 +102,7 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
-                        "moderator_list": profile.moderator_list,
+                        "moderator_list": mods,
                         "handle": profile.handle,
                         "about": profile.about,
                         "website": profile.website,
@@ -323,7 +326,7 @@ class OpenBazaarAPI(APIResource):
                 u.moderator = str_to_bool(request.args["moderator"][0])
             if "moderator_list" in request.args:
                 for moderator in request.args["moderator_list"]:
-                    u.moderator_list.append(moderator)
+                    u.moderator_list.append(unhexlify(moderator))
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
