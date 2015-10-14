@@ -604,7 +604,14 @@ class Contract(object):
         self.blockchain.broadcast(tx_signed)
         self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
 
-        # TODO: broadcast over websocket
+        message_json = {
+            "payment_received": {
+                "order_id": order_id,
+                "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
+            }
+        }
+        # push the message over websockets
+        self.ws.push(json.dumps(message_json, indent=4))
         return order_id
 
     def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
