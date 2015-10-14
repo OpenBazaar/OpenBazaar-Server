@@ -681,7 +681,6 @@ class OpenBazaarAPI(APIResource):
                 request.args["libbitcoin_server"][0],
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
-                request.args["server_url"][0],
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0]
             )
@@ -717,9 +716,8 @@ class OpenBazaarAPI(APIResource):
                 "libbitcoin_server": settings[14],
                 "ssl": True if settings[15] == 1 else False,
                 "seed": settings[16],
-                "server_url": settings[17],
-                "terms_conditions": settings[18],
-                "refund_policy": settings[19]
+                "terms_conditions": settings[17],
+                "refund_policy": settings[18]
             }
             request.write(json.dumps(settings_json, indent=4))
             request.finish()
