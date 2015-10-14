@@ -532,7 +532,13 @@ class Contract(object):
         receipt_json["buyer_receipt"]["signature"] = \
             self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
-        # TODO: update file system and db
+        self.db.Purchases().update_status(self.contract["buyer_order"]["order"]["ref_hash"], 3)
+        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
     def accept_receipt(self, ws, blockchain, receipt_json=None):
         """
@@ -588,8 +594,18 @@ class Contract(object):
 
             d = defer.Deferred()
 
+            def save_contract():
+                self.db.Sales().update_status(self.contract["buyer_order"]["order"]["ref_hash"], 3)
+                file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
+                with open(file_path, 'w') as outfile:
+                    outfile.write(json.dumps(self.contract, indent=4))
+                file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
             def on_broadcast_complete(success):
                 if success:
+                    save_contract()
                     d.callback(order_id)
                 else:
                     d.callback(False)
@@ -601,12 +617,14 @@ class Contract(object):
                         self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
                         self.blockchain.broadcast(tx, cb=on_broadcast_complete)
                     else:
+                        save_contract()
                         d.callback(order_id)
 
                 if success:
                     # broadcast anyway but don't wait for callback
                     self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
                     self.blockchain.broadcast(tx)
+                    save_contract()
                     d.callback(order_id)
                 else:
                     # check to see if the tx is already in the blockchain
