@@ -605,5 +605,5 @@ class Server(object):
         Saves the file to a cache folder if it doesn't already exist.
         """
         if not os.path.isfile(DATA_FOLDER + "cache/" + digest(filename).encode("hex")):
-            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'w') as outfile:
+            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'wb') as outfile:
                 outfile.write(filename)

@@ -59,7 +59,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("Looking up image with hash %s" % image_hash.encode('hex'))
         self.router.addContact(sender)
         try:
-            with open(self.db.HashMap().get_file(image_hash), "r") as filename:
+            with open(self.db.HashMap().get_file(image_hash), "rb") as filename:
                 image = filename.read()
             return [image]
         except Exception:
