@@ -612,19 +612,19 @@ class OpenBazaarAPI(APIResource):
             if "image" in request.args:
                 for image in request.args["image"]:
                     hash_value = digest(image).encode("hex")
-                    with open(DATA_FOLDER + "store/media/" + hash_value, 'w') as outfile:
+                    with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
                         outfile.write(image)
                     self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 hash_value = digest(request.args["avatar"][0]).encode("hex")
-                with open(DATA_FOLDER + "store/avatar", 'w') as outfile:
+                with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(request.args["avatar"][0])
                 self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
                 hash_value = digest(request.args["header"][0]).encode("hex")
-                with open(DATA_FOLDER + "store/header", 'w') as outfile:
+                with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                     outfile.write(request.args["header"][0])
                 self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/header")
                 ret.append(hash_value)
