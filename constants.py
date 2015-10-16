@@ -16,14 +16,14 @@ if fc.has_section(mySection):
     items = fc.items(mySection)
     values = [value[1] for value in items]
 
-    data_folder, seed_node, seed_node_testnet, ksize, alpha, trans_fee = values
+    data_f, seed_n, seed_n_t, ks, alp, trans_f = values
 
-    DATA_FOLDER = values[0]
-    SEED_NODE = values[1]
-    SEED_NODE_TESTNET = values[2]
-    KSIZE = values[3]
-    ALPHA = values[4]
-    TRANSACTION_FEE = values[5]
+    DATA_FOLDER = data_f
+    SEED_NODE = seed_n
+    SEED_NODE_TESTNET = seed_n_t
+    KSIZE = ks
+    ALPHA = alp
+    TRANSACTION_FEE = trans_f
 
 '''
 DATA_FOLDER = expanduser("~") + "/OpenBazaar/"
