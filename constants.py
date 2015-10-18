@@ -23,6 +23,7 @@ if fc.has_section(mySection):
     KSIZE = ks
     ALPHA = alp
     TRANSACTION_FEE = trans_f
+
     print DATA_FOLDER
     print SEED_NODE
     print SEED_NODE_TESTNET
