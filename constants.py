@@ -4,7 +4,7 @@ import ConfigParser
 
 dataFolderPath = expanduser('~')
 currentPath = getcwdu()
-myFileConfig = 'constants.cfg'
+myFileConfig = 'ob.cfg'
 finalFileConfig = join(currentPath, myFileConfig)
 fc = ConfigParser.ConfigParser()
 fc.read(finalFileConfig)
