@@ -3,11 +3,12 @@ from zope.interface.verify import verifyObject
 from txrudp.rudp import ConnectionMultiplexer
 from txrudp.connection import HandlerFactory, Handler
 from txrudp.crypto_connection import CryptoConnectionFactory
+from twisted.internet.task import LoopingCall
 from interfaces import MessageProcessor
 from protos.message import Message, FIND_VALUE
 from log import Logger
 from dht.node import Node
-
+from protos.message import PING
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
     """
@@ -41,6 +42,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.active_connections = active_connections
             self.connection = None
             self.node = None
+            LoopingCall(self.ping).start(300, now=False)
 
             # TODO: should send ping message at regular intervals to catch an improperly closed connection.
 
@@ -69,7 +71,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                         processor.router.removeContact(self.node)
             self.log.info(
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
-                                                         self.connection.dest_addr[1]))\
+                                                         self.connection.dest_addr[1]))
+
+        def ping(self):
+            for processor in self.processors:
+                if PING in processor:
+                    processor.callPing(self.node)
 
 
     class ConnHandlerFactory(HandlerFactory):
