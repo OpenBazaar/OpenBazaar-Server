@@ -353,8 +353,15 @@ class Server(object):
                 s.bootstrap(data['neighbors']).addCallback(callback)
             else:
                 s.bootstrap(data['neighbors'])
-
-        # TODO: if bootstrapping fails because all our cached nodes are dead, then query the seed again
+        else:
+            # TODO: load seed from config file
+            if callback is not None:
+                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
+                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))\
+                    .addCallback(callback)
+            else:
+                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
+                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))
         return s
 
     def saveStateRegularly(self, fname, frequency=600):

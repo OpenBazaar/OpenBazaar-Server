@@ -10,6 +10,7 @@ from log import Logger
 from dht.node import Node
 from protos.message import PING
 
+
 class OpenBazaarProtocol(ConnectionMultiplexer):
     """
     A protocol extending the txrudp datagram protocol. This is the main protocol
@@ -44,8 +45,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.node = None
             LoopingCall(self.ping).start(300, now=False)
 
-            # TODO: should send ping message at regular intervals to catch an improperly closed connection.
-
         def receive_message(self, datagram):
             if len(datagram) < 166:
                 self.log.warning("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))
@@ -65,19 +64,17 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def handle_shutdown(self):
             self.connection.unregister()
-            if self.node is not None:
-                for processor in self.processors:
-                    if FIND_VALUE in processor:
-                        processor.router.removeContact(self.node)
+            for processor in self.processors:
+                if FIND_VALUE in processor and self.node is not None:
+                    processor.router.removeContact(self.node)
             self.log.info(
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
                                                          self.connection.dest_addr[1]))
 
         def ping(self):
             for processor in self.processors:
-                if PING in processor:
+                if PING in processor and self.node is not None:
                     processor.callPing(self.node)
-
 
     class ConnHandlerFactory(HandlerFactory):
 
