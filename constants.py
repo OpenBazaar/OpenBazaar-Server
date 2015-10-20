@@ -17,7 +17,7 @@ if fc.has_section(mySection):
     #capture info
     data_f1 = join(dataFolderPath, fc.get(mySection, 'DATA_FOLDER'))
     data_f2 = join(data_f1, '')  # is necesary for "/" the end
-    seed_n = fc.get(mySection, 'SEED_NODE' )
+    seed_n = fc.get(mySection, 'SEED_NODE')
     seed_n_p = fc.getint(mySection, 'SEED_NODE_PORT')
     seed_n_t = fc.get(mySection, 'SEED_NODE_TESTNET')
     seed_n_t_p = fc.getint(mySection, 'SEED_NODE_TESTNET_PORT')
