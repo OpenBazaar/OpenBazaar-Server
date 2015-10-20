@@ -64,7 +64,8 @@ class KademliaProtocolTest(unittest.TestCase):
         self.wire_protocol.makeConnection(transport)
 
     def tearDown(self):
-        self.con.shutdown()
+        if self.con.state != connection.State.SHUTDOWN:
+            self.con.shutdown()
         self.wire_protocol.shutdown()
         os.remove("test.db")
 

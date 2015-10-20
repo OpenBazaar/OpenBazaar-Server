@@ -29,6 +29,7 @@ from db.datastore import Database
 from twisted.python import log, logfile
 from constants import DATA_FOLDER
 
+
 def run(*args):
     TESTNET = args[0]
 

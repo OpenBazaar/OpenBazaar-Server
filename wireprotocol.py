@@ -32,7 +32,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.blockchain = None
         self.processors = []
         self.factory = self.ConnHandlerFactory(self.processors, self)
+        self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
+        LoopingCall(self.log_connected_nodes).start(60)
+
+    def log_connected_nodes(self):
+        self.log.info("Connected nodes: %s" % self.keys())
 
     class ConnHandler(Handler):
 
@@ -43,7 +48,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.active_connections = active_connections
             self.connection = None
             self.node = None
-            LoopingCall(self.ping).start(300, now=False)
+            LoopingCall(self.keep_alive).start(300, now=False)
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
@@ -71,7 +76,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
                                                          self.connection.dest_addr[1]))
 
-        def ping(self):
+        def keep_alive(self):
             for processor in self.processors:
                 if PING in processor and self.node is not None:
                     processor.callPing(self.node)
