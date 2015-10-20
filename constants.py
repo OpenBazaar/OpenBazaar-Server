@@ -1,3 +1,4 @@
+__author__ = 'foxcarlos'
 from os import getcwd
 from os.path import expanduser, join
 import ConfigParser
@@ -9,12 +10,12 @@ finalFileConfig = join(currentPath, myFileConfig)
 fc = ConfigParser.ConfigParser(allow_no_value=True)
 fc.read(finalFileConfig)
 
-#name of section in Config File ob.cfg
+# name of section in Config File ob.cfg
 mySection = 'CONSTANTS'
 
-#if exist the sections in file config
+# if exist the sections in file config
 if fc.has_section(mySection):
-    #capture info
+    # capture info
     data_f1 = join(dataFolderPath, fc.get(mySection, 'DATA_FOLDER'))
     data_f2 = join(data_f1, '')  # is necesary for "/" the end
     seed_n = fc.get(mySection, 'SEED_NODE')
@@ -31,16 +32,3 @@ if fc.has_section(mySection):
     KSIZE = ks
     ALPHA = alp
     TRANSACTION_FEE = trans_f
-
-'''
-from os.path import expanduser
-
-# TODO: this can be loaded from a config file
-
-DATA_FOLDER = expanduser("~") + "/OpenBazaar/"
-SEED_NODE = ("205.186.154.163", 18467)
-SEED_NODE_TESTNET = ("205.186.154.163", 28467)
-KSIZE = 20
-ALPHA = 3
-TRANSACTION_FEE = 10000'''
-
