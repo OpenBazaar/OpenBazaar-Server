@@ -24,6 +24,7 @@ from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage
+from market.profile import Profile
 
 
 def run(*args):
@@ -70,7 +71,7 @@ def run(*args):
     protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
     # kademlia
-    node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey)
+    node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,

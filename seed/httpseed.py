@@ -28,6 +28,7 @@ from keyutils.keys import KeyChain
 from db.datastore import Database
 from twisted.python import log, logfile
 from constants import DATA_FOLDER
+from market.profile import Profile
 
 
 def run(*args):
@@ -65,7 +66,7 @@ def run(*args):
     port = response[2]
 
     # Start the kademlia server
-    this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey)
+    this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey, vendor=Profile(db).get().vendor)
     protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
 
     try:
