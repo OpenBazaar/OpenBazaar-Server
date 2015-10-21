@@ -173,7 +173,8 @@ class Server(object):
 
         ds = {}
         for addr in addrs:
-            ds[addr] = self.protocol.ping((addr[0], addr[1]))
+            if addr != (self.node.ip, self.node.port):
+                ds[addr] = self.protocol.ping((addr[0], addr[1]))
         return deferredDict(ds).addCallback(initTable)
 
     def inetVisibleIP(self):

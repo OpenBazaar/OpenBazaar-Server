@@ -92,8 +92,8 @@ def run(*args):
             self.nodes = {}
             for bucket in self.kserver.protocol.router.buckets:
                 for node in bucket.getNodes():
-                    self.nodes[node.id] = node
-            self.nodes[this_node.id] = this_node
+                    self.nodes[(node.ip, node.port)] = node
+            self.nodes[(this_node.ip, this_node.port)] = this_node
             loopingCall = task.LoopingCall(self.crawl)
             loopingCall.start(60, True)
 
@@ -104,15 +104,14 @@ def run(*args):
                     try:
                         n.ParseFromString(proto)
                         node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
-                        if node.id not in self.nodes:
-                            self.nodes[node.id] = node
+                        self.nodes[(node.ip, node.port)] = node
                     except Exception:
                         pass
 
             def start_crawl(results):
                 for node, result in results.items():
                     if not result[0]:
-                        del self.nodes[node.id]
+                        del self.nodes[(node.ip, node.port)]
                 node = Node(digest(random.getrandbits(255)))
                 nearest = self.kserver.protocol.router.findNeighbors(node)
                 spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
@@ -121,8 +120,7 @@ def run(*args):
             ds = {}
             for bucket in self.kserver.protocol.router.buckets:
                 for node in bucket.getNodes():
-                    if node.id not in self.nodes:
-                        self.nodes[node.id] = node
+                    self.nodes[(node.ip, node.port)] = node
             for node in self.nodes.values():
                 if node.id != this_node.id:
                     ds[node] = self.kserver.protocol.callPing(node)
