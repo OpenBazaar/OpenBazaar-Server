@@ -18,10 +18,15 @@ if fc.has_section(mySection):
     # capture info
     data_f1 = join(dataFolderPath, fc.get(mySection, 'DATA_FOLDER'))
     data_f2 = join(data_f1, '')  # is necesary for "/" the end
-    seed_n = fc.get(mySection, 'SEED_NODE')
-    seed_n_p = fc.getint(mySection, 'SEED_NODE_PORT')
-    seed_n_t = fc.get(mySection, 'SEED_NODE_TESTNET')
-    seed_n_t_p = fc.getint(mySection, 'SEED_NODE_TESTNET_PORT')
+
+    if ':' in fc.get(mySection, 'SEED_NODE'):
+        seed_n = fc.get(mySection, 'SEED_NODE').split(':')[0]
+        seed_n_p = int(fc.get(mySection, 'SEED_NODE').split(':')[1])
+
+    if ':' in fc.get(mySection, 'SEED_NODE_TESTNET'):
+        seed_n_t = fc.get(mySection, 'SEED_NODE_TESTNET').split(':')[0]
+        seed_n_t_p = int(fc.get(mySection, 'SEED_NODE_TESTNET').split(':')[1])
+
     ks = fc.getint(mySection, 'KSIZE')
     alp = fc.getint(mySection, 'ALPHA')
     trans_f = fc.getint(mySection, 'TRANSACTION_FEE')
@@ -32,3 +37,5 @@ if fc.has_section(mySection):
     KSIZE = ks
     ALPHA = alp
     TRANSACTION_FEE = trans_f
+else:
+    print 'No Section name "{0}" in file config:{1}'.format(mySection, myFileConfig)
