@@ -105,11 +105,12 @@ class Server(object):
            pubkey: The hex encoded public key to verify the signature on the response
         """
         try:
+            self.log.info("querying %s for peers" % seed)
             nodes = []
             c = httplib.HTTPConnection(seed)
             c.request("GET", "/")
             response = c.getresponse()
-            self.log.info("Https response from %s: %s, %s" % (seed, response.status, response.reason))
+            self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
             data = response.read()
             reread_data = data.decode("zlib")
             proto = peers.PeerSeeds()
@@ -121,9 +122,10 @@ class Server(object):
                 nodes.append(tup)
             verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
             verify_key.verify("".join(proto.peer_data), proto.signature)
+            self.log.info("%s returned %s peers" % (seed, len(nodes)))
             return nodes
         except Exception, e:
-            self.log.error("Failed to query seed: %s" % str(e))
+            self.log.error("failed to query seed: %s" % str(e))
 
     def bootstrappableNeighbors(self):
         """
@@ -150,6 +152,7 @@ class Server(object):
         # if the transport hasn't been initialized yet, wait a second
         if self.protocol.multiplexer.transport is None:
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
+        self.log.info("bootstrapping with %s addresses, finding neighbors..." % len(addrs))
 
         def initTable(results):
             nodes = []
@@ -167,7 +170,7 @@ class Server(object):
                             raise Exception('Invalid GUID')
                         nodes.append(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
                     except Exception:
-                        self.log.msg("Bootstrap node returned invalid GUID")
+                        self.log.warning("bootstrap node returned invalid GUID")
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()
 
@@ -211,7 +214,7 @@ class Server(object):
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to get key %s" % dkey.encode('hex'))
+            self.log.warning("there are no known neighbors to get key %s" % dkey.encode('hex'))
             return defer.succeed(None)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
@@ -252,7 +255,7 @@ class Server(object):
         node = Node(keyword)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to set keyword %s" % keyword.encode("hex"))
+            self.log.warning("there are no known neighbors to set keyword %s" % keyword.encode("hex"))
             return defer.succeed(False)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(store)
@@ -271,11 +274,11 @@ class Server(object):
             signature: a signature covering the key.
 
         """
-        self.log.info("deleting '%s':'%s' from the network" % (keyword.encode("hex"), key.encode("hex")))
+        self.log.debug("deleting '%s':'%s' from the network" % (keyword.encode("hex"), key.encode("hex")))
         dkey = digest(keyword)
 
         def delete(nodes):
-            self.log.debug("deleting '%s' on %s" % (key.encode("hex"), [str(i) for i in nodes]))
+            self.log.info("deleting '%s' on %s" % (key.encode("hex"), [str(i) for i in nodes]))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
             if self.storage.getSpecific(dkey, key) is not None:
@@ -286,7 +289,7 @@ class Server(object):
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to delete key %s" % key.encode("hex"))
+            self.log.warning("there are no known neighbors to delete key %s" % key.encode("hex"))
             return defer.succeed(False)
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.ksize)
         return spider.find().addCallback(delete)
@@ -313,7 +316,7 @@ class Server(object):
                 return defer.succeed(node)
         nearest = self.protocol.router.findNeighbors(node_to_find)
         if len(nearest) == 0:
-            self.log.warning("There are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
+            self.log.warning("there are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
             return defer.succeed(None)
         spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(check_for_node)
@@ -331,7 +334,7 @@ class Server(object):
                 'neighbors': self.bootstrappableNeighbors(),
                 'testnet': self.protocol.multiplexer.testnet}
         if len(data['neighbors']) == 0:
-            self.log.warning("No known neighbors, so not writing to cache.")
+            self.log.warning("no known neighbors, so not writing to cache.")
             return
         with open(fname, 'w') as f:
             pickle.dump(data, f)

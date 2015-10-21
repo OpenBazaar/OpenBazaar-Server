@@ -37,7 +37,7 @@ class SpiderCrawl(object):
         self.nearest = NodeHeap(self.node, self.ksize)
         self.lastIDsCrawled = []
         self.log = Logger(system=self)
-        self.log.info("creating spider with peers: %s" % peers)
+        self.log.debug("creating spider with peers: %s" % peers)
         self.nearest.push(peers)
 
     def _find(self, rpcmethod):
@@ -56,10 +56,10 @@ class SpiderCrawl(object):
              yet queried
           4. repeat, unless nearest list has all been queried, then ur done
         """
-        self.log.info("crawling with nearest: %s" % str(tuple(self.nearest)))
+        self.log.debug("crawling with nearest: %s" % str(tuple(self.nearest)))
         count = self.alpha
         if self.nearest.getIDs() == self.lastIDsCrawled:
-            self.log.info("last iteration same as current - checking all in list now")
+            self.log.debug("last iteration same as current - checking all in list now")
             count = len(self.nearest)
         self.lastIDsCrawled = self.nearest.getIDs()
 
@@ -118,7 +118,7 @@ class ValueSpiderCrawl(SpiderCrawl):
         valueCounts = Counter(values)
         if len(valueCounts) != 1:
             args = (self.node.long_id, str(values))
-            self.log.warning("Got multiple values for key %i: %s" % args)
+            self.log.warning("got multiple values for key %i: %s" % args)
         value = valueCounts.most_common(1)[0][0]
 
         ds = []

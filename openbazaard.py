@@ -23,9 +23,9 @@ from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
-from dht.storage import PersistentStorage
+from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
-
+from log import Logger, FileLogObserver
 
 def run(*args):
     TESTNET = args[0]
@@ -39,16 +39,16 @@ def run(*args):
     # logging
     # TODO: prune this log file and prevent it from getting too large?
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
-    log.addObserver(log.FileLogObserver(logFile).emit)
-    log.startLogging(sys.stdout)
+    log.addObserver(FileLogObserver(logFile, level=args[1]).emit)
+    log.addObserver(FileLogObserver(level=args[1]).emit)
+    logger = Logger(system="OpenBazaard")
 
     # stun
-    # TODO: accept port from command line
-    port = 18467 if not TESTNET else 28467
-    print "Finding NAT Type.."
+    port = args[2]
+    logger.info("Finding NAT Type..")
     # TODO: maintain a list of backup STUN servers and try them if ours fails
     response = stun.get_ip_info(stun_host="seed.openbazaar.org", source_port=port)
-    print "%s on %s:%s" % (response[0], response[1], response[2])
+    logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]
 
@@ -59,6 +59,7 @@ def run(*args):
     # TODO: use TURN if symmetric NAT
 
     def on_bootstrap_complete(resp):
+        logger.info("bootstrap complete, downloading outstanding messages...")
         mlistener = MessageListenerImpl(ws_factory, db)
         mserver.get_messages(mlistener)
         mserver.protocol.add_listener(mlistener)
@@ -73,11 +74,16 @@ def run(*args):
     # kademlia
     node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
 
+    if node.vendor:
+        storage = PersistentStorage(db.DATABASE)
+    else:
+        storage = ForgetfulStorage()
+
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
-                                   on_bootstrap_complete, storage=PersistentStorage(db.DATABASE))
+                                   on_bootstrap_complete, storage=storage)
     except Exception:
-        kserver = Server(node, db, KSIZE, ALPHA, storage=PersistentStorage(db.DATABASE))
+        kserver = Server(node, db, KSIZE, ALPHA, storage=storage)
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(
             kserver.querySeed("seed.openbazaar.org:8080",
@@ -114,14 +120,14 @@ def run(*args):
     # TODO: listen on the libbitcoin heartbeat port instead fetching height
     def height_fetched(ec, height):
         # TODO: re-broadcast any unconfirmed txs in the db using height to find confirmation status
-        print "Libbitcoin server online"
+        logger.info("Libbitcoin server online")
         try:
             timeout.cancel()
         except Exception:
             pass
 
     def timeout(client):
-        print "Libbitcoin server offline"
+        print logger.critical("Libbitcoin server offline")
         client = None
 
     if TESTNET:
@@ -172,6 +178,9 @@ commands:
         python openbazaard.py start [-d DAEMON]''')
             parser.add_argument('-d', '--daemon', action='store_true', help="run the server in the background")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
+            parser.add_argument('-l', '--loglevel', default="info",
+                                help="set the loggin level [debug, info, warning, error, criticial]")
+            parser.add_argument('-p', '--port', help="set the network port")
             args = parser.parse_args(sys.argv[2:])
             OKBLUE = '\033[94m'
             ENDC = '\033[0m'
@@ -188,10 +197,14 @@ commands:
             print "OpenBazaar Server v0.1 starting..."
             unix = ("linux", "linux2", "darwin")
             # TODO: run as windows service (also for STOP and RESTART)
-            if args.daemon and platform.system().lower() in unix:
-                self.daemon.start(args.testnet)
+            if args.port:
+                port = int(args.port)
             else:
-                run(args.testnet)
+                port = 18467 if not args.testnet else 28467
+            if args.daemon and platform.system().lower() in unix:
+                self.daemon.start(args.testnet, args.loglevel, port)
+            else:
+                run(args.testnet, args.loglevel, port)
 
         def stop(self):
             # pylint: disable=W0612

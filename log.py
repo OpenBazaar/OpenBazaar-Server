@@ -5,17 +5,18 @@ Copyright (c) 2014 Brian Muller
 import sys
 from twisted.python import log
 
-INFO = 5
-DEBUG = 4
-WARNING = 3
+DEBUG = 5
+WARNING = 4
+INFO = 3
 ERROR = 2
 CRITICAL = 1
 
+levels = {"debug": 5, "warning": 4, "info": 3, "error": 2, "critical": 1}
 
 class FileLogObserver(log.FileLogObserver):
-    def __init__(self, f=None, level=WARNING, default=DEBUG):
+    def __init__(self, f=None, level="info", default=DEBUG):
         log.FileLogObserver.__init__(self, f or sys.stdout)
-        self.level = level
+        self.level = levels[level]
         self.default = default
 
     def emit(self, eventDict):
