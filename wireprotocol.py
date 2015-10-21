@@ -48,7 +48,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.active_connections = active_connections
             self.connection = None
             self.node = None
-            LoopingCall(self.keep_alive).start(300, now=False)
+            self.keep_alive_loop = LoopingCall(self.keep_alive)
+            self.keep_alive_loop.start(300, now=False)
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
@@ -68,10 +69,11 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            self.connection.unregister()
             for processor in self.processors:
                 if FIND_VALUE in processor and self.node is not None:
                     processor.router.removeContact(self.node)
+            self.connection.unregister()
+            self.keep_alive_loop.stop()
             self.log.info(
                 "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
                                                          self.connection.dest_addr[1]))
