@@ -475,7 +475,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
         self.wire_protocol[self.addr1] = self.con
 
-        self.protocol.addToRouter(mknode())
+        self.protocol.router.addContact(mknode())
 
         self.protocol.storage[digest("keyword")] = (
             digest("key"), self.protocol.sourceNode.getProto().SerializeToString())

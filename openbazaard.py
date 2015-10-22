@@ -79,10 +79,7 @@ def run(*args):
     # kademlia
     node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
 
-    if node.vendor:
-        storage = PersistentStorage(db.DATABASE)
-    else:
-        storage = ForgetfulStorage()
+    storage = ForgetfulStorage() if TESTNET else PersistentStorage(db)
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
