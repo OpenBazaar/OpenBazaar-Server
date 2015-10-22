@@ -242,7 +242,7 @@ class Server(object):
         self.log.debug("setting '%s' on network" % keyword.encode("hex"))
 
         def store(nodes):
-            self.log.info("setting '%s' on %s" % (keyword.encode("hex"), [str(i) for i in nodes]))
+            self.log.debug("setting '%s' on %s" % (keyword.encode("hex"), [str(i) for i in nodes]))
             ds = [self.protocol.callStore(node, keyword, key, value) for node in nodes]
 
             keynode = Node(keyword)
@@ -278,7 +278,7 @@ class Server(object):
         dkey = digest(keyword)
 
         def delete(nodes):
-            self.log.info("deleting '%s' on %s" % (key.encode("hex"), [str(i) for i in nodes]))
+            self.log.debug("deleting '%s' on %s" % (key.encode("hex"), [str(i) for i in nodes]))
             ds = [self.protocol.callDelete(node, dkey, key, signature) for node in nodes]
 
             if self.storage.getSpecific(dkey, key) is not None:

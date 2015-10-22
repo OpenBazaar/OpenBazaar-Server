@@ -28,6 +28,7 @@ from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
 from log import Logger, FileLogObserver
 
+
 def run(*args):
     TESTNET = args[0]
 
@@ -46,7 +47,7 @@ def run(*args):
 
     # NAT traversal
     port = args[2]
-    logger.info("Finding NAT Type..")
+    logger.info("Finding NAT Type...")
     try:
         response = stun.get_ip_info(source_port=port)
     except Exception:
@@ -111,12 +112,12 @@ def run(*args):
     listenWS(ws_factory)
     webdir = File(".")
     web = Site(webdir)
-    reactor.listenTCP(9000, web, interface="127.0.0.1")
+    reactor.listenTCP(9000, web, interface=args[4])
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
     site = Site(api, timeout=None)
-    reactor.listenTCP(18469, site, interface="127.0.0.1")
+    reactor.listenTCP(18469, site, interface=args[3])
 
     # TODO: add optional SSL on rest and websocket servers
 
@@ -183,8 +184,12 @@ commands:
             parser.add_argument('-d', '--daemon', action='store_true', help="run the server in the background")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
             parser.add_argument('-l', '--loglevel', default="info",
-                                help="set the loggin level [debug, info, warning, error, criticial]")
+                                help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
+            parser.add_argument('-r', '--restallowip', default="127.0.0.1",
+                                help="bind the rest api server to this ip")
+            parser.add_argument('-w', '--wsallowip', default="127.0.0.1",
+                                help="bind the websocket server to this ip")
             args = parser.parse_args(sys.argv[2:])
             OKBLUE = '\033[94m'
             ENDC = '\033[0m'
@@ -206,9 +211,9 @@ commands:
             else:
                 port = 18467 if not args.testnet else 28467
             if args.daemon and platform.system().lower() in unix:
-                self.daemon.start(args.testnet, args.loglevel, port)
+                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip)
             else:
-                run(args.testnet, args.loglevel, port)
+                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip)
 
         def stop(self):
             # pylint: disable=W0612

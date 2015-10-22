@@ -402,8 +402,8 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps({}))
                 request.finish()
 
-        if "id" in request.args:
-            if "guid" in request.args:
+        if "id" in request.args and len(request.args["id"][0]) == 40:
+            if "guid" in request.args and len(request.args["guid"][0]) == 40:
                 def get_node(node):
                     if node is not None:
                         self.mserver.get_contract(node, unhexlify(request.args["id"][0]))\
