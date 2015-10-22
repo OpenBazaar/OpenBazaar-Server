@@ -114,12 +114,40 @@ if isfile(finalFileConfig):
         except ConfigParser.Error, error:
             print error
 
+        # Extract Config LIBBITCOIN_SERVER
+        libbitcoin_s = ''
+        nameOptionLBS = 'LIBBITCOIN_SERVER'
+
+        try:
+            optionLBS = fc.get(mySection, nameOptionLBS)
+            # if have value
+            if optionLBS:
+                libbitcoin_s = fc.get(mySection, nameOptionLBS)
+        except ConfigParser.Error, error:
+            print error
+
+        # Extract Config LIBBITCOIN_SERVER_TESTNET
+        libbitcoin_s_t = ''
+        nameOptionLBS_T = 'LIBBITCOIN_SERVER_TESTNET'
+
+        try:
+            optionLBS_T = fc.get(mySection, nameOptionLBS_T)
+            # if have value
+            if optionLBS_T:
+                libbitcoin_s_t = fc.get(mySection, nameOptionLBS_T)
+        except ConfigParser.Error, error:
+            print error
+
+        # Constant Assignment
         DATA_FOLDER = data_f2
         SEED_NODE = (seed_n, seed_n_p)
         SEED_NODE_TESTNET = (seed_n_t, seed_n_t_p)
         KSIZE = ks
         ALPHA = alp
         TRANSACTION_FEE = trans_f
+        LIBBITCOIN_SERVER = libbitcoin_s
+        LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
+
     except ConfigParser.Error, error:
         print error
 else:
