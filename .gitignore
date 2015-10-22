@@ -20,7 +20,6 @@ lib64/
 parts/
 sdist/
 var/
-.ropeproject/
 *.egg-info/
 .installed.cfg
 *.egg
