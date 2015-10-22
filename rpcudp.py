@@ -27,7 +27,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=5):
+    def __init__(self, proto, router, waitTimeout=2.5):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.

@@ -18,6 +18,7 @@ from dht.utils import digest
 from market.profile import Profile
 from market.contracts import Contract
 from collections import OrderedDict
+from upnp import PortMapper
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -502,6 +503,7 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
+        PortMapper().clean_my_mappings(self.kserver.node.port)
         self.protocol.shutdown()
         reactor.stop()
 
@@ -724,4 +726,10 @@ class OpenBazaarAPI(APIResource):
             }
             request.write(json.dumps(settings_json, indent=4))
             request.finish()
+        return server.NOT_DONE_YET
+
+    @GET('^/api/v1/connected_peers')
+    def get_connected_peers(self, request):
+        request.write(json.dumps(self.protocol.keys(), indent=4))
+        request.finish()
         return server.NOT_DONE_YET

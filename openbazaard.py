@@ -7,6 +7,7 @@ from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
 from daemon import Daemon
+from upnp import PortMapper
 
 import stun
 import requests
@@ -43,10 +44,9 @@ def run(*args):
     log.addObserver(FileLogObserver(level=args[1]).emit)
     logger = Logger(system="OpenBazaard")
 
-    # stun
+    # NAT traversal
     port = args[2]
     logger.info("Finding NAT Type..")
-    # TODO: maintain a list of backup STUN servers and try them if ours fails
     try:
         response = stun.get_ip_info(source_port=port)
     except Exception:
@@ -55,9 +55,8 @@ def run(*args):
     ip_address = response[1]
     port = response[2]
 
-    # TODO: try UPnP if restricted NAT
-
-    # TODO: maintain open connection to seed node if STUN/UPnP fail
+    if response[0] != "Full Cone":
+        PortMapper().add_port_mapping(port, port, 'UDP')
 
     # TODO: use TURN if symmetric NAT
 

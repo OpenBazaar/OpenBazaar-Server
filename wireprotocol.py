@@ -35,10 +35,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.factory = self.ConnHandlerFactory(self.processors)
         self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
-        LoopingCall(self.log_connected_nodes).start(60)
-
-    def log_connected_nodes(self):
-        self.log.info("connected nodes: %s" % self.keys())
 
     class ConnHandler(Handler):
 
