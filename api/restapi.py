@@ -733,3 +733,20 @@ class OpenBazaarAPI(APIResource):
         request.write(json.dumps(self.protocol.keys(), indent=4))
         request.finish()
         return server.NOT_DONE_YET
+
+    @GET('^/api/v1/routing_table')
+    def get_routing_table(self, request):
+        nodes = []
+        for bucket in self.kserver.protocol.router.buckets:
+            for node in bucket.nodes.values():
+                n = {
+                    "guid": node.id.encode("hex"),
+                    "ip": node.ip,
+                    "port": node.port,
+                    "vendor": node.vendor
+                }
+                nodes.append(n)
+        request.write(json.dumps(nodes, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+

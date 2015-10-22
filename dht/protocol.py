@@ -4,7 +4,7 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from zope.interface import implements
 import nacl.signing
 from dht.node import Node
@@ -184,7 +184,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if self.router.isNewNode(node):
             self.log.debug("Found a new node, transferring key/values")
-            self.transferKeyValues(node)
+            reactor.callLater(1, self.transferKeyValues, node)
         self.router.addContact(node)
 
     def __iter__(self):

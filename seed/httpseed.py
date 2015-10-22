@@ -29,6 +29,7 @@ from db.datastore import Database
 from twisted.python import log, logfile
 from constants import DATA_FOLDER
 from market.profile import Profile
+from log import Logger, FileLogObserver
 
 
 def run(*args):
@@ -39,8 +40,9 @@ def run(*args):
 
     # logging
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
-    log.addObserver(log.FileLogObserver(logFile).emit)
-    log.startLogging(sys.stdout)
+    log.addObserver(FileLogObserver(logFile, level="debug").emit)
+    log.addObserver(FileLogObserver(level="debug").emit)
+    logger = Logger(system="Httpseed")
 
     # Load the keys
     keychain = KeyChain(db)
@@ -59,9 +61,9 @@ def run(*args):
 
     # Stun
     port = 18467 if not TESTNET else 28467
-    print "Finding NAT Type.."
+    logger.info("Finding NAT Type...")
     response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=port, stun_port=19302)
-    print "%s on %s:%s" % (response[0], response[1], response[2])
+    logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]
 
@@ -132,15 +134,13 @@ def run(*args):
         def render_GET(self, request):
             nodes = self.nodes.values()
             shuffle(nodes)
-            log.msg("Received a request for nodes, responding...")
+            logger.info("Received a request for nodes, responding...")
             if "format" in request.args:
                 if request.args["format"][0] == "json":
                     json_list = []
                     if "type" in request.args and request.args["type"][0] == "vendors":
-                        print "getting list of vendors"
                         for node in nodes:
                             if node.vendor is True:
-                                print "found vendor"
                                 node_dic = {}
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port

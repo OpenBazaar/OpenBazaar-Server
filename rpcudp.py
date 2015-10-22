@@ -27,7 +27,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=2.5):
+    def __init__(self, proto, router, waitTimeout=3):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -127,7 +127,8 @@ class RPCProtocol:
         """
         seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
         if not hp and self.multiplexer.ip_address[0] != seed[0]:
-            self.log.debug("did not receive reply from %s:%s, trying hole punching..." % (address[0], address[1]))
+            args = (address[0], address[1], b64encode(msgID))
+            self.log.debug("did not receive reply from %s:%s for msgID %s, trying hole punching..." % args)
             self.hole_punch(seed, address[0], address[1], "True")
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address, True)
             self._outstanding[msgID][1] = timeout
