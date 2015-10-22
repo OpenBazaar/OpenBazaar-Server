@@ -19,9 +19,11 @@ from protos import objects
 from market.profile import Profile
 from market.contracts import Contract
 from collections import OrderedDict
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
+from log import Logger
+
 
 class Server(object):
     def __init__(self, kserver, signing_key, database):
@@ -34,6 +36,7 @@ class Server(object):
         self.signing_key = signing_key
         self.router = kserver.protocol.router
         self.db = database
+        self.log = Logger(system=self)
         self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key, database)
 
         # TODO: we need a loop here that republishes keywords when they are about to expire
@@ -91,6 +94,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching contract %s from %s" % (contract_hash.encode("hex"), node_to_ask))
         d = self.protocol.callGetContract(node_to_ask, contract_hash)
         return d.addCallback(get_result)
 
@@ -113,6 +117,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching image %s from %s" % (image_hash.encode("hex"), node_to_ask))
         d = self.protocol.callGetImage(node_to_ask, image_hash)
         return d.addCallback(get_result)
 
@@ -135,9 +140,9 @@ class Server(object):
                     if not gpg.verify(p.pgp_key.signature) or \
                                     node_to_ask.id.encode('hex') not in p.pgp_key.signature:
                         p.ClearField("pgp_key")
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.avatar_hash)):
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.avatar_hash.encode("hex")):
                     self.get_image(node_to_ask, p.avatar_hash)
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(p.header_hash)):
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
                     self.get_image(node_to_ask, p.header_hash)
                 return p
             except Exception:
@@ -145,6 +150,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching profile from %s" % node_to_ask)
         d = self.protocol.callGetProfile(node_to_ask)
         return d.addCallback(get_result)
 
@@ -163,7 +169,7 @@ class Server(object):
                 verify_key.verify(result[1][1] + result[1][0])
                 m = objects.Metadata()
                 m.ParseFromString(result[1][0])
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(m.avatar_hash)):
+                if not os.path.isfile(DATA_FOLDER + 'cache/' + m.avatar_hash.encode("hex")):
                     self.get_image(node_to_ask, m.avatar_hash)
                 return m
             except Exception:
@@ -171,6 +177,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching user metadata from %s" % node_to_ask)
         d = self.protocol.callGetUserMetadata(node_to_ask)
         return d.addCallback(get_result)
 
@@ -194,6 +201,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching store listings from %s" % node_to_ask)
         d = self.protocol.callGetListings(node_to_ask)
         return d.addCallback(get_result)
 
@@ -212,7 +220,7 @@ class Server(object):
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
                 if l.HasField("thumbnail_hash"):
-                    if not os.path.isfile(DATA_FOLDER + 'cache/' + hexlify(l.thumbnail_hash)):
+                    if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
                         self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
             except Exception:
@@ -220,6 +228,7 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
+        self.log.info("fetching metadata for contract %s from %s" % (contract_hash.encode("hex"), node_to_ask))
         d = self.protocol.callGetContractMetadata(node_to_ask, contract_hash)
         return d.addCallback(get_result)
 
@@ -237,6 +246,7 @@ class Server(object):
         Profile(self.db).update(u)
         proto = self.kserver.node.getProto().SerializeToString()
         self.kserver.set(digest("moderators"), digest(proto), proto)
+        self.log.info("setting self as moderator on the network")
 
     def unmake_moderator(self):
         """
@@ -247,6 +257,7 @@ class Server(object):
         signature = self.signing_key.sign(key)[:64]
         self.kserver.delete("moderators", key, signature)
         Profile(self.db).remove_field("moderator")
+        self.log.info("removing self as moderator from the network")
 
     def follow(self, node_to_follow):
         """
@@ -290,6 +301,7 @@ class Server(object):
         f.metadata.MergeFrom(m)
         signature = self.signing_key.sign(f.SerializeToString())[:64]
         d = self.protocol.callFollow(node_to_follow, f.SerializeToString(), signature)
+        self.log.info("sending follow request to %s" % node_to_follow)
         return d.addCallback(save_to_db)
 
     def unfollow(self, node_to_unfollow):
@@ -306,6 +318,7 @@ class Server(object):
 
         signature = self.signing_key.sign("unfollow:" + node_to_unfollow.id)[:64]
         d = self.protocol.callUnfollow(node_to_unfollow, signature)
+        self.log.info("sending unfollow request to %s" % node_to_unfollow)
         return d.addCallback(save_to_db)
 
     def get_followers(self, node_to_ask):
@@ -334,7 +347,7 @@ class Server(object):
                     v_key.verify(follower.SerializeToString(), signature)
                     h = nacl.hash.sha512(follower.signed_pubkey)
                     pow_hash = h[64:128]
-                    if int(pow_hash[:6], 16) >= 50 or hexlify(follower.guid) != h[:40]:
+                    if int(pow_hash[:6], 16) >= 50 or follower.guid.encode("hex") != h[:40]:
                         raise Exception('Invalid GUID')
                     if follower.following != node_to_ask.id:
                         raise Exception('Invalid follower')
@@ -343,6 +356,7 @@ class Server(object):
             return f
 
         d = self.protocol.callGetFollowers(node_to_ask)
+        self.log.info("fetching followers from %s" % node_to_ask)
         return d.addCallback(get_response)
 
     def get_following(self, node_to_ask):
@@ -371,13 +385,14 @@ class Server(object):
                     v_key.verify(user.metadata.SerializeToString(), signature)
                     h = nacl.hash.sha512(user.signed_pubkey)
                     pow_hash = h[64:128]
-                    if int(pow_hash[:6], 16) >= 50 or hexlify(user.guid) != h[:40]:
+                    if int(pow_hash[:6], 16) >= 50 or user.guid.encode("hex") != h[:40]:
                         raise Exception('Invalid GUID')
                 except Exception:
                     f.users.remove(user)
             return f
 
         d = self.protocol.callGetFollowing(node_to_ask)
+        self.log.info("fetching following list from %s" % node_to_ask)
         return d.addCallback(get_response)
 
     def send_notification(self, message):
@@ -409,6 +424,7 @@ class Server(object):
         f.ParseFromString(self.db.FollowData().get_followers())
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
+        self.log.info("broadcasting notification to followers")
         return defer.DeferredList(dl).addCallback(send)
 
     def send_message(self, receiving_node, public_key, message_type, message, subject=None, store_only=False):
@@ -444,6 +460,8 @@ class Server(object):
         def get_response(response):
             if not response[0]:
                 self.kserver.set(digest(receiving_node.id), pkephem, ciphertext)
+
+        self.log.info("sending encrypted message to %s" % receiving_node.id.encode("hex"))
         if not store_only:
             self.protocol.callMessage(receiving_node, pkephem, ciphertext).addCallback(get_response)
         else:
@@ -456,6 +474,7 @@ class Server(object):
 
         def parse_messages(messages):
             if messages is not None:
+                self.log.info("retrieved %s message(s) from the dht" % len(messages))
                 for message in messages:
                     try:
                         value = objects.Value()
@@ -472,7 +491,7 @@ class Server(object):
                             verify_key.verify(p.SerializeToString(), signature)
                             h = nacl.hash.sha512(p.signed_pubkey)
                             pow_hash = h[64:128]
-                            if int(pow_hash[:6], 16) >= 50 or hexlify(p.sender_guid) != h[:40]:
+                            if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40]:
                                 raise Exception('Invalid guid')
                             if p.type == objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"):
                                 c = Contract(self.db, hash_value=unhexlify(p.subject))
@@ -520,6 +539,7 @@ class Server(object):
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
         d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
+        self.log.info("purchasing contract %s from %s" % (contract.get_contract_id().encode("hex"), node_to_ask))
         return d.addCallback(parse_response)
 
     def confirm_order(self, guid, contract):
@@ -558,6 +578,7 @@ class Server(object):
                 return d.addCallback(parse_response)
             else:
                 return parse_response([False])
+        self.log.info("sending order confirmation to %s" % guid)
         return self.kserver.resolve(unhexlify(guid)).addCallback(get_node)
 
     def complete_order(self, guid, contract):
@@ -597,6 +618,7 @@ class Server(object):
                 return d.addCallback(parse_response)
             else:
                 return parse_response([False])
+        self.log.info("sending order receipt to %s" % guid)
         return self.kserver.resolve(unhexlify(guid)).addCallback(get_node)
 
     @staticmethod

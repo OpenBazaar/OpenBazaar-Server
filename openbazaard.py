@@ -47,7 +47,10 @@ def run(*args):
     port = args[2]
     logger.info("Finding NAT Type..")
     # TODO: maintain a list of backup STUN servers and try them if ours fails
-    response = stun.get_ip_info(stun_host="seed.openbazaar.org", source_port=port)
+    try:
+        response = stun.get_ip_info(source_port=port)
+    except Exception:
+        response = stun.get_ip_info()
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]

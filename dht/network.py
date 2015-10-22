@@ -122,7 +122,7 @@ class Server(object):
                 nodes.append(tup)
             verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
             verify_key.verify("".join(proto.peer_data), proto.signature)
-            self.log.info("%s returned %s peers" % (seed, len(nodes)))
+            self.log.info("%s returned %s addresses" % (seed, len(nodes)))
             return nodes
         except Exception, e:
             self.log.error("failed to query seed: %s" % str(e))
