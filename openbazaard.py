@@ -68,6 +68,8 @@ def run(*args):
         nlistener = NotificationListenerImpl(ws_factory, db)
         mserver.protocol.add_listener(nlistener)
 
+        # TODO: ping seed node to establish connection if not full cone NAT
+
         # TODO: after bootstrap run through any pending contracts and see if the bitcoin address
         # has been funded, if not listen on the address and start the 10 minute delete timer.
 
@@ -198,7 +200,7 @@ commands:
             print
             print "OpenBazaar Server v0.1 starting..."
             unix = ("linux", "linux2", "darwin")
-            # TODO: run as windows service (also for STOP and RESTART)
+
             if args.port:
                 port = int(args.port)
             else:

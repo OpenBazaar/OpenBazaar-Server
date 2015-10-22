@@ -149,7 +149,7 @@ class RPCProtocol:
             self.hole_punch((ip, int(port)), sender.ip, sender.port)
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
-            self.multiplexer.send_message(" ", (ip, int(port)))
+            self.multiplexer.send_datagram(" ", (ip, int(port)))
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
