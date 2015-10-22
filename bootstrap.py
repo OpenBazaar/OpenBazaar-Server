@@ -4,11 +4,23 @@ import sys
 
 
 def bootstrap(use_testnet):
-    subprocess.call(['pip', 'install', '-r', 'requirements.txt'])
-    if use_testnet:
-        os.system('python openbazaard.py start --testnet')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    if sys.platform == "darwin":
+
+        # OSX won't pass the PATH
+        subprocess.call(['/usr/local/bin/pip', 'install', '-r', '%s/requirements.txt' % script_dir])
+        if use_testnet:
+            os.system('/usr/local/bin/python %s/openbazaard.py start --testnet' % script_dir)
+        else:
+            os.system('/usr/local/bin/python %s/openbazaard.py start' % script_dir)
+
     else:
-        os.system('python openbazaard.py start')
+        subprocess.call(['pip', 'install', '-r', '%s%srequirements.txt' % (script_dir, os.pathsep)])
+        if use_testnet:
+            os.system('python %s%sopenbazaard.py start --testnet' % (script_dir, os.pathsep))
+        else:
+            os.system('python %s%sopenbazaard.py start' % (script_dir, os.pathsep))
 
 
 if __name__ == '__main__':
