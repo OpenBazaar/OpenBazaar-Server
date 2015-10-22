@@ -16,7 +16,7 @@ from twisted.internet import defer
 from log import Logger
 from protos.message import Message, Command
 from dht import node
-from constants import SEED_NODE, SEED_NODE_TESTNET
+from constants import SEED_NODE, SEED_NODE_TESTNET, PROTOCOL_VERSION
 
 
 class RPCProtocol:
@@ -58,6 +58,13 @@ class RPCProtocol:
         if m.testnet != self.multiplexer.testnet:
             self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
+            connection.shutdown()
+            return False
+
+        if m.protoVer < PROTOCOL_VERSION:
+            self.log.warning("received message from %s with incompatible protocol version." %
+                             str(connection.dest_addr))
+            connection.shutdown()
             return False
 
         # Check that the GUID is valid. If not, ignore
@@ -73,6 +80,7 @@ class RPCProtocol:
 
             except Exception:
                 self.log.warning("received message from sender with invalid GUID, ignoring")
+                connection.shutdown()
                 return False
 
         if m.sender.vendor:
@@ -112,6 +120,7 @@ class RPCProtocol:
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
         m.command = Command.Value(funcname.upper())
+        m.protoVer = PROTOCOL_VERSION
         m.testnet = self.multiplexer.testnet
         for arg in response:
             m.arguments.append(str(arg))
@@ -167,6 +176,7 @@ class RPCProtocol:
             m.messageID = msgID
             m.sender.MergeFrom(self.proto)
             m.command = Command.Value(name.upper())
+            m.protoVer = PROTOCOL_VERSION
             for arg in args:
                 m.arguments.append(str(arg))
             m.testnet = self.multiplexer.testnet

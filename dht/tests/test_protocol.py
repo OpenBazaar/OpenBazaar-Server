@@ -19,10 +19,12 @@ from dht.node import Node
 from protos import message, objects
 from wireprotocol import OpenBazaarProtocol
 from db import datastore
+from constants import PROTOCOL_VERSION
 
 
 class KademliaProtocolTest(unittest.TestCase):
     def setUp(self):
+        self.version = PROTOCOL_VERSION
         self.public_ip = '123.45.67.89'
         self.port = 12345
         self.own_addr = (self.public_ip, self.port)
@@ -80,6 +82,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("PING")
+        m.protoVer = self.version
         m.testnet = False
         data = m.SerializeToString()
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
@@ -102,6 +105,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
@@ -133,6 +137,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
@@ -149,6 +154,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", "Bad Signature"])
         data = m.SerializeToString()
@@ -175,6 +181,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("DELETE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.signing_key.sign("Key")[:64]])
         data = m.SerializeToString()
@@ -194,6 +201,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STUN")
+        m.protoVer = self.version
         m.testnet = False
         data = m.SerializeToString()
         m.arguments.extend([self.public_ip, str(self.port)])
@@ -223,6 +231,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_NODE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("nodetofind"))
         data = m.SerializeToString()
@@ -250,6 +259,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.protoVer = self.version
         m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
         data = m.SerializeToString()
         self.handler.receive_message(data)
@@ -262,6 +272,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_VALUE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
@@ -300,6 +311,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.messageID = digest("msgid")
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("FIND_VALUE")
+        m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
@@ -491,6 +503,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m = message.Message()
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
+        m.protoVer = self.version
         m.arguments.append(digest("keyword"))
         m.arguments.append(digest("key"))
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())

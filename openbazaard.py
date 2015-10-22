@@ -7,7 +7,6 @@ from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
 from daemon import Daemon
-from upnp import PortMapper
 
 import stun
 import requests
@@ -27,6 +26,7 @@ from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
 from log import Logger, FileLogObserver
+from upnp import PortMapper
 
 
 def run(*args):
@@ -79,7 +79,7 @@ def run(*args):
     # kademlia
     node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
 
-    storage = ForgetfulStorage() if TESTNET else PersistentStorage(db)
+    storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.DATABASE)
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
