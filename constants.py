@@ -1,4 +1,4 @@
-__author__ = 'foxcarlos'
+__author__ = 'foxcarlos-TeamCreed'
 from os import getcwd
 from os.path import expanduser, join, isfile
 import ConfigParser
@@ -38,7 +38,6 @@ if isfile(finalFileConfig):
         seed_n_p = ''
         nameOptionSN = 'SEED_NODE'
 
-        #if fc.has_option(mySection, nameOptionSN):
         try:
             optionSeedNode = fc.get(mySection, nameOptionSN)
             # if have value
@@ -57,7 +56,6 @@ if isfile(finalFileConfig):
         seed_n_t_p = ''
         nameOptionSNT = 'SEED_NODE_TESTNET'
 
-        #if fc.has_option(mySection, nameOptionSNT):
         try:
             optionSeeNodeTest = fc.get(mySection, nameOptionSNT)
             # if have value
@@ -75,7 +73,6 @@ if isfile(finalFileConfig):
         ks = ''
         nameOptionKS = 'KSIZE'
 
-        #if fc.has_option(mySection, nameOptionKS):
         try:
             optionKSize = fc.get(mySection, nameOptionKS)
             # if have value
@@ -91,7 +88,6 @@ if isfile(finalFileConfig):
         alp = ''
         nameOptionAlpha = 'ALPHA'
 
-        #if fc.has_option(mySection, nameOptionAlpha):
         try:
             optionAlpha = fc.get(mySection, nameOptionAlpha)
             # if have value
@@ -107,7 +103,6 @@ if isfile(finalFileConfig):
         trans_f = ''
         nameOptionTrans_f = 'TRANSACTION_FEE'
 
-        #if fc.has_option(mySection, nameOptionTrans_f):
         try:
             optionTrans_f = fc.get(mySection, nameOptionTrans_f)
             # if have value
