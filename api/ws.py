@@ -159,6 +159,7 @@ class WSProtocol(WebSocketServerProtocol):
                         count += 1
                         self.factory.outstanding[message_id].append(l.contract_hash)
                         if count == 3:
+                            vendors.remove(node)
                             return count
                 vendors.remove(node)
             else:
