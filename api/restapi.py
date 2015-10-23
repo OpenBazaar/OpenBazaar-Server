@@ -68,7 +68,7 @@ class OpenBazaarAPI(APIResource):
                 request.write("No such image '%s'" % request.path)
             request.finish()
 
-        if "hash" in request.args:
+        if "hash" in request.args and len(request.args["hash"][0]) == 40:
             if self.db.HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
                 image_path = self.db.HashMap().get_file(unhexlify(request.args["hash"][0]))
             else:

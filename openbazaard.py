@@ -47,6 +47,7 @@ def run(*args):
 
     # NAT traversal
     port = args[2]
+    PortMapper().add_port_mapping(port, port, 'UDP')
     logger.info("Finding NAT Type...")
     try:
         response = stun.get_ip_info(source_port=port)
@@ -55,9 +56,6 @@ def run(*args):
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]
-
-    if response[0] != "Full Cone":
-        PortMapper().add_port_mapping(port, port, 'UDP')
 
     # TODO: use TURN if symmetric NAT
 

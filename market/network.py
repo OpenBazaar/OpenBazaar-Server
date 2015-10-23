@@ -118,7 +118,7 @@ class Server(object):
             else:
                 return None
 
-        if node_to_ask.ip is None:
+        if node_to_ask.ip is None or len(image_hash) != 20:
             return defer.succeed(None)
         self.log.info("fetching image %s from %s" % (image_hash.encode("hex"), node_to_ask))
         d = self.protocol.callGetImage(node_to_ask, image_hash)
