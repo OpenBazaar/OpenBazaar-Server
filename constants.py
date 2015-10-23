@@ -122,7 +122,7 @@ if isfile(finalFileConfig):
             optionLBS = fc.get(mySection, nameOptionLBS)
             # if have value
             if optionLBS:
-                libbitcoin_s = fc.get(mySection, nameOptionLBS)
+                libbitcoin_s = optionLBS
         except ConfigParser.Error, error:
             print error
 
@@ -134,7 +134,22 @@ if isfile(finalFileConfig):
             optionLBS_T = fc.get(mySection, nameOptionLBS_T)
             # if have value
             if optionLBS_T:
-                libbitcoin_s_t = fc.get(mySection, nameOptionLBS_T)
+                libbitcoin_s_t = optionLBS_T
+        except ConfigParser.Error, error:
+            print error
+
+        # Extract Config PROTOCOL_VERSION
+        protocol_ver = ''
+        nameOptionProtocolVer = 'PROTOCOL_VERSION'
+
+        try:
+            optionProtocolVer = fc.get(mySection, nameOptionProtocolVer)
+            # if have value
+            try:
+                protocol_ver = '' if not optionProtocolVer else int(optionProtocolVer)
+            except ValueError, error:
+                print error
+
         except ConfigParser.Error, error:
             print error
 
@@ -147,6 +162,7 @@ if isfile(finalFileConfig):
         TRANSACTION_FEE = trans_f
         LIBBITCOIN_SERVER = libbitcoin_s
         LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
+        PROTOCOL_VERSION = protocol_ver
 
     except ConfigParser.Error, error:
         print error
