@@ -138,21 +138,6 @@ if isfile(finalFileConfig):
         except ConfigParser.Error, error:
             print error
 
-        # Extract Config PROTOCOL_VERSION
-        protocol_ver = ''
-        nameOptionProtocolVer = 'PROTOCOL_VERSION'
-
-        try:
-            optionProtocolVer = fc.get(mySection, nameOptionProtocolVer)
-            # if have value
-            try:
-                protocol_ver = '' if not optionProtocolVer else int(optionProtocolVer)
-            except ValueError, error:
-                print error
-
-        except ConfigParser.Error, error:
-            print error
-
         # Constant Assignment
         DATA_FOLDER = data_f2
         SEED_NODE = (seed_n, seed_n_p)
@@ -162,7 +147,6 @@ if isfile(finalFileConfig):
         TRANSACTION_FEE = trans_f
         LIBBITCOIN_SERVER = libbitcoin_s
         LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
-        PROTOCOL_VERSION = protocol_ver
 
     except ConfigParser.Error, error:
         print error
