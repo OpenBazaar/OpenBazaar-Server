@@ -16,7 +16,7 @@ from twisted.internet import defer
 from log import Logger
 from protos.message import Message, Command
 from dht import node
-from constants import SEED_NODE, SEED_NODE_TESTNET, PROTOCOL_VERSION
+from constants import PROTOCOL_VERSION
 
 
 class RPCProtocol:
@@ -134,6 +134,10 @@ class RPCProtocol:
         should get through. This timeout will only fire if the hole punching
         fails.
         """
+        # pylint: disable=pointless-string-statement
+        """
+        Hole punching disabled for now
+
         seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
         if not hp and self.multiplexer.ip_address[0] != seed[0]:
             args = (address[0], address[1], b64encode(msgID))
@@ -142,12 +146,11 @@ class RPCProtocol:
             timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address, True)
             self._outstanding[msgID][1] = timeout
         else:
-            args = (b64encode(msgID), self._waitTimeout)
-            self.log.warning("did not receive reply for msg id %s within %i seconds" % args)
-            self._outstanding[msgID][0].callback((False, None))
-            del self._outstanding[msgID]
-            if address in self.multiplexer:
-                self.multiplexer[address].shutdown()
+        """
+        args = (b64encode(msgID), self._waitTimeout)
+        self.log.warning("did not receive reply for msg id %s within %i seconds" % args)
+        self._outstanding[msgID][0].callback((False, None))
+        del self._outstanding[msgID]
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
