@@ -109,9 +109,12 @@ class Server(object):
         """
 
         def get_result(result):
-            if digest(result[1][0]) == image_hash:
-                self.cache(result[1][0])
-                return result[1][0]
+            if result[0]:
+                if digest(result[1][0]) == image_hash:
+                    self.cache(result[1][0])
+                    return result[1][0]
+                else:
+                    return None
             else:
                 return None
 
