@@ -24,8 +24,8 @@ def bootstrap(use_testnet):
 
 
 if __name__ == '__main__':
-    use_testnet = False
+    testnet = False
     if len(sys.argv) > 1:
         if sys.argv[1] == 'testnet':
-            use_testnet = True
-    bootstrap(use_testnet)
+            testnet = True
+    bootstrap(testnet)
