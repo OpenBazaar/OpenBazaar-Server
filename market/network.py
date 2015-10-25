@@ -57,9 +57,10 @@ class Server(object):
         """
 
         def get_result(result):
-            if digest(result[1][0]) == contract_hash:
-                contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
-                try:
+            try:
+                if result[0] and digest(result[1][0]) == contract_hash:
+                    contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
+
                     # TODO: verify the guid in the contract matches this node's guid
                     signature = contract["vendor_offer"]["signature"]
                     pubkey = node_to_ask.signed_pubkey[64:]
@@ -82,14 +83,14 @@ class Server(object):
                         verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
                         verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
                         # should probably also validate the handle here.
-                except Exception:
+                    self.cache(result[1][0])
+                    if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
+                        for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
+                            self.get_image(node_to_ask, unhexlify(image_hash))
+                    return contract
+                else:
                     return None
-                self.cache(result[1][0])
-                if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
-                    for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
-                        self.get_image(node_to_ask, unhexlify(image_hash))
-                return contract
-            else:
+            except Exception:
                 return None
 
         if node_to_ask.ip is None:
@@ -109,13 +110,13 @@ class Server(object):
         """
 
         def get_result(result):
-            if result[0]:
-                if digest(result[1][0]) == image_hash:
+            try:
+                if result[0] and digest(result[1][0]) == image_hash:
                     self.cache(result[1][0])
                     return result[1][0]
                 else:
                     return None
-            else:
+            except Exception:
                 return None
 
         if node_to_ask.ip is None or len(image_hash) != 20:
@@ -313,10 +314,13 @@ class Server(object):
         """
 
         def save_to_db(result):
-            if result[0] and result[1][0] == "True":
-                self.db.FollowData().unfollow(node_to_unfollow.id)
-                return True
-            else:
+            try:
+                if result[0] and result[1][0] == "True":
+                    self.db.FollowData().unfollow(node_to_unfollow.id)
+                    return True
+                else:
+                    return False
+            except Exception:
                 return False
 
         signature = self.signing_key.sign("unfollow:" + node_to_unfollow.id)[:64]

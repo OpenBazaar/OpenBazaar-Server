@@ -111,8 +111,11 @@ class RPCProtocol:
         if funcname == "hole_punch":
             f(sender, *args)
         else:
-            d = defer.maybeDeferred(f, sender, *args)
-            d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
+            try:
+                d = defer.maybeDeferred(f, sender, *args)
+                d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
+            except TypeError:
+                self.log.error("Received %s message with too many args. %s" % (funcname, args))
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
         self.log.debug("sending response for msg id %s to %s" % (b64encode(msgID), sender))
