@@ -21,6 +21,7 @@ from zope.interface.exceptions import DoesNotImplement
 from interfaces import NotificationListener, MessageListener
 from collections import OrderedDict
 from keyutils.bip32utils import derive_childkey
+from base64 import b64encode
 
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
@@ -60,7 +61,7 @@ class MarketProtocol(RPCProtocol):
         try:
             with open(self.db.HashMap().get_file(image_hash), "rb") as filename:
                 image = filename.read()
-            return [image]
+            return [b64encode(image)]
         except Exception:
             self.log.warning("could not find image %s" % image_hash.encode('hex'))
             return ["None"]

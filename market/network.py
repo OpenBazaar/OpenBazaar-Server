@@ -23,6 +23,7 @@ from binascii import unhexlify
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
 from log import Logger
+from base64 import b64decode
 
 
 class Server(object):
@@ -111,9 +112,10 @@ class Server(object):
 
         def get_result(result):
             try:
-                if result[0] and digest(result[1][0]) == image_hash:
-                    self.cache(result[1][0])
-                    return result[1][0]
+                img = b64decode(result[1][0])
+                if digest(img) == image_hash:
+                    self.cache(img)
+                    return img
                 else:
                     return None
             except Exception:
