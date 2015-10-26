@@ -320,7 +320,7 @@ class Contract(object):
 
         price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
         if "bitcoin" in price_json:
-            order_json["buyer_order"]["order"]["payment"]["amount"] = price_json["bitcoin"]
+            amount_to_pay = float(price_json["bitcoin"]) * quantity
         else:
             currency_code = price_json["fiat"]["currency_code"]
             fiat_price = price_json["fiat"]["price"]
@@ -330,8 +330,46 @@ class Contract(object):
                 conversion_rate = response.read()
             except URLError:
                 return False
-            order_json["buyer_order"]["order"]["payment"]["amount"] = float(
-                "{0:.8f}".format(float(fiat_price) / float(conversion_rate)))
+            amount_to_pay = float("{0:.8f}".format(float(fiat_price) / float(conversion_rate))) * quantity
+        if "shipping" in self.contract["vendor_offer"]["listing"]:
+            if not self.contract["vendor_offer"]["listing"]["shipping"]["free"]:
+                shipping_origin = str(self.contract["vendor_offer"]["listing"]["shipping"][
+                    "shipping_origin"].upper())
+                if shipping_origin == country.upper():
+                    if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
+                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                            "bitcoin"]["domestic"]) * quantity
+                    else:
+                        price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
+                            "price"]["domestic"]
+                        currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                            "fiat"]["currency_code"]
+                        try:
+                            request = Request('https://api.bitcoinaverage.com/ticker/' + currency.upper() + '/last')
+                            response = urlopen(request)
+                            conversion_rate = response.read()
+                        except URLError:
+                            return False
+                        shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
+                else:
+                    if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
+                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                            "bitcoin"]["international"]) * quantity
+                    else:
+                        price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
+                            "price"]["international"]
+                        currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                            "fiat"]["currency_code"]
+                        try:
+                            request = Request('https://api.bitcoinaverage.com/ticker/' + currency.upper() + '/last')
+                            response = urlopen(request)
+                            conversion_rate = response.read()
+                        except URLError:
+                            return False
+                        shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
+                amount_to_pay += shipping_amount
+
+        order_json["buyer_order"]["order"]["payment"]["amount"] = amount_to_pay
 
         self.contract["buyer_order"] = order_json["buyer_order"]
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
@@ -847,17 +885,61 @@ class Contract(object):
             # TODO: verify the bitcoin signature after we add it
 
             # verify buyer included the correct bitcoin amount for payment
+            quantity = int(self.contract["buyer_order"]["order"]["quantity"])
             price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
             if "bitcoin" in price_json:
-                asking_price = price_json["bitcoin"]
+                asking_price = price_json["bitcoin"] * quantity
             else:
                 currency_code = price_json["fiat"]["currency_code"]
                 fiat_price = price_json["fiat"]["price"]
                 request = Request('https://api.bitcoinaverage.com/ticker/' + currency_code.upper() + '/last')
                 response = urlopen(request)
                 conversion_rate = response.read()
-                asking_price = float("{0:.8f}".format(float(fiat_price) / float(conversion_rate)))
-            if asking_price > self.contract["buyer_order"]["order"]["payment"]["amount"]:
+                asking_price = float("{0:.8f}".format(float(fiat_price) / float(conversion_rate))) * quantity
+
+            if "shipping" in self.contract["vendor_offer"]["listing"]:
+                if not self.contract["vendor_offer"]["listing"]["shipping"]["free"]:
+                    shipping_origin = self.contract["vendor_offer"]["listing"]["shipping"][
+                        "shipping_origin"].upper()
+                    if shipping_origin == self.contract["buyer_order"]["order"]["shipping"]["country"].upper():
+                        if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
+                            shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
+                                "flat_fee"]["bitcoin"]["domestic"]) * quantity
+                        else:
+                            price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
+                                "price"]["domestic"]
+                            currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                                "fiat"]["currency_code"]
+                            try:
+                                request = Request('https://api.bitcoinaverage.com/ticker/' +
+                                                  currency.upper() + '/last')
+                                response = urlopen(request)
+                                conversion_rate = response.read()
+                            except URLError:
+                                return False
+                            shipping_amount = float("{0:.8f}".format(float(price) /
+                                                                     float(conversion_rate))) * quantity
+                    else:
+                        if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
+                            shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
+                                "flat_fee"]["bitcoin"]["international"]) * quantity
+                        else:
+                            price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
+                                "price"]["international"]
+                            currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
+                                "fiat"]["currency_code"]
+                            try:
+                                request = Request('https://api.bitcoinaverage.com/ticker/' +
+                                                  currency.upper() + '/last')
+                                response = urlopen(request)
+                                conversion_rate = response.read()
+                            except URLError:
+                                return False
+                            shipping_amount = float("{0:.8f}".format(float(price) /
+                                                                     float(conversion_rate))) * quantity
+                    asking_price += shipping_amount
+
+            if asking_price > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
                 raise Exception("Insuffient Payment")
 
             # verify a valid moderator was selected

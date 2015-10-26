@@ -35,7 +35,7 @@ message Profile {
         optional bool nsfw                = 5 [default = false];
         optional bool vendor              = 6 [default = false];
         optional bool moderator           = 7 [default = false];
-        repeated bytes moderator_list    = 8;
+        repeated bytes moderator_list     = 8;
         optional string handle            = 9;
         optional string about             = 10;
         optional string short_description = 11;

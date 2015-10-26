@@ -9,8 +9,11 @@ myFileConfig = 'ob.cfg'
 finalFileConfig = join(currentPath, myFileConfig)
 fc = ConfigParser.ConfigParser(allow_no_value=True)
 
-# if file config found
-if isfile(finalFileConfig):
+# if file config not found
+if not isfile(finalFileConfig):
+    message = 'The file Config "{0}" not found'.format(finalFileConfig)
+    print message
+else:
     fc.read(finalFileConfig)
 
     # name of section in Config File ob.cfg
@@ -150,6 +153,3 @@ if isfile(finalFileConfig):
 
     except ConfigParser.Error, error:
         print error
-else:
-    message = 'The file Config "{0}" not found'.format(finalFileConfig)
-    print message
