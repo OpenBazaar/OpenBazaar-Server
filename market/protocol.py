@@ -23,6 +23,7 @@ from collections import OrderedDict
 from keyutils.bip32utils import derive_childkey
 from base64 import b64encode
 
+
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
@@ -53,7 +54,7 @@ class MarketProtocol(RPCProtocol):
             return [contract]
         except Exception:
             self.log.warning("could not find contract %s" % contract_hash.encode('hex'))
-            return ["None"]
+            return None
 
     def rpc_get_image(self, sender, image_hash):
         self.log.info("serving image %s to %s" % (image_hash.encode('hex'), sender))
@@ -64,7 +65,7 @@ class MarketProtocol(RPCProtocol):
             return [b64encode(image)]
         except Exception:
             self.log.warning("could not find image %s" % image_hash.encode('hex'))
-            return ["None"]
+            return None
 
     def rpc_get_profile(self, sender):
         self.log.info("serving profile to %s" % sender)
@@ -74,7 +75,7 @@ class MarketProtocol(RPCProtocol):
             return [proto, self.signing_key.sign(proto)[:64]]
         except Exception:
             self.log.error("unable to load the profile")
-            return ["None"]
+            return None
 
     def rpc_get_user_metadata(self, sender):
         self.log.info("serving user metadata to %s" % sender)
@@ -90,7 +91,7 @@ class MarketProtocol(RPCProtocol):
             return [m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.error("unable to load profile metadata")
-            return ["None"]
+            return None
 
     def rpc_get_listings(self, sender):
         self.log.info("serving store listings to %s" % sender)
@@ -104,7 +105,7 @@ class MarketProtocol(RPCProtocol):
             return [l.SerializeToString(), self.signing_key.sign(l.SerializeToString())[:64]]
         except Exception:
             self.log.warning("could not find any listings in the database")
-            return ["None"]
+            return None
 
     def rpc_get_contract_metadata(self, sender, contract_hash):
         self.log.info("serving metadata for contract %s to %s" % (contract_hash.encode("hex"), sender))
@@ -119,7 +120,7 @@ class MarketProtocol(RPCProtocol):
             return [ser, self.signing_key.sign(ser)[:64]]
         except Exception:
             self.log.warning("could not find metadata for contract %s" % contract_hash.encode("hex"))
-            return ["None"]
+            return None
 
     def rpc_follow(self, sender, proto, signature):
         self.log.info("received follow request from %s" % sender)
@@ -164,7 +165,7 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         ser = self.db.FollowData().get_followers()
         if ser is None:
-            return ["None"]
+            return None
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
@@ -173,7 +174,7 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         ser = self.db.FollowData().get_following()
         if ser is None:
-            return ["None"]
+            return None
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 

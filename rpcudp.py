@@ -17,6 +17,7 @@ from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import PROTOCOL_VERSION
+from protos.message import NOT_FOUND
 
 
 class RPCProtocol:
@@ -87,15 +88,21 @@ class RPCProtocol:
             self.db.VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
 
         msgID = m.messageID
-        data = tuple(m.arguments)
+        if m.command == NOT_FOUND:
+            data = None
+        else:
+            data = tuple(m.arguments)
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         else:
             self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
-        msgargs = (b64encode(msgID), sender)
-        self.log.debug("received response for message id %s from %s" % msgargs)
+        if data is not None:
+            msgargs = (b64encode(msgID), sender)
+            self.log.debug("received response for message id %s from %s" % msgargs)
+        else:
+            self.log.warning("received 404 error response from %s" % sender)
         d, timeout = self._outstanding[msgID]
         timeout.cancel()
         d.callback((True, data))
@@ -122,11 +129,14 @@ class RPCProtocol:
         m = Message()
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
-        m.command = Command.Value(funcname.upper())
         m.protoVer = PROTOCOL_VERSION
         m.testnet = self.multiplexer.testnet
-        for arg in response:
-            m.arguments.append(str(arg))
+        if response is None:
+            m.command = NOT_FOUND
+        else:
+            m.command = Command.Value(funcname.upper())
+            for arg in response:
+                m.arguments.append(str(arg))
         data = m.SerializeToString()
         connection.send_message(data)
 
