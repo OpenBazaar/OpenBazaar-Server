@@ -57,14 +57,16 @@ class MarketProtocol(RPCProtocol):
             return None
 
     def rpc_get_image(self, sender, image_hash):
-        self.log.info("serving image %s to %s" % (image_hash.encode('hex'), sender))
         self.router.addContact(sender)
         try:
+            if len(image_hash) != 20:
+                raise Exception("Invalid image hash")
+            self.log.info("serving image %s to %s" % (image_hash.encode('hex'), sender))
             with open(self.db.HashMap().get_file(image_hash), "rb") as filename:
                 image = filename.read()
             return [b64encode(image)]
         except Exception:
-            self.log.warning("could not find image %s" % image_hash.encode('hex'))
+            self.log.warning("could not find image %s" % image_hash[:20].encode('hex'))
             return None
 
     def rpc_get_profile(self, sender):
