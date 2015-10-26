@@ -17,7 +17,7 @@ from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import PROTOCOL_VERSION
-from protos.message import NOT_FOUND
+from protos.message import NOT_FOUND, GET_IMAGE
 
 
 class RPCProtocol:
@@ -137,7 +137,7 @@ class RPCProtocol:
         data = m.SerializeToString()
         connection.send_message(data)
 
-    def _timeout(self, msgID, address, hp=False):
+    def _timeout(self, msgID):
         """
         If a message times out we are first going to try hole punching because
         the node may be behind a restricted NAT. If it is successful, the original
@@ -174,6 +174,12 @@ class RPCProtocol:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
             self.multiplexer.send_datagram(" ", (ip, int(port)))
 
+    def _get_waitTimeout(self, command):
+        if command == GET_IMAGE:
+            return 100
+        else:
+            return self._waitTimeout
+
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
             return object.__getattr__(self, name)
@@ -186,7 +192,7 @@ class RPCProtocol:
         def func(address, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
-            m.messageID = msgID
+            m.messageID = str(msgID)
             m.sender.MergeFrom(self.proto)
             m.command = Command.Value(name.upper())
             m.protoVer = PROTOCOL_VERSION
@@ -194,12 +200,11 @@ class RPCProtocol:
                 m.arguments.append(str(arg))
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
-            self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+            d = defer.Deferred()
+            timeout = reactor.callLater(self._get_waitTimeout(m.command), self._timeout, msgID)
+            self._outstanding[msgID] = [d, timeout]
             self.multiplexer.send_message(data, address)
-            if name is not "hole_punch":
-                d = defer.Deferred()
-                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address)
-                self._outstanding[msgID] = [d, timeout]
-                return d
+            self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+            return d
 
         return func

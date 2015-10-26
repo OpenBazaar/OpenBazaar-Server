@@ -127,7 +127,7 @@ def run(*args):
             pass
 
     def timeout(client):
-        print logger.critical("Libbitcoin server offline")
+        logger.critical("Libbitcoin server offline")
         client = None
 
     if TESTNET:
@@ -138,7 +138,7 @@ def run(*args):
     # TODO: load libbitcoin server url from config file
 
     libbitcoin_client.fetch_last_height(height_fetched)
-    timeout = reactor.callLater(5, timeout, libbitcoin_client)
+    timeout = reactor.callLater(7, timeout, libbitcoin_client)
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
