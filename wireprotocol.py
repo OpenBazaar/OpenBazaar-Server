@@ -9,7 +9,7 @@ from interfaces import MessageProcessor
 from protos.message import Message, FIND_VALUE
 from log import Logger
 from dht.node import Node
-from protos.message import PING
+from protos.message import PING, NOT_FOUND
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -66,7 +66,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.node = Node(m.sender.guid, m.sender.ip, m.sender.port,
                                  m.sender.signedPublicKey, m.sender.vendor)
                 for processor in self.processors:
-                    if m.command in processor:
+                    if m.command in processor or m.command == NOT_FOUND:
                         processor.receive_message(datagram, self.connection)
             except Exception:
                 # If message isn't formatted property then ignore

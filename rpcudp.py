@@ -94,7 +94,7 @@ class RPCProtocol:
             data = tuple(m.arguments)
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
-        else:
+        elif m.command != NOT_FOUND:
             self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
@@ -121,7 +121,7 @@ class RPCProtocol:
             try:
                 d = defer.maybeDeferred(f, sender, *args)
                 d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
-            except TypeError:
+            except Exception:
                 self.log.error("Received %s message with too many args. %s" % (funcname, args))
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
