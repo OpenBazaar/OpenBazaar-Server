@@ -74,13 +74,15 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            for processor in self.processors:
-                if FIND_VALUE in processor and self.node is not None:
-                    processor.router.removeContact(self.node)
-            self.connection.unregister()
-            self.keep_alive_loop.stop()
-            if self.addr:
-                self.log.info("connection with %s terminated" % self.addr)
+            if self.connection is not None:
+                for processor in self.processors:
+                    if FIND_VALUE in processor and self.node is not None:
+                        processor.router.removeContact(self.node)
+                reactor.callLater(90, self.connection.unregister)
+                if self.addr:
+                    self.log.info("connection with %s terminated" % self.addr)
+                self.keep_alive_loop.stop()
+                self.connection = None
 
         def keep_alive(self):
             for processor in self.processors:

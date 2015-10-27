@@ -137,7 +137,7 @@ class RPCProtocol:
         data = m.SerializeToString()
         connection.send_message(data)
 
-    def _timeout(self, msgID):
+    def _timeout(self, msgID, address):
         """
         If a message times out we are first going to try hole punching because
         the node may be behind a restricted NAT. If it is successful, the original
@@ -161,6 +161,7 @@ class RPCProtocol:
         self.log.warning("did not receive reply for msg id %s within %i seconds" % args)
         self._outstanding[msgID][0].callback((False, None))
         del self._outstanding[msgID]
+        self.multiplexer[address].shutdown()
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
@@ -201,7 +202,7 @@ class RPCProtocol:
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
             d = defer.Deferred()
-            timeout = reactor.callLater(self._get_waitTimeout(m.command), self._timeout, msgID)
+            timeout = reactor.callLater(self._get_waitTimeout(m.command), self._timeout, msgID, address)
             self._outstanding[msgID] = [d, timeout]
             self.multiplexer.send_message(data, address)
             self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
