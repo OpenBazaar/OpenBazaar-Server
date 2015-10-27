@@ -17,7 +17,7 @@ from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import PROTOCOL_VERSION
-from protos.message import NOT_FOUND, GET_IMAGE
+from protos.message import NOT_FOUND, GET_IMAGE, GET_CONTRACT
 
 
 class RPCProtocol:
@@ -28,7 +28,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=3):
+    def __init__(self, proto, router, waitTimeout=5):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -175,7 +175,7 @@ class RPCProtocol:
             self.multiplexer.send_datagram(" ", (ip, int(port)))
 
     def _get_waitTimeout(self, command):
-        if command == GET_IMAGE:
+        if command == GET_IMAGE or command == GET_CONTRACT:
             return 100
         else:
             return self._waitTimeout
@@ -192,7 +192,7 @@ class RPCProtocol:
         def func(address, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
-            m.messageID = str(msgID)
+            m.messageID = msgID
             m.sender.MergeFrom(self.proto)
             m.command = Command.Value(name.upper())
             m.protoVer = PROTOCOL_VERSION
