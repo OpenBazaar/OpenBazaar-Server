@@ -6,7 +6,7 @@ from txrudp.crypto_connection import CryptoConnectionFactory
 from twisted.internet.task import LoopingCall
 from twisted.internet import task, reactor
 from interfaces import MessageProcessor
-from protos.message import Message, FIND_VALUE
+from protos.message import Message
 from log import Logger
 from dht.node import Node
 from protos.message import PING, NOT_FOUND
@@ -74,15 +74,15 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            if self.connection is not None:
-                for processor in self.processors:
-                    if FIND_VALUE in processor and self.node is not None:
-                        processor.router.removeContact(self.node)
-                reactor.callLater(90, self.connection.unregister)
-                if self.addr:
-                    self.log.info("connection with %s terminated" % self.addr)
+            for processor in self.processors:
+                processor.timeout((self.connection.dest_addr[0], self.connection.dest_addr[1]), self.node)
+            reactor.callLater(90, self.connection.unregister)
+            if self.addr:
+                self.log.info("connection with %s terminated" % self.addr)
+            try:
                 self.keep_alive_loop.stop()
-                self.connection = None
+            except Exception:
+                pass
 
         def keep_alive(self):
             for processor in self.processors:

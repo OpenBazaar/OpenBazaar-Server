@@ -11,13 +11,12 @@ import nacl.hash
 from binascii import hexlify
 from hashlib import sha1
 from base64 import b64encode
-from twisted.internet import reactor
 from twisted.internet import defer
 from log import Logger
 from protos.message import Message, Command
 from dht import node
 from constants import PROTOCOL_VERSION
-from protos.message import NOT_FOUND, GET_IMAGE, GET_CONTRACT
+from protos.message import NOT_FOUND
 
 
 class RPCProtocol:
@@ -103,8 +102,7 @@ class RPCProtocol:
             self.log.debug("received response for message id %s from %s" % msgargs)
         else:
             self.log.warning("received 404 error response from %s" % sender)
-        d, timeout = self._outstanding[msgID]
-        timeout.cancel()
+        d = self._outstanding[msgID][0]
         d.callback((True, data))
         del self._outstanding[msgID]
 
@@ -137,31 +135,17 @@ class RPCProtocol:
         data = m.SerializeToString()
         connection.send_message(data)
 
-    def _timeout(self, msgID, address):
+    def timeout(self, address, node_to_remove):
         """
-        If a message times out we are first going to try hole punching because
-        the node may be behind a restricted NAT. If it is successful, the original
-        should get through. This timeout will only fire if the hole punching
-        fails.
+        This timeout is called by the txrudp connection handler. We will run through the
+        outstanding messages and callback false on any waiting on this IP address.
         """
-        # pylint: disable=pointless-string-statement
-        """
-        Hole punching disabled for now
-
-        seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
-        if not hp and self.multiplexer.ip_address[0] != seed[0]:
-            args = (address[0], address[1], b64encode(msgID))
-            self.log.debug("did not receive reply from %s:%s for msgID %s, trying hole punching..." % args)
-            self.hole_punch(seed, address[0], address[1], "True")
-            timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address, True)
-            self._outstanding[msgID][1] = timeout
-        else:
-        """
-        args = (b64encode(msgID), self._waitTimeout)
-        self.log.warning("did not receive reply for msg id %s within %i seconds" % args)
-        self._outstanding[msgID][0].callback((False, None))
-        del self._outstanding[msgID]
-        self.multiplexer[address].shutdown()
+        if node_to_remove is not None:
+            self.router.removeContact(node_to_remove)
+        for msgID, val in self._outstanding.items():
+            if address == val[1]:
+                val[0].callback((False, None))
+                del self._outstanding[msgID]
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
@@ -174,12 +158,6 @@ class RPCProtocol:
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
             self.multiplexer.send_datagram(" ", (ip, int(port)))
-
-    def _get_waitTimeout(self, command):
-        if command == GET_IMAGE or command == GET_CONTRACT:
-            return 100
-        else:
-            return self._waitTimeout
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
@@ -202,8 +180,7 @@ class RPCProtocol:
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
             d = defer.Deferred()
-            timeout = reactor.callLater(self._get_waitTimeout(m.command), self._timeout, msgID, address)
-            self._outstanding[msgID] = [d, timeout]
+            self._outstanding[msgID] = [d, address]
             self.multiplexer.send_message(data, address)
             self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             return d
