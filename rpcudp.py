@@ -103,7 +103,8 @@ class RPCProtocol:
         else:
             self.log.warning("received 404 error response from %s" % sender)
         d = self._outstanding[msgID][0]
-        self._outstanding[msgID][2].cancel()
+        if self._outstanding[msgID][2].active():
+            self._outstanding[msgID][2].cancel()
         d.callback((True, data))
         del self._outstanding[msgID]
 
@@ -158,7 +159,9 @@ class RPCProtocol:
             self.hole_punch((ip, int(port)), sender.ip, sender.port)
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
-            self.multiplexer.send_datagram(" ", (ip, int(port)))
+            # pylint: disable=W0612
+            for i in range(20):
+                self.multiplexer.send_datagram("", (ip, int(port)))
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
@@ -184,6 +187,8 @@ class RPCProtocol:
             if name != "hole_punch":
                 seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
                 hole_punch = reactor.callLater(3, self.hole_punch, seed, address[0], address[1], "True")
+                if address in self.multiplexer:
+                    hole_punch.cancel()
                 self._outstanding[msgID] = [d, address, hole_punch]
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             else:
