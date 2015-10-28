@@ -141,6 +141,24 @@ else:
         except ConfigParser.Error, error:
             print error
 
+        # Extract Config SEED
+        seed = ''
+        seed = ''
+        nameOptionS = 'SEED'
+
+        try:
+            optionSeed = fc.get(mySection, nameOptionS)
+            # if have value
+            if optionSeed:
+                if ':' in fc.get(mySection, nameOptionS):
+                    seed_n = fc.get(mySection, nameOptionS).split(':')[0]
+                    try:
+                        seed_n_p = int(fc.get(mySection, nameOptionSN).split(':')[1])
+                    except ValueError, error:
+                        print error
+        except ConfigParser.Error, error:
+            print error
+
         # Constant Assignment
         DATA_FOLDER = data_f2
         SEED_NODE = (seed_n, seed_n_p)
