@@ -20,7 +20,7 @@ import objects
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
   package='',
-  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"y\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x11\n\targuments\x18\x04 \x03(\x0c\x12\x16\n\x07testnet\x18\x05 \x01(\x08:\x05\x66\x61lse*\xaf\x03\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\x0e\n\nHOLE_PUNCH\x10\x03\x12\t\n\x05STORE\x10\x04\x12\n\n\x06\x44\x45LETE\x10\x05\x12\n\n\x06NOTIFY\x10\x06\x12\x0b\n\x07MESSAGE\x10\x07\x12\n\n\x06\x46OLLOW\x10\x08\x12\x0c\n\x08UNFOLLOW\x10\t\x12\t\n\x05ORDER\x10\n\x12\x16\n\x12ORDER_CONFIRMATION\x10\x0b\x12\x12\n\x0e\x43OMPLETE_ORDER\x10\x0c\x12\r\n\tFIND_NODE\x10\r\x12\x0e\n\nFIND_VALUE\x10\x0e\x12\x10\n\x0cGET_CONTRACT\x10\x0f\x12\r\n\tGET_IMAGE\x10\x10\x12\x0f\n\x0bGET_PROFILE\x10\x11\x12\x10\n\x0cGET_LISTINGS\x10\x12\x12\x15\n\x11GET_USER_METADATA\x10\x13\x12\x19\n\x15GET_CONTRACT_METADATA\x10\x14\x12\x11\n\rGET_FOLLOWING\x10\x15\x12\x11\n\rGET_FOLLOWERS\x10\x16\x12\x10\n\x0b\x42\x41\x44_REQUEST\x10\x90\x03\x12\x0e\n\tNOT_FOUND\x10\x94\x03\x12\x0e\n\tCALM_DOWN\x10\xa4\x03\x12\x12\n\rUNKNOWN_ERROR\x10\x88\x04')
+  serialized_pb=_b('\n\rmessage.proto\x1a\robjects.proto\"\x8b\x01\n\x07Message\x12\x11\n\tmessageID\x18\x01 \x02(\x0c\x12\x15\n\x06sender\x18\x02 \x02(\x0b\x32\x05.Node\x12\x19\n\x07\x63ommand\x18\x03 \x02(\x0e\x32\x08.Command\x12\x10\n\x08protoVer\x18\x04 \x02(\r\x12\x11\n\targuments\x18\x05 \x03(\x0c\x12\x16\n\x07testnet\x18\x06 \x01(\x08:\x05\x66\x61lse*\xaf\x03\n\x07\x43ommand\x12\x08\n\x04PING\x10\x01\x12\x08\n\x04STUN\x10\x02\x12\x0e\n\nHOLE_PUNCH\x10\x03\x12\t\n\x05STORE\x10\x04\x12\n\n\x06\x44\x45LETE\x10\x05\x12\n\n\x06NOTIFY\x10\x06\x12\x0b\n\x07MESSAGE\x10\x07\x12\n\n\x06\x46OLLOW\x10\x08\x12\x0c\n\x08UNFOLLOW\x10\t\x12\t\n\x05ORDER\x10\n\x12\x16\n\x12ORDER_CONFIRMATION\x10\x0b\x12\x12\n\x0e\x43OMPLETE_ORDER\x10\x0c\x12\r\n\tFIND_NODE\x10\r\x12\x0e\n\nFIND_VALUE\x10\x0e\x12\x10\n\x0cGET_CONTRACT\x10\x0f\x12\r\n\tGET_IMAGE\x10\x10\x12\x0f\n\x0bGET_PROFILE\x10\x11\x12\x10\n\x0cGET_LISTINGS\x10\x12\x12\x15\n\x11GET_USER_METADATA\x10\x13\x12\x19\n\x15GET_CONTRACT_METADATA\x10\x14\x12\x11\n\rGET_FOLLOWING\x10\x15\x12\x11\n\rGET_FOLLOWERS\x10\x16\x12\x10\n\x0b\x42\x41\x44_REQUEST\x10\x90\x03\x12\x0e\n\tNOT_FOUND\x10\x94\x03\x12\x0e\n\tCALM_DOWN\x10\xa4\x03\x12\x12\n\rUNKNOWN_ERROR\x10\x88\x04')
   ,
   dependencies=[objects.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -138,8 +138,8 @@ _COMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=156,
-  serialized_end=587,
+  serialized_start=175,
+  serialized_end=606,
 )
 _sym_db.RegisterEnumDescriptor(_COMMAND)
 
@@ -202,15 +202,22 @@ _MESSAGE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='arguments', full_name='Message.arguments', index=3,
-      number=4, type=12, cpp_type=9, label=3,
+      name='protoVer', full_name='Message.protoVer', index=3,
+      number=4, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='arguments', full_name='Message.arguments', index=4,
+      number=5, type=12, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='testnet', full_name='Message.testnet', index=4,
-      number=5, type=8, cpp_type=7, label=1,
+      name='testnet', full_name='Message.testnet', index=5,
+      number=6, type=8, cpp_type=7, label=1,
       has_default_value=True, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -226,8 +233,8 @@ _MESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=32,
-  serialized_end=153,
+  serialized_start=33,
+  serialized_end=172,
 )
 
 _MESSAGE.fields_by_name['sender'].message_type = objects._NODE

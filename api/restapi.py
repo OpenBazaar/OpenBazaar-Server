@@ -18,6 +18,7 @@ from dht.utils import digest
 from market.profile import Profile
 from market.contracts import Contract
 from collections import OrderedDict
+from upnp import PortMapper
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -67,7 +68,7 @@ class OpenBazaarAPI(APIResource):
                 request.write("No such image '%s'" % request.path)
             request.finish()
 
-        if "hash" in request.args:
+        if "hash" in request.args and len(request.args["hash"][0]) == 40:
             if self.db.HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
                 image_path = self.db.HashMap().get_file(unhexlify(request.args["hash"][0]))
             else:
@@ -279,7 +280,7 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
-            return server.NOT_DONE_YET
+        return server.NOT_DONE_YET
 
     @POST('^/api/v1/unfollow')
     def unfollow(self, request):
@@ -293,7 +294,7 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
-            return server.NOT_DONE_YET
+        return server.NOT_DONE_YET
 
     # pylint: disable=R0201
     @POST('^/api/v1/profile')
@@ -401,8 +402,8 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps({}))
                 request.finish()
 
-        if "id" in request.args:
-            if "guid" in request.args:
+        if "id" in request.args and len(request.args["id"][0]) == 40:
+            if "guid" in request.args and len(request.args["guid"][0]) == 40:
                 def get_node(node):
                     if node is not None:
                         self.mserver.get_contract(node, unhexlify(request.args["id"][0]))\
@@ -502,6 +503,7 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
+        PortMapper().clean_my_mappings(self.kserver.node.port)
         self.protocol.shutdown()
         reactor.stop()
 
@@ -725,3 +727,26 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps(settings_json, indent=4))
             request.finish()
         return server.NOT_DONE_YET
+
+    @GET('^/api/v1/connected_peers')
+    def get_connected_peers(self, request):
+        request.write(json.dumps(self.protocol.keys(), indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
+    @GET('^/api/v1/routing_table')
+    def get_routing_table(self, request):
+        nodes = []
+        for bucket in self.kserver.protocol.router.buckets:
+            for node in bucket.nodes.values():
+                n = {
+                    "guid": node.id.encode("hex"),
+                    "ip": node.ip,
+                    "port": node.port,
+                    "vendor": node.vendor
+                }
+                nodes.append(n)
+        request.write(json.dumps(nodes, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+

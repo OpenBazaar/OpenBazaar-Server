@@ -1,14 +1,15 @@
 __author__ = 'chris'
 from zope.interface.verify import verifyObject
 from txrudp.rudp import ConnectionMultiplexer
-from txrudp.connection import HandlerFactory, Handler
+from txrudp.connection import HandlerFactory, Handler, State
 from txrudp.crypto_connection import CryptoConnectionFactory
 from twisted.internet.task import LoopingCall
+from twisted.internet import task, reactor
 from interfaces import MessageProcessor
-from protos.message import Message, FIND_VALUE
+from protos.message import Message
 from log import Logger
 from dht.node import Node
-from protos.message import PING
+from protos.message import PING, NOT_FOUND
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -31,28 +32,33 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.ws = None
         self.blockchain = None
         self.processors = []
-        self.factory = self.ConnHandlerFactory(self.processors, self)
+        self.factory = self.ConnHandlerFactory(self.processors)
         self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
-        LoopingCall(self.log_connected_nodes).start(60)
-
-    def log_connected_nodes(self):
-        self.log.info("Connected nodes: %s" % self.keys())
 
     class ConnHandler(Handler):
 
-        def __init__(self, processors, active_connections, *args, **kwargs):
+        def __init__(self, processors, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
             self.log = Logger(system=self)
             self.processors = processors
-            self.active_connections = active_connections
             self.connection = None
             self.node = None
-            LoopingCall(self.keep_alive).start(300, now=False)
+            self.keep_alive_loop = LoopingCall(self.keep_alive)
+            self.keep_alive_loop.start(300, now=False)
+            self.on_connection_made()
+            self.addr = None
+
+        def on_connection_made(self):
+            if self.connection is None or self.connection.state == State.CONNECTING:
+                return task.deferLater(reactor, 1, self.on_connection_made)
+            if self.connection.state == State.CONNECTED:
+                self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
+                self.log.info("connected to %s" % self.addr)
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
-                self.log.warning("received datagram too small from %s, ignoring" % str(self.connection.dest_addr))
+                self.log.warning("received datagram too small from %s, ignoring" % self.addr)
                 return False
             m = Message()
             try:
@@ -60,21 +66,23 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.node = Node(m.sender.guid, m.sender.ip, m.sender.port,
                                  m.sender.signedPublicKey, m.sender.vendor)
                 for processor in self.processors:
-                    if m.command in processor:
+                    if m.command in processor or m.command == NOT_FOUND:
                         processor.receive_message(datagram, self.connection)
             except Exception:
                 # If message isn't formatted property then ignore
-                self.log.warning("Received unknown message from %s, ignoring" % str(self.connection.dest_addr))
+                self.log.warning("received unknown message from %s, ignoring" % self.addr)
                 return False
 
         def handle_shutdown(self):
-            self.connection.unregister()
             for processor in self.processors:
-                if FIND_VALUE in processor and self.node is not None:
-                    processor.router.removeContact(self.node)
-            self.log.info(
-                "Connection with (%s, %s) terminated" % (self.connection.dest_addr[0],
-                                                         self.connection.dest_addr[1]))
+                processor.timeout((self.connection.dest_addr[0], self.connection.dest_addr[1]), self.node)
+            reactor.callLater(30, self.connection.unregister)
+            if self.addr:
+                self.log.info("connection with %s terminated" % self.addr)
+            try:
+                self.keep_alive_loop.stop()
+            except Exception:
+                pass
 
         def keep_alive(self):
             for processor in self.processors:
@@ -83,13 +91,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
     class ConnHandlerFactory(HandlerFactory):
 
-        def __init__(self, processors, active_connections):
+        def __init__(self, processors):
             super(OpenBazaarProtocol.ConnHandlerFactory, self).__init__()
             self.processors = processors
-            self.active_connecitons = active_connections
 
         def make_new_handler(self, *args, **kwargs):
-            return OpenBazaarProtocol.ConnHandler(self.processors, self.active_connecitons)
+            return OpenBazaarProtocol.ConnHandler(self.processors)
 
     def register_processor(self, processor):
         """Add a new class which implements the `MessageProcessor` interface."""

@@ -15,6 +15,7 @@ from twisted.internet import defer
 from binascii import unhexlify
 from dht.node import Node
 
+
 class WSProtocol(WebSocketServerProtocol):
     """
     Handles new incoming requests coming from a websocket.

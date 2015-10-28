@@ -4,7 +4,7 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from zope.interface import implements
 import nacl.signing
 from dht.node import Node
@@ -91,7 +91,7 @@ class KademliaProtocol(RPCProtocol):
         return ["False"]
 
     def rpc_find_node(self, sender, key):
-        self.log.info("finding neighbors of %s in local table" % key.encode('hex'))
+        self.log.debug("finding neighbors of %s in local table" % key.encode('hex'))
         self.addToRouter(sender)
         node = Node(key)
         nodeList = self.router.findNeighbors(node, exclude=sender)
@@ -169,7 +169,7 @@ class KademliaProtocol(RPCProtocol):
         if result[0]:
             if self.router.isNewNode(node):
                 self.transferKeyValues(node)
-            self.log.info("got response from %s, adding to router" % node)
+            self.log.debug("got response from %s, adding to router" % node)
             self.router.addContact(node)
         else:
             self.log.debug("no response from %s, removing from router" % node)
@@ -184,7 +184,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if self.router.isNewNode(node):
             self.log.debug("Found a new node, transferring key/values")
-            self.transferKeyValues(node)
+            reactor.callLater(1, self.transferKeyValues, node)
         self.router.addContact(node)
 
     def __iter__(self):

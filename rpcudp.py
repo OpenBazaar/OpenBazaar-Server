@@ -11,12 +11,12 @@ import nacl.hash
 from binascii import hexlify
 from hashlib import sha1
 from base64 import b64encode
-from twisted.internet import reactor
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from log import Logger
 from protos.message import Message, Command
 from dht import node
-from constants import SEED_NODE, SEED_NODE_TESTNET
+from constants import PROTOCOL_VERSION, SEED_NODE, SEED_NODE_TESTNET
+from protos.message import NOT_FOUND
 
 
 class RPCProtocol:
@@ -27,7 +27,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=5, noisy=True):
+    def __init__(self, proto, router, waitTimeout=5):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -43,7 +43,6 @@ class RPCProtocol:
         self.router = router
         self._waitTimeout = waitTimeout
         self._outstanding = {}
-        self.noisy = noisy
         self.log = Logger(system=self)
 
     def receive_message(self, datagram, connection):
@@ -53,12 +52,19 @@ class RPCProtocol:
             sender = node.Node(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey, m.sender.vendor)
         except Exception:
             # If message isn't formatted property then ignore
-            self.log.warning("Received unknown message from %s, ignoring" % str(connection.dest_addr))
+            self.log.warning("received unknown message from %s, ignoring" % str(connection.dest_addr))
             return False
 
         if m.testnet != self.multiplexer.testnet:
-            self.log.warning("Received message from %s with incorrect network parameters." %
+            self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
+            connection.shutdown()
+            return False
+
+        if m.protoVer < PROTOCOL_VERSION:
+            self.log.warning("received message from %s with incompatible protocol version." %
+                             str(connection.dest_addr))
+            connection.shutdown()
             return False
 
         # Check that the GUID is valid. If not, ignore
@@ -73,31 +79,37 @@ class RPCProtocol:
                     raise Exception('Invalid GUID')
 
             except Exception:
-                self.log.warning("Received message from sender with invalid GUID, ignoring")
+                self.log.warning("received message from sender with invalid GUID, ignoring")
+                connection.shutdown()
                 return False
 
         if m.sender.vendor:
             self.db.VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
 
         msgID = m.messageID
-        data = tuple(m.arguments)
+        if m.command == NOT_FOUND:
+            data = None
+        else:
+            data = tuple(m.arguments)
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
-        else:
+        elif m.command != NOT_FOUND:
             self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
-        msgargs = (b64encode(msgID), sender)
-        if self.noisy:
-            self.log.debug("Received response for message id %s from %s" % msgargs)
-        d, timeout = self._outstanding[msgID]
-        timeout.cancel()
+        if data is not None:
+            msgargs = (b64encode(msgID), sender)
+            self.log.debug("received response for message id %s from %s" % msgargs)
+        else:
+            self.log.warning("received 404 error response from %s" % sender)
+        d = self._outstanding[msgID][0]
+        if self._outstanding[msgID][2].active():
+            self._outstanding[msgID][2].cancel()
         d.callback((True, data))
         del self._outstanding[msgID]
 
     def _acceptRequest(self, msgID, funcname, args, sender, connection):
-        if self.noisy:
-            self.log.debug("Received request from %s, command %s" % (sender, funcname.upper()))
+        self.log.debug("received request from %s, command %s" % (sender, funcname.upper()))
         f = getattr(self, "rpc_%s" % funcname, None)
         if f is None or not callable(f):
             msgargs = (self.__class__.__name__, funcname)
@@ -110,38 +122,32 @@ class RPCProtocol:
             d.addCallback(self._sendResponse, funcname, msgID, sender, connection)
 
     def _sendResponse(self, response, funcname, msgID, sender, connection):
-        if self.noisy:
-            self.log.debug("Sending response for msg id %s to %s" % (b64encode(msgID), sender))
+        self.log.debug("sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
         m.sender.MergeFrom(self.proto)
-        m.command = Command.Value(funcname.upper())
+        m.protoVer = PROTOCOL_VERSION
         m.testnet = self.multiplexer.testnet
-        for arg in response:
-            m.arguments.append(str(arg))
+        if response is None:
+            m.command = NOT_FOUND
+        else:
+            m.command = Command.Value(funcname.upper())
+            for arg in response:
+                m.arguments.append(str(arg))
         data = m.SerializeToString()
         connection.send_message(data)
 
-    def _timeout(self, msgID, address, hp=False):
+    def timeout(self, address, node_to_remove):
         """
-        If a message times out we are first going to try hole punching because
-        the node may be behind a restricted NAT. If it is successful, the original
-        should get through. This timeout will only fire if the hole punching
-        fails.
+        This timeout is called by the txrudp connection handler. We will run through the
+        outstanding messages and callback false on any waiting on this IP address.
         """
-        seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
-        if not hp and self.multiplexer.ip_address[0] != seed[0]:
-            self.log.warning("Did not receive reply for msg id %s, trying hole punching" % (b64encode(msgID)))
-            self.hole_punch(seed, address[0], address[1], "True")
-            timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address, True)
-            self._outstanding[msgID][1] = timeout
-        else:
-            args = (b64encode(msgID), self._waitTimeout)
-            self.log.warning("Did not receive reply for msg id %s within %i seconds" % args)
-            self._outstanding[msgID][0].callback((False, None))
-            del self._outstanding[msgID]
-            if address in self.multiplexer:
-                self.multiplexer[address].shutdown()
+        if node_to_remove is not None:
+            self.router.removeContact(node_to_remove)
+        for msgID, val in self._outstanding.items():
+            if address == val[1]:
+                val[0].callback((False, None))
+                del self._outstanding[msgID]
 
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
@@ -152,8 +158,10 @@ class RPCProtocol:
         if relay == "True":
             self.hole_punch((ip, int(port)), sender.ip, sender.port)
         else:
-            self.log.debug("Punching through NAT for %s:%s" % (ip, port))
-            self.multiplexer.send_message(" ", (ip, int(port)))
+            self.log.debug("punching through NAT for %s:%s" % (ip, port))
+            # pylint: disable=W0612
+            for i in range(20):
+                self.multiplexer.send_datagram("", (ip, int(port)))
 
     def __getattr__(self, name):
         if name.startswith("_") or name.startswith("rpc_"):
@@ -170,17 +178,22 @@ class RPCProtocol:
             m.messageID = msgID
             m.sender.MergeFrom(self.proto)
             m.command = Command.Value(name.upper())
+            m.protoVer = PROTOCOL_VERSION
             for arg in args:
                 m.arguments.append(str(arg))
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
-            if self.noisy:
+            d = defer.Deferred()
+            if name != "hole_punch":
+                seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
+                hole_punch = reactor.callLater(3, self.hole_punch, seed, address[0], address[1], "True")
+                if address in self.multiplexer:
+                    hole_punch.cancel()
+                self._outstanding[msgID] = [d, address, hole_punch]
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+            else:
+                self.log.debug("sending hole punch message to %s" % args[0] + ":" + str(args[1]))
             self.multiplexer.send_message(data, address)
-            if name is not "hole_punch":
-                d = defer.Deferred()
-                timeout = reactor.callLater(self._waitTimeout, self._timeout, msgID, address)
-                self._outstanding[msgID] = [d, timeout]
-                return d
+            return d
 
         return func

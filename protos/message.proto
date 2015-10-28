@@ -14,8 +14,9 @@ message Message {
 	required bytes messageID        = 1;
 	required Node sender            = 2;
 	required Command command        = 3;
-	repeated bytes arguments        = 4;
-	optional bool testnet           = 5 [default = false];
+	required uint32 protoVer        = 4;
+	repeated bytes arguments        = 5;
+	optional bool testnet           = 6 [default = false];
 }
 
 //A list of commands accepted by nodes

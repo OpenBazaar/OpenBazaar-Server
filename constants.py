@@ -3,6 +3,8 @@ from os import getcwd
 from os.path import expanduser, join
 import ConfigParser
 
+PROTOCOL_VERSION = 3
+
 dataFolderPath = expanduser('~')
 currentPath = getcwd()
 myFileConfig = 'ob.cfg'
