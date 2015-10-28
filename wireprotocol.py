@@ -76,7 +76,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         def handle_shutdown(self):
             for processor in self.processors:
                 processor.timeout((self.connection.dest_addr[0], self.connection.dest_addr[1]), self.node)
-            reactor.callLater(90, self.connection.unregister)
+            reactor.callLater(30, self.connection.unregister)
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
             try:

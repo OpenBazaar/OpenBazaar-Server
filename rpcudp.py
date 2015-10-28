@@ -11,11 +11,11 @@ import nacl.hash
 from binascii import hexlify
 from hashlib import sha1
 from base64 import b64encode
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from log import Logger
 from protos.message import Message, Command
 from dht import node
-from constants import PROTOCOL_VERSION
+from constants import PROTOCOL_VERSION, SEED_NODE, SEED_NODE_TESTNET
 from protos.message import NOT_FOUND
 
 
@@ -103,6 +103,7 @@ class RPCProtocol:
         else:
             self.log.warning("received 404 error response from %s" % sender)
         d = self._outstanding[msgID][0]
+        self._outstanding[msgID][2].cancel()
         d.callback((True, data))
         del self._outstanding[msgID]
 
@@ -180,9 +181,14 @@ class RPCProtocol:
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
             d = defer.Deferred()
-            self._outstanding[msgID] = [d, address]
+            if name != "hole_punch":
+                seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
+                hole_punch = reactor.callLater(3, self.hole_punch, seed, address[0], address[1], "True")
+                self._outstanding[msgID] = [d, address, hole_punch]
+                self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+            else:
+                self.log.debug("sending hole punch message to %s" % args[0] + ":" + str(args[1]))
             self.multiplexer.send_message(data, address)
-            self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
             return d
 
         return func

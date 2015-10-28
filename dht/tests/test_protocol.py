@@ -10,7 +10,7 @@ import nacl.encoding
 import nacl.hash
 from txrudp import connection, rudp, packet, constants
 from twisted.trial import unittest
-from twisted.internet import task, address, udp, defer
+from twisted.internet import task, address, udp, defer, reactor
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
@@ -455,7 +455,7 @@ class KademliaProtocolTest(unittest.TestCase):
         message_id = digest("msgid")
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         d = defer.Deferred()
-        self.protocol._outstanding[message_id] = (d, self.addr1)
+        self.protocol._outstanding[message_id] = (d, self.addr1, reactor.callLater(5, handle_response))
         self.protocol._acceptResponse(message_id, ["test"], n)
 
         return d.addCallback(handle_response)

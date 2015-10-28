@@ -280,7 +280,7 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
-            return server.NOT_DONE_YET
+        return server.NOT_DONE_YET
 
     @POST('^/api/v1/unfollow')
     def unfollow(self, request):
@@ -294,7 +294,7 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": False, "reason": "could not resolve guid"}, indent=4))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
-            return server.NOT_DONE_YET
+        return server.NOT_DONE_YET
 
     # pylint: disable=R0201
     @POST('^/api/v1/profile')
