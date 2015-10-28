@@ -23,7 +23,6 @@ from binascii import unhexlify
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
 from log import Logger
-from base64 import b64decode
 
 
 class Server(object):
@@ -68,22 +67,23 @@ class Server(object):
                     verify_key = nacl.signing.VerifyKey(pubkey)
                     verify_key.verify(json.dumps(contract["vendor_offer"]["listing"], indent=4),
                                       unhexlify(signature))
-                    for moderator in contract["vendor_offer"]["listing"]["moderators"]:
-                        guid = moderator["guid"]
-                        guid_key = moderator["pubkeys"]["signing"]["key"]
-                        guid_sig = moderator["pubkeys"]["signing"]["signature"]
-                        enc_key = moderator["pubkeys"]["encryption"]["key"]
-                        enc_sig = moderator["pubkeys"]["encryption"]["signature"]
-                        bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
-                        bitcoin_sig = moderator["pubkeys"]["bitcoin"]["signature"]
-                        h = nacl.hash.sha512(unhexlify(guid_sig) + unhexlify(guid_key))
-                        pow_hash = h[64:128]
-                        if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
-                            raise Exception('Invalid GUID')
-                        verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
-                        verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
-                        verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
-                        # should probably also validate the handle here.
+                    if "moderators" in contract["vendor_offer"]["listing"]:
+                        for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+                            guid = moderator["guid"]
+                            guid_key = moderator["pubkeys"]["signing"]["key"]
+                            guid_sig = moderator["pubkeys"]["signing"]["signature"]
+                            enc_key = moderator["pubkeys"]["encryption"]["key"]
+                            enc_sig = moderator["pubkeys"]["encryption"]["signature"]
+                            bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
+                            bitcoin_sig = moderator["pubkeys"]["bitcoin"]["signature"]
+                            h = nacl.hash.sha512(unhexlify(guid_sig) + unhexlify(guid_key))
+                            pow_hash = h[64:128]
+                            if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
+                                raise Exception('Invalid GUID')
+                            verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
+                            verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
+                            verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
+                            # should probably also validate the handle here.
                     self.cache(result[1][0])
                     if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
                         for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
@@ -112,10 +112,9 @@ class Server(object):
 
         def get_result(result):
             try:
-                img = b64decode(result[1][0])
-                if digest(img) == image_hash:
-                    self.cache(img)
-                    return img
+                if result[0] and digest(result[1][0]) == image_hash:
+                    self.cache(result[1][0])
+                    return result[1][0]
                 else:
                     return None
             except Exception:
