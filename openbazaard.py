@@ -18,7 +18,7 @@ from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, KSIZE, ALPHA
+from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET
 from market import network
 from market.listeners import MessageListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
@@ -131,9 +131,9 @@ def run(*args):
         client = None
 
     if TESTNET:
-        libbitcoin_client = LibbitcoinClient("tcp://libbitcoin2.openbazaar.org:9091")
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
     else:
-        libbitcoin_client = LibbitcoinClient("tcp://libbitcoin1.openbazaar.org:9091")
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
 
     # TODO: load libbitcoin server url from config file
 
