@@ -354,6 +354,7 @@ class OpenBazaarAPI(APIResource):
             p.update(u)
             request.write(json.dumps({"success": True}))
             request.finish()
+            self.kserver.node.vendor = p.get().vendor
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

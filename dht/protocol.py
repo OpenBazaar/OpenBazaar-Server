@@ -29,7 +29,7 @@ class KademliaProtocol(RPCProtocol):
         self.db = database
         self.log = Logger(system=self)
         self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH]
-        RPCProtocol.__init__(self, sourceNode.getProto(), self.router)
+        RPCProtocol.__init__(self, sourceNode, self.router)
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer

@@ -37,7 +37,7 @@ class Server(object):
         self.router = kserver.protocol.router
         self.db = database
         self.log = Logger(system=self)
-        self.protocol = MarketProtocol(kserver.node.getProto(), self.router, signing_key, database)
+        self.protocol = MarketProtocol(kserver.node, self.router, signing_key, database)
 
         # TODO: we need a loop here that republishes keywords when they are about to expire
 

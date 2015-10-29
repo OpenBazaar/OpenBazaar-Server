@@ -26,9 +26,9 @@ from keyutils.bip32utils import derive_childkey
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, node_proto, router, signing_key, database):
+    def __init__(self, node, router, signing_key, database):
         self.router = router
-        RPCProtocol.__init__(self, node_proto, router)
+        RPCProtocol.__init__(self, node, router)
         self.log = Logger(system=self)
         self.multiplexer = None
         self.db = database

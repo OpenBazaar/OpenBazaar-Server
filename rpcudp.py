@@ -27,7 +27,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, proto, router, waitTimeout=5):
+    def __init__(self, sourceNode, router, waitTimeout=5):
         """
         Args:
             proto: A protobuf `Node` object containing info about this node.
@@ -39,7 +39,7 @@ class RPCProtocol:
             testnet: The network parameters to use.
 
         """
-        self.proto = proto
+        self.sourceNode = sourceNode
         self.router = router
         self._waitTimeout = waitTimeout
         self._outstanding = {}
@@ -125,7 +125,7 @@ class RPCProtocol:
         self.log.debug("sending response for msg id %s to %s" % (b64encode(msgID), sender))
         m = Message()
         m.messageID = msgID
-        m.sender.MergeFrom(self.proto)
+        m.sender.MergeFrom(self.sourceNode.getProto())
         m.protoVer = PROTOCOL_VERSION
         m.testnet = self.multiplexer.testnet
         if response is None:
@@ -176,7 +176,7 @@ class RPCProtocol:
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
-            m.sender.MergeFrom(self.proto)
+            m.sender.MergeFrom(self.sourceNode.getProto())
             m.command = Command.Value(name.upper())
             m.protoVer = PROTOCOL_VERSION
             for arg in args:
