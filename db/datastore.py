@@ -277,6 +277,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
             f = Followers()
             ser = self.get_followers()
             if ser is not None:
+                f.ParseFromString(ser)
                 for follower in f.followers:
                     if follower.guid == proto.guid:
                         f.followers.remove(follower)
