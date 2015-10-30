@@ -49,7 +49,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.db = Database(filepath=":memory:")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr)
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr, "Full Cone")
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
@@ -225,7 +225,7 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.db = Database(filepath=":memory:")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr)
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr, "Full Cone")
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)

@@ -69,7 +69,7 @@ def run(*args):
 
     # Start the kademlia server
     this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey, vendor=Profile(db).get().vendor)
-    protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
+    protocol = OpenBazaarProtocol((ip_address, port), response[0], testnet=TESTNET)
 
     try:
         kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)

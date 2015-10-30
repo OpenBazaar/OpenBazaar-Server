@@ -20,7 +20,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     the appropriate classes for processing.
     """
 
-    def __init__(self, ip_address, testnet=False):
+    def __init__(self, ip_address, nat_type, testnet=False):
         """
         Initialize the new protocol with the connection handler factory.
 
@@ -32,20 +32,20 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.ws = None
         self.blockchain = None
         self.processors = []
-        self.factory = self.ConnHandlerFactory(self.processors)
+        self.factory = self.ConnHandlerFactory(self.processors, nat_type)
         self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
 
     class ConnHandler(Handler):
 
-        def __init__(self, processors, *args, **kwargs):
+        def __init__(self, processors, nat_type, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
             self.log = Logger(system=self)
             self.processors = processors
             self.connection = None
             self.node = None
             self.keep_alive_loop = LoopingCall(self.keep_alive)
-            self.keep_alive_loop.start(300, now=False)
+            self.keep_alive_loop.start(300 if nat_type == "Full Cone" else 30, now=False)
             self.on_connection_made()
             self.addr = None
 
@@ -76,7 +76,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         def handle_shutdown(self):
             for processor in self.processors:
                 processor.timeout((self.connection.dest_addr[0], self.connection.dest_addr[1]), self.node)
-            reactor.callLater(30, self.connection.unregister)
+            self.connection.unregister()
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
             try:
@@ -91,12 +91,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
     class ConnHandlerFactory(HandlerFactory):
 
-        def __init__(self, processors):
+        def __init__(self, processors, nat_type):
             super(OpenBazaarProtocol.ConnHandlerFactory, self).__init__()
             self.processors = processors
+            self.nat_type = nat_type
 
         def make_new_handler(self, *args, **kwargs):
-            return OpenBazaarProtocol.ConnHandler(self.processors)
+            return OpenBazaarProtocol.ConnHandler(self.processors, self.nat_type)
 
     def register_processor(self, processor):
         """Add a new class which implements the `MessageProcessor` interface."""

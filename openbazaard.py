@@ -72,7 +72,7 @@ def run(*args):
         # TODO: after bootstrap run through any pending contracts and see if the bitcoin address
         # has been funded, if not listen on the address and start the 10 minute delete timer.
 
-    protocol = OpenBazaarProtocol((ip_address, port), testnet=TESTNET)
+    protocol = OpenBazaarProtocol((ip_address, port), response[0], testnet=TESTNET)
 
     # kademlia
     node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
