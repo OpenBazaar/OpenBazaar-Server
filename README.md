@@ -7,7 +7,7 @@ If you are looking to contribute to the OpenBazaar backend, this is the repo you
 
 Installation notes:
 ---------------------
-You will need Python and pip installed on your system.
+You will need Python 2 and pip installed on your system.
 
 Depending on your configuration, you may also need to install python-dev, libffi-dev and python-pylint-common. If you're on Linux, you can do so using your operating system's standard package manager (ex. `sudo apt-get install python-dev`)
 
@@ -33,4 +33,9 @@ You can now start the server with:
 python openbazaard.py start
 ```
 
+Various options, including those related to logging and debugging, can be displayed like so:
+
+```bash
+python openbazaard.py start --help
+```
 
