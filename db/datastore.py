@@ -5,6 +5,7 @@ from constants import DATA_FOLDER
 from protos.objects import Listings, Followers, Following
 from dht.node import Node
 
+
 class Database(object):
 
     # pylint: disable=W0601
@@ -20,13 +21,19 @@ class Database(object):
         self.DATABASE = DATABASE
         if filepath:
             DATABASE = filepath
-        if not os.path.exists(DATA_FOLDER):
+        if not os.path.exists(DATA_FOLDER + "cache/"):
             os.makedirs(DATA_FOLDER + "cache/")
+        if not os.path.exists(DATA_FOLDER + "store/listings/contracts/"):
             os.makedirs(DATA_FOLDER + "store/listings/contracts/")
+        if not os.path.exists(DATA_FOLDER + "store/listings/in progress/"):
             os.makedirs(DATA_FOLDER + "store/listings/in progress/")
+        if not os.path.exists(DATA_FOLDER + "store/listings/trade receipts/"):
             os.makedirs(DATA_FOLDER + "store/listings/trade receipts/")
+        if not os.path.exists(DATA_FOLDER + "store/media/"):
             os.makedirs(DATA_FOLDER + "store/media/")
+        if not os.path.exists(DATA_FOLDER + "purchases/in progress/"):
             os.makedirs(DATA_FOLDER + "purchases/in progress/")
+        if not os.path.exists(DATA_FOLDER + "purchases/trade receipts/"):
             os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
         if not os.path.isfile(DATABASE):
             self.create_database()
