@@ -49,10 +49,13 @@ def run(*args):
     port = args[2]
     PortMapper().add_port_mapping(port, port, 'UDP')
     logger.info("Finding NAT Type...")
-    try:
-        response = stun.get_ip_info(source_port=port)
-    except Exception:
-        response = stun.get_ip_info()
+    while True:
+        try:
+            response = stun.get_ip_info(source_port=port)
+            break
+        except Exception:
+            pass
+
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]

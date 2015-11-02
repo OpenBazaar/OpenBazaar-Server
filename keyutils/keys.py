@@ -24,7 +24,7 @@ class KeyChain(object):
             self.encryption_pubkey = self.encryption_key.public_key.encode()
 
     def create_keychain(self):
-        print "Generating GUID, stand by..."
+        print "Generating GUID, this may take a few minutes..."
         g = GUID()
         self.guid = g.guid
         self.guid_privkey = g.privkey

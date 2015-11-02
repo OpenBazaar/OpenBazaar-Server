@@ -293,7 +293,7 @@ class Contract(object):
             order_json["buyer_order"]["order"]["shipping"]["country"] = country
         if options is not None:
             order_json["buyer_order"]["order"]["options"] = options
-        if moderator:  # TODO: Handle direct payments
+        if moderator:
             chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
             order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
             valid_mod = False
@@ -316,6 +316,18 @@ class Contract(object):
                 payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
             else:
                 payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
+            order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
+        else:
+            chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
+            order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
+
+            masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
+            vendor_key = derive_childkey(masterkey_v, chaincode)
+
+            if self.testnet:
+                payment_address = bitcoin.pubkey_to_address(vendor_key, 196)
+            else:
+                payment_address = bitcoin.pubkey_to_address(vendor_key)
             order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
 
         price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
@@ -419,25 +431,41 @@ class Contract(object):
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         # apply signatures
         outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
-        redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
-        value = 0
-        for output in outpoints:
-            value += output["value"]
-            del output["value"]
-        value -= TRANSACTION_FEE
-        outs = [{'value': value, 'address': payout_address}]
-        tx = bitcoin.mktx(outpoints, outs)
-        signatures = []
-        chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-        masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
-        vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
-        for index in range(0, len(outpoints)):
-            sig = bitcoin.multisign(tx, index, redeem_script, vendor_priv)
-            signatures.append({"input_index": index, "signature": sig})
-        conf_json["vendor_order_confirmation"]["invoice"]["payout"] = {}
-        conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
-        conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = value
-        conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = signatures
+        if "moderator" in self.contract["buyer_order"]["order"]:
+            redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
+            value = 0
+            for output in outpoints:
+                value += output["value"]
+                del output["value"]
+            value -= TRANSACTION_FEE
+            outs = [{'value': value, 'address': payout_address}]
+            tx = bitcoin.mktx(outpoints, outs)
+            signatures = []
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
+            for index in range(0, len(outpoints)):
+                sig = bitcoin.multisign(tx, index, redeem_script, vendor_priv)
+                signatures.append({"input_index": index, "signature": sig})
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"] = {}
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = value
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = signatures
+        else:
+            value = 0
+            for output in outpoints:
+                value += output["value"]
+                del output["value"]
+            value -= TRANSACTION_FEE
+            outs = [{'value': value, 'address': payout_address}]
+            tx = bitcoin.mktx(outpoints, outs)
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
+            for index in range(0, len(outpoints)):
+                tx = bitcoin.sign(tx, index, vendor_priv)
+            # TODO: broadcast tx
+
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
@@ -942,14 +970,43 @@ class Contract(object):
             if asking_price > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
                 raise Exception("Insuffient Payment")
 
-            # verify a valid moderator was selected
-            # TODO: handle direct payments
-            valid_mod = False
-            for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
-                if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
-                    valid_mod = True
-            if not valid_mod:
-                raise Exception("Invalid moderator")
+            if "moderator" in self.contract["buyer_order"]["order"]:
+                # verify a valid moderator was selected
+                valid_mod = False
+                for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
+                    if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
+                        valid_mod = True
+                if not valid_mod:
+                    raise Exception("Invalid moderator")
+                # verify redeem script
+                chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+                for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
+                    if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
+                        masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
+
+                masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+                masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+                buyer_key = derive_childkey(masterkey_b, chaincode)
+                vendor_key = derive_childkey(masterkey_v, chaincode)
+                moderator_key = derive_childkey(masterkey_m, chaincode)
+
+                redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+                if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
+                    raise Exception("Invalid redeem script")
+            else:
+                # verify the direct payment address
+                chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+
+                masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+                vendor_key = derive_childkey(masterkey_v, chaincode)
+
+                # verify the payment address
+                if self.testnet:
+                    payment_address = bitcoin.pubkey_to_address(vendor_key, 196)
+                else:
+                    payment_address = bitcoin.pubkey_to_address(vendor_key)
+                if payment_address != self.contract["buyer_order"]["order"]["payment"]["address"]:
+                    raise Exception("Incorrect payment address")
 
             # verify all the shipping fields exist
             if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
@@ -965,30 +1022,6 @@ class Contract(object):
             for value in map(pubkeys.get, keys):
                 if value is None:
                     raise Exception("Missing pubkey field")
-
-            # verify redeem script
-            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
-                if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
-                    masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
-
-            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
-            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
-            buyer_key = derive_childkey(masterkey_b, chaincode)
-            vendor_key = derive_childkey(masterkey_v, chaincode)
-            moderator_key = derive_childkey(masterkey_m, chaincode)
-
-            redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
-            if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
-                raise Exception("Invalid redeem script")
-
-            # verify the payment address
-            if self.testnet:
-                payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
-            else:
-                payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
-            if payment_address != self.contract["buyer_order"]["order"]["payment"]["address"]:
-                raise Exception("Incorrect payment address")
 
             return True
 
