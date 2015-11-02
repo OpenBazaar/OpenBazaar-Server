@@ -28,6 +28,7 @@ class MarketProtocol(RPCProtocol):
 
     def __init__(self, node, router, signing_key, database):
         self.router = router
+        self.node = node
         RPCProtocol.__init__(self, node, router)
         self.log = Logger(system=self)
         self.multiplexer = None
@@ -133,7 +134,7 @@ class MarketProtocol(RPCProtocol):
             f.ParseFromString(proto)
             if f.guid != sender.id:
                 raise Exception('GUID does not match sending node')
-            if f.following != self.proto.guid:
+            if f.following != self.node.id:
                 raise Exception('Following wrong node')
             f.signature = signature
             self.db.FollowData().set_follower(f)
@@ -153,7 +154,7 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         try:
             verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
-            verify_key.verify("unfollow:" + self.proto.guid, signature)
+            verify_key.verify("unfollow:" + self.node.id, signature)
             f = self.db.FollowData()
             f.delete_follower(sender.id)
             return ["True"]
