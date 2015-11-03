@@ -326,6 +326,7 @@ class OpenBazaarAPI(APIResource):
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
             if "moderator_list" in request.args:
+                u.moderator_list = []
                 for moderator in request.args["moderator_list"]:
                     u.moderator_list.append(unhexlify(moderator))
             if "website" in request.args:
@@ -591,7 +592,8 @@ class OpenBazaarAPI(APIResource):
             with open(file_path, 'r') as filename:
                 order = json.load(filename, object_pairs_hook=OrderedDict)
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
-            c.add_order_confirmation(request.args["payout_address"][0],
+            c.add_order_confirmation(self.protocol.blockchain,
+                                     request.args["payout_address"][0],
                                      comments=request.args["comments"][0] if "comments" in request.args else None,
                                      shipper=request.args["shipper"][0] if "shipper" in request.args else None,
                                      tracking_number=request.args["tracking_number"][0]

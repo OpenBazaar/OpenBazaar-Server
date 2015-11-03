@@ -393,6 +393,7 @@ class Contract(object):
                 order_json["buyer_order"]["order"]["payment"]["amount"])
 
     def add_order_confirmation(self,
+                               libbitcoin_client,
                                payout_address,
                                comments=None,
                                shipper=None,
@@ -403,7 +404,7 @@ class Contract(object):
         """
         Add the vendor's order confirmation to the contract.
         """
-
+        self.blockchain = libbitcoin_client
         if not self.testnet and not (payout_address[:1] == "1" or payout_address[:1] == "3"):
             raise Exception("Bitcoin address is not a mainnet address")
         elif self.testnet and not \
@@ -464,8 +465,7 @@ class Contract(object):
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
             for index in range(0, len(outpoints)):
                 tx = bitcoin.sign(tx, index, vendor_priv)
-            # TODO: broadcast tx
-
+            self.blockchain.broadcast(tx)
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
