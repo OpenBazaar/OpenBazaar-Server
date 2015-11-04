@@ -466,6 +466,7 @@ class Contract(object):
             for index in range(0, len(outpoints)):
                 tx = bitcoin.sign(tx, index, vendor_priv)
             self.blockchain.broadcast(tx)
+            self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx))
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
@@ -560,7 +561,7 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
             receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
-        if payout:
+        if payout and "moderator" in self.contract["buyer_order"]["order"]:
             outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -630,33 +631,37 @@ class Contract(object):
 
         # TODO: verify buyer signature
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
-        outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
-        payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-        redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
-        for output in outpoints:
-            del output["value"]
-        value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
-        outs = [{'value': value, 'address': payout_address}]
-        tx = bitcoin.mktx(outpoints, outs)
+        if "moderator" in self.contract["buyer_order"]["order"]:
+            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+            payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
+            for output in outpoints:
+                del output["value"]
+            value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
+            outs = [{'value': value, 'address': payout_address}]
+            tx = bitcoin.mktx(outpoints, outs)
 
-        chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-        masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
-        buyer_key = derive_childkey(masterkey_b, chaincode)
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+            buyer_key = derive_childkey(masterkey_b, chaincode)
 
-        vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
-        buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
-        for index in range(0, len(outpoints)):
-            for s in vendor_sigs:
-                if s["input_index"] == index:
-                    sig2 = str(s["signature"])
-            for s in buyer_sigs:
-                if s["input_index"] == index:
-                    sig1 = str(s["signature"])
+            vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
+            buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
+            for index in range(0, len(outpoints)):
+                for s in vendor_sigs:
+                    if s["input_index"] == index:
+                        sig2 = str(s["signature"])
+                for s in buyer_sigs:
+                    if s["input_index"] == index:
+                        sig1 = str(s["signature"])
 
-            if bitcoin.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
-                tx_signed = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
-            else:
-                raise Exception("Buyer sent invalid signature")
+                if bitcoin.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
+                    tx_signed = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
+                else:
+                    raise Exception("Buyer sent invalid signature")
+            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
+            self.blockchain.broadcast(tx_signed)
+            self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
 
         self.db.Sales().update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
@@ -665,10 +670,6 @@ class Contract(object):
         file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
         if os.path.exists(file_path):
             os.remove(file_path)
-
-        self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
-        self.blockchain.broadcast(tx_signed)
-        self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
 
         message_json = {
             "payment_received": {
@@ -688,7 +689,6 @@ class Contract(object):
         unfunded for more than 10 minutes.
         """
 
-        # TODO: Handle direct payments
         self.ws = websocket_server
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
@@ -760,8 +760,12 @@ class Contract(object):
         # get the amount (in satoshi) the user is expected to pay
         amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
         if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
-            output_script = 'a914' + digest(unhexlify(
-                self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
+            if "moderator" in self.contract["buyer_order"]["order"]:
+                output_script = 'a914' + digest(unhexlify(
+                    self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
+            else:
+                output_script = '76a914' + bitcoin.b58check_to_hex(
+                    self.contract["buyer_order"]["order"]["payment"]["address"]) +'88ac'
             for output in transaction["outs"]:
                 if output["script"] == output_script:
                     self.amount_funded += output["value"]
