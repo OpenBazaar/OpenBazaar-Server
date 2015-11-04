@@ -62,7 +62,7 @@ class OpenBazaarAPI(APIResource):
                 defer.returnValue(0)
 
             if os.path.exists(image_path):
-                yield _setContentDispositionAndSend(image_path, ".jpg", "image/jpeg")
+                yield _setContentDispositionAndSend(image_path, "jpg", "image/jpeg")
             else:
                 request.setResponseCode(http.NOT_FOUND)
                 request.write("No such image '%s'" % request.path)
@@ -616,21 +616,24 @@ class OpenBazaarAPI(APIResource):
             ret = []
             if "image" in request.args:
                 for image in request.args["image"]:
-                    hash_value = digest(image).encode("hex")
+                    img = image.decode('base64')
+                    hash_value = digest(img).encode("hex")
                     with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
-                        outfile.write(image)
-                    self.db.HashMap().insert(digest(image), DATA_FOLDER + "store/media/" + hash_value)
+                        outfile.write(img)
+                    self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
-                hash_value = digest(request.args["avatar"][0]).encode("hex")
+                avi = request.args["avatar"][0].decode("base64")
+                hash_value = digest(avi).encode("hex")
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
-                    outfile.write(request.args["avatar"][0])
+                    outfile.write(avi)
                 self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
-                hash_value = digest(request.args["header"][0]).encode("hex")
+                hdr = request.args["header"][0].decode("base64")
+                hash_value = digest(hdr).encode("hex")
                 with open(DATA_FOLDER + "store/header", 'wb') as outfile:
-                    outfile.write(request.args["header"][0])
+                    outfile.write(hdr)
                 self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
