@@ -326,7 +326,7 @@ class OpenBazaarAPI(APIResource):
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
             if "moderator_list" in request.args:
-                u.moderator_list = []
+                p.get().ClearField("moderator_list")
                 for moderator in request.args["moderator_list"]:
                     u.moderator_list.append(unhexlify(moderator))
             if "website" in request.args:
