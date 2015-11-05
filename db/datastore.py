@@ -4,6 +4,7 @@ import os
 from constants import DATA_FOLDER
 from protos.objects import Listings, Followers, Following
 from dht.node import Node
+from binascii import unhexlify
 
 
 class Database(object):
@@ -45,36 +46,43 @@ class Database(object):
         else:
             db = lite.connect(filepath)
 
-        # FIXME: change row types as noted below. BLOBs cannot be indexed.
         cursor = db.cursor()
-        cursor.execute('''CREATE TABLE hashmap(hash BLOB PRIMARY KEY, filepath TEXT)''')  # change hash to TEXT
+        cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
+
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
+
         cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
+
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
+
         cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
-        cursor.execute('''CREATE TABLE messages(guid BLOB , handle TEXT, signed_pubkey BLOB,
+
+        cursor.execute('''CREATE TABLE messages(guid TEXT PRIMARY KEY, handle TEXT, signed_pubkey BLOB,
     encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
-    avatar_hash BLOB, signature BLOB, outgoing INTEGER)''') # change guid to TEXT, index guid
+    avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
+
         cursor.execute('''CREATE TABLE notifications(guid BLOB, handle TEXT, message TEXT,
     timestamp INTEGER, avatar_hash BLOB)''')
-        cursor.execute('''CREATE TABLE vendors(guid BLOB UNIQUE, ip TEXT, port INTEGER, signedPubkey BLOB)''')
-        # ^ change guid to TEXT
-        cursor.execute('''CREATE INDEX idx1 ON vendors(guid);''')
-        cursor.execute('''CREATE TABLE moderators(guid BLOB UNIQUE, signedPubkey BLOB, encryptionKey BLOB,
-    encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT)''') # change guid to TEXT
-        cursor.execute('''CREATE INDEX idx2 ON moderators(guid);''')
-        cursor.execute('''CREATE TABLE purchases(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc FLOAT,
-    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''') # change id to TEXT
-        cursor.execute('''CREATE INDEX idx3 ON purchases(id);''')
-        cursor.execute('''CREATE TABLE sales(id BLOB UNIQUE, title TEXT, timestamp INTEGER, btc REAL,
+
+        cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, ip TEXT, port INTEGER, signedPubkey BLOB)''')
+
+        cursor.execute('''CREATE TABLE moderators(guid TEXT PRIMARY KEY, signedPubkey BLOB, encryptionKey BLOB,
+    encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
+    avatar BLOB, fee FLOAT)''')
+
+        cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, btc FLOAT,
+    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
+
+        cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, btc REAL,
     address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT, paymentTX TEXT)''')
-        # ^ change id to TEXT
-        cursor.execute('''CREATE INDEX idx4 ON sales(id);''')
+
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,
 shipToCity TEXT, shipToState TEXT, shipToPostalCode TEXT, shipToCountry TEXT, blocked BLOB, libbitcoinServer TEXT,
 SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
+
         db.commit()
         return db
 
@@ -366,7 +374,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
             else:
                 return ret
 
-        def delete_notfication(self, guid, timestamp):
+        def delete_notification(self, guid, timestamp):
             cursor = self.db.cursor()
             cursor.execute('''DELETE FROM notifications WHERE guid=? AND timestamp=?''', (guid, timestamp))
             self.db.commit()
@@ -391,7 +399,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
             ret = cursor.fetchall()
             nodes = []
             for n in ret:
-                node = Node(n[0], n[1], n[2], n[3], True)
+                node = Node(unhexlify(n[0]), n[1], n[2], n[3], True)
                 nodes.append(node)
             return nodes
 
@@ -406,13 +414,13 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
             self.db.text_factory = str
 
         def save_moderator(self, guid, signed_pubkey, encryption_key, encription_sig,
-                           bitcoin_key, bicoin_sig, handle=""):
+                           bitcoin_key, bicoin_sig, name, avatar_hash, fee, handle="", short_desc=""):
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO moderators(guid, signedPubkey, encryptionKey,
-    encryptionSignature, bitcoinKey, bitcoinSignature, handle) VALUES (?,?,?,?,?,?,?)''',
-                               (guid, signed_pubkey, encryption_key, encription_sig,
-                                bitcoin_key, bicoin_sig, handle))
+    encryptionSignature, bitcoinKey, bitcoinSignature, handle, name, description, avatar, fee)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)''', (guid, signed_pubkey, encryption_key, encription_sig, bitcoin_key,
+                                        bicoin_sig, handle, name, short_desc, avatar_hash, fee))
             except Exception as e:
                 print e.message
             self.db.commit()
@@ -420,7 +428,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         def get_moderator(self, guid):
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, signedPubkey, encryptionKey, encryptionSignature, bitcoinKey,
-     bitcoinSignature, handle FROM moderators WHERE guid=?''', (guid,))
+     bitcoinSignature, handle, name, description, avatar, fee FROM moderators WHERE guid=?''', (guid,))
             ret = cursor.fetchall()
             if not ret:
                 return None

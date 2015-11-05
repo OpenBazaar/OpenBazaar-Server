@@ -5,6 +5,7 @@ from interfaces import MessageListener, NotificationListener
 from zope.interface import implements
 from protos.objects import Plaintext_Message, Following
 
+
 class MessageListenerImpl(object):
     implements(MessageListener)
 
@@ -14,7 +15,7 @@ class MessageListenerImpl(object):
 
     def notify(self, plaintext, signature):
 
-        self.db.save_message(plaintext.sender_guid, plaintext.handle, plaintext.signed_pubkey,
+        self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.signed_pubkey,
                              plaintext.encryption_pubkey, plaintext.subject,
                              Plaintext_Message.Type.Name(plaintext.type), plaintext.message,
                              plaintext.avatar_hash, plaintext.timestamp, signature, False)
@@ -36,6 +37,7 @@ class MessageListenerImpl(object):
             message_json["message"]["handle"] = plaintext.handle
         self.ws.push(json.dumps(message_json, indent=4))
 
+
 class NotificationListenerImpl(object):
     implements(NotificationListener)
 
@@ -54,7 +56,7 @@ class NotificationListenerImpl(object):
                     avatar_hash = user.metadata.avatar_hash
                     handle = user.metadata.handle
         timestamp = int(time.time())
-        self.db.NotificationStore().save_notification(guid, handle, message, timestamp, avatar_hash)
+        self.db.NotificationStore().save_notification(guid.encode("hex"), handle, message, timestamp, avatar_hash)
         notification_json = {
             "notification": {
                 "guid": guid.encode("hex"),

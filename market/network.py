@@ -502,7 +502,7 @@ class Server(object):
                             if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40]:
                                 raise Exception('Invalid guid')
                             if p.type == objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"):
-                                c = Contract(self.db, hash_value=unhexlify(p.subject))
+                                c = Contract(self.db, hash_value=p.subject)
                                 c.accept_order_confirmation(self.protocol.multiplexer.ws,
                                                             confirmation_json=p.message)
                             else:

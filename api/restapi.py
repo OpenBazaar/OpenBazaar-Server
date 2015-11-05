@@ -69,8 +69,8 @@ class OpenBazaarAPI(APIResource):
             request.finish()
 
         if "hash" in request.args and len(request.args["hash"][0]) == 40:
-            if self.db.HashMap().get_file(unhexlify(request.args["hash"][0])) is not None:
-                image_path = self.db.HashMap().get_file(unhexlify(request.args["hash"][0]))
+            if self.db.HashMap().get_file(request.args["hash"][0]) is not None:
+                image_path = self.db.HashMap().get_file(request.args["hash"][0])
             else:
                 image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
             if not os.path.exists(image_path) and "guid" in request.args:
@@ -421,7 +421,7 @@ class OpenBazaarAPI(APIResource):
                     self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
             else:
                 try:
-                    with open(self.db.HashMap().get_file(unhexlify(request.args["id"][0])), "r") as filename:
+                    with open(self.db.HashMap().get_file(request.args["id"][0]), "r") as filename:
                         contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
                     parse_contract(contract)
                 except Exception:
@@ -483,7 +483,7 @@ class OpenBazaarAPI(APIResource):
     def delete_contract(self, request):
         try:
             if "id" in request.args:
-                file_path = self.db.HashMap().get_file(unhexlify(request.args["id"][0]))
+                file_path = self.db.HashMap().get_file(request.args["id"][0])
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                 c = Contract(self.db, contract=contract)
@@ -552,7 +552,7 @@ class OpenBazaarAPI(APIResource):
                 options = {}
                 for option in request.args["options"]:
                     options[option] = request.args[option][0]
-            c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
+            c = Contract(self.db, hash_value=request.args["id"][0], testnet=self.protocol.testnet)
             payment = c.\
                 add_purchase_info(int(request.args["quantity"][0]),
                                   request.args["ship_to"][0] if "ship_to" in request.args else None,
@@ -620,21 +620,21 @@ class OpenBazaarAPI(APIResource):
                     hash_value = digest(img).encode("hex")
                     with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
                         outfile.write(img)
-                    self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/media/" + hash_value)
+                    self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(avi)
-                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/avatar")
+                self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
                 with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                     outfile.write(hdr)
-                self.db.HashMap().insert(unhexlify(hash_value), DATA_FOLDER + "store/header")
+                self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()

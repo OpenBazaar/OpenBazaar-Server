@@ -123,7 +123,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             address: a `tuple` of (ip address, port) of the recipient.
         """
         if address not in self:
-            con = self.make_new_connection((self.ip_address[0], self.ip_address[1]), address)
+            con = self.make_new_connection(self.ip_address, address)
         else:
             con = self[address]
         con.send_message(datagram)

@@ -84,7 +84,8 @@ class RPCProtocol:
                 return False
 
         if m.sender.vendor:
-            self.db.VendorStore().save_vendor(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey)
+            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.ip,
+                                              m.sender.port, m.sender.signedPublicKey)
 
         msgID = m.messageID
         if m.command == NOT_FOUND:
@@ -152,7 +153,7 @@ class RPCProtocol:
     def rpc_hole_punch(self, sender, ip, port, relay="False"):
         """
         A method for handling an incoming HOLE_PUNCH message. Relay the message
-        to the correct node if it's not for us. Otherwise sent a datagram to allow
+        to the correct node if it's not for us. Otherwise send a datagram to allow
         the other node to punch through our NAT.
         """
         if relay == "True":

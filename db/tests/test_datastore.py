@@ -174,7 +174,7 @@ class DatastoreTest(unittest.TestCase):
                                   '0000-00-00 00:00:00', '')
         n = self.ns.get_notifications()
         self.assertIsNotNone(n)
-        self.ns.delete_notfication(self.u.guid, '0000-00-00 00:00:00')
+        self.ns.delete_notification(self.u.guid, '0000-00-00 00:00:00')
         n = self.ns.get_notifications()
         self.assertIsNone(n)
 

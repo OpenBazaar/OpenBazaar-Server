@@ -43,7 +43,7 @@ class Contract(object):
 
         Args:
             contract: an `OrderedDict` containing a filled out json contract
-            hash: a hash160 (in raw bytes) of a contract
+            hash_value: a hash160 (in hex) of a contract
             testnet: is this contract on the testnet
         """
         self.db = database
@@ -221,11 +221,14 @@ class Contract(object):
         if moderators is not None:
             self.contract["vendor_offer"]["listing"]["moderators"] = []
             for mod in moderators:
-                mod_info = self.db.ModeratorStore().get_moderator(unhexlify(mod))
-                print mod_info
+                mod_info = self.db.ModeratorStore().get_moderator(mod)
                 if mod_info is not None:
                     moderator = {
                         "guid": mod,
+                        "name": mod_info[7],
+                        "avatar": mod_info[9].encode("hex"),
+                        "short_description": mod_info[8],
+                        "fee": str(mod_info[10]) + "%",
                         "blockchain_id": mod_info[6],
                         "pubkeys": {
                             "signing": {
@@ -816,17 +819,17 @@ class Contract(object):
 
         # get the file path
         h = self.db.HashMap()
-        file_path = h.get_file(digest(json.dumps(self.contract, indent=4)))
+        file_path = h.get_file(digest(json.dumps(self.contract, indent=4)).encode("hex"))
 
         # maybe delete the images from disk
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"] and delete_images:
             for image_hash in self.contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
                 # delete from disk
-                image_path = h.get_file(unhexlify(image_hash))
+                image_path = h.get_file(image_hash)
                 if os.path.exists(image_path):
                     os.remove(image_path)
                 # remove pointer to the image from the HashMap
-                h.delete(unhexlify(image_hash))
+                h.delete(image_hash)
 
         # delete the contract from disk
         if os.path.exists(file_path):
@@ -837,7 +840,7 @@ class Contract(object):
         self.db.ListingsStore().delete_listing(contract_hash)
 
         # remove the pointer to the contract from the HashMap
-        h.delete(contract_hash)
+        h.delete(contract_hash.encode("hex"))
 
     def save(self):
         """
@@ -888,7 +891,7 @@ class Contract(object):
                 data.ships_to.append(CountryCode.Value(region.upper()))
 
         # save the mapping of the contract file path and contract hash in the database
-        self.db.HashMap().insert(data.contract_hash, file_path)
+        self.db.HashMap().insert(data.contract_hash.encode("hex"), file_path)
 
         # save the `ListingMetadata` protobuf to the database as well
         self.db.ListingsStore().add_listing(data)
@@ -906,7 +909,7 @@ class Contract(object):
             ref_hash = unhexlify(self.contract["buyer_order"]["order"]["ref_hash"])
 
             # verify that the reference hash matches the contract and that the contract actually exists
-            if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash):
+            if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash.encode("hex")):
                 raise Exception("Order for contract that doesn't exist")
 
             # verify the signature on the order

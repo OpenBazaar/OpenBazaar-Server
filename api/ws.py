@@ -59,7 +59,7 @@ class WSProtocol(WebSocketServerProtocol):
                 vendors.remove(node)
                 return True
             else:
-                self.factory.db.VendorStore().delete_vendor(node.id)
+                self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
                 vendors.remove(node)
                 return False
 
@@ -77,9 +77,11 @@ class WSProtocol(WebSocketServerProtocol):
 
                 def parse_profile(profile, node):
                     if profile is not None:
-                        m.save_moderator(node.id, node.signed_pubkey, profile.encryption_key.public_key,
+                        m.save_moderator(node.id.encode("hex"), node.signed_pubkey,
+                                         profile.encryption_key.public_key,
                                          profile.encryption_key.signature, profile.bitcoin_key.public_key,
-                                         profile.bitcoin_key.signature, profile.handle)
+                                         profile.bitcoin_key.signature, profile.name, profile.avatar_hash,
+                                         profile.moderation_fee, profile.handle, profile.short_description)
                         moderator = {
                             "id": message_id,
                             "moderator":
@@ -89,7 +91,8 @@ class WSProtocol(WebSocketServerProtocol):
                                     "handle": profile.handle,
                                     "short_description": profile.short_description,
                                     "avatar_hash": profile.avatar_hash.encode("hex"),
-                                    "about": profile.about
+                                    "about": profile.about,
+                                    "fee": profile.moderation_fee
                                 }
                         }
                         self.sendMessage(json.dumps(moderator, indent=4), False)
@@ -163,7 +166,7 @@ class WSProtocol(WebSocketServerProtocol):
                             return count
                 vendors.remove(node)
             else:
-                self.factory.db.VendorStore().delete_vendor(node.id)
+                self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
                 vendors.remove(node)
             return count
 
