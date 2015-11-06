@@ -259,4 +259,6 @@ enum CountryCode {
     YEMEN                          = 248;
     ZAMBIA                         = 249;
     ZIMBABWE                       = 250;
+    AFGHANISTAN                    = 251;
+    ALLAND_ISLANDS                 = 252;
 }

@@ -756,3 +756,36 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_notifications')
+    def get_notifications(self, request):
+        notifications = self.db.NotificationStore().get_notifications()
+        notification_list = []
+        for n in notifications:
+            notification_json = {
+                "id": n[0],
+                "guid": n[1].encode("hex"),
+                "handle": n[2],
+                "message": n[3],
+                "timestamp": n[4],
+                "avatar_hash": n[5].encode("hex"),
+                "read": False if n[6] == 0 else True
+            }
+        notification_list.append(notification_json)
+        request.write(json.dumps(notification_list, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
+    @POST('^/api/v1/mark_notification_as_read')
+    def mark_as_read(self, request):
+        try:
+            self.db.NotificationStore().mark_as_read(request.args["id"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
+
+

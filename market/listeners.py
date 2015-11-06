@@ -1,9 +1,11 @@
 __author__ = 'chris'
 import json
 import time
+import random
 from interfaces import MessageListener, NotificationListener
 from zope.interface import implements
 from protos.objects import Plaintext_Message, Following
+from dht.utils import digest
 
 
 class MessageListenerImpl(object):
@@ -56,15 +58,17 @@ class NotificationListenerImpl(object):
                     avatar_hash = user.metadata.avatar_hash
                     handle = user.metadata.handle
         timestamp = int(time.time())
-        self.db.NotificationStore().save_notification(guid.encode("hex"), handle, message, timestamp, avatar_hash)
+        notif_id = digest(random.getrandbits(255)).encode("hex")
+        self.db.NotificationStore().save_notification(notif_id, guid.encode("hex"), handle, message,
+                                                      timestamp, avatar_hash)
         notification_json = {
             "notification": {
+                "id": notif_id,
                 "guid": guid.encode("hex"),
+                "handle": handle,
                 "message": message,
                 "timestamp": timestamp,
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        if handle:
-            notification_json["notification"]["handle"] = handle
         self.ws.push(json.dumps(notification_json, indent=4))

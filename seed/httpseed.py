@@ -39,7 +39,7 @@ def run(*args):
     db = Database(testnet=TESTNET)
 
     # logging
-    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log")
+    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=5000000, maxRotatedFiles=1)
     log.addObserver(FileLogObserver(logFile, level="debug").emit)
     log.addObserver(FileLogObserver(level="debug").emit)
     logger = Logger(system="Httpseed")
