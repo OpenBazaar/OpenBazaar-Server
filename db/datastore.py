@@ -368,11 +368,7 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         def get_notifications(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, guid, handle, message, timestamp, avatar_hash, read FROM notifications''')
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret
+            return cursor.fetchall()
 
         def mark_as_read(self, notif_id):
             cursor = self.db.cursor()

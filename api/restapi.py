@@ -787,5 +787,18 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
+    @POST('^/api/v1/send_notification')
+    def send_notification(self, request):
+        try:
+            def get_response(num):
+                request.write(json.dumps({"success": True, "peers reached": num}, indent=4))
+                request.finish()
+            self.mserver.send_notification(request.args["message"][0]).addCallback(get_response)
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
 
 

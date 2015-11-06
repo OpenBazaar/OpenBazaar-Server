@@ -169,14 +169,14 @@ class DatastoreTest(unittest.TestCase):
 
     def test_notificationStore(self):
         n = self.ns.get_notifications()
-        self.assertIsNone(n)
+        self.assertTrue(len(n) == 0)
         self.ns.save_notification("1234", self.u.guid, self.m.handle, 'NOTICE',
                                   '0000-00-00 00:00:00', '')
         n = self.ns.get_notifications()
         self.assertIsNotNone(n)
         self.ns.delete_notification("1234")
         n = self.ns.get_notifications()
-        self.assertIsNone(n)
+        self.assertTrue(len(n) == 0)
 
     def test_vendorStore(self):
         v = self.vs.get_vendors()

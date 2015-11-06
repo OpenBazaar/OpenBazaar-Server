@@ -39,7 +39,7 @@ def run(*args):
     keys = KeyChain(db)
 
     # logging
-    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=5000000, maxRotatedFiles=1)
+    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=0)
     log.addObserver(FileLogObserver(logFile, level=args[1]).emit)
     log.addObserver(FileLogObserver(level=args[1]).emit)
     logger = Logger(system="OpenBazaard")
