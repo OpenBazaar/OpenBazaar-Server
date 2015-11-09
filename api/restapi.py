@@ -2,23 +2,25 @@ __author__ = 'chris'
 import json
 import os
 import pickle
+from binascii import unhexlify
+from collections import OrderedDict
+
 from txrestapi.resource import APIResource
 from txrestapi.methods import GET, POST, DELETE
 from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
 from twisted.internet import defer, reactor
-from binascii import unhexlify
-from constants import DATA_FOLDER
 from twisted.protocols.basic import FileSender
+
+from constants import DATA_FOLDER
 from protos.countries import CountryCode
 from protos import objects
 from keyutils.keys import KeyChain
 from dht.utils import digest
 from market.profile import Profile
 from market.contracts import Contract
-from collections import OrderedDict
-from upnp import PortMapper
+from net.upnp import PortMapper
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -538,7 +540,8 @@ class OpenBazaarAPI(APIResource):
         try:
             def handle_response(resp, contract):
                 if resp:
-                    contract.await_funding(self.protocol.ws, self.protocol.blockchain, resp)
+                    contract.await_funding(self.mserver.protocol.get_notification_listener(),
+                                           self.protocol.blockchain, resp)
                     request.write(json.dumps({"success": True, "payment_address": payment[0],
                                               "amount": payment[1],
                                               "order_id": c.get_contract_id().encode("hex")},
@@ -765,10 +768,12 @@ class OpenBazaarAPI(APIResource):
                 "id": n[0],
                 "guid": n[1].encode("hex"),
                 "handle": n[2],
-                "message": n[3],
-                "timestamp": n[4],
-                "avatar_hash": n[5].encode("hex"),
-                "read": False if n[6] == 0 else True
+                "type": n[3],
+                "order_id": n[4],
+                "title": n[5],
+                "timestamp": n[6],
+                "image_hash": n[7].encode("hex"),
+                "read": False if n[8] == 0 else True
             }
         notification_list.append(notification_json)
         request.write(json.dumps(notification_list, indent=4))
@@ -787,13 +792,13 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
-    @POST('^/api/v1/send_notification')
-    def send_notification(self, request):
+    @POST('^/api/v1/broadcast')
+    def broadcast(self, request):
         try:
             def get_response(num):
                 request.write(json.dumps({"success": True, "peers reached": num}, indent=4))
                 request.finish()
-            self.mserver.send_notification(request.args["message"][0]).addCallback(get_response)
+            self.mserver.broadcast(request.args["message"][0]).addCallback(get_response)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

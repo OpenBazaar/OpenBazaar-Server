@@ -7,13 +7,14 @@ import nacl.hash
 from txrudp import packet, connection, rudp, constants
 from twisted.internet import udp, address, task
 from twisted.trial import unittest
+
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
 from dht.node import Node, NodeHeap
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
 from dht.protocol import KademliaProtocol
 from protos.objects import Value
-from wireprotocol import OpenBazaarProtocol
+from net.wireprotocol import OpenBazaarProtocol
 from db.datastore import Database
 from constants import ALPHA, KSIZE
 

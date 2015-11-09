@@ -2,31 +2,32 @@ __author__ = 'chris'
 import sys
 import argparse
 import platform
+
 from twisted.internet import reactor
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
-from daemon import Daemon
-
 import stun
 import requests
+
 from autobahn.twisted.websocket import listenWS
 
+from daemon import Daemon
 from libbitcoin import LibbitcoinClient
 from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
-from wireprotocol import OpenBazaarProtocol
+from net.wireprotocol import OpenBazaarProtocol
 from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET
 from market import network
-from market.listeners import MessageListenerImpl, NotificationListenerImpl
+from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
 from log import Logger, FileLogObserver
-from upnp import PortMapper
+from net.upnp import PortMapper
 
 
 def run(*args):
@@ -39,7 +40,7 @@ def run(*args):
     keys = KeyChain(db)
 
     # logging
-    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=0)
+    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
     log.addObserver(FileLogObserver(logFile, level=args[1]).emit)
     log.addObserver(FileLogObserver(level=args[1]).emit)
     logger = Logger(system="OpenBazaard")
@@ -63,11 +64,13 @@ def run(*args):
 
     def on_bootstrap_complete(resp):
         logger.info("bootstrap complete, downloading outstanding messages...")
+        nlistener = NotificationListenerImpl(ws_factory, db)
+        mserver.protocol.add_listener(nlistener)
         mlistener = MessageListenerImpl(ws_factory, db)
         mserver.get_messages(mlistener)
         mserver.protocol.add_listener(mlistener)
-        nlistener = NotificationListenerImpl(ws_factory, db)
-        mserver.protocol.add_listener(nlistener)
+        blistener = BroadcastListenerImpl(ws_factory, db)
+        mserver.protocol.add_listener(blistener)
 
         # TODO: ping seed node to establish connection if not full cone NAT
 

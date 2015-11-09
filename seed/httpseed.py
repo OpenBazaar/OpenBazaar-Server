@@ -7,26 +7,27 @@ import argparse
 import platform
 from binascii import hexlify
 from random import shuffle
-
 import os
-from daemon import Daemon
+
 from twisted.internet import task, reactor
 from twisted.web import resource, server
 import stun
 import nacl.signing
 import nacl.hash
 import nacl.encoding
+from twisted.python import log, logfile
+
+from daemon import Daemon
 from seed import peers
 from dht.node import Node
 from dht.network import Server
 from dht.crawling import NodeSpiderCrawl
 from dht.utils import digest, deferredDict
 from protos import objects
-from wireprotocol import OpenBazaarProtocol
+from net.wireprotocol import OpenBazaarProtocol
 from market import network
 from keyutils.keys import KeyChain
 from db.datastore import Database
-from twisted.python import log, logfile
 from constants import DATA_FOLDER
 from market.profile import Profile
 from log import Logger, FileLogObserver
@@ -39,7 +40,7 @@ def run(*args):
     db = Database(testnet=TESTNET)
 
     # logging
-    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=0)
+    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
     log.addObserver(FileLogObserver(logFile, level="debug").emit)
     log.addObserver(FileLogObserver(level="debug").emit)
     logger = Logger(system="Httpseed")

@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 from zope.interface import Interface, Attribute
 
+
 class MessageProcessor(Interface):
     """
     This is an interface for processing messages coming off the wire. Classes that implement this interface should be
@@ -35,16 +36,18 @@ class MessageProcessor(Interface):
         :return: iter([list of enums])
         """
 
-class NotificationListener(Interface):
+
+class BroadcastListener(Interface):
     """
-    An interface for handling notifications sent to followers.
+    An interface for handling broadcasts sent to followers.
     """
 
     def notify(guid, message):
         """
-        New notifications will be sent here. They will only show if this node is following the node
-        which sent the notification.
+        New broadcasts will be sent here. They will only show if this node is following the node
+        which sent the broadcast.
         """
+
 
 class MessageListener(Interface):
     """
@@ -57,4 +60,24 @@ class MessageListener(Interface):
         Args:
             plaintext_message: the protobuf object containing the message
             signature: the signature covering the message.
+        """
+
+
+class NotificationListener(Interface):
+    """
+    An interface for handling event notifications. New events should update this
+    listener which will save the notifications to the db and push it to UI via websockets.
+    """
+
+    def notify(guid, handle, type, order_id, title, image_hash):
+        """
+        This should be called to register a new notification.
+        Args:
+            guid: (in hex) optional depending on notification type.
+            handle: optional depending on notification type.
+            type: a `String` containing the type of notification,
+                  (ex: Follow, New Order, Order Confirmation, Payment Received).
+            order_id: an order id if this notification is for an order
+            title: a `String` which can be used for the item's title if an order notification.
+            image_hash: optional depending on notification type.
         """

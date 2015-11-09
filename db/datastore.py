@@ -63,8 +63,11 @@ class Database(object):
     encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
     avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
 
-        cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
-    timestamp INTEGER, avatar_hash BLOB, read INTEGER)''')
+        cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
+    order_id TEXT, title TEXT, timestamp INTEGER, image_hash BLOB, read INTEGER)''')
+
+        cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
+    timestamp INTEGER, avatar_hash BLOB)''')
 
         cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, ip TEXT, port INTEGER, signedPubkey BLOB)''')
 
@@ -359,15 +362,17 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def save_notification(self, notif_id, guid, handle, message, timestamp, avatar_hash):
+        def save_notification(self, notif_id, guid, handle, notif_type, order_id, title, timestamp, image_hash):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO notifications(id, guid, handle, message, timestamp, avatar_hash, read)
-    VALUES (?,?,?,?,?,?,?)''', (notif_id, guid, handle, message, timestamp, avatar_hash, 0))
+            cursor.execute('''INSERT INTO notifications(id, guid, handle, type, order_id, title, timestamp,
+image_hash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
+                                                  image_hash, 0))
             self.db.commit()
 
         def get_notifications(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, guid, handle, message, timestamp, avatar_hash, read FROM notifications''')
+            cursor.execute('''SELECT id, guid, handle, type, order_id, title, timestamp, image_hash, read
+FROM notifications''')
             return cursor.fetchall()
 
         def mark_as_read(self, notif_id):
@@ -378,6 +383,27 @@ SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
         def delete_notification(self, notif_id):
             cursor = self.db.cursor()
             cursor.execute('''DELETE FROM notifications WHERE id=?''', (notif_id,))
+            self.db.commit()
+
+    class BroadcastStore(object):
+        def __init__(self):
+            self.db = lite.connect(DATABASE)
+            self.db.text_factory = str
+
+        def save_broadcast(self, broadcast_id, guid, handle, message, timestamp, avatar_hash):
+            cursor = self.db.cursor()
+            cursor.execute('''INSERT INTO broadcasts(id, guid, handle, message, timestamp, avatar_hash)
+    VALUES (?,?,?,?,?,?)''', (broadcast_id, guid, handle, message, timestamp, avatar_hash))
+            self.db.commit()
+
+        def get_broadcasts(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT id, guid, handle, message, timestamp, avatar_hash FROM broadcasts''')
+            return cursor.fetchall()
+
+        def delete_broadcast(self, broadcast_id):
+            cursor = self.db.cursor()
+            cursor.execute('''DELETE FROM broadcasts WHERE id=?''', (broadcast_id,))
             self.db.commit()
 
     class VendorStore(object):

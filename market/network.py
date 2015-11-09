@@ -403,11 +403,11 @@ class Server(object):
         self.log.info("fetching following list from %s" % node_to_ask)
         return d.addCallback(get_response)
 
-    def send_notification(self, message):
+    def broadcast(self, message):
         """
-        Sends a notification message to all online followers. It will resolve
-        each guid before sending the notification. Messages must be less than
-        140 characters. Returns the number of followers the notification reached.
+        Sends a broadcast message to all online followers. It will resolve
+        each guid before sending the broadcast. Messages must be less than
+        140 characters. Returns the number of followers the broadcast reached.
         """
 
         if len(message) > 140:
@@ -425,14 +425,14 @@ class Server(object):
             signature = self.signing_key.sign(str(message))[:64]
             for n in nodes:
                 if n[1] is not None:
-                    ds.append(self.protocol.callNotify(n[1], message, signature))
+                    ds.append(self.protocol.callBroadcast(n[1], message, signature))
             return defer.DeferredList(ds).addCallback(how_many_reached)
         dl = []
         f = objects.Followers()
         f.ParseFromString(self.db.FollowData().get_followers())
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
-        self.log.info("broadcasting notification to followers")
+        self.log.info("broadcasting %s to followers" % message)
         return defer.DeferredList(dl).addCallback(send)
 
     def send_message(self, receiving_node, public_key, message_type, message, subject=None, store_only=False):
@@ -503,8 +503,13 @@ class Server(object):
                                 raise Exception('Invalid guid')
                             if p.type == objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"):
                                 c = Contract(self.db, hash_value=p.subject)
-                                c.accept_order_confirmation(self.protocol.multiplexer.ws,
+                                c.accept_order_confirmation(self.protocol.get_notification_listener(),
                                                             confirmation_json=p.message)
+                            elif p.type == objects.Plaintext_Message.Type.Value("RECEIPT"):
+                                c = Contract(self.db, hash_value=p.subject)
+                                c.accept_receipt(self.protocol.get_notification_listener(),
+                                                 self.protocol.multiplexer.blockchain,
+                                                 receipt_json=p.message)
                             else:
                                 listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
                                                 objects.Plaintext_Message.Type.Name(p.type), p.message)

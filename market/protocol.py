@@ -1,25 +1,27 @@
 __author__ = 'chris'
 
 import json
+from collections import OrderedDict
+
 import nacl.signing
 import nacl.utils
 import nacl.encoding
 import nacl.hash
 from nacl.public import PrivateKey, PublicKey, Box
 from zope.interface import implements
-from rpcudp import RPCProtocol
+from zope.interface.verify import verifyObject
+from zope.interface.exceptions import DoesNotImplement
+
+from net.rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from log import Logger
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
-    GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, NOTIFY, \
+    GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
     GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER
 from market.contracts import Contract
 from market.profile import Profile
 from protos.objects import Metadata, Listings, Followers, Plaintext_Message
-from zope.interface.verify import verifyObject
-from zope.interface.exceptions import DoesNotImplement
-from interfaces import NotificationListener, MessageListener
-from collections import OrderedDict
+from interfaces import BroadcastListener, MessageListener, NotificationListener
 from keyutils.bip32utils import derive_childkey
 
 
@@ -37,7 +39,7 @@ class MarketProtocol(RPCProtocol):
         self.listeners = []
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
-                                 NOTIFY, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER]
+                                 BROADCAST, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -144,6 +146,12 @@ class MarketProtocol(RPCProtocol):
             m.handle = proto.handle
             m.avatar_hash = proto.avatar_hash
             m.nsfw = proto.nsfw
+            for listener in self.listeners:
+                try:
+                    verifyObject(NotificationListener, listener)
+                    listener.notify(sender.id, f.metadata.handle, "follow", "", "", f.metadata.avatar_hash)
+                except DoesNotImplement:
+                    pass
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.warning("failed to validate follower")
@@ -180,19 +188,19 @@ class MarketProtocol(RPCProtocol):
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
-    def rpc_notify(self, sender, message, signature):
+    def rpc_broadcast(self, sender, message, signature):
         if len(message) <= 140 and self.db.FollowData().is_following(sender.id):
             try:
                 verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
                 verify_key.verify(message, signature)
             except Exception:
-                self.log.warning("received invalid notification from %s" % sender)
+                self.log.warning("received invalid broadcast from %s" % sender)
                 return ["False"]
-            self.log.info("received a notification from %s" % sender)
+            self.log.info("received a broadcast from %s" % sender)
             self.router.addContact(sender)
             for listener in self.listeners:
                 try:
-                    verifyObject(NotificationListener, listener)
+                    verifyObject(BroadcastListener, listener)
                     listener.notify(sender.id, message)
                 except DoesNotImplement:
                     pass
@@ -244,7 +252,7 @@ class MarketProtocol(RPCProtocol):
                 listing_hash = c.contract["buyer_order"]["order"]["ref_hash"]
                 signature = self.signing_key.sign(
                     str(payment_address) + str(amount) + str(listing_hash) + str(buyer_key))[:64]
-                c.await_funding(self.multiplexer.ws, self.multiplexer.blockchain, signature, False)
+                c.await_funding(self.get_notification_listener(), self.multiplexer.blockchain, signature, False)
                 return [signature]
             else:
                 self.log.warning("received invalid order from %s" % sender)
@@ -259,7 +267,7 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            contract_id = c.accept_order_confirmation(self.multiplexer.ws)
+            contract_id = c.accept_order_confirmation(self.get_notification_listener())
             if contract_id:
                 self.router.addContact(sender)
                 self.log.info("received confirmation for order %s" % contract_id)
@@ -278,7 +286,7 @@ class MarketProtocol(RPCProtocol):
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
 
-            contract_id = c.accept_receipt(self.multiplexer.ws, self.multiplexer.blockchain)
+            contract_id = c.accept_receipt(self.get_notification_listener(), self.multiplexer.blockchain)
             self.router.addContact(sender)
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]
@@ -336,7 +344,7 @@ class MarketProtocol(RPCProtocol):
         d = self.get_following(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callNotify(self, nodeToAsk, message, signature):
+    def callBroadcast(self, nodeToAsk, message, signature):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.notify(address, message, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
@@ -373,6 +381,14 @@ class MarketProtocol(RPCProtocol):
             self.log.debug("no response from %s, removing from router" % node)
             self.router.removeContact(node)
         return result
+
+    def get_notification_listener(self):
+        for listener in self.listeners:
+            try:
+                verifyObject(NotificationListener, listener)
+                return listener
+            except DoesNotImplement:
+                pass
 
     def __iter__(self):
         return iter(self.handled_commands)

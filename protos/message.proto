@@ -26,7 +26,7 @@ enum Command {
 	HOLE_PUNCH              = 3;
 	STORE                   = 4;
 	DELETE                  = 5;
-	NOTIFY                  = 6;
+	BROADCAST               = 6;
 	MESSAGE                 = 7;
 	FOLLOW                  = 8;
 	UNFOLLOW                = 9;

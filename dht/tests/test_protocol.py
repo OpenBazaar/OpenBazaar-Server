@@ -2,8 +2,8 @@ __author__ = 'chris'
 import time
 import random
 from binascii import unhexlify
-
 import os
+
 import mock
 import nacl.signing
 import nacl.encoding
@@ -11,13 +11,14 @@ import nacl.hash
 from txrudp import connection, rudp, packet, constants
 from twisted.trial import unittest
 from twisted.internet import task, address, udp, defer, reactor
+
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
 from dht.tests.utils import mknode
 from dht.node import Node
 from protos import message, objects
-from wireprotocol import OpenBazaarProtocol
+from net.wireprotocol import OpenBazaarProtocol
 from db import datastore
 from constants import PROTOCOL_VERSION
 

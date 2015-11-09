@@ -70,7 +70,7 @@ class Contract(object):
 
         # used when purchasing this contract
         self.testnet = testnet
-        self.ws = None
+        self.notification_listener = None
         self.blockchain = None
         self.amount_funded = 0
         self.received_txs = []
@@ -481,11 +481,11 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
-    def accept_order_confirmation(self, ws, confirmation_json=None):
+    def accept_order_confirmation(self, notification_listener, confirmation_json=None):
         """
         Validate the order confirmation sent over from the seller and update our node accordingly.
         """
-        self.ws = ws
+        self.notification_listener = notification_listener
         try:
             if confirmation_json:
                 self.contract["vendor_order_confirmation"] = json.loads(confirmation_json,
@@ -512,14 +512,18 @@ class Contract(object):
             # update the contract in the file system
             with open(file_path, 'w') as outfile:
                 outfile.write(json.dumps(self.contract, indent=4))
-            message_json = {
-                "order_confirmation": {
-                    "order_id": contract_hash,
-                    "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
-                }
-            }
-            # push the message over websockets
-            self.ws.push(json.dumps(message_json, indent=4))
+            title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+            if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+                image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+            else:
+                image_hash = ""
+            if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+                handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+            else:
+                handle = ""
+            vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+            self.notification_listener.notify(vendor_guid, handle, "order confirmation", contract_hash, title,
+                                              image_hash)
             return contract_hash
         except Exception:
             return False
@@ -610,12 +614,12 @@ class Contract(object):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-    def accept_receipt(self, ws, blockchain, receipt_json=None):
+    def accept_receipt(self, notification_listener, blockchain, receipt_json=None):
         """
         Process the final receipt sent over by the buyer. If valid, broadcast the transaction
         to the bitcoin network.
         """
-        self.ws = ws
+        self.notification_listener = notification_listener
         self.blockchain = blockchain
         if receipt_json:
             self.contract["buyer_receipt"] = json.loads(receipt_json,
@@ -665,6 +669,17 @@ class Contract(object):
             self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
             self.blockchain.broadcast(tx_signed)
             self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
+            title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+            if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+                image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+            else:
+                image_hash = ""
+            buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+            if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+                handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+            else:
+                handle = ""
+            self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
 
         self.db.Sales().update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
@@ -674,17 +689,9 @@ class Contract(object):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        message_json = {
-            "payment_received": {
-                "order_id": order_id,
-                "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
-            }
-        }
-        # push the message over websockets
-        self.ws.push(json.dumps(message_json, indent=4))
         return order_id
 
-    def await_funding(self, websocket_server, libbitcoin_client, proofSig, is_purchase=True):
+    def await_funding(self, notification_listener, libbitcoin_client, proofSig, is_purchase=True):
         """
         Saves the contract to the file system and db as an unfunded contract.
         Listens on the libbitcoin server for the multisig address to be funded.
@@ -692,7 +699,7 @@ class Contract(object):
         unfunded for more than 10 minutes.
         """
 
-        self.ws = websocket_server
+        self.notification_listener = notification_listener
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
@@ -781,31 +788,33 @@ class Contract(object):
                 self.blockchain.unsubscribe_address(
                     self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
                 order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+                title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+                if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+                    image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+                else:
+                    image_hash = ""
                 if self.is_purchase:
-                    message_json = {
-                        "payment_received": {
-                            "address": self.contract["buyer_order"]["order"]["payment"]["address"],
-                            "order_id": order_id
-                            }
-                    }
-
+                    if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+                        handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+                    else:
+                        handle = ""
+                    vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+                    self.notification_listener.notify(vendor_guid, handle, "payment complete", order_id, title,
+                                                      image_hash)
                     # update the db
                     self.db.Purchases().update_status(order_id, 1)
                     self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                 else:
-                    message_json = {
-                        "new_order": {
-                            "order_id": order_id,
-                            "title": self.contract["vendor_offer"]["listing"]["item"]["title"]
-                            }
-                    }
+                    buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+                    if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+                        handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+                    else:
+                        handle = ""
+                    self.notification_listener.notify(buyer_guid, handle, "new order", order_id, title, image_hash)
                     self.db.Sales().update_status(order_id, 1)
                     self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Received new order %s" % order_id)
-
-                # push the message over websockets
-                self.ws.push(json.dumps(message_json, indent=4))
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)
