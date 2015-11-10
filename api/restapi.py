@@ -775,7 +775,7 @@ class OpenBazaarAPI(APIResource):
                 "image_hash": n[7].encode("hex"),
                 "read": False if n[8] == 0 else True
             }
-        notification_list.append(notification_json)
+            notification_list.append(notification_json)
         request.write(json.dumps(notification_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
