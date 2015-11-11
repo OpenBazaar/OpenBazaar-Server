@@ -328,7 +328,7 @@ class Contract(object):
             vendor_key = derive_childkey(masterkey_v, chaincode)
 
             if self.testnet:
-                payment_address = bitcoin.pubkey_to_address(vendor_key, 196)
+                payment_address = bitcoin.pubkey_to_address(vendor_key, 111)
             else:
                 payment_address = bitcoin.pubkey_to_address(vendor_key)
             order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
@@ -1018,7 +1018,7 @@ class Contract(object):
 
                 # verify the payment address
                 if self.testnet:
-                    payment_address = bitcoin.pubkey_to_address(vendor_key, 196)
+                    payment_address = bitcoin.pubkey_to_address(vendor_key, 111)
                 else:
                     payment_address = bitcoin.pubkey_to_address(vendor_key)
                 if payment_address != self.contract["buyer_order"]["order"]["payment"]["address"]:
