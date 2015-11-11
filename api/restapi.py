@@ -783,7 +783,8 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/mark_notification_as_read')
     def mark_as_read(self, request):
         try:
-            self.db.NotificationStore().mark_as_read(request.args["id"][0])
+            for notif_id in request.args["id"]:
+                self.db.NotificationStore().mark_as_read(notif_id)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
