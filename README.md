@@ -27,7 +27,13 @@ make
 
 If everything has installed fine, you should get a message that everything went OK.
 
-You can now start the server with:
+You can now start the server on testnet (recommended at this point) with:
+
+```bash
+python openbazaard.py start --testnet
+```
+
+To run on the regular network:
 
 ```bash
 python openbazaard.py start
