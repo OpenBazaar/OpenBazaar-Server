@@ -1,7 +1,6 @@
 __author__ = 'chris'
 import json
 import os
-import pickle
 from binascii import unhexlify
 from collections import OrderedDict
 
@@ -685,13 +684,8 @@ class OpenBazaarAPI(APIResource):
                 request.args["language"][0],
                 request.args["time_zone"][0],
                 1 if str_to_bool(request.args["notifications"][0]) else 0,
-                request.args["ship_to_name"][0],
-                request.args["ship_to_street"][0],
-                request.args["ship_to_city"][0],
-                request.args["ship_to_state"][0],
-                request.args["ship_to_postal_code"][0],
-                request.args["ship_to_country"][0],
-                pickle.dumps(request.args["blocked"]),
+                json.dumps(request.args["shipping_addresses"]),
+                json.dumps(request.args["blocked"]),
                 request.args["libbitcoin_server"][0],
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
@@ -720,18 +714,13 @@ class OpenBazaarAPI(APIResource):
                 "language": settings[4],
                 "time_zone": settings[5],
                 "notifications": True if settings[6] == 1 else False,
-                "ship_to_name": settings[7],
-                "ship_to_street": settings[8],
-                "ship_to_city": settings[9],
-                "ship_to_state": settings[10],
-                "ship_to_postal_code": settings[11],
-                "ship_to_country": settings[12],
-                "blocked_guids": pickle.loads(settings[13]),
-                "libbitcoin_server": settings[14],
-                "ssl": True if settings[15] == 1 else False,
-                "seed": settings[16],
-                "terms_conditions": settings[17],
-                "refund_policy": settings[18]
+                "shipping_addresses": json.loads(settings[7]),
+                "blocked_guids": json.loads(settings[8]),
+                "libbitcoin_server": settings[9],
+                "ssl": True if settings[10] == 1 else False,
+                "seed": settings[11],
+                "terms_conditions": settings[12],
+                "refund_policy": settings[13]
             }
             request.write(json.dumps(settings_json, indent=4))
             request.finish()

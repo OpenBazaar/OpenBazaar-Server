@@ -82,9 +82,8 @@ class Database(object):
     address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT, paymentTX TEXT)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
-country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shipToName TEXT, shipToStreet TEXT,
-shipToCity TEXT, shipToState TEXT, shipToPostalCode TEXT, shipToCountry TEXT, blocked BLOB, libbitcoinServer TEXT,
-SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
+country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
+libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
 
         db.commit()
         return db
@@ -602,19 +601,17 @@ FROM notifications''')
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def update(self, refundAddress, currencyCode, country, language, timeZone, notifications, shipToName,
-                   shipToStreet, shipToCity, shipToState, shipToPostalCode, shipToCountry, blocked,
-                   libbitcoinServer, ssl, seed, terms_conditions, refund_policy):
+        def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
+                   shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions, refund_policy):
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
-language, timeZone, notifications, shipToName, shipToStreet, shipToCity, shipToState, shipToPostalCode, shipToCountry,
-blocked, libbitcoinServer, ssl, seed, terms_conditions, refund_policy)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (1, refundAddress, currencyCode, country, language, timeZone,
-                                                    notifications, shipToName, shipToStreet, shipToCity,
-                                                    shipToState, shipToPostalCode, shipToCountry, blocked,
-                                                    libbitcoinServer, ssl, seed, terms_conditions,
-                                                    refund_policy))
+language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
+terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                               (1, refundAddress, currencyCode, country, language, timeZone,
+                                notifications, shipping_addresses, blocked,
+                                libbitcoinServer, ssl, seed, terms_conditions,
+                                refund_policy))
             except Exception as e:
                 print e.message
             self.db.commit()
