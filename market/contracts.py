@@ -983,7 +983,7 @@ class Contract(object):
                                                                      float(conversion_rate))) * quantity
                     asking_price += shipping_amount
 
-            if asking_price > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
+            if float(asking_price) > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
                 raise Exception("Insuffient Payment")
 
             if "moderator" in self.contract["buyer_order"]["order"]:

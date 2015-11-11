@@ -529,7 +529,6 @@ class Server(object):
             node_to_ask: a `dht.node.Node` object
             contract: a complete `Contract` object containing the buyer's order
         """
-
         def parse_response(response):
             try:
                 address = contract.contract["buyer_order"]["order"]["payment"]["address"]
