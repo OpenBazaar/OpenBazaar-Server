@@ -707,7 +707,6 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({}, indent=4))
             request.finish()
         else:
-            print settings
             settings_json = {
                 "refund_address": settings[1],
                 "currency_code": settings[2],

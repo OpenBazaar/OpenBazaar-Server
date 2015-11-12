@@ -604,16 +604,13 @@ FROM notifications''')
         def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
                    shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions, refund_policy):
             cursor = self.db.cursor()
-            try:
-                cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
+            cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
-terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                               (1, refundAddress, currencyCode, country, language, timeZone,
-                                notifications, shipping_addresses, blocked,
-                                libbitcoinServer, ssl, seed, terms_conditions,
-                                refund_policy))
-            except Exception as e:
-                print e.message
+terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                           (1, refundAddress, currencyCode, country, language, timeZone,
+                            notifications, shipping_addresses, blocked,
+                            libbitcoinServer, ssl, seed, terms_conditions,
+                            refund_policy))
             self.db.commit()
 
         def get(self):
