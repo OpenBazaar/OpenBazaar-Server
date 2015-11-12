@@ -19,7 +19,7 @@ from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from net.wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET
+from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
@@ -28,10 +28,12 @@ from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
 from log import Logger, FileLogObserver
 from net.upnp import PortMapper
+from net.sslcontext import ChainedOpenSSLContextFactory
 
 
 def run(*args):
     TESTNET = args[0]
+    SSL = args[5]
 
     # database
     db = Database(TESTNET)
@@ -112,12 +114,18 @@ def run(*args):
     listenWS(ws_factory)
     webdir = File(".")
     web = Site(webdir)
-    reactor.listenTCP(9000, web, interface=args[4])
+    if SSL:
+        reactor.listenSSL(9000, web, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=args[4])
+    else:
+        reactor.listenTCP(9000, web, interface=args[4])
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
     site = Site(api, timeout=None)
-    reactor.listenTCP(18469, site, interface=args[3])
+    if SSL:
+        reactor.listenSSL(18469, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=args[3])
+    else:
+        reactor.listenTCP(18469, site, interface=args[3])
 
     # TODO: add optional SSL on rest and websocket servers
 
@@ -183,6 +191,9 @@ commands:
         python openbazaard.py start [-d DAEMON]''')
             parser.add_argument('-d', '--daemon', action='store_true', help="run the server in the background")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
+            parser.add_argument('-s', '--ssl', action='store_true',
+                                help="use ssl on api connections. you must set the path to your "
+                                     "certificate and private key in the config file.")
             parser.add_argument('-l', '--loglevel', default="info",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
@@ -211,9 +222,9 @@ commands:
             else:
                 port = 18467 if not args.testnet else 28467
             if args.daemon and platform.system().lower() in unix:
-                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip)
+                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl)
             else:
-                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip)
+                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl)
 
         def stop(self):
             # pylint: disable=W0612

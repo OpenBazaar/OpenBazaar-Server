@@ -143,6 +143,35 @@ else:
         except ConfigParser.Error, error:
             print error
 
+        # extract Config  SSL_CERT
+        ssl_crt = ''
+        nameOptionSsl_crt = 'SSL_CERT'
+
+        try:
+            optionssl_crt = fc.get(mySection, nameOptionSsl_crt)
+            # if have value
+            try:
+                ssl_crt = '' if not optionssl_crt else optionssl_crt
+            except ValueError, error:
+                print error
+
+        except ConfigParser.Error, error:
+            pass
+
+        # extract Config  SSL_KEY
+        ssl_key = ''
+        nameOptionSsl_key = 'SSL_KEY'
+        try:
+            optionssl_key = fc.get(mySection, nameOptionSsl_key)
+            # if have value
+            try:
+                ssl_key = '' if not optionssl_key else optionssl_key
+            except ValueError, error:
+                print error
+
+        except ConfigParser.Error, error:
+            pass
+
         # Constant Assignment
         DATA_FOLDER = data_f2
         SEED_NODE = (seed_n, seed_n_p)
@@ -152,6 +181,8 @@ else:
         TRANSACTION_FEE = trans_f
         LIBBITCOIN_SERVER = libbitcoin_s
         LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
+        SSL_CERT = ssl_crt
+        SSL_KEY = ssl_key
 
     except ConfigParser.Error, error:
         print error
