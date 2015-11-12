@@ -684,8 +684,8 @@ class OpenBazaarAPI(APIResource):
                 request.args["language"][0],
                 request.args["time_zone"][0],
                 1 if str_to_bool(request.args["notifications"][0]) else 0,
-                json.dumps(request.args["shipping_addresses"]),
-                json.dumps(request.args["blocked"]),
+                json.dumps(request.args["shipping_addresses"] if request.args["shipping_addresses"] != "" else []),
+                json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
                 request.args["libbitcoin_server"][0],
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
@@ -707,6 +707,7 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({}, indent=4))
             request.finish()
         else:
+            print settings
             settings_json = {
                 "refund_address": settings[1],
                 "currency_code": settings[2],
