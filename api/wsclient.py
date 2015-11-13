@@ -40,6 +40,7 @@ if __name__ == '__main__':
 
     factory = WebSocketClientFactory("ws://localhost:18466")
     factory.protocol = BroadcastClientProtocol
+
     connectWS(factory)
 
     reactor.run()

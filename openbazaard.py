@@ -3,7 +3,7 @@ import sys
 import argparse
 import platform
 
-from twisted.internet import reactor
+from twisted.internet import reactor, ssl
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -107,27 +107,50 @@ def run(*args):
 
     reactor.listenUDP(port, protocol)
 
+    class OnlyIP(Site):
+        def __init__(self, resource, ip, timeout=60 * 60 * 1):
+            self.ip = ip
+            Site.__init__(self, resource, timeout=timeout)
+
+        def buildProtocol(self, addr):
+            if addr.host == self.ip:
+                return Site.buildProtocol(self, addr)
+            return None
+
     # websockets api
-    ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
-    ws_factory.protocol = WSProtocol
-    ws_factory.setProtocolOptions(allowHixie76=True)
-    listenWS(ws_factory)
-    webdir = File(".")
-    web = Site(webdir)
     if SSL:
-        reactor.listenSSL(9000, web, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=args[4])
+        ws_factory = WSFactory("wss://127.0.0.1:18466", mserver, kserver)
+        contextFactory = ssl.DefaultOpenSSLContextFactory(SSL_KEY, SSL_CERT)
+        ws_factory.protocol = WSProtocol
+        ws_factory.setProtocolOptions(allowHixie76=True)
+        listenWS(ws_factory, contextFactory)
     else:
-        reactor.listenTCP(9000, web, interface=args[4])
+        ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
+        ws_factory.protocol = WSProtocol
+        ws_factory.setProtocolOptions(allowHixie76=True)
+        listenWS(ws_factory)
+    webdir = File(".")
+    if args[4] != "127.0.0.1":
+        ws_interface = "0.0.0.0"
+        web = OnlyIP(webdir, args[4])
+    else:
+        ws_interface = args[4]
+        web = Site(webdir)
+
+    reactor.listenTCP(9000, web, interface=ws_interface)
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
-    site = Site(api, timeout=None)
-    if SSL:
-        reactor.listenSSL(18469, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=args[3])
+    if args[3] != "127.0.0.1":
+        rest_interface = "0.0.0.0"
+        site = OnlyIP(api, args[3], timeout=None)
     else:
-        reactor.listenTCP(18469, site, interface=args[3])
-
-    # TODO: add optional SSL on rest and websocket servers
+        rest_interface = args[4]
+        site = Site(api, timeout=None)
+    if SSL:
+        reactor.listenSSL(18469, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
+    else:
+        reactor.listenTCP(18469, site, interface=rest_interface)
 
     # blockchain
     # TODO: listen on the libbitcoin heartbeat port instead fetching height
