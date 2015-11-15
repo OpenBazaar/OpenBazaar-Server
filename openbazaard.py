@@ -3,7 +3,7 @@ import sys
 import argparse
 import platform
 
-from twisted.internet import reactor, ssl
+from twisted.internet import reactor
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -120,7 +120,7 @@ def run(*args):
     # websockets api
     if SSL:
         ws_factory = WSFactory("wss://127.0.0.1:18466", mserver, kserver)
-        contextFactory = ssl.DefaultOpenSSLContextFactory(SSL_KEY, SSL_CERT)
+        contextFactory = ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT)
         ws_factory.protocol = WSProtocol
         ws_factory.setProtocolOptions(allowHixie76=True)
         listenWS(ws_factory, contextFactory)
@@ -130,7 +130,7 @@ def run(*args):
         ws_factory.setProtocolOptions(allowHixie76=True)
         listenWS(ws_factory)
     webdir = File(".")
-    if args[4] != "127.0.0.1":
+    if args[4] != "127.0.0.1" and args[4] != "0.0.0.0":
         ws_interface = "0.0.0.0"
         web = OnlyIP(webdir, args[4])
     else:
@@ -141,11 +141,11 @@ def run(*args):
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
-    if args[3] != "127.0.0.1":
+    if args[3] != "127.0.0.1" and args[3] != "0.0.0.0":
         rest_interface = "0.0.0.0"
         site = OnlyIP(api, args[3], timeout=None)
     else:
-        rest_interface = args[4]
+        rest_interface = args[3]
         site = Site(api, timeout=None)
     if SSL:
         reactor.listenSSL(18469, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
@@ -221,9 +221,9 @@ commands:
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
             parser.add_argument('-r', '--restallowip', default="127.0.0.1",
-                                help="bind the rest api server to this ip")
+                                help="only allow rest api connections from this ip")
             parser.add_argument('-w', '--wsallowip', default="127.0.0.1",
-                                help="bind the websocket server to this ip")
+                                help="only allow websockets connections from this ip")
             args = parser.parse_args(sys.argv[2:])
             OKBLUE = '\033[94m'
             ENDC = '\033[0m'

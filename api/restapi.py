@@ -771,7 +771,7 @@ class OpenBazaarAPI(APIResource):
         return server.NOT_DONE_YET
 
     @POST('^/api/v1/mark_notification_as_read')
-    def mark_as_read(self, request):
+    def mark_notification_as_read(self, request):
         try:
             for notif_id in request.args["id"]:
                 self.db.NotificationStore().mark_as_read(notif_id)
@@ -796,5 +796,36 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_chat_messages')
+    def get_chat_messages(self, request):
+        messages = self.db.MessageStore().get_messages(request.args["guid"], "CHAT")
+        limit = int(request.args["limit"][0]) if "limit" in request.args else len(messages)
+        start = int(request.args["start"][0]) if "start" in request.args else 0
+        message_list = []
+        for m in messages[::-1][start: start + limit]:
+            message_json = {
+                "guid": m[0],
+                "handle": m[1],
+                "encryption_key": m[3],
+                "message": m[6],
+                "timestamp": m[7],
+                "avatar_hash": m[8].encode("hex"),
+                "outgoing": False if m[10] == 0 else True,
+                "read": False if m[11] == 0 else True
+            }
+            message_list.append(message_json)
+        request.write(json.dumps(message_list, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
 
-
+    @POST('^/api/v1/mark_chat_message_as_read')
+    def mark_chat_message_as_read(self, request):
+        try:
+            self.db.MessageStore().mark_as_read(request.args["guid"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET

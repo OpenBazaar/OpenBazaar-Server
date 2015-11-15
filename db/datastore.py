@@ -61,7 +61,7 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE messages(guid TEXT PRIMARY KEY, handle TEXT, signed_pubkey BLOB,
     encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
-    avatar_hash BLOB, signature BLOB, outgoing INTEGER)''')
+    avatar_hash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
 
         cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
     order_id TEXT, title TEXT, timestamp INTEGER, image_hash BLOB, read INTEGER)''')
@@ -335,21 +335,22 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
             outgoing = 1 if is_outgoing else 0
             cursor = self.db.cursor()
             cursor.execute('''INSERT INTO messages(guid, handle, signed_pubkey, encryption_pubkey, subject,
-    message_type, message, timestamp, avatar_hash, signature, outgoing) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+    message_type, message, timestamp, avatar_hash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
-                            message, timestamp, avatar_hash, signature, outgoing))
+                            message, timestamp, avatar_hash, signature, outgoing, 0))
             self.db.commit()
 
         def get_messages(self, guid, message_type):
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, handle, signed_pubkey, encryption_pubkey, subject, message_type, message,
-    timestamp, avatar_hash, signature, outgoing FROM messages WHERE guid=? AND message_type=?''',
+    timestamp, avatar_hash, signature, outgoing, read FROM messages WHERE guid=? AND message_type=?''',
                            (guid, message_type))
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret
+            return cursor.fetchall()
+
+        def mark_as_read(self, guid):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE messages SET read=? WHERE guid=?;''', (1, guid))
+            self.db.commit()
 
         def delete_message(self, guid):
             cursor = self.db.cursor()

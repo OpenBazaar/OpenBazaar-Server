@@ -346,7 +346,7 @@ class MarketProtocol(RPCProtocol):
 
     def callBroadcast(self, nodeToAsk, message, signature):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.notify(address, message, signature)
+        d = self.broadcast(address, message, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):

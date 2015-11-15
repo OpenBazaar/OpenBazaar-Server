@@ -157,7 +157,7 @@ class DatastoreTest(unittest.TestCase):
 
     def test_saveMessage(self):
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')
-        self.assertIsNone(msgs)
+        self.assertTrue(len(msgs) == 0)
         self.ms.save_message(self.u.guid, self.m.handle, self.u.signed_pubkey,
                              '', 'SUBJECT', 'CHAT', 'MESSAGE', '0000-00-00 00:00:00',
                              '', '', '')
@@ -165,7 +165,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertIsNotNone(msgs)
         self.ms.delete_message(self.u.guid)
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')
-        self.assertIsNone(msgs)
+        self.assertTrue(len(msgs) == 0)
 
     def test_notificationStore(self):
         n = self.ns.get_notifications()
