@@ -798,7 +798,7 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/get_chat_messages')
     def get_chat_messages(self, request):
-        messages = self.db.MessageStore().get_messages(request.args["guid"], "CHAT")
+        messages = self.db.MessageStore().get_messages(request.args["guid"][0], "CHAT")
         limit = int(request.args["limit"][0]) if "limit" in request.args else len(messages)
         start = int(request.args["start"][0]) if "start" in request.args else 0
         message_list = []
@@ -817,6 +817,14 @@ class OpenBazaarAPI(APIResource):
         request.write(json.dumps(message_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
+
+    @GET('^/api/v1/get_chat_conversations')
+    def get_chat_conversations(self, request):
+        messages = self.db.MessageStore().get_conversations()
+        request.write(json.dumps(messages, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
 
     @POST('^/api/v1/mark_chat_message_as_read')
     def mark_chat_message_as_read(self, request):

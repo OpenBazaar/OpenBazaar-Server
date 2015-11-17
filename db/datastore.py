@@ -60,7 +60,7 @@ class Database(object):
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
         cursor.execute('''CREATE TABLE messages(guid TEXT PRIMARY KEY, handle TEXT, signed_pubkey BLOB,
-    encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp, INTEGER,
+    encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp INTEGER,
     avatar_hash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
 
         cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
@@ -346,6 +346,18 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
     timestamp, avatar_hash, signature, outgoing, read FROM messages WHERE guid=? AND message_type=?''',
                            (guid, message_type))
             return cursor.fetchall()
+
+        def get_conversations(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT DISTINCT guid FROM messages''',)
+            guids = cursor.fetchall()
+            ret = []
+            for g in guids:
+                cursor.execute('''SELECT avatar_hash FROM messages WHERE guid=? and message_type="CHAT"''', (g[0],))
+                val = cursor.fetchone()
+                if val is not None:
+                    ret.append({"guid": g[0], "avatar_hash": val[0]})
+            return ret
 
         def mark_as_read(self, guid):
             cursor = self.db.cursor()
