@@ -128,7 +128,7 @@ class KademliaProtocol(RPCProtocol):
 
     def callStore(self, nodeToAsk, keyword, key, value, ttl):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.store(address, keyword, key, value, str(ttl))
+        d = self.store(address, keyword, key, value, str(int(round(ttl))))
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callDelete(self, nodeToAsk, keyword, key, signature):
