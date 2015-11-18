@@ -98,7 +98,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.protocol.router.addContact(self.node2)
         self.protocol.router.addContact(self.node3)
 
-        # test resonse with uncontacted nodes
+        # test response with uncontacted nodes
         node = Node(digest("s"))
         nearest = self.protocol.router.findNeighbors(node)
         spider = ValueSpiderCrawl(self.protocol, node, nearest, KSIZE, ALPHA)
@@ -132,6 +132,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.protocol.sourceNode.getProto().SerializeToString()
+        val.ttl = 10
         response = (True, ("value", val.SerializeToString()))
         responses = {self.node3.id: response}
         spider.nearestWithoutValue = NodeHeap(node, 1)
@@ -152,15 +153,18 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         val = Value()
         val.valueKey = digest("contractID")
         val.serializedData = self.node1.getProto().SerializeToString()
+        val.ttl = 10
         val1 = val.SerializeToString()
-        value = spider._handleFoundValues([(val1,)])
+        value = spider._handleFoundValues([val1])
         self.assertEqual(value[0], val.SerializeToString())
 
         # test handle multiple values
         val.serializedData = self.node2.getProto().SerializeToString()
         val2 = val.SerializeToString()
-        found_values = [(val1,), (val1,), (val2,)]
-        self.assertEqual(spider._handleFoundValues(found_values), (val1,))
+        val.valueKey = digest("contractID2")
+        val3 = val.SerializeToString()
+        found_values = [val1, val2, val2, val3]
+        self.assertEqual(spider._handleFoundValues(found_values), [val3, val2])
 
         # test store value at nearest without value
         spider.nearestWithoutValue.push(self.node1)

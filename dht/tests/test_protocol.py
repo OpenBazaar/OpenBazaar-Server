@@ -108,9 +108,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("STORE")
         m.protoVer = self.version
         m.testnet = False
-        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key",
+                            self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
         data = m.SerializeToString()
-        del m.arguments[-3:]
+        del m.arguments[-4:]
         m.arguments.append("True")
         expected_message = m.SerializeToString()
         self.handler.receive_message(data)
@@ -127,7 +128,7 @@ class KademliaProtocolTest(unittest.TestCase):
             self.protocol.sourceNode.getProto().SerializeToString())
 
     def test_bad_rpc_store(self):
-        r = self.protocol.rpc_store(self.node, 'testkeyword', 'kw', 'val')
+        r = self.protocol.rpc_store(self.node, 'testkeyword', 'kw', 'val', 10)
         self.assertEqual(r, ['False'])
 
     def test_rpc_delete(self):
@@ -140,9 +141,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("STORE")
         m.protoVer = self.version
         m.testnet = False
-        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key",
+                            self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
         data = m.SerializeToString()
-        del m.arguments[-3:]
+        del m.arguments[-4:]
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
         self.handler.receive_message(data)
@@ -261,7 +263,8 @@ class KademliaProtocolTest(unittest.TestCase):
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
         m.command = message.Command.Value("STORE")
         m.protoVer = self.version
-        m.arguments.extend([digest("Keyword"), "Key", self.protocol.sourceNode.getProto().SerializeToString()])
+        m.arguments.extend([digest("Keyword"), "Key",
+                            self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
         data = m.SerializeToString()
         self.handler.receive_message(data)
         self.assertTrue(
@@ -283,6 +286,7 @@ class KademliaProtocolTest(unittest.TestCase):
         value = objects.Value()
         value.valueKey = "Key"
         value.serializedData = self.protocol.sourceNode.getProto().SerializeToString()
+        value.ttl = 10
         m.arguments.append("value")
         m.arguments.append(value.SerializeToString())
         expected_message = m.SerializeToString()
@@ -360,7 +364,7 @@ class KademliaProtocolTest(unittest.TestCase):
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         self.wire_protocol[self.addr1] = self.con
         self.protocol.callStore(n, digest("Keyword"), digest("Key"),
-                                self.protocol.sourceNode.getProto().SerializeToString())
+                                self.protocol.sourceNode.getProto().SerializeToString(), 10)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
@@ -484,7 +488,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.protocol.router.addContact(mknode())
 
         self.protocol.storage[digest("keyword")] = (
-            digest("key"), self.protocol.sourceNode.getProto().SerializeToString())
+            digest("key"), self.protocol.sourceNode.getProto().SerializeToString(), 10)
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
 
         self.clock.advance(1)
@@ -501,6 +505,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.append(digest("keyword"))
         m.arguments.append(digest("key"))
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
+        m.arguments.append(str(10))
         self.assertEqual(x.sender, m.sender)
         self.assertEqual(x.command, m.command)
         self.assertEqual(x.arguments[0], m.arguments[0])

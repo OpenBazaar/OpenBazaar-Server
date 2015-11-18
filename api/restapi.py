@@ -825,7 +825,6 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
-
     @POST('^/api/v1/mark_chat_message_as_read')
     def mark_chat_message_as_read(self, request):
         try:
