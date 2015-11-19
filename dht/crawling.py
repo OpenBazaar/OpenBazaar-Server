@@ -3,7 +3,7 @@ Copyright (c) 2014 Brian Muller
 Copyright (c) 2015 OpenBazaar
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 from twisted.internet import defer
 
 from log import Logger
@@ -94,7 +94,8 @@ class ValueSpiderCrawl(SpiderCrawl):
             if not response.happened():
                 toremove.append(peerid)
             elif response.hasValue():
-                foundValues.append(response.getValue())
+                # since we get back a list of values, we will just extend foundValues (excluding duplicates)
+                foundValues = list(set(foundValues) | set(response.getValue()))
             else:
                 peer = self.nearest.getNodeById(peerid)
                 self.nearestWithoutValue.push(peer)
@@ -115,11 +116,30 @@ class ValueSpiderCrawl(SpiderCrawl):
         make sure we tell the nearest node that *didn't* have
         the value to store it.
         """
-        valueCounts = Counter(values)
-        if len(valueCounts) != 1:
-            args = (self.node.long_id, str(values))
-            self.log.warning("got multiple values for key %i: %s" % args)
-        value = valueCounts.most_common(1)[0][0]
+
+        value_dict = defaultdict(list)
+        ttl_dict = defaultdict(list)
+        for v in values:
+            try:
+                d = objects.Value()
+                d.ParseFromString(v)
+                value_dict[d.valueKey].append(d.serializedData)
+                ttl_dict[d.valueKey].append(d.ttl)
+            except Exception:
+                pass
+        value = []
+        for k, v in value_dict.items():
+            ttl = ttl_dict[k]
+            if len(v) > 1:
+                valueCounts = Counter(v)
+                v = [valueCounts.most_common(1)[0][0]]
+                ttlCounts = Counter(ttl_dict[k])
+                ttl = [ttlCounts.most_common(1)[0][0]]
+            val = objects.Value()
+            val.valueKey = k
+            val.serializedData = v[0]
+            val.ttl = ttl[0]
+            value.append(val.SerializeToString())
 
         ds = []
         peerToSaveTo = self.nearestWithoutValue.popleft()
@@ -128,7 +148,8 @@ class ValueSpiderCrawl(SpiderCrawl):
                 try:
                     val = objects.Value()
                     val.ParseFromString(v)
-                    ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey, val.serializedData))
+                    ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey,
+                                                      val.serializedData, val.ttl))
                 except Exception:
                     pass
             return defer.gatherResults(ds).addCallback(lambda _: value)

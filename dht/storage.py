@@ -78,8 +78,10 @@ class ForgetfulStorage(object):
             valueDic = self.data[keyword]
             if values[0] not in valueDic:
                 valueDic[values[0]] = values[1]
+                valueDic.set_ttl(values[0], values[2])
         else:
             valueDic[values[0]] = values[1]
+            valueDic.set_ttl(values[0], values[2])
             self.data[keyword] = valueDic
         self.cull()
 
@@ -97,6 +99,7 @@ class ForgetfulStorage(object):
                 value = Value()
                 value.valueKey = k
                 value.serializedData = v
+                value.ttl = int(round(self.data[keyword].get_ttl(k)))
                 ret.append(value.SerializeToString())
             return ret
         return default
@@ -156,25 +159,27 @@ class PersistentStorage(object):
         cursor.execute('''SELECT id, value FROM dht WHERE keyword=? AND id=? AND value=?''',
                        (keyword.encode("hex"), values[0], values[1]))
         if cursor.fetchone() is None:
+            birthday = time.time() - (self.ttl - values[2])
             cursor.execute('''INSERT OR IGNORE INTO dht(keyword, id, value, birthday)
-                          VALUES (?,?,?,?)''', (keyword.encode("hex"), values[0], values[1], time.time()))
+                          VALUES (?,?,?,?)''', (keyword.encode("hex"), values[0], values[1], birthday))
             self.db.commit()
         self.cull()
 
     def __getitem__(self, keyword):
         self.cull()
         cursor = self.db.cursor()
-        cursor.execute('''SELECT id, value FROM dht WHERE keyword=?''', (keyword.encode("hex"),))
+        cursor.execute('''SELECT id, value, birthday FROM dht WHERE keyword=?''', (keyword.encode("hex"),))
         return cursor.fetchall()
 
     def get(self, keyword, default=None):
         self.cull()
         if len(self[keyword]) > 0:
             ret = []
-            for k, v in self[keyword]:
+            for k, v, birthday in self[keyword]:
                 value = Value()
                 value.valueKey = k
                 value.serializedData = v
+                value.ttl = int(round(self.ttl - (time.time() - birthday)))
                 ret.append(value.SerializeToString())
             return ret
         return default

@@ -21,12 +21,12 @@ class ForgetFulStorageTest(unittest.TestCase):
         f = ForgetfulStorage()
         tdict1 = TTLDict(3)
         tdict1[self.key1] = self.value
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         tdict2 = TTLDict(3)
         tdict2[self.key1] = self.value
         tdict2[self.key2] = self.value
-        f[self.keyword2] = (self.key1, self.value)
-        f[self.keyword2] = (self.key2, self.value)
+        f[self.keyword2] = (self.key1, self.value, 10)
+        f[self.keyword2] = (self.key2, self.value, 10)
         self.assertEqual(f.data[self.keyword1], tdict1)
         self.assertEqual(f.data[self.keyword2], tdict2)
 
@@ -34,44 +34,45 @@ class ForgetFulStorageTest(unittest.TestCase):
         f = ForgetfulStorage()
         tdict = TTLDict(3)
         tdict[self.key1] = self.value
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         self.assertEqual(tdict, f[self.keyword1])
 
     def test_get(self):
         v = Value()
         v.valueKey = self.key1
         v.serializedData = self.value
+        v.ttl = 10
         testv = [v.SerializeToString()]
         f = ForgetfulStorage()
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         self.assertEqual(testv, f.get(self.keyword1))
 
     def test_getSpecific(self):
         f = ForgetfulStorage()
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         self.assertEqual(self.value, f.getSpecific(self.keyword1, self.key1))
 
     def test_delete(self):
         f = ForgetfulStorage()
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         f.delete(self.keyword1, self.key1)
         self.assertEqual(f.get(self.keyword1), None)
 
     def test_iterkeys(self):
         f = ForgetfulStorage()
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         for k in f.iterkeys():
             self.assertEqual(k, self.keyword1)
 
     def test_iteritems(self):
         f = ForgetfulStorage()
-        f[self.keyword1] = (self.key1, self.value)
+        f[self.keyword1] = (self.key1, self.value, 10)
         for k, v in f.iteritems(self.keyword1):
             self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
-        f = ForgetfulStorage(ttl=.00000000000001)
-        f[self.keyword1] = (self.key1, self.value)
+        f = ForgetfulStorage()
+        f[self.keyword1] = (self.key1, self.value, .00000000000001)
         self.assertTrue(self.keyword1 not in f)
 
 
@@ -85,47 +86,51 @@ class PersistentStorageTest(unittest.TestCase):
 
     def test_setitem(self):
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
-        p[self.keyword2] = (self.key1, self.value)
-        p[self.keyword2] = (self.key2, self.value)
-        self.assertEqual(p[self.keyword1], [(self.key1, self.value)])
-        self.assertEqual(p[self.keyword2], [(self.key1, self.value), (self.key2, self.value)])
+        p[self.keyword1] = (self.key1, self.value, 10)
+        p[self.keyword2] = (self.key1, self.value, 10)
+        p[self.keyword2] = (self.key2, self.value, 10)
+        self.assertEqual(p[self.keyword1][0][:2], (self.key1, self.value))
+        ret = []
+        for val in p[self.keyword2]:
+            ret.append(val[:2])
+        self.assertEqual(ret, [(self.key1, self.value), (self.key2, self.value)])
 
     def test_get(self):
         v = Value()
         v.valueKey = self.key1
         v.serializedData = self.value
+        v.ttl = 10
         testv = [v.SerializeToString()]
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword1] = (self.key1, self.value, 10)
         self.assertEqual(testv, p.get(self.keyword1))
 
     def test_getSpecific(self):
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword1] = (self.key1, self.value, 10)
         self.assertEqual(self.value, p.getSpecific(self.keyword1, self.key1))
 
     def test_delete(self):
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword1] = (self.key1, self.value, 10)
         p.delete(self.keyword1, self.key1)
         self.assertEqual(p.get(self.keyword1), None)
 
     def test_iterkeys(self):
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword1] = (self.key1, self.value, 10)
         for k in p.iterkeys():
             self.assertEqual(k, self.keyword1)
 
     def test_iteritems(self):
         p = PersistentStorage(":memory:")
-        p[self.keyword1] = (self.key1, self.value)
+        p[self.keyword1] = (self.key1, self.value, 10)
         for k, v in p.iteritems(self.keyword1):
             self.assertEqual((self.key1, self.value), (k, v))
 
     def test_ttl(self):
-        p = PersistentStorage(":memory:", ttl=.000000000001)
-        p[self.keyword1] = (self.key1, self.value)
+        p = PersistentStorage(":memory:")
+        p[self.keyword1] = (self.key1, self.value, .000000000001)
         self.assertTrue(p.get(self.keyword1) is None)
 
 

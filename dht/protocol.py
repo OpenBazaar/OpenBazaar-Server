@@ -53,11 +53,11 @@ class KademliaProtocol(RPCProtocol):
         self.addToRouter(sender)
         return [self.sourceNode.getProto().SerializeToString()]
 
-    def rpc_store(self, sender, keyword, key, value):
+    def rpc_store(self, sender, keyword, key, value, ttl):
         self.addToRouter(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 1800:
-            self.storage[keyword] = (key, value)
+        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 1800 and int(ttl) <= 604800:
+            self.storage[keyword] = (key, value, int(ttl))
             return ["True"]
         else:
             return ["False"]
@@ -126,9 +126,9 @@ class KademliaProtocol(RPCProtocol):
         d = self.ping(address)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callStore(self, nodeToAsk, keyword, key, value):
+    def callStore(self, nodeToAsk, keyword, key, value, ttl):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.store(address, keyword, key, value)
+        d = self.store(address, keyword, key, value, str(int(round(ttl))))
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callDelete(self, nodeToAsk, keyword, key, signature):
@@ -160,7 +160,7 @@ class KademliaProtocol(RPCProtocol):
                     or (newNodeClose and thisNodeClosest) \
                     or (thisNodeClosest and len(neighbors) < self.ksize):
                 for k, v in self.storage.iteritems(keyword):
-                    ds.append(self.callStore(node, keyword, k, v))
+                    ds.append(self.callStore(node, keyword, k, v, self.storage.get_ttl(keyword, k)))
         return defer.gatherResults(ds)
 
     def handleCallResponse(self, result, node):
