@@ -5,6 +5,7 @@ import nacl.encoding
 from keyutils.guid import GUID
 from nacl.public import PrivateKey
 
+
 class KeyChain(object):
 
     def __init__(self, database):

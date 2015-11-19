@@ -38,6 +38,8 @@ class Database(object):
             os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
         if not os.path.isfile(DATABASE):
             self.create_database()
+            if os.path.exists(DATA_FOLDER + "cache.pickle"):
+                os.remove(DATA_FOLDER + "cache.pickle")
 
     @staticmethod
     def create_database(filepath=None):
