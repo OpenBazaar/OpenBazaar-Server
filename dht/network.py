@@ -26,7 +26,6 @@ from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
 
-
 def _anyRespondSuccess(responses):
     """
     Given the result of a DeferredList of calls to peers, ensure that at least
@@ -91,42 +90,51 @@ class Server(object):
             # Republish keys older than one hour
             for keyword in self.storage.iterkeys():
                 for k, v in self.storage.iteritems(keyword):
-                    ttl = self.storage.get_ttl(keyword, k)
-                    if ttl < 601200:
-                        ds.append(self.set(keyword, k, v, ttl))
+                    if self.storage.get_ttl(keyword, k) < 601200:
+                        ds.append(self.set(keyword, k, v))
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 
-    def querySeed(self, seed, pubkey):
+    def querySeed(self, list_seed_pubkey):
         """
         Query an HTTP seed and return a `list` if (ip, port) `tuple` pairs.
 
         Args:
-           seed: A `string` consisting of "ip:port" or "hostname:port"
-           pubkey: The hex encoded public key to verify the signature on the response
+            Receives a list of one or more tuples Example [(seed, pubkey)]
+            seed: A `string` consisting of "ip:port" or "hostname:port"
+            pubkey: The hex encoded public key to verify the signature on the response
         """
-        try:
-            self.log.info("querying %s for peers" % seed)
-            nodes = []
-            c = httplib.HTTPConnection(seed)
-            c.request("GET", "/")
-            response = c.getresponse()
-            self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
-            data = response.read()
-            reread_data = data.decode("zlib")
-            proto = peers.PeerSeeds()
-            proto.ParseFromString(reread_data)
-            for peer in proto.peer_data:
-                p = peers.PeerData()
-                p.ParseFromString(peer)
-                tup = (str(p.ip_address), p.port)
-                nodes.append(tup)
-            verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-            verify_key.verify("".join(proto.peer_data), proto.signature)
-            self.log.info("%s returned %s addresses" % (seed, len(nodes)))
+
+        nodes = []
+        if not list_seed_pubkey:
+            self.log.error('failed to query seed {0} from ob.cfg'.format(list_seed_pubkey))
             return nodes
-        except Exception, e:
-            self.log.error("failed to query seed: %s" % str(e))
+        else:
+            for sp in list_seed_pubkey:
+                seed, pubkey = sp
+                try:
+                    self.log.info("querying %s for peers" % seed)
+                    # nodes = []
+                    c = httplib.HTTPConnection(seed)
+                    c.request("GET", "/")
+                    response = c.getresponse()
+                    self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
+                    data = response.read()
+                    reread_data = data.decode("zlib")
+                    proto = peers.PeerSeeds()
+                    proto.ParseFromString(reread_data)
+                    for peer in proto.peer_data:
+                        p = peers.PeerData()
+                        p.ParseFromString(peer)
+                        tup = (str(p.ip_address), p.port)
+                        nodes.append(tup)
+                    verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
+                    verify_key.verify("".join(proto.peer_data), proto.signature)
+                    self.log.info("%s returned %s addresses" % (seed, len(nodes)))
+                    # return nodes
+                except Exception, e:
+                    self.log.error("failed to query seed: %s" % str(e))
+            return nodes
 
     def bootstrappableNeighbors(self):
         """
@@ -220,7 +228,7 @@ class Server(object):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
 
-    def set(self, keyword, key, value, ttl=604800):
+    def set(self, keyword, key, value):
         """
         Set the given key/value tuple at the hash of the given keyword.
         All values stored in the DHT are stored as dictionaries of key/value
@@ -244,11 +252,11 @@ class Server(object):
 
         def store(nodes):
             self.log.debug("setting '%s' on %s" % (keyword.encode("hex"), [str(i) for i in nodes]))
-            ds = [self.protocol.callStore(node, keyword, key, value, ttl) for node in nodes]
+            ds = [self.protocol.callStore(node, keyword, key, value) for node in nodes]
 
             keynode = Node(keyword)
             if self.node.distanceTo(keynode) < max([n.distanceTo(keynode) for n in nodes]):
-                self.storage[keyword] = (key, value, ttl)
+                self.storage[keyword] = (key, value)
                 self.log.debug("got a store request from %s, storing value" % str(self.node))
 
             return defer.DeferredList(ds).addCallback(_anyRespondSuccess)
