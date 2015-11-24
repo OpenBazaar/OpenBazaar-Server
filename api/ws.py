@@ -1,5 +1,6 @@
 __author__ = 'chris'
 
+import ast
 import json
 import os
 import time
@@ -234,7 +235,12 @@ class WSProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, isBinary):
         try:
+
             request_json = json.loads(payload)
+            if type(request_json) is unicode:
+                payload = ast.literal_eval(payload)
+                request_json = json.loads(payload)
+
             message_id = request_json["request"]["id"]
 
             if request_json["request"]["command"] == "get_vendors":
@@ -257,7 +263,8 @@ class WSProtocol(WebSocketServerProtocol):
                                   request_json["request"]["message_type"],
                                   request_json["request"]["recipient_key"])
 
-        except Exception:
+        except Exception as e:
+            print 'Exception occurred: %s' % e
             pass
 
     def connectionLost(self, reason):
