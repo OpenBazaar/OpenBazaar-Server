@@ -61,9 +61,10 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
-        cursor.execute('''CREATE TABLE messages(guid TEXT PRIMARY KEY, handle TEXT, signed_pubkey BLOB,
+        cursor.execute('''CREATE TABLE messages(guid TEXT, handle TEXT, signed_pubkey BLOB,
     encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp INTEGER,
     avatar_hash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
+        cursor.execute('''CREATE INDEX index_messages_guid ON messages(guid);''')
 
         cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
     order_id TEXT, title TEXT, timestamp INTEGER, image_hash BLOB, read INTEGER)''')
