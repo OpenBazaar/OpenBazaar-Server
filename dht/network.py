@@ -25,7 +25,9 @@ from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
+
 from constants import SEED
+
 
 def _anyRespondSuccess(responses):
     """
@@ -91,8 +93,9 @@ class Server(object):
             # Republish keys older than one hour
             for keyword in self.storage.iterkeys():
                 for k, v in self.storage.iteritems(keyword):
-                    if self.storage.get_ttl(keyword, k) < 601200:
-                        ds.append(self.set(keyword, k, v))
+                    ttl = self.storage.get_ttl(keyword, k)
+                    if ttl < 601200:
+                        ds.append(self.set(keyword, k, v, ttl))
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 
@@ -229,7 +232,7 @@ class Server(object):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find()
 
-    def set(self, keyword, key, value):
+    def set(self, keyword, key, value, ttl=604800):
         """
         Set the given key/value tuple at the hash of the given keyword.
         All values stored in the DHT are stored as dictionaries of key/value
@@ -253,11 +256,11 @@ class Server(object):
 
         def store(nodes):
             self.log.debug("setting '%s' on %s" % (keyword.encode("hex"), [str(i) for i in nodes]))
-            ds = [self.protocol.callStore(node, keyword, key, value) for node in nodes]
+            ds = [self.protocol.callStore(node, keyword, key, value, ttl) for node in nodes]
 
             keynode = Node(keyword)
             if self.node.distanceTo(keynode) < max([n.distanceTo(keynode) for n in nodes]):
-                self.storage[keyword] = (key, value)
+                self.storage[keyword] = (key, value, ttl)
                 self.log.debug("got a store request from %s, storing value" % str(self.node))
 
             return defer.DeferredList(ds).addCallback(_anyRespondSuccess)
@@ -373,8 +376,7 @@ class Server(object):
                 s.bootstrap(s.querySeed(SEED))\
                     .addCallback(callback)
             else:
-                s.bootstrap(s.querySeed([("seed.openbazaar.org:8080",
-                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117")]))
+                s.bootstrap(s.querySeed(SEED))
         return s
 
     def saveStateRegularly(self, fname, frequency=600):
