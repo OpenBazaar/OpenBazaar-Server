@@ -25,6 +25,7 @@ from dht.crawling import ValueSpiderCrawl
 from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
+from constants import SEED
 
 def _anyRespondSuccess(responses):
     """
@@ -369,12 +370,11 @@ class Server(object):
         else:
             # TODO: load seed from config file
             if callback is not None:
-                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
-                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))\
+                s.bootstrap(s.querySeed(SEED))\
                     .addCallback(callback)
             else:
-                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
-                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))
+                s.bootstrap(s.querySeed([("seed.openbazaar.org:8080",
+                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117")]))
         return s
 
     def saveStateRegularly(self, fname, frequency=600):

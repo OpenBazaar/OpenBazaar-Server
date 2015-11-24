@@ -19,7 +19,8 @@ from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from net.wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEED
+from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
+    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEED
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol

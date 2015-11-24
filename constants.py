@@ -197,7 +197,7 @@ else:
                                 goodSeeds.append(s)
                                 errorInSeed = False
                 if errorInSeed:
-                    print(logError.format(s))
+                    print logError.format(s)
         else:
             print 'No SECTIONS "{0}" in fileConfig ob.cfg'.format(mySection_2)
 
