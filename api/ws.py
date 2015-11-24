@@ -235,9 +235,8 @@ class WSProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, isBinary):
         try:
-
             request_json = json.loads(payload)
-            if type(request_json) is unicode:
+            if isinstance(request_json, unicode):
                 payload = ast.literal_eval(payload)
                 request_json = json.loads(payload)
 
@@ -265,7 +264,6 @@ class WSProtocol(WebSocketServerProtocol):
 
         except Exception as e:
             print 'Exception occurred: %s' % e
-            pass
 
     def connectionLost(self, reason):
         WebSocketServerProtocol.connectionLost(self, reason)
