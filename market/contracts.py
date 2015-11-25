@@ -693,7 +693,7 @@ class Contract(object):
     def await_funding(self, notification_listener, libbitcoin_client, proofSig, is_purchase=True):
         """
         Saves the contract to the file system and db as an unfunded contract.
-        Listens on the libbitcoin server for the multisig address to be funded.\
+        Listens on the libbitcoin server for the multisig address to be funded.
         """
 
         self.notification_listener = notification_listener
@@ -736,7 +736,6 @@ class Contract(object):
             outfile.write(json.dumps(self.contract, indent=4))
         self.blockchain.subscribe_address(str(payment_address), notification_cb=self.on_tx_received)
 
-
     def on_tx_received(self, address_version, address_hash, height, block_hash, tx):
         """
         Fire when the libbitcoin server tells us we received a payment to this funding address.
@@ -776,7 +775,7 @@ class Contract(object):
                     image_hash = ""
                 if self.is_purchase:
                     unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
-                    file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+                    in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
                     if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
                         handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
                     else:
@@ -790,7 +789,7 @@ class Contract(object):
                     self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                 else:
                     unfunded_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
-                    file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+                    in_progress_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
                     buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
                     if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
                         handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
@@ -801,11 +800,7 @@ class Contract(object):
                     self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Received new order %s" % order_id)
 
-                with open(file_path, 'w') as outfile:
-                    outfile.write(json.dumps(self.contract, indent=4))
-
-                if os.path.exists(unfunded_path) and os.path.exists(file_path):
-                    os.remove(unfunded_path)
+                os.rename(unfunded_path, in_progress_path)
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)

@@ -368,7 +368,7 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
                 val = cursor.fetchone()
                 if val is not None:
                     ret.append({"guid": g[0],
-                                "avatar_hash": val[0],
+                                "avatar_hash": val[0].encode("hex"),
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
             return ret
 
