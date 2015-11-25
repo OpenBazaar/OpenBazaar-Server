@@ -932,7 +932,7 @@ class Contract(object):
             quantity = int(self.contract["buyer_order"]["order"]["quantity"])
             price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
             if "bitcoin" in price_json:
-                asking_price = price_json["bitcoin"] * quantity
+                asking_price = float(price_json["bitcoin"]) * quantity
             else:
                 currency_code = price_json["fiat"]["currency_code"]
                 fiat_price = price_json["fiat"]["price"]
