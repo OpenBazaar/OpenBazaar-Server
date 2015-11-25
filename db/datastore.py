@@ -29,12 +29,16 @@ class Database(object):
             os.makedirs(DATA_FOLDER + "store/listings/contracts/")
         if not os.path.exists(DATA_FOLDER + "store/listings/in progress/"):
             os.makedirs(DATA_FOLDER + "store/listings/in progress/")
+        if not os.path.exists(DATA_FOLDER + "store/listings/unfunded/"):
+            os.makedirs(DATA_FOLDER + "store/listings/unfunded/")
         if not os.path.exists(DATA_FOLDER + "store/listings/trade receipts/"):
             os.makedirs(DATA_FOLDER + "store/listings/trade receipts/")
         if not os.path.exists(DATA_FOLDER + "store/media/"):
             os.makedirs(DATA_FOLDER + "store/media/")
         if not os.path.exists(DATA_FOLDER + "purchases/in progress/"):
             os.makedirs(DATA_FOLDER + "purchases/in progress/")
+        if not os.path.exists(DATA_FOLDER + "purchases/unfunded/"):
+            os.makedirs(DATA_FOLDER + "purchases/unfunded/")
         if not os.path.exists(DATA_FOLDER + "purchases/trade receipts/"):
             os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
         if not os.path.isfile(DATABASE):
@@ -370,7 +374,7 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
 
         def get_unread(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid FROM messages WHERE read=0''',)
+            cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0''',)
             ret = []
             guids = cursor.fetchall()
             for g in guids:

@@ -15,7 +15,6 @@ from market.utils import deserialize
 import re
 import os
 import nacl.encoding
-from twisted.internet import reactor
 from protos.objects import Listings
 from protos.countries import CountryCode
 from dht.utils import digest
@@ -694,9 +693,7 @@ class Contract(object):
     def await_funding(self, notification_listener, libbitcoin_client, proofSig, is_purchase=True):
         """
         Saves the contract to the file system and db as an unfunded contract.
-        Listens on the libbitcoin server for the multisig address to be funded.
-        Deletes the unfunded contract from the file system and db if it goes
-        unfunded for more than 10 minutes.
+        Listens on the libbitcoin server for the multisig address to be funded.\
         """
 
         self.notification_listener = notification_listener
@@ -714,7 +711,7 @@ class Contract(object):
         else:
             vendor = self.contract["vendor_offer"]["listing"]["id"]["guid"]
         if is_purchase:
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
             self.db.Purchases().new_purchase(order_id,
                                              self.contract["vendor_offer"]["listing"]["item"]["title"],
                                              time.time(),
@@ -725,7 +722,7 @@ class Contract(object):
                                              vendor,
                                              proofSig)
         else:
-            file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+            file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
             self.db.Sales().new_sale(order_id,
                                      self.contract["vendor_offer"]["listing"]["item"]["title"],
                                      time.time(),
@@ -737,24 +734,8 @@ class Contract(object):
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
-        self.timeout = reactor.callLater(600, self._delete_unfunded)
         self.blockchain.subscribe_address(str(payment_address), notification_cb=self.on_tx_received)
 
-    def _delete_unfunded(self):
-        """
-        The user failed to fund the contract in the 10 minute window. Remove it from
-        the file system and db.
-        """
-
-        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-        if self.is_purchase:
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-            self.db.Purchases().delete_purchase(order_id)
-        else:
-            file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
-            self.db.Sales().delete_sale(order_id)
-        if os.path.exists(file_path):
-            os.remove(file_path)
 
     def on_tx_received(self, address_version, address_hash, height, block_hash, tx):
         """
@@ -794,6 +775,8 @@ class Contract(object):
                 else:
                     image_hash = ""
                 if self.is_purchase:
+                    unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
+                    file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
                     if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
                         handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
                     else:
@@ -806,6 +789,8 @@ class Contract(object):
                     self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                 else:
+                    unfunded_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
+                    file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
                     buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
                     if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
                         handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
@@ -815,6 +800,12 @@ class Contract(object):
                     self.db.Sales().update_status(order_id, 1)
                     self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Received new order %s" % order_id)
+
+                with open(file_path, 'w') as outfile:
+                    outfile.write(json.dumps(self.contract, indent=4))
+
+                if os.path.exists(unfunded_path) and os.path.exists(file_path):
+                    os.remove(unfunded_path)
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)
