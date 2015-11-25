@@ -806,7 +806,7 @@ class OpenBazaarAPI(APIResource):
             message_json = {
                 "guid": m[0],
                 "handle": m[1],
-                "encryption_key": m[3],
+                "encryption_key": m[3].encode("hex"),
                 "message": m[6],
                 "timestamp": m[7],
                 "avatar_hash": m[8].encode("hex"),

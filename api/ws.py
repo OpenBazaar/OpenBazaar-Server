@@ -178,7 +178,7 @@ class WSProtocol(WebSocketServerProtocol):
 
     def send_message(self, guid, handle, message, subject, message_type, recipient_encryption_key):
         self.factory.db.MessageStore().save_message(guid, handle, "", recipient_encryption_key, subject,
-                                                    message_type.upper(), message, "", time.time(), "", True)
+                                                    message_type.upper(), message, time.time(), "", "", True)
 
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid), "123.4.5.6", 1234)

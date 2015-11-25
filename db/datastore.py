@@ -381,7 +381,6 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
                 ret.append(g[0])
             return Counter(ret)
 
-
         def mark_as_read(self, guid):
             cursor = self.db.cursor()
             cursor.execute('''UPDATE messages SET read=? WHERE guid=?;''', (1, guid))
