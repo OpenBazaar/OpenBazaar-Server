@@ -8,6 +8,6 @@ pynacl==0.3.0
 txrestapi==0.2
 autobahn==0.10.9
 python-obelisk
-requests==2.4.3
+requests==2.6.0
 pyopenssl==0.15.1
 miniupnpc==1.9
