@@ -137,7 +137,7 @@ def run(*args):
         ws_interface = args[4]
         web = Site(webdir)
 
-    reactor.listenTCP(9000, web, interface=ws_interface)
+    reactor.listenTCP(18465, web, interface=ws_interface)
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)

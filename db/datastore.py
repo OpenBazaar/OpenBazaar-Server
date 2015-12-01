@@ -371,6 +371,7 @@ WHERE guid=? and message_type="CHAT"''', (g[0],))
                     ret.append({"guid": g[0],
                                 "avatar_hash": val[0].encode("hex"),
                                 "last_message": val[1],
+                                "timestamp": val[2],
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
             return ret
 

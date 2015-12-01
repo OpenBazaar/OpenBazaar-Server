@@ -367,7 +367,7 @@ class OpenBazaarAPI(APIResource):
     def add_social_account(self, request):
         try:
             p = Profile(self.db)
-            if "account_type" in request.args and "username" in request.args and "proof" in request.args:
+            if "account_type" in request.args and "username" in request.args:
                 p.add_social_account(request.args["account_type"][0], request.args["username"][0],
                                      request.args["proof"][0] if "proof" in request.args else None)
             else:
