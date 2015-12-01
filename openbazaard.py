@@ -93,10 +93,7 @@ def run(*args):
     except Exception:
         kserver = Server(node, db, KSIZE, ALPHA, storage=storage)
         kserver.protocol.connect_multiplexer(protocol)
-        kserver.bootstrap(
-            kserver.querySeed(SEED))\
-            .addCallback(on_bootstrap_complete)
-        # TODO: load seeds from config file
+        kserver.bootstrap(kserver.querySeed(SEED)).addCallback(on_bootstrap_complete)
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
     protocol.register_processor(kserver.protocol)
 
@@ -170,8 +167,6 @@ def run(*args):
         libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
     else:
         libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
-
-    # TODO: load libbitcoin server url from config file
 
     libbitcoin_client.fetch_last_height(height_fetched)
     timeout = reactor.callLater(7, timeout, libbitcoin_client)

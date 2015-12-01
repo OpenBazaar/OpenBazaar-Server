@@ -54,6 +54,7 @@ class Database(object):
             db = lite.connect(filepath)
 
         cursor = db.cursor()
+        cursor.execute('''PRAGMA user_version = 0''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
@@ -364,7 +365,7 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
             ret = []
             unread = self.get_unread()
             for g in guids:
-                cursor.execute('''SELECT avatar_hash, message, max(timestamp) FROM messages
+                cursor.execute('''SELECT avatar_hash, message, max(timestamp), encryption_pubkey FROM messages
 WHERE guid=? and message_type="CHAT"''', (g[0],))
                 val = cursor.fetchone()
                 if val is not None:
@@ -372,6 +373,7 @@ WHERE guid=? and message_type="CHAT"''', (g[0],))
                                 "avatar_hash": val[0].encode("hex"),
                                 "last_message": val[1],
                                 "timestamp": val[2],
+                                "encryption_key": val[3].encode("hex"),
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
             return ret
 
