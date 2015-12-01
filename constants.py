@@ -172,6 +172,35 @@ else:
         except ConfigParser.Error, error:
             pass
 
+        # Extract Config SEEDS
+        mySection_2 = 'SEEDS'
+        seed = ''
+        lSeed = []
+        goodSeeds = []
+        logError = 'Wrong config file "{0}", this value is ignored'
+
+        if fc.has_section(mySection_2):
+            try:
+                listSeed = [seeds[1] for seeds in fc.items(mySection_2)]
+                lSeed = [tuple(s.split(",")) for s in listSeed]
+            except ConfigParser.Error, error:
+                print error
+
+            for s in lSeed:
+                errorInSeed = True
+                if len(s) == 2:
+                    seed, key = s
+                    if ':' in seed:
+                        url, port = seed.split(':')
+                        if url and port:
+                            if key:
+                                goodSeeds.append(s)
+                                errorInSeed = False
+                if errorInSeed:
+                    print logError.format(s)
+        else:
+            print 'No SECTIONS "{0}" in fileConfig ob.cfg'.format(mySection_2)
+
         # Constant Assignment
         DATA_FOLDER = data_f2
         SEED_NODE = (seed_n, seed_n_p)
@@ -183,6 +212,7 @@ else:
         LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
         SSL_CERT = ssl_crt
         SSL_KEY = ssl_key
+        SEED = goodSeeds
 
     except ConfigParser.Error, error:
         print error

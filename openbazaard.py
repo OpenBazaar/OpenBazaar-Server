@@ -19,7 +19,8 @@ from keyutils.keys import KeyChain
 from dht.network import Server
 from dht.node import Node
 from net.wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER, LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT
+from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
+    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEED
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from api.ws import WSFactory, WSProtocol
@@ -93,8 +94,7 @@ def run(*args):
         kserver = Server(node, db, KSIZE, ALPHA, storage=storage)
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(
-            kserver.querySeed("seed.openbazaar.org:8080",
-                              "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))\
+            kserver.querySeed(SEED))\
             .addCallback(on_bootstrap_complete)
         # TODO: load seeds from config file
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)

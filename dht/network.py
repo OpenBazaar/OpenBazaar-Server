@@ -26,6 +26,8 @@ from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
 
+from constants import SEED
+
 
 def _anyRespondSuccess(responses):
     """
@@ -97,36 +99,46 @@ class Server(object):
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 
-    def querySeed(self, seed, pubkey):
+    def querySeed(self, list_seed_pubkey):
         """
         Query an HTTP seed and return a `list` if (ip, port) `tuple` pairs.
 
         Args:
-           seed: A `string` consisting of "ip:port" or "hostname:port"
-           pubkey: The hex encoded public key to verify the signature on the response
+            Receives a list of one or more tuples Example [(seed, pubkey)]
+            seed: A `string` consisting of "ip:port" or "hostname:port"
+            pubkey: The hex encoded public key to verify the signature on the response
         """
-        try:
-            self.log.info("querying %s for peers" % seed)
-            nodes = []
-            c = httplib.HTTPConnection(seed)
-            c.request("GET", "/")
-            response = c.getresponse()
-            self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
-            data = response.read()
-            reread_data = data.decode("zlib")
-            proto = peers.PeerSeeds()
-            proto.ParseFromString(reread_data)
-            for peer in proto.peer_data:
-                p = peers.PeerData()
-                p.ParseFromString(peer)
-                tup = (str(p.ip_address), p.port)
-                nodes.append(tup)
-            verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-            verify_key.verify("".join(proto.peer_data), proto.signature)
-            self.log.info("%s returned %s addresses" % (seed, len(nodes)))
+
+        nodes = []
+        if not list_seed_pubkey:
+            self.log.error('failed to query seed {0} from ob.cfg'.format(list_seed_pubkey))
             return nodes
-        except Exception, e:
-            self.log.error("failed to query seed: %s" % str(e))
+        else:
+            for sp in list_seed_pubkey:
+                seed, pubkey = sp
+                try:
+                    self.log.info("querying %s for peers" % seed)
+                    # nodes = []
+                    c = httplib.HTTPConnection(seed)
+                    c.request("GET", "/")
+                    response = c.getresponse()
+                    self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
+                    data = response.read()
+                    reread_data = data.decode("zlib")
+                    proto = peers.PeerSeeds()
+                    proto.ParseFromString(reread_data)
+                    for peer in proto.peer_data:
+                        p = peers.PeerData()
+                        p.ParseFromString(peer)
+                        tup = (str(p.ip_address), p.port)
+                        nodes.append(tup)
+                    verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
+                    verify_key.verify("".join(proto.peer_data), proto.signature)
+                    self.log.info("%s returned %s addresses" % (seed, len(nodes)))
+                    # return nodes
+                except Exception, e:
+                    self.log.error("failed to query seed: %s" % str(e))
+            return nodes
 
     def bootstrappableNeighbors(self):
         """
@@ -361,12 +373,10 @@ class Server(object):
         else:
             # TODO: load seed from config file
             if callback is not None:
-                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
-                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))\
+                s.bootstrap(s.querySeed(SEED))\
                     .addCallback(callback)
             else:
-                s.bootstrap(s.querySeed("seed.openbazaar.org:8080",
-                                        "5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117"))
+                s.bootstrap(s.querySeed(SEED))
         return s
 
     def saveStateRegularly(self, fname, frequency=600):
