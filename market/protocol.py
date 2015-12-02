@@ -236,6 +236,8 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_order(self, sender, pubkey, encrypted):
+        if not self.multiplexer.blockchain.connected:
+            return ["False"]
         try:
             box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
             order = box.decrypt(encrypted)

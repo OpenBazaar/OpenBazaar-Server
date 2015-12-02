@@ -3,12 +3,15 @@ import obelisk
 import struct
 from obelisk import error_code
 from binascii import  unhexlify
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
+from log import Logger
 
 class LibbitcoinClient(obelisk.ObeliskOfLightClient):
     """
     An extension of the Obelisk client to handle transaction broadcasts.
     """
+
+    connected = True
 
     valid_messages = [
         'fetch_block_header',
@@ -78,3 +81,37 @@ class LibbitcoinClient(obelisk.ObeliskOfLightClient):
                 if cb:
                     cb(True)
         self.send_command("transaction_pool.validate", unhexlify(tx), cb=parse_result)
+
+
+class HeartbeatProtocol(protocol.Protocol):
+    """
+    For listening on the libbitcoin server heartbeat port
+    """
+    def __init__(self, libbitcoin_client):
+        self.libbitcoin_client = libbitcoin_client
+        self.timeout = reactor.callLater(7, self.call_timeout)
+        self.log = Logger(system=self)
+
+    def call_timeout(self):
+        self.log.critical("Libbitcoin server offline")
+        self.libbitcoin_client.connected = False
+
+    def dataReceived(self, data):
+        self.log.debug("libbitcoin heartbeat")
+        self.timeout.cancel()
+        self.libbitcoin_client.connected = True
+        self.transport.loseConnection()
+
+
+class HeartbeatFactory(protocol.ClientFactory):
+    def __init__(self, libbitcoin_client):
+        self.libbitcoin_client = libbitcoin_client
+        self.log = Logger(system=self)
+
+    def buildProtocol(self, addr):
+        self.protocol = HeartbeatProtocol(self.libbitcoin_client)
+        return self.protocol
+
+    def clientConnectionFailed(self, connector, reason):
+        self.libbitcoin_client.connected = False
+        self.log.critical("Libbitcoin server offline")

@@ -3,7 +3,7 @@ import sys
 import argparse
 import platform
 
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -13,7 +13,7 @@ import requests
 from autobahn.twisted.websocket import listenWS
 
 from daemon import Daemon
-from libbitcoin import LibbitcoinClient
+from libbitcoin import LibbitcoinClient, HeartbeatFactory
 from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
@@ -150,26 +150,18 @@ def run(*args):
         reactor.listenTCP(18469, site, interface=rest_interface)
 
     # blockchain
-    # TODO: listen on the libbitcoin heartbeat port instead fetching height
-    def height_fetched(ec, height):
-        # TODO: re-broadcast any unconfirmed txs in the db using height to find confirmation status
-        logger.info("Libbitcoin server online")
-        try:
-            timeout.cancel()
-        except Exception:
-            pass
-
-    def timeout(client):
-        logger.critical("Libbitcoin server offline")
-        client = None
-
     if TESTNET:
         libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
     else:
         libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
 
-    libbitcoin_client.fetch_last_height(height_fetched)
-    timeout = reactor.callLater(7, timeout, libbitcoin_client)
+    def heartbeat():
+        f = HeartbeatFactory(libbitcoin_client)
+        if TESTNET:
+            reactor.connectTCP(LIBBITCOIN_SERVER_TESTNET[6: LIBBITCOIN_SERVER_TESTNET.index(":", 6)], 9092, f)
+        else:
+            reactor.connectTCP(LIBBITCOIN_SERVER[6: LIBBITCOIN_SERVER.index(":", 6)], 9092, f)
+    task.LoopingCall(heartbeat).start(300)
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
