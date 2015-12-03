@@ -86,11 +86,13 @@ class Database(object):
     encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
     avatar BLOB, fee FLOAT)''')
 
-        cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, btc FLOAT,
-    address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT, proofSig BLOB)''')
+        cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
+timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT,
+proofSig BLOB, contract_type TEXT)''')
 
-        cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, btc REAL,
-    address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, seller TEXT, paymentTX TEXT)''')
+        cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
+timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
+paymentTX TEXT, contract_type TEXT)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
@@ -516,21 +518,22 @@ FROM notifications''')
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def new_purchase(self, order_id, title, timestamp, btc,
-                         address, status, thumbnail, seller, proofSig):
+        def new_purchase(self, order_id, title, description, timestamp, btc,
+                         address, status, thumbnail, seller, proofSig, contract_type):
             cursor = self.db.cursor()
             try:
-                cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, timestamp, btc, address, status,
-    thumbnail, seller, proofSig) VALUES (?,?,?,?,?,?,?,?,?)''',
-                               (order_id, title, timestamp, btc, address, status, thumbnail, seller, proofSig))
+                cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, description, timestamp, btc,
+address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                               (order_id, title, description, timestamp, btc, address,
+                                status, thumbnail, seller, proofSig, contract_type))
             except Exception as e:
                 print e.message
             self.db.commit()
 
         def get_purchase(self, order_id):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-     thumbnail, seller, proofSig FROM purchases WHERE id=?''', (order_id,))
+            cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
+     thumbnail, seller, contract_type, proofSig FROM purchases WHERE id=?''', (order_id,))
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -544,8 +547,8 @@ FROM notifications''')
 
         def get_all(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-     thumbnail, seller, proofSig FROM purchases ''')
+            cursor.execute('''SELECT id, title, description, timestamp, btc, status,
+     thumbnail, seller, contract_type FROM purchases ''')
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -576,21 +579,22 @@ FROM notifications''')
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def new_sale(self, order_id, title, timestamp, btc,
-                     address, status, thumbnail, seller):
+        def new_sale(self, order_id, title, description, timestamp, btc,
+                     address, status, thumbnail, buyer, contract_type):
             cursor = self.db.cursor()
             try:
-                cursor.execute('''INSERT OR REPLACE INTO sales(id, title, timestamp, btc, address, status,
-    thumbnail, seller) VALUES (?,?,?,?,?,?,?,?)''',
-                               (order_id, title, timestamp, btc, address, status, thumbnail, seller))
+                cursor.execute('''INSERT OR REPLACE INTO sales(id, title, description, timestamp, btc, address,
+status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                               (order_id, title, description, timestamp, btc, address, status,
+                                thumbnail, buyer, contract_type))
             except Exception as e:
                 print e.message
             self.db.commit()
 
         def get_sale(self, order_id):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-    thumbnail, seller FROM sales WHERE id=?''', (order_id,))
+            cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
+    thumbnail, buyer, contract_type FROM sales WHERE id=?''', (order_id,))
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -604,8 +608,8 @@ FROM notifications''')
 
         def get_all(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, title, timestamp, btc, address, status,
-    thumbnail, seller, paymentTX FROM sales ''')
+            cursor.execute('''SELECT id, title, description, timestamp, btc, status,
+    thumbnail, buyer, contract_type FROM sales ''')
             ret = cursor.fetchall()
             if not ret:
                 return None

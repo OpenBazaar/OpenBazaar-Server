@@ -710,27 +710,35 @@ class Contract(object):
             vendor = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
         else:
             vendor = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+            buyer = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+        else:
+            buyer = self.contract["buyer_order"]["order"]["id"]["guid"]
         if is_purchase:
             file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
             self.db.Purchases().new_purchase(order_id,
                                              self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                             self.contract["vendor_offer"]["listing"]["item"]["description"],
                                              time.time(),
                                              self.contract["buyer_order"]["order"]["payment"]["amount"],
                                              payment_address,
                                              0,
                                              thumbnail_hash,
                                              vendor,
-                                             proofSig)
+                                             proofSig,
+                                             self.contract["vendor_offer"]["listing"]["metatdata"]["category"])
         else:
             file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
             self.db.Sales().new_sale(order_id,
                                      self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                     self.contract["vendor_offer"]["listing"]["item"]["description"],
                                      time.time(),
                                      self.contract["buyer_order"]["order"]["payment"]["amount"],
                                      payment_address,
                                      0,
                                      thumbnail_hash,
-                                     vendor)
+                                     buyer,
+                                     self.contract["vendor_offer"]["listing"]["metatdata"]["category"])
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))

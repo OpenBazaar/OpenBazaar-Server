@@ -839,3 +839,45 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @GET('^/api/v1/get_sales')
+    def get_sales(self, request):
+        sales = self.db.Sales().get_all()
+        sales_list = []
+        for sale in sales:
+            sale_json = {
+                "order_id": sale[0],
+                "title": sale[1],
+                "description": sale[2],
+                "timestamp": sale[3],
+                "btc_total": sale[4],
+                "status": sale[5],
+                "thumbnail_hash": sale[6],
+                "buyer": sale[7],
+                "contract_type": sale[8]
+            }
+            sales_list.append(sale_json)
+        request.write(json.dumps(sales_list, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
+    @GET('^/api/v1/get_purchases')
+    def get_purchases(self, request):
+        purchases = self.db.Purchases().get_all()
+        purchases_list = []
+        for purchase in purchases:
+            purchase_json = {
+                "order_id": purchase[0],
+                "title": purchase[1],
+                "description": purchase[2],
+                "timestamp": purchase[3],
+                "btc_total": purchase[4],
+                "status": purchase[5],
+                "thumbnail_hash": purchase[6],
+                "vendor": purchase[7],
+                "contract_type": purchase[8]
+            }
+            purchases_list.append(purchase_json)
+        request.write(json.dumps(purchases_list, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
