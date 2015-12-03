@@ -726,7 +726,7 @@ class Contract(object):
                                              thumbnail_hash,
                                              vendor,
                                              proofSig,
-                                             self.contract["vendor_offer"]["listing"]["metatdata"]["category"])
+                                             self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
             file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
             self.db.Sales().new_sale(order_id,
@@ -738,7 +738,7 @@ class Contract(object):
                                      0,
                                      thumbnail_hash,
                                      buyer,
-                                     self.contract["vendor_offer"]["listing"]["metatdata"]["category"])
+                                     self.contract["vendor_offer"]["listing"]["metadata"]["category"])
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
