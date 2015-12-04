@@ -371,7 +371,6 @@ class Server(object):
             else:
                 s.bootstrap(data['neighbors'])
         else:
-            # TODO: load seed from config file
             if callback is not None:
                 s.bootstrap(s.querySeed(SEED))\
                     .addCallback(callback)
