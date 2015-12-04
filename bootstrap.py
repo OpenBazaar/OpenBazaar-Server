@@ -10,17 +10,19 @@ def bootstrap(use_testnet):
 
         # OSX won't pass the PATH
         subprocess.call(['/usr/local/bin/pip', 'install', '-r', '%s/requirements.txt' % script_dir])
+        os.chdir(script_dir)
         if use_testnet:
-            os.system('/usr/local/bin/python %s/openbazaard.py start --testnet' % script_dir)
+            os.system('/usr/local/bin/python openbazaard.py start --testnet')
         else:
-            os.system('/usr/local/bin/python %s/openbazaard.py start' % script_dir)
+            os.system('/usr/local/bin/python openbazaard.py start')
 
     else:
         subprocess.call(['pip', 'install', '-r', '%s%srequirements.txt' % (script_dir, os.pathsep)])
+        os.chdir(script_dir)
         if use_testnet:
-            os.system('python %s%sopenbazaard.py start --testnet' % (script_dir, os.pathsep))
+            os.system('python sopenbazaard.py start --testnet')
         else:
-            os.system('python %s%sopenbazaard.py start' % (script_dir, os.pathsep))
+            os.system('python openbazaard.py start')
 
 
 if __name__ == '__main__':
