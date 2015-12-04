@@ -13,10 +13,9 @@ from hashlib import sha1
 from base64 import b64encode
 from twisted.internet import defer, reactor
 from log import Logger
-from protos.message import Message, Command
+from protos.message import Message, Command, NOT_FOUND
 from dht import node
 from constants import PROTOCOL_VERSION, SEED_NODE, SEED_NODE_TESTNET
-from protos.message import NOT_FOUND
 
 
 class RPCProtocol:

@@ -22,9 +22,16 @@ message Node {
 //The value returned by a FIND_VALUE rpc call
 //Typically a list of these will be returned for any given keyword.
 message Value {
-	required bytes valueKey       = 1;
-	required bytes serializedData = 2;
-	required uint32 ttl           = 3;
+    optional bytes keyword        = 1;
+	required bytes valueKey       = 2;
+	required bytes serializedData = 3;
+	required uint32 ttl           = 4;
+}
+
+//A list of these is sent in an INV packet
+message Inv {
+    required bytes keyword  = 1;
+    required bytes valueKey = 2;
 }
 
 //The object returned by the GET_PROFILE rpc call
