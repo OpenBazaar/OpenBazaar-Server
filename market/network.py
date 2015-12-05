@@ -467,6 +467,7 @@ class Server(object):
 
         def get_response(response):
             if not response[0]:
+                ciphertext = box.encrypt(p.SerializeToString().encode("zlib"), nonce)
                 self.kserver.set(digest(receiving_node.id), pkephem, ciphertext)
 
         self.log.info("sending encrypted message to %s" % receiving_node.id.encode("hex"))
@@ -490,7 +491,7 @@ class Server(object):
                         try:
                             box = Box(PrivateKey(self.signing_key.encode()), PublicKey(value.valueKey))
                             ciphertext = value.serializedData
-                            plaintext = box.decrypt(ciphertext)
+                            plaintext = box.decrypt(ciphertext).decode("zlib")
                             p = objects.Plaintext_Message()
                             p.ParseFromString(plaintext)
                             signature = p.signature
@@ -511,8 +512,7 @@ class Server(object):
                                                  self.protocol.multiplexer.blockchain,
                                                  receipt_json=p.message)
                             else:
-                                listener.notify(p.sender_guid, p.encryption_pubkey, p.subject,
-                                                objects.Plaintext_Message.Type.Name(p.type), p.message)
+                                listener.notify(p, signature)
                         except Exception:
                             pass
                         signature = self.signing_key.sign(value.valueKey)[:64]

@@ -753,7 +753,6 @@ class Contract(object):
 
         # decode the transaction
         transaction = deserialize(tx.encode("hex"))
-
         # get the amount (in satoshi) the user is expected to pay
         amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
         if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
