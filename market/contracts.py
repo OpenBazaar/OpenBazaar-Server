@@ -73,7 +73,6 @@ class Contract(object):
         self.blockchain = None
         self.amount_funded = 0
         self.received_txs = []
-        self.timeout = None
         self.is_purchase = False
         self.outpoints = []
 
@@ -772,7 +771,6 @@ class Contract(object):
                     self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) + ":" + str(output["index"]),
                                            "value": output["value"]})
             if self.amount_funded >= amount_to_pay:  # if fully funded
-                self.timeout.cancel()
                 self.blockchain.unsubscribe_address(
                     self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
                 order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
@@ -789,8 +787,8 @@ class Contract(object):
                     else:
                         handle = ""
                     vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
-                    self.notification_listener.notify(vendor_guid, handle, "payment complete", order_id, title,
-                                                      image_hash)
+                    self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
+                                                      order_id, title, image_hash)
                     # update the db
                     self.db.Purchases().update_status(order_id, 1)
                     self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
@@ -803,7 +801,8 @@ class Contract(object):
                         handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
                     else:
                         handle = ""
-                    self.notification_listener.notify(buyer_guid, handle, "new order", order_id, title, image_hash)
+                    self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
+                                                      title, image_hash)
                     self.db.Sales().update_status(order_id, 1)
                     self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
                     self.log.info("Received new order %s" % order_id)
