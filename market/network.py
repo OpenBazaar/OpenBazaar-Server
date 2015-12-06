@@ -441,8 +441,6 @@ class Server(object):
         will be placed in the dht for the node to pick up later.
         """
         pro = Profile(self.db).get()
-        if len(message) > 1500:
-            return
         p = objects.Plaintext_Message()
         p.sender_guid = self.kserver.node.id
         p.signed_pubkey = self.kserver.node.signed_pubkey

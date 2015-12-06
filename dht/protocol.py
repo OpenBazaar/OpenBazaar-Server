@@ -56,7 +56,7 @@ class KademliaProtocol(RPCProtocol):
     def rpc_store(self, sender, keyword, key, value, ttl):
         self.addToRouter(sender)
         self.log.debug("got a store request from %s, storing value" % str(sender))
-        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 1800 and int(ttl) <= 604800:
+        if len(keyword) == 20 and len(key) <= 33 and len(value) <= 2100 and int(ttl) <= 604800:
             self.storage[keyword] = (key, value, int(ttl))
             return ["True"]
         else:

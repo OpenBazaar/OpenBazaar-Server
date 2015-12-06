@@ -751,62 +751,69 @@ class Contract(object):
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
 
-        # decode the transaction
-        transaction = deserialize(tx.encode("hex"))
-        # get the amount (in satoshi) the user is expected to pay
-        amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
-        if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
-            if "moderator" in self.contract["buyer_order"]["order"]:
-                output_script = 'a914' + digest(unhexlify(
-                    self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
-            else:
-                output_script = '76a914' + bitcoin.b58check_to_hex(
-                    self.contract["buyer_order"]["order"]["payment"]["address"]) +'88ac'
-            for output in transaction["outs"]:
-                if output["script"] == output_script:
-                    self.amount_funded += output["value"]
-                    if tx not in self.received_txs:
-                        self.received_txs.append(tx)
-                    self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) + ":" + str(output["index"]),
-                                           "value": output["value"]})
-            if self.amount_funded >= amount_to_pay:  # if fully funded
-                self.blockchain.unsubscribe_address(
-                    self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
-                order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-                title = self.contract["vendor_offer"]["listing"]["item"]["title"]
-                if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
-                    image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
-                else:
-                    image_hash = ""
-                if self.is_purchase:
-                    unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
-                    in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-                    if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
-                        handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
-                    else:
-                        handle = ""
-                    vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
-                    self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
-                                                      order_id, title, image_hash)
-                    # update the db
-                    self.db.Purchases().update_status(order_id, 1)
-                    self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
-                    self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
-                else:
-                    unfunded_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
-                    in_progress_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
-                    buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
-                    if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
-                        handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
-                    else:
-                        handle = ""
-                    self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
-                                                      title, image_hash)
-                    self.db.Sales().update_status(order_id, 1)
-                    self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
-                    self.log.info("Received new order %s" % order_id)
+        try:
+            # decode the transaction
+            self.log.info("Bitcoin transaction detected")
+            transaction = deserialize(tx.encode("hex"))
 
-                os.rename(unfunded_path, in_progress_path)
+            # get the amount (in satoshi) the user is expected to pay
+            amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
+            if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
+                if "moderator" in self.contract["buyer_order"]["order"]:
+                    output_script = 'a914' + digest(unhexlify(
+                        self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
+                else:
+                    output_script = '76a914' + bitcoin.b58check_to_hex(
+                        self.contract["buyer_order"]["order"]["payment"]["address"]) +'88ac'
+                for output in transaction["outs"]:
+                    if output["script"] == output_script:
+                        self.amount_funded += output["value"]
+                        if tx not in self.received_txs:
+                            self.received_txs.append(tx)
+                        self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) +
+                                                         ":" + str(output["index"]), "value": output["value"]})
+                if self.amount_funded >= amount_to_pay:  # if fully funded
+                    self.blockchain.unsubscribe_address(
+                        self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
+                    order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+                    title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+                    if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+                        image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+                    else:
+                        image_hash = ""
+                    if self.is_purchase:
+                        unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
+                        in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+                        if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+                            handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+                        else:
+                            handle = ""
+                        vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+                        self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
+                                                          order_id, title, image_hash)
+                        # update the db
+                        self.db.Purchases().update_status(order_id, 1)
+                        self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
+                        self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
+                    else:
+                        unfunded_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
+                        in_progress_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+                        buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+                        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+                            handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+                        else:
+                            handle = ""
+                        self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
+                                                          title, image_hash)
+                        self.db.Sales().update_status(order_id, 1)
+                        self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
+                        self.log.info("Received new order %s" % order_id)
+
+                    os.rename(unfunded_path, in_progress_path)
+        except Exception:
+            self.log.critical("Error processing bitcoin transaction")
+            import traceback
+            traceback.print_exc()
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)

@@ -67,13 +67,7 @@ def run(*args):
 
     def on_bootstrap_complete(resp):
         logger.info("bootstrap complete, downloading outstanding messages...")
-        nlistener = NotificationListenerImpl(ws_factory, db)
-        mserver.protocol.add_listener(nlistener)
-        mlistener = MessageListenerImpl(ws_factory, db)
         mserver.get_messages(mlistener)
-        mserver.protocol.add_listener(mlistener)
-        blistener = BroadcastListenerImpl(ws_factory, db)
-        mserver.protocol.add_listener(blistener)
 
         # TODO: ping seed node to establish connection if not full cone NAT
 
@@ -162,6 +156,14 @@ def run(*args):
         else:
             reactor.connectTCP(LIBBITCOIN_SERVER[6: LIBBITCOIN_SERVER.index(":", 6)], 9092, f)
     task.LoopingCall(heartbeat).start(300)
+
+    # listeners
+    nlistener = NotificationListenerImpl(ws_factory, db)
+    mserver.protocol.add_listener(nlistener)
+    mlistener = MessageListenerImpl(ws_factory, db)
+    mserver.protocol.add_listener(mlistener)
+    blistener = BroadcastListenerImpl(ws_factory, db)
+    mserver.protocol.add_listener(blistener)
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
