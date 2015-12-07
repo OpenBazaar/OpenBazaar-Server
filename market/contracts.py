@@ -705,11 +705,13 @@ class Contract(object):
             thumbnail_hash = vendor_item["image_hashes"][0]
         else:
             thumbnail_hash = ""
-        if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+        if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"] \
+                and self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"] != "":
             vendor = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
         else:
             vendor = self.contract["vendor_offer"]["listing"]["id"]["guid"]
-        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"] \
+                and self.contract["buyer_order"]["order"]["id"]["blockchain_id"] != "":
             buyer = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
         else:
             buyer = self.contract["buyer_order"]["order"]["id"]["guid"]
@@ -812,8 +814,6 @@ class Contract(object):
                     os.rename(unfunded_path, in_progress_path)
         except Exception:
             self.log.critical("Error processing bitcoin transaction")
-            import traceback
-            traceback.print_exc()
 
     def get_contract_id(self):
         contract = json.dumps(self.contract, indent=4)
