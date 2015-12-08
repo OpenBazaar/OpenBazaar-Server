@@ -536,10 +536,6 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/purchase_contract')
     def purchase_contract(self, request):
-        if not self.protocol.blockchain.connected:
-            request.write(json.dumps({"success": False, "reason": "Libbitcoin server offline"}, indent=4))
-            request.finish()
-            return server.NOT_DONE_YET
         try:
             def handle_response(resp, contract):
                 if resp:
