@@ -302,10 +302,15 @@ class OpenBazaarAPI(APIResource):
     def update_profile(self, request):
         try:
             p = Profile(self.db)
-            if not p.get().encryption_key \
-                    and "name" not in request.args \
-                    and "location" not in request.args:
-                request.write(json.dumps({"success": False, "reason": "name or location not included"}, indent=4))
+            can_update_profile = (p.get().encryption_key or
+                                  ("name" in request.args and
+                                   "location" in request.args))
+            if not can_update_profile:
+                request_dict = {
+                    "success": False,
+                    "reason": "name or location not included"
+                }
+                request.write(json.dumps(request_dict, indent=4))
                 request.finish()
                 return False
             u = objects.Profile()
