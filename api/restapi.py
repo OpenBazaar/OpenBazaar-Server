@@ -877,3 +877,40 @@ class OpenBazaarAPI(APIResource):
         request.write(json.dumps(purchases_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
+
+    @POST('^/api/v1/check_for_payment')
+    def check_for_payment(self, request):
+        try:
+            file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
+            with open(file_path, 'r') as filename:
+                order = json.load(filename, object_pairs_hook=OrderedDict)
+            c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
+            c.blockchain = self.protocol.blockchain
+            c.notification_listener = self.mserver.protocol.get_notification_listener()
+            c.is_purchase = True
+            addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+
+            def history_fetched(ec, history):
+                if not ec:
+                    for id, txhash, index, height, value in history:
+                        def cb_txpool(ec, result):
+                            if ec:
+                                self.protocol.blockchain.fetch_transaction(txhash, cb_chain)
+                            else:
+                                c.on_tx_received(None, None, None, None, result)
+
+                        def cb_chain(ec, result):
+                            if not ec:
+                                c.on_tx_received(None, None, None, None, result)
+
+                        self.protocol.blockchain.fetch_txpool_transaction(txhash, cb_txpool)
+
+            self.protocol.blockchain.fetch_history2(addr, history_fetched)
+
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET

@@ -752,7 +752,6 @@ class Contract(object):
         funding level. We need to keep a running balance and increment it when a new transaction
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
-
         try:
             # decode the transaction
             self.log.info("Bitcoin transaction detected")
