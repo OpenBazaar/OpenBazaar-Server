@@ -6,6 +6,7 @@ from binascii import  unhexlify
 from twisted.internet import reactor, protocol
 from log import Logger
 
+
 class LibbitcoinClient(obelisk.ObeliskOfLightClient):
     """
     An extension of the Obelisk client to handle transaction broadcasts.

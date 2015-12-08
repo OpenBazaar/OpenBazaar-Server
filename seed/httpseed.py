@@ -29,7 +29,6 @@ from market import network
 from keyutils.keys import KeyChain
 from db.datastore import Database
 from constants import DATA_FOLDER
-from market.profile import Profile
 from log import Logger, FileLogObserver
 
 
