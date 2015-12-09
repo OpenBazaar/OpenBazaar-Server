@@ -13,7 +13,6 @@ import requests
 from autobahn.twisted.websocket import listenWS
 
 from daemon import Daemon
-from libbitcoin import LibbitcoinClient
 from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
@@ -30,6 +29,7 @@ from market.profile import Profile
 from log import Logger, FileLogObserver
 from net.upnp import PortMapper
 from net.sslcontext import ChainedOpenSSLContextFactory
+from obelisk.client import LibbitcoinClient
 
 
 def run(*args):
@@ -145,9 +145,9 @@ def run(*args):
 
     # blockchain
     if TESTNET:
-        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET, log=Logger(service="LibbitcoinClient"))
     else:
-        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER, log=Logger(service="LibbitcoinClient"))
 
     # listeners
     nlistener = NotificationListenerImpl(ws_factory, db)
