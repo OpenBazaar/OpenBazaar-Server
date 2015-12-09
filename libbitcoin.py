@@ -1,20 +1,27 @@
 __author__ = 'chris'
 import struct
 from binascii import  unhexlify
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from obelisk import error_code
 from obelisk import ObeliskOfLightClient
 from obelisk.zmq_fallback import ZmqSocket
 import zmq
 from log import Logger
 
+
 class LibbitcoinClient(ObeliskOfLightClient):
     """
     An extension of the Obelisk client to handle transaction broadcasts.
     """
 
-    connected = False
-    log = Logger(system="LibbitcoinClient")
+    def __init__(self, address):
+        ObeliskOfLightClient.__init__(self, address)
+        self. address = address
+        self.connected = False
+        self.log = Logger(system="LibbitcoinClient")
+        self.start_heartbeat()
+        task.LoopingCall(self.refresh_connection).start(600)
+
 
     valid_messages = [
         'fetch_block_header',
@@ -35,6 +42,11 @@ class LibbitcoinClient(ObeliskOfLightClient):
         'broadcast_transaction',
         'validate'
     ]
+
+    def refresh_connection(self):
+        if self.subscribed == 0:
+            self._socket.close()
+            self._socket = self.setup(self.address)
 
     # pylint: disable=R0201
     def _on_broadcast_transaction(self, data):
@@ -59,8 +71,10 @@ class LibbitcoinClient(ObeliskOfLightClient):
 
         def on_broadcast(error, data):
             if error:
+                self.log.critical("Transaction %s broadcast failed" % tx)
                 cb(False)
             else:
+                self.log.info("Transaction %s broadcast complete" % tx)
                 cb(True)
 
         self.send_command("protocol.broadcast_transaction", unhexlify(tx), cb=on_broadcast)
@@ -75,7 +89,7 @@ class LibbitcoinClient(ObeliskOfLightClient):
                     cb(True)
         self.send_command("transaction_pool.validate", unhexlify(tx), cb=parse_result)
 
-    def start_heartbeat(self, address):
+    def start_heartbeat(self):
 
         def timeout():
             self.connected = False
@@ -90,4 +104,4 @@ class LibbitcoinClient(ObeliskOfLightClient):
         t = reactor.callLater(10, timeout)
 
         s = ZmqSocket(frame_received, 3, type=zmq.SUB)
-        s.connect(address)
+        s.connect(self.address[:len(self.address) - 4] + "9092")

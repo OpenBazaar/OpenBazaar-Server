@@ -145,12 +145,9 @@ def run(*args):
 
     # blockchain
     if TESTNET:
-        server_url = LIBBITCOIN_SERVER_TESTNET
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
     else:
-        server_url = LIBBITCOIN_SERVER
-
-    libbitcoin_client = LibbitcoinClient(server_url)
-    libbitcoin_client.start_heartbeat(server_url[:len(server_url) - 4] + "9092")
+        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
 
     # listeners
     nlistener = NotificationListenerImpl(ws_factory, db)
