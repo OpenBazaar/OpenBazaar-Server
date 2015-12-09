@@ -3,7 +3,7 @@ import sys
 import argparse
 import platform
 
-from twisted.internet import reactor, task
+from twisted.internet import reactor
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -13,7 +13,7 @@ import requests
 from autobahn.twisted.websocket import listenWS
 
 from daemon import Daemon
-from libbitcoin import LibbitcoinClient, HeartbeatFactory
+from libbitcoin import LibbitcoinClient
 from db.datastore import Database
 from keyutils.keys import KeyChain
 from dht.network import Server
@@ -145,17 +145,12 @@ def run(*args):
 
     # blockchain
     if TESTNET:
-        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET)
+        server_url = LIBBITCOIN_SERVER_TESTNET
     else:
-        libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER)
+        server_url = LIBBITCOIN_SERVER
 
-    def heartbeat():
-        f = HeartbeatFactory(libbitcoin_client)
-        if TESTNET:
-            reactor.connectTCP(LIBBITCOIN_SERVER_TESTNET[6: LIBBITCOIN_SERVER_TESTNET.index(":", 6)], 9092, f)
-        else:
-            reactor.connectTCP(LIBBITCOIN_SERVER[6: LIBBITCOIN_SERVER.index(":", 6)], 9092, f)
-    task.LoopingCall(heartbeat).start(300)
+    libbitcoin_client = LibbitcoinClient(server_url)
+    libbitcoin_client.start_heartbeat(server_url[:len(server_url) - 4] + "9092")
 
     # listeners
     nlistener = NotificationListenerImpl(ws_factory, db)

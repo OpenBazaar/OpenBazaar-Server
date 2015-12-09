@@ -897,7 +897,9 @@ class OpenBazaarAPI(APIResource):
 
             def history_fetched(ec, history):
                 if not ec:
-                    for id, txhash, index, height, value in history:
+                    # pylint: disable=W0612
+                    # pylint: disable=W0640
+                    for objid, txhash, index, height, value in history:
                         def cb_txpool(ec, result):
                             if ec:
                                 self.protocol.blockchain.fetch_transaction(txhash, cb_chain)
