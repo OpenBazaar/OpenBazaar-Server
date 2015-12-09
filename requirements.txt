@@ -7,7 +7,7 @@ gnupg==2.0.2
 pynacl==0.3.0
 txrestapi==0.2
 autobahn==0.10.9
-python-libbitcoinclient==0.2.0
+python-libbitcoinclient==0.3.0
 requests==2.6.0
 pyopenssl==0.15.1
 miniupnpc==1.9
