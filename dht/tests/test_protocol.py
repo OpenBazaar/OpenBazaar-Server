@@ -489,6 +489,9 @@ class KademliaProtocolTest(unittest.TestCase):
 
         self.protocol.storage[digest("keyword")] = (
             digest("key"), self.protocol.sourceNode.getProto().SerializeToString(), 10)
+        self.protocol.storage[digest("keyword")] = (
+            digest("key2"), self.protocol.sourceNode.getProto().SerializeToString(), 10)
+
         self.protocol.transferKeyValues(Node(digest("id"), self.addr1[0], self.addr1[1]))
 
         self.clock.advance(1)
@@ -498,19 +501,24 @@ class KademliaProtocolTest(unittest.TestCase):
         x = message.Message()
         x.ParseFromString(sent_message)
 
+        i = objects.Inv()
+        i.keyword = digest("keyword")
+        i.valueKey = digest("key")
+
+        i2 = objects.Inv()
+        i2.keyword = digest("keyword")
+        i2.valueKey = digest("key2")
+
         m = message.Message()
         m.sender.MergeFrom(self.protocol.sourceNode.getProto())
-        m.command = message.Command.Value("STORE")
+        m.command = message.Command.Value("INV")
         m.protoVer = self.version
-        m.arguments.append(digest("keyword"))
-        m.arguments.append(digest("key"))
-        m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
-        m.arguments.append(str(10))
+        m.arguments.append(i.SerializeToString())
+        m.arguments.append(i2.SerializeToString())
         self.assertEqual(x.sender, m.sender)
         self.assertEqual(x.command, m.command)
-        self.assertEqual(x.arguments[0], m.arguments[0])
-        self.assertEqual(x.arguments[1], m.arguments[1])
-        self.assertEqual(x.arguments[2], m.arguments[2])
+        self.assertTrue(x.arguments[0] in m.arguments)
+        self.assertTrue(x.arguments[1] in m.arguments)
 
     def test_refreshIDs(self):
         node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))

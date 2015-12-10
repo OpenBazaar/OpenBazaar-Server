@@ -5,7 +5,7 @@ Copyright (c) 2015 OpenBazaar
 
 import random
 
-from twisted.internet import defer, reactor
+from twisted.internet import reactor
 from zope.interface import implements
 import nacl.signing
 
@@ -16,7 +16,7 @@ from log import Logger
 from net.rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from protos import objects
-from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH
+from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES
 
 
 class KademliaProtocol(RPCProtocol):
@@ -30,7 +30,7 @@ class KademliaProtocol(RPCProtocol):
         self.multiplexer = None
         self.db = database
         self.log = Logger(system=self)
-        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH]
+        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES]
         RPCProtocol.__init__(self, sourceNode, self.router)
 
     def connect_multiplexer(self, multiplexer):
@@ -111,6 +111,30 @@ class KademliaProtocol(RPCProtocol):
         ret.extend(value)
         return ret
 
+    def rpc_inv(self, sender, serlialized_invs):
+        self.addToRouter(sender)
+        ret = []
+        for inv in serlialized_invs:
+            try:
+                i = objects.Inv()
+                i.ParseFromString(inv)
+                if self.storage.getSpecific(i.keyword, i.valueKey) is None:
+                    ret.append(inv)
+            except Exception:
+                pass
+        return ret
+
+    def rpc_values(self, sender, serialized_values):
+        self.addToRouter(sender)
+        for val in serialized_values:
+            try:
+                v = objects.Value()
+                v.ParseFromString(val)
+                self.storage[v.keyword] = (v.valueKey, v.serializedData, int(v.ttl))
+            except Exception:
+                pass
+        return ["True"]
+
     def callFindNode(self, nodeToAsk, nodeToFind):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.find_node(address, nodeToFind.id)
@@ -136,6 +160,16 @@ class KademliaProtocol(RPCProtocol):
         d = self.delete(address, keyword, key, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
+    def callInv(self, nodeToAsk, serlialized_inv_list):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.inv(address, *serlialized_inv_list)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callValues(self, nodeToAsk, serlialized_values_list):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.values(address, *serlialized_values_list)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
     def transferKeyValues(self, node):
         """
         Given a new node, send it all the keys/values it should be storing.
@@ -149,7 +183,26 @@ class KademliaProtocol(RPCProtocol):
         is closer than the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        ds = []
+        def send_values(inv_list):
+            values = []
+            for requested_inv in inv_list:
+                try:
+                    i = objects.Inv()
+                    i.ParseFromString(requested_inv)
+                    value = self.storage.getSpecific(i.keyword, i.valueKey)
+                    if value is not None:
+                        v = objects.Value()
+                        v.keyword = i.keyword
+                        v.valueKey = i.valueKey
+                        v.serializedData = value
+                        v.ttl = self.storage.get_ttl(i.keyword, i.valueKey)
+                        values.append(v.SerializeToString())
+                except Exception:
+                    pass
+            if len(values) > 0:
+                self.callValues(node, values)
+
+        inv = []
         for keyword in self.storage.iterkeys():
             keynode = Node(keyword)
             neighbors = self.router.findNeighbors(keynode, exclude=node)
@@ -159,9 +212,14 @@ class KademliaProtocol(RPCProtocol):
             if len(neighbors) == 0 \
                     or (newNodeClose and thisNodeClosest) \
                     or (thisNodeClosest and len(neighbors) < self.ksize):
+                # pylint: disable=W0612
                 for k, v in self.storage.iteritems(keyword):
-                    ds.append(self.callStore(node, keyword, k, v, self.storage.get_ttl(keyword, k)))
-        return defer.gatherResults(ds)
+                    i = objects.Inv()
+                    i.keyword = keyword
+                    i.valueKey = k
+                    inv.append(i.SerializeToString())
+        if len(inv) > 0:
+            self.callInv(node, inv).addCallback(send_values)
 
     def handleCallResponse(self, result, node):
         """
