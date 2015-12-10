@@ -5,7 +5,7 @@ Copyright (c) 2015 OpenBazaar
 
 import random
 
-from twisted.internet import defer, reactor
+from twisted.internet import reactor
 from zope.interface import implements
 import nacl.signing
 
@@ -118,7 +118,7 @@ class KademliaProtocol(RPCProtocol):
             try:
                 i = objects.Inv()
                 i.ParseFromString(inv)
-                if not self.storage.exists(i.keyword, i.valueKey):
+                if self.storage.getSpecific(i.keyword, i.valueKey) is None:
                     ret.append(inv)
             except Exception:
                 pass
@@ -183,7 +183,26 @@ class KademliaProtocol(RPCProtocol):
         is closer than the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        ds = []
+        def send_values(inv_list):
+            values = []
+            for requested_inv in inv_list:
+                try:
+                    i = objects.Inv()
+                    i.ParseFromString(requested_inv)
+                    value = self.storage.getSpecific(i.keyword, i.valueKey)
+                    if value is not None:
+                        v = objects.Value()
+                        v.keyword = i.keyword
+                        v.valueKey = i.valueKey
+                        v.serializedData = value
+                        v.ttl = self.storage.get_ttl(i.keyword, i.valueKey)
+                        values.append(v.SerializeToString())
+                except Exception:
+                    pass
+            if len(values) > 0:
+                self.callValues(node, values)
+
+        inv = []
         for keyword in self.storage.iterkeys():
             keynode = Node(keyword)
             neighbors = self.router.findNeighbors(keynode, exclude=node)
@@ -193,9 +212,14 @@ class KademliaProtocol(RPCProtocol):
             if len(neighbors) == 0 \
                     or (newNodeClose and thisNodeClosest) \
                     or (thisNodeClosest and len(neighbors) < self.ksize):
+                # pylint: disable=W0612
                 for k, v in self.storage.iteritems(keyword):
-                    ds.append(self.callStore(node, keyword, k, v, self.storage.get_ttl(keyword, k)))
-        return defer.gatherResults(ds)
+                    i = objects.Inv()
+                    i.keyword = keyword
+                    i.valueKey = k
+                    inv.append(i.SerializeToString())
+        if len(inv) > 0:
+            self.callInv(node, inv).addCallback(send_values)
 
     def handleCallResponse(self, result, node):
         """
