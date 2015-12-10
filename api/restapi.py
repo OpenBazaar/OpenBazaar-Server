@@ -107,6 +107,7 @@ class OpenBazaarAPI(APIResource):
                         "moderator_list": mods,
                         "handle": profile.handle,
                         "about": profile.about,
+                        "short_description": profile.short_description,
                         "website": profile.website,
                         "email": profile.email,
                         "primary_color": profile.primary_color,
