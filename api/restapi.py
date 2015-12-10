@@ -885,6 +885,10 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/check_for_payment')
     def check_for_payment(self, request):
+        if not self.protocol.blockchain.connected:
+            request.write(json.dumps({"success": False, "reason": "libbitcoin server offline"}, indent=4))
+            request.finish()
+            return False
         try:
             file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
             with open(file_path, 'r') as filename:

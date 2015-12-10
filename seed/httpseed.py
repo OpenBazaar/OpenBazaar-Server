@@ -97,7 +97,7 @@ def run(*args):
                     self.nodes[(node.ip, node.port)] = node
             self.nodes[(this_node.ip, this_node.port)] = this_node
             loopingCall = task.LoopingCall(self.crawl)
-            loopingCall.start(60, True)
+            loopingCall.start(180, True)
 
         def crawl(self):
             def gather_results(result):
