@@ -16,7 +16,7 @@ from log import Logger
 from net.rpcudp import RPCProtocol
 from interfaces import MessageProcessor
 from protos import objects
-from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH
+from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES
 
 
 class KademliaProtocol(RPCProtocol):
@@ -30,7 +30,7 @@ class KademliaProtocol(RPCProtocol):
         self.multiplexer = None
         self.db = database
         self.log = Logger(system=self)
-        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH]
+        self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES]
         RPCProtocol.__init__(self, sourceNode, self.router)
 
     def connect_multiplexer(self, multiplexer):
@@ -111,6 +111,30 @@ class KademliaProtocol(RPCProtocol):
         ret.extend(value)
         return ret
 
+    def rpc_inv(self, sender, serlialized_invs):
+        self.addToRouter(sender)
+        ret = []
+        for inv in serlialized_invs:
+            try:
+                i = objects.Inv()
+                i.ParseFromString(inv)
+                if not self.storage.exists(i.keyword, i.valueKey):
+                    ret.append(inv)
+            except Exception:
+                pass
+        return ret
+
+    def rpc_values(self, sender, serialized_values):
+        self.addToRouter(sender)
+        for val in serialized_values:
+            try:
+                v = objects.Value()
+                v.ParseFromString(val)
+                self.storage[v.keyword] = (v.valueKey, v.serializedData, int(v.ttl))
+            except Exception:
+                pass
+        return ["True"]
+
     def callFindNode(self, nodeToAsk, nodeToFind):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.find_node(address, nodeToFind.id)
@@ -134,6 +158,16 @@ class KademliaProtocol(RPCProtocol):
     def callDelete(self, nodeToAsk, keyword, key, signature):
         address = (nodeToAsk.ip, nodeToAsk.port)
         d = self.delete(address, keyword, key, signature)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callInv(self, nodeToAsk, serlialized_inv_list):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.inv(address, *serlialized_inv_list)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callValues(self, nodeToAsk, serlialized_values_list):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.values(address, *serlialized_values_list)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def transferKeyValues(self, node):
