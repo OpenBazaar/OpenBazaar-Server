@@ -555,6 +555,11 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
             else:
                 return ret
 
+        def get_unfunded(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT id FROM purchases WHERE status=0''')
+            return cursor.fetchall()
+
         def update_status(self, order_id, status):
             cursor = self.db.cursor()
             cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
@@ -615,6 +620,11 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
                 return None
             else:
                 return ret
+
+        def get_unfunded(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT id FROM sales WHERE status=0''')
+            return cursor.fetchall()
 
         def update_status(self, order_id, status):
             cursor = self.db.cursor()

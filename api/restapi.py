@@ -889,7 +889,7 @@ class OpenBazaarAPI(APIResource):
         if not self.protocol.blockchain.connected:
             request.write(json.dumps({"success": False, "reason": "libbitcoin server offline"}, indent=4))
             request.finish()
-            return False
+            return server.NOT_DONE_YET
         try:
             file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
             with open(file_path, 'r') as filename:

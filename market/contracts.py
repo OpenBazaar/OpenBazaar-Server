@@ -1046,3 +1046,48 @@ class Contract(object):
 
     def __repr__(self):
         return json.dumps(self.contract, indent=4)
+
+
+def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, testnet=False):
+    """
+    Run through the unfunded contracts in our database and query the
+    libbitcoin server to see if they received a payment.
+    """
+    def check(order_ids, is_purchase=True):
+        for order_id in order_ids:
+            try:
+                if is_purchase:
+                    file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
+                else:
+                    file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id[0] + ".json"
+                with open(file_path, 'r') as filename:
+                    order = json.load(filename, object_pairs_hook=OrderedDict)
+                c = Contract(db, contract=order, testnet=testnet)
+                c.blockchain = libbitcoin_client
+                c.notification_listener = notification_listener
+                c.is_purchase = is_purchase
+                addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+
+                def history_fetched(ec, history):
+                    if not ec:
+                        # pylint: disable=W0612
+                        # pylint: disable=W0640
+                        for objid, txhash, index, height, value in history:
+                            def cb_txpool(ec, result):
+                                if ec:
+                                    libbitcoin_client.fetch_transaction(txhash, cb_chain)
+                                else:
+                                    c.on_tx_received(None, None, None, None, result)
+
+                            def cb_chain(ec, result):
+                                if not ec:
+                                    c.on_tx_received(None, None, None, None, result)
+
+                            libbitcoin_client.fetch_txpool_transaction(txhash, cb_txpool)
+
+                libbitcoin_client.fetch_history2(addr, history_fetched)
+            except Exception:
+                pass
+
+    check(db.Purchases().get_unfunded(), True)
+    check(db.Sales().get_unfunded(), False)

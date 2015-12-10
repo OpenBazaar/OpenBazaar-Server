@@ -3,7 +3,7 @@ import sys
 import argparse
 import platform
 
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -26,6 +26,7 @@ from api.ws import WSFactory, WSProtocol
 from api.restapi import OpenBazaarAPI
 from dht.storage import PersistentStorage, ForgetfulStorage
 from market.profile import Profile
+from market.contracts import check_unfunded_for_payment
 from log import Logger, FileLogObserver
 from net.upnp import PortMapper
 from net.sslcontext import ChainedOpenSSLContextFactory
@@ -68,11 +69,9 @@ def run(*args):
     def on_bootstrap_complete(resp):
         logger.info("bootstrap complete, downloading outstanding messages...")
         mserver.get_messages(mlistener)
+        task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
 
         # TODO: ping seed node to establish connection if not full cone NAT
-
-        # TODO: after bootstrap run through any pending contracts and see if the bitcoin address
-        # has been funded, if not listen on the address and start the 10 minute delete timer.
 
     protocol = OpenBazaarProtocol((ip_address, port), response[0], testnet=TESTNET)
 
