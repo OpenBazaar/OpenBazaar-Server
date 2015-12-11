@@ -183,7 +183,7 @@ class KademliaProtocol(RPCProtocol):
         is closer than the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        def send_values(inv_list):
+        def send_values(*inv_list):
             values = []
             for requested_inv in inv_list:
                 try:
