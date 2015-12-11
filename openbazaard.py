@@ -111,23 +111,21 @@ def run(*args):
 
     # websockets api
     if SSL:
-        ws_factory = WSFactory("wss://127.0.0.1:18466", mserver, kserver)
+        ws_factory = WSFactory("wss://127.0.0.1:18466", mserver, kserver, only_ip=args[4])
         contextFactory = ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT)
         ws_factory.protocol = WSProtocol
-        ws_factory.setProtocolOptions(allowHixie76=True)
         listenWS(ws_factory, contextFactory)
     else:
         ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
         ws_factory.protocol = WSProtocol
-        ws_factory.setProtocolOptions(allowHixie76=True)
         listenWS(ws_factory)
-    webdir = File(".")
+
     if args[4] != "127.0.0.1" and args[4] != "0.0.0.0":
         ws_interface = "0.0.0.0"
-        web = OnlyIP(webdir, args[4])
     else:
         ws_interface = args[4]
-        web = Site(webdir)
+    webdir = File(".")
+    web = Site(webdir)
 
     reactor.listenTCP(18465, web, interface=ws_interface)
 

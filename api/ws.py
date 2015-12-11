@@ -277,16 +277,19 @@ class WSFactory(WebSocketServerFactory):
     currently connected clients.
     """
 
-    def __init__(self, url, mserver, kserver, debug=False, debugCodePaths=False):
+    def __init__(self, url, mserver, kserver, only_ip="127.0.0.1", debug=False, debugCodePaths=False):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
         self.outstanding = {}
         self.clients = []
+        self.only_ip = only_ip
 
     def register(self, client):
-        if client not in self.clients:
+        if client.transport.getPeer().host != self.only_ip and self.only_ip != "0.0.0.0":
+            client.transport.loseConnection()
+        elif client not in self.clients:
             self.clients.append(client)
 
     def unregister(self, client):
