@@ -116,7 +116,7 @@ def run(*args):
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory, contextFactory)
     else:
-        ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver)
+        ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver, only_ip=args[4])
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory)
 
