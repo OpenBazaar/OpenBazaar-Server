@@ -237,6 +237,7 @@ commands:
                 description="Shutdown the server and disconnect",
                 usage='''usage:
         python openbazaard.py stop''')
+            parser.parse_args(sys.argv[2:])
             print "OpenBazaar server stopping..."
             try:
                 requests.get("http://localhost:18469/api/v1/shutdown")
@@ -249,6 +250,7 @@ commands:
                 description="Restart the server",
                 usage='''usage:
         python openbazaard.py restart''')
+            parser.parse_args(sys.argv[2:])
             print "Restarting OpenBazaar server..."
             self.daemon.restart()
 

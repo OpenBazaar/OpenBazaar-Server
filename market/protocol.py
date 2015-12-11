@@ -377,7 +377,6 @@ class MarketProtocol(RPCProtocol):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            self.log.debug("got response from %s, adding to router" % node)
             self.router.addContact(node)
         else:
             self.log.debug("no response from %s, removing from router" % node)
