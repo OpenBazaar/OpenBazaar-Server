@@ -12,4 +12,6 @@ python-libbitcoinclient==0.3.2
 requests==2.7.0
 pyopenssl==0.15.1
 miniupnpc==1.9
-service_identity
+characteristic==14.3.0
+pyasn1-modules==0.0.8
+service-identity==14.0.0
