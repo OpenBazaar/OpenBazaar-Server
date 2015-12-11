@@ -101,6 +101,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_rpc_store(self):
         self._connecting_to_connected()
+        self.protocol.router.addContact(self.protocol.sourceNode)
 
         m = message.Message()
         m.messageID = digest("msgid")
@@ -133,6 +134,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_rpc_delete(self):
         self._connecting_to_connected()
+        self.protocol.router.addContact(self.protocol.sourceNode)
 
         # Set a keyword to store
         m = message.Message()
@@ -256,6 +258,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
     def test_rpc_find_value(self):
         self._connecting_to_connected()
+        self.protocol.router.addContact(self.protocol.sourceNode)
 
         # Set a value to find
         m = message.Message()

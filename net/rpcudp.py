@@ -137,8 +137,7 @@ class RPCProtocol:
                 response = [response]
             for arg in response:
                 m.arguments.append(str(arg))
-        data = m.SerializeToString()
-        connection.send_message(data)
+        connection.send_message(m.SerializeToString())
 
     def timeout(self, address, node_to_remove):
         """

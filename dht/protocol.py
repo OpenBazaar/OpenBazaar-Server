@@ -183,24 +183,25 @@ class KademliaProtocol(RPCProtocol):
         is closer than the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        def send_values(*inv_list):
+        def send_values(inv_list):
             values = []
-            for requested_inv in inv_list:
-                try:
-                    i = objects.Inv()
-                    i.ParseFromString(requested_inv)
-                    value = self.storage.getSpecific(i.keyword, i.valueKey)
-                    if value is not None:
-                        v = objects.Value()
-                        v.keyword = i.keyword
-                        v.valueKey = i.valueKey
-                        v.serializedData = value
-                        v.ttl = self.storage.get_ttl(i.keyword, i.valueKey)
-                        values.append(v.SerializeToString())
-                except Exception:
-                    pass
-            if len(values) > 0:
-                self.callValues(node, values)
+            if inv_list[0]:
+                for requested_inv in inv_list[1]:
+                    try:
+                        i = objects.Inv()
+                        i.ParseFromString(requested_inv)
+                        value = self.storage.getSpecific(i.keyword, i.valueKey)
+                        if value is not None:
+                            v = objects.Value()
+                            v.keyword = i.keyword
+                            v.valueKey = i.valueKey
+                            v.serializedData = value
+                            v.ttl = int(round(self.storage.get_ttl(i.keyword, i.valueKey)))
+                            values.append(v.SerializeToString())
+                    except Exception:
+                        pass
+                if len(values) > 0:
+                    self.callValues(node, values)
 
         inv = []
         for keyword in self.storage.iterkeys():
