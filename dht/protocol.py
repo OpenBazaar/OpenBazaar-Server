@@ -111,7 +111,7 @@ class KademliaProtocol(RPCProtocol):
         ret.extend(value)
         return ret
 
-    def rpc_inv(self, sender, serlialized_invs):
+    def rpc_inv(self, sender, *serlialized_invs):
         self.addToRouter(sender)
         ret = []
         for inv in serlialized_invs:
@@ -124,7 +124,7 @@ class KademliaProtocol(RPCProtocol):
                 pass
         return ret
 
-    def rpc_values(self, sender, serialized_values):
+    def rpc_values(self, sender, *serialized_values):
         self.addToRouter(sender)
         for val in serialized_values:
             try:
