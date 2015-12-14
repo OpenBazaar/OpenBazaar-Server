@@ -118,7 +118,6 @@ class Server(object):
                 seed, pubkey = sp
                 try:
                     self.log.info("querying %s for peers" % seed)
-                    # nodes = []
                     c = httplib.HTTPConnection(seed)
                     c.request("GET", "/")
                     response = c.getresponse()
@@ -135,7 +134,6 @@ class Server(object):
                     verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
                     verify_key.verify("".join(proto.peer_data), proto.signature)
                     self.log.info("%s returned %s addresses" % (seed, len(nodes)))
-                    # return nodes
                 except Exception, e:
                     self.log.error("failed to query seed: %s" % str(e))
             return nodes

@@ -1,7 +1,9 @@
 message PeerData {
-    required string ip_address = 1;
-    required uint32 port       = 2;
-    required bool vendor       = 3;
+    required string ip_address  = 1;
+    required uint32 port        = 2;
+    required bool vendor        = 3;
+    optional bytes guid         = 4;
+    optional bytes signedPubkey = 5;
 }
 
 message PeerSeeds {

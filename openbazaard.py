@@ -1,4 +1,5 @@
 __author__ = 'chris'
+import time
 import sys
 import argparse
 import platform
@@ -9,6 +10,7 @@ from twisted.web.server import Site
 from twisted.web.static import File
 import stun
 import requests
+import threading
 
 from autobahn.twisted.websocket import listenWS
 
@@ -51,7 +53,8 @@ def run(*args):
 
     # NAT traversal
     port = args[2]
-    PortMapper().add_port_mapping(port, port, 'UDP')
+    p = PortMapper()
+    threading.Thread(target=p.add_port_mapping, args=(port, port, "UDP")).start()
     logger.info("Finding NAT Type...")
     while True:
         try:
@@ -59,7 +62,6 @@ def run(*args):
             break
         except Exception:
             pass
-
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     nat_type = response[0]
     ip_address = response[1]
@@ -158,6 +160,7 @@ def run(*args):
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
+    logger.info("Startup took %s seconds" % str(round(time.time() - args[6], 2)))
     reactor.run()
 
 if __name__ == "__main__":
@@ -227,7 +230,7 @@ commands:
             if args.daemon and platform.system().lower() in unix:
                 self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl)
             else:
-                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl)
+                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl, time.time())
 
         def stop(self):
             # pylint: disable=W0612

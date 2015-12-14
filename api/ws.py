@@ -4,7 +4,7 @@ import ast
 import json
 import os
 import time
-from constants import DATA_FOLDER
+from constants import DATA_FOLDER, SEED
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
@@ -12,7 +12,6 @@ from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerPr
 from protos.countries import CountryCode
 from protos.objects import Plaintext_Message, Value, Listings
 from protos import objects
-from twisted.internet import defer
 from binascii import unhexlify
 from dht.node import Node
 
@@ -27,20 +26,19 @@ class WSProtocol(WebSocketServerProtocol):
 
     def get_vendors(self, message_id):
         if message_id in self.factory.outstanding:
-            vendors = self.factory.outstanding[message_id]
+            queried = self.factory.outstanding[message_id]
         else:
-            vendors = self.factory.db.VendorStore().get_vendors()
-            shuffle(vendors)
-            self.factory.outstanding[message_id] = vendors
+            queried = []
+            self.factory.outstanding[message_id] = queried
 
-        def count_results(results):
-            to_query = 0
-            for result in results:
-                if not result:
-                    to_query += 1
-            for node in vendors[:to_query]:
-                dl.append(self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node))
-                defer.gatherResults(dl).addCallback(count_results)
+        vendors = self.factory.db.VendorStore().get_vendors()
+
+        if len(vendors) - len(queried) == 0:
+            self.factory.mserver.querySeed(SEED)
+            vendors = self.factory.db.VendorStore().get_vendors()
+
+        shuffle(vendors)
+        to_query = list(set(vendors) - set(queried))
 
         def handle_response(metadata, node):
             if metadata is not None:
@@ -57,17 +55,14 @@ class WSProtocol(WebSocketServerProtocol):
                         }
                 }
                 self.sendMessage(json.dumps(vendor, indent=4), False)
-                vendors.remove(node)
+                queried.append(node)
                 return True
             else:
                 self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
-                vendors.remove(node)
                 return False
 
-        dl = []
-        for node in vendors[:30]:
-            dl.append(self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node))
-        defer.gatherResults(dl).addCallback(count_results)
+        for node in to_query[:30]:
+            self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node)
 
     def get_moderators(self, message_id):
         m = self.factory.db.ModeratorStore()
@@ -119,17 +114,12 @@ class WSProtocol(WebSocketServerProtocol):
         if message_id not in self.factory.outstanding:
             self.factory.outstanding[message_id] = []
         vendors = self.factory.db.VendorStore().get_vendors()
-        shuffle(vendors)
 
-        def count_results(results):
-            to_query = 30
-            for result in results:
-                to_query -= result
-            shuffle(vendors)
-            if to_query/3 > 0 and len(vendors) > 0:
-                for node in vendors[:to_query/3]:
-                    dl.append(self.factory.mserver.get_listings(node).addCallback(handle_response, node))
-                defer.gatherResults(dl).addCallback(count_results)
+        if len(vendors) == 0:
+            self.factory.mserver.querySeed(SEED)
+            vendors = self.factory.db.VendorStore().get_vendors()
+
+        shuffle(vendors)
 
         def handle_response(listings, node):
             count = 0
@@ -164,17 +154,14 @@ class WSProtocol(WebSocketServerProtocol):
                         count += 1
                         self.factory.outstanding[message_id].append(l.contract_hash)
                         if count == 3:
-                            return count
+                            break
                 vendors.remove(node)
             else:
                 self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
                 vendors.remove(node)
-            return count
 
-        dl = []
-        for vendor in vendors[:10]:
-            dl.append(self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor))
-        defer.gatherResults(dl).addCallback(count_results)
+        for vendor in vendors[:15]:
+            self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
 
     def send_message(self, guid, handle, message, subject, message_type, recipient_encryption_key):
         self.factory.db.MessageStore().save_message(guid, handle, "", unhexlify(recipient_encryption_key), subject,

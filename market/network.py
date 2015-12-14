@@ -9,6 +9,7 @@ import nacl.encoding
 import nacl.utils
 import gnupg
 import bitcoin
+import httplib
 from dht.node import Node
 from nacl.public import PrivateKey, PublicKey, Box
 from twisted.internet import defer, reactor, task
@@ -23,6 +24,7 @@ from binascii import unhexlify
 from keyutils.keys import KeyChain
 from keyutils.bip32utils import derive_childkey
 from log import Logger
+from seed import peers
 
 
 class Server(object):
@@ -42,6 +44,44 @@ class Server(object):
         # TODO: we need a loop here that republishes keywords when they are about to expire
 
         # TODO: we also need a loop here to delete expiring contract (if they are set to expire)
+
+    def querySeed(self, list_seed_pubkey):
+        """
+        Query an HTTP seed for known vendors and save the vendors to the db.
+
+        Args:
+            Receives a list of one or more tuples Example [(seed, pubkey)]
+            seed: A `string` consisting of "ip:port" or "hostname:port"
+            pubkey: The hex encoded public key to verify the signature on the response
+        """
+
+        nodes = []
+        if not list_seed_pubkey:
+            self.log.error('failed to query seed {0} from ob.cfg'.format(list_seed_pubkey))
+            return nodes
+        else:
+            for sp in list_seed_pubkey:
+                seed, pubkey = sp
+                try:
+                    self.log.info("querying %s for peers" % seed)
+                    c = httplib.HTTPConnection(seed)
+                    c.request("GET", "/?type=vendors")
+                    response = c.getresponse()
+                    self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
+                    data = response.read()
+                    reread_data = data.decode("zlib")
+                    proto = peers.PeerSeeds()
+                    proto.ParseFromString(reread_data)
+                    v = self.db.VendorStore()
+                    for peer in proto.peer_data:
+                        p = peers.PeerData()
+                        p.ParseFromString(peer)
+                        v.save_vendor(p.guid, p.ip_address, p.port, p.signedPubkey)
+                    verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
+                    verify_key.verify("".join(proto.peer_data), proto.signature)
+                    self.log.info("%s returned %s addresses" % (seed, len(nodes)))
+                except Exception, e:
+                    self.log.error("failed to query seed: %s" % str(e))
 
     def get_contract(self, node_to_ask, contract_hash):
         """

@@ -144,6 +144,8 @@ def run(*args):
                                 node_dic = {}
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port
+                                node_dic["guid"] = node.id
+                                node_dic["signed_pubkey"] = node.signed_pubkey
                                 json_list.append(node_dic)
                         sig = signing_key.sign(str(json_list))
                         resp = {"peers": json_list, "signature": hexlify(sig[:64])}
@@ -179,6 +181,8 @@ def run(*args):
                             peer.ip_address = node.ip
                             peer.port = node.port
                             peer.vendor = node.vendor
+                            peer.guid = node.id
+                            peer.signedPubkey = node.signed_pubkey
                             proto.peer_data.append(peer.SerializeToString())
 
                     sig = signing_key.sign("".join(proto.peer_data))[:64]
