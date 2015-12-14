@@ -38,7 +38,10 @@ class WSProtocol(WebSocketServerProtocol):
             vendors = self.factory.db.VendorStore().get_vendors()
 
         shuffle(vendors)
-        to_query = list(set(vendors) - set(queried))
+        to_query = []
+        for vendor in vendors:
+            if vendor.id not in queried:
+                to_query.append(vendor)
 
         def handle_response(metadata, node):
             if metadata is not None:
@@ -55,7 +58,7 @@ class WSProtocol(WebSocketServerProtocol):
                         }
                 }
                 self.sendMessage(json.dumps(vendor, indent=4), False)
-                queried.append(node)
+                queried.append(node.id)
                 return True
             else:
                 self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
