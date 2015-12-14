@@ -55,33 +55,27 @@ class Server(object):
             pubkey: The hex encoded public key to verify the signature on the response
         """
 
-        nodes = []
-        if not list_seed_pubkey:
-            self.log.error('failed to query seed {0} from ob.cfg'.format(list_seed_pubkey))
-            return nodes
-        else:
-            for sp in list_seed_pubkey:
-                seed, pubkey = sp
-                try:
-                    self.log.info("querying %s for peers" % seed)
-                    c = httplib.HTTPConnection(seed)
-                    c.request("GET", "/?type=vendors")
-                    response = c.getresponse()
-                    self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
-                    data = response.read()
-                    reread_data = data.decode("zlib")
-                    proto = peers.PeerSeeds()
-                    proto.ParseFromString(reread_data)
-                    v = self.db.VendorStore()
-                    for peer in proto.peer_data:
-                        p = peers.PeerData()
-                        p.ParseFromString(peer)
-                        v.save_vendor(p.guid, p.ip_address, p.port, p.signedPubkey)
-                    verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-                    verify_key.verify("".join(proto.peer_data), proto.signature)
-                    self.log.info("%s returned %s addresses" % (seed, len(nodes)))
-                except Exception, e:
-                    self.log.error("failed to query seed: %s" % str(e))
+        for sp in list_seed_pubkey:
+            seed, pubkey = sp
+            try:
+                self.log.info("querying %s for peers" % seed)
+                c = httplib.HTTPConnection(seed)
+                c.request("GET", "/?type=vendors")
+                response = c.getresponse()
+                self.log.debug("Http response from %s: %s, %s" % (seed, response.status, response.reason))
+                data = response.read()
+                reread_data = data.decode("zlib")
+                proto = peers.PeerSeeds()
+                proto.ParseFromString(reread_data)
+                v = self.db.VendorStore()
+                for peer in proto.peer_data:
+                    p = peers.PeerData()
+                    p.ParseFromString(peer)
+                    v.save_vendor(p.guid, p.ip_address, p.port, p.signedPubkey)
+                verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
+                verify_key.verify("".join(proto.peer_data), proto.signature)
+            except Exception, e:
+                self.log.error("failed to query seed: %s" % str(e))
 
     def get_contract(self, node_to_ask, contract_hash):
         """
