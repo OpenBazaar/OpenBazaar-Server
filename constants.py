@@ -28,15 +28,13 @@ else:
         nameOptionDF = 'DATA_FOLDER'
 
         # if exist option in file config
-        # if fc.has_option(mySection, nameOptionDF):
         try:
             optionDataFolder = fc.get(mySection, nameOptionDF)
             # if have a value
             if optionDataFolder:
-                data_f1 = join(dataFolderPath, optionDataFolder)
-                data_f2 = join(data_f1, '')  # is necesary for put "/" the end
+                data_f2 = optionDataFolder
         except ConfigParser.Error, error:
-            print error
+            data_f2 = dataFolderPath + "/OpenBazaar/"
 
         # Extract Config SEED_NODE
         seed_n = ''

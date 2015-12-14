@@ -116,12 +116,12 @@ def run(*args):
 
     # websockets api
     if SSL:
-        ws_factory = WSFactory("wss://127.0.0.1:18466", mserver, kserver, only_ip=args[4])
+        ws_factory = WSFactory("wss://127.0.0.1:" + str(args[7]), mserver, kserver, only_ip=args[4])
         contextFactory = ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT)
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory, contextFactory)
     else:
-        ws_factory = WSFactory("ws://127.0.0.1:18466", mserver, kserver, only_ip=args[4])
+        ws_factory = WSFactory("ws://127.0.0.1:" + str(args[7]), mserver, kserver, only_ip=args[4])
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory)
 
@@ -132,7 +132,7 @@ def run(*args):
     webdir = File(".")
     web = Site(webdir)
 
-    reactor.listenTCP(18465, web, interface=ws_interface)
+    reactor.listenTCP(args[7] - 1, web, interface=ws_interface)
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
@@ -143,9 +143,9 @@ def run(*args):
         rest_interface = args[3]
         site = Site(api, timeout=None)
     if SSL:
-        reactor.listenSSL(18469, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
+        reactor.listenSSL(args[6], site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
     else:
-        reactor.listenTCP(18469, site, interface=rest_interface)
+        reactor.listenTCP(args[6], site, interface=rest_interface)
 
     # blockchain
     if TESTNET:
@@ -163,25 +163,12 @@ def run(*args):
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
-    logger.info("Startup took %s seconds" % str(round(time.time() - args[6], 2)))
+    logger.info("Startup took %s seconds" % str(round(time.time() - args[8], 2)))
 
     reactor.run()
 
 if __name__ == "__main__":
     # pylint: disable=anomalous-backslash-in-string
-
-    # If the user recently shut down we need to pause to make sure the socket is
-    # fully closed before starting back up.
-    try:
-        with open(DATA_FOLDER + "cache.pickle", 'r') as f:
-            data = pickle.load(f)
-        if "shutdown_time" in data:
-            current_time = time.time()
-            if current_time - data["shutdown_time"] < 5:
-                time.sleep(5 - (current_time - data["shutdown_time"]))
-    except IOError:
-        pass
-
     class OpenBazaard(Daemon):
         def run(self, *args):
             run(*args)
@@ -208,11 +195,13 @@ commands:
             getattr(self, args.command)()
 
         def start(self):
+
             parser = argparse.ArgumentParser(
                 description="Start the OpenBazaar server",
                 usage='''usage:
         python openbazaard.py start [-d DAEMON]''')
-            parser.add_argument('-d', '--daemon', action='store_true', help="run the server in the background")
+            parser.add_argument('-d', '--daemon', action='store_true',
+                                help="run the server in the background as a daemon")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
             parser.add_argument('-s', '--ssl', action='store_true',
                                 help="use ssl on api connections. you must set the path to your "
@@ -224,6 +213,9 @@ commands:
                                 help="only allow rest api connections from this ip")
             parser.add_argument('-w', '--wsallowip', default="127.0.0.1",
                                 help="only allow websockets connections from this ip")
+            parser.add_argument('--restapiport', help="set the rest api port", default=18469)
+            parser.add_argument('--websocketport', help="set the websocket api port", default=18466)
+            parser.add_argument('--pidfile', help="name of the pid file", default="openbazaard.pid")
             args = parser.parse_args(sys.argv[2:])
             OKBLUE = '\033[94m'
             ENDC = '\033[0m'
@@ -238,6 +230,19 @@ commands:
             print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
             print
             print "OpenBazaar Server v0.1 starting..."
+
+            # If the user recently shut down we need to pause to make sure the socket is
+            # fully closed before starting back up.
+            try:
+                with open(DATA_FOLDER + "cache.pickle", 'r') as f:
+                    data = pickle.load(f)
+                if "shutdown_time" in data:
+                    current_time = time.time()
+                    if current_time - data["shutdown_time"] < 5:
+                        time.sleep(5 - (current_time - data["shutdown_time"]))
+            except IOError:
+                pass
+
             unix = ("linux", "linux2", "darwin")
 
             if args.port:
@@ -245,9 +250,12 @@ commands:
             else:
                 port = 18467 if not args.testnet else 28467
             if args.daemon and platform.system().lower() in unix:
-                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl)
+                self.daemon.pidfile = "/tmp/" + args.pidfile
+                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl,
+                                  int(args.restapiport), int(args.websocketport), time.time())
             else:
-                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl, time.time())
+                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl,
+                    int(args.restapiport), int(args.websocketport), time.time())
 
         def stop(self):
             # pylint: disable=W0612
