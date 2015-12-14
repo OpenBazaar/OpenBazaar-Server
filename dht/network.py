@@ -89,13 +89,9 @@ class Server(object):
             ds.append(spider.find())
 
         def republishKeys(_):
-            ds = []
-            # Republish keys older than one hour
-            for keyword in self.storage.iterkeys():
-                for k, v in self.storage.iteritems(keyword):
-                    ttl = self.storage.get_ttl(keyword, k)
-                    if ttl < 601200:
-                        ds.append(self.set(keyword, k, v, ttl))
+            for bucket in self.protocol.router.buckets:
+                for node in bucket.nodes.values():
+                    self.protocol.transferKeyValues(node)
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 

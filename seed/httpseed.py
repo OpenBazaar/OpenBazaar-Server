@@ -144,8 +144,8 @@ def run(*args):
                                 node_dic = {}
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port
-                                node_dic["guid"] = node.id
-                                node_dic["signed_pubkey"] = node.signed_pubkey
+                                node_dic["guid"] = node.id.encode("hex")
+                                node_dic["signed_pubkey"] = node.signed_pubkey.encode("hex")
                                 json_list.append(node_dic)
                         sig = signing_key.sign(str(json_list))
                         resp = {"peers": json_list, "signature": hexlify(sig[:64])}
