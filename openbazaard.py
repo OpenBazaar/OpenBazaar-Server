@@ -1,5 +1,6 @@
 __author__ = 'chris'
 import time
+import pickle
 import sys
 import argparse
 import platform
@@ -57,6 +58,8 @@ def run(*args):
     threading.Thread(target=p.add_port_mapping, args=(port, port, "UDP")).start()
     logger.info("Finding NAT Type...")
     while True:
+        # sometimes the stun server returns a code the client
+        # doesn't understand so we have to try again
         try:
             response = stun.get_ip_info(source_port=port)
             break
@@ -161,10 +164,24 @@ def run(*args):
     protocol.set_servers(ws_factory, libbitcoin_client)
 
     logger.info("Startup took %s seconds" % str(round(time.time() - args[6], 2)))
+
     reactor.run()
 
 if __name__ == "__main__":
     # pylint: disable=anomalous-backslash-in-string
+
+    # If the user recently shut down we need to pause to make sure the socket is
+    # fully closed before starting back up.
+    try:
+        with open(DATA_FOLDER + "cache.pickle", 'r') as f:
+            data = pickle.load(f)
+        if "shutdown_time" in data:
+            current_time = time.time()
+            if current_time - data["shutdown_time"] < 5:
+                time.sleep(5 - (current_time - data["shutdown_time"]))
+    except IOError:
+        pass
+
     class OpenBazaard(Daemon):
         def run(self, *args):
             run(*args)
