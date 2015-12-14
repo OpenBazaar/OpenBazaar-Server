@@ -71,7 +71,7 @@ class Server(object):
                 for peer in proto.peer_data:
                     p = peers.PeerData()
                     p.ParseFromString(peer)
-                    v.save_vendor(p.guid, p.ip_address, p.port, p.signedPubkey)
+                    v.save_vendor(p.guid.encode("hex"), p.ip_address, p.port, p.signedPubkey)
                 verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
                 verify_key.verify("".join(proto.peer_data), proto.signature)
             except Exception, e:
