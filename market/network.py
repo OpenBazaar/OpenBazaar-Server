@@ -58,7 +58,7 @@ class Server(object):
         for sp in list_seed_pubkey:
             seed, pubkey = sp
             try:
-                self.log.info("querying %s for peers" % seed)
+                self.log.debug("querying %s for vendors" % seed)
                 c = httplib.HTTPConnection(seed)
                 c.request("GET", "/?type=vendors")
                 response = c.getresponse()

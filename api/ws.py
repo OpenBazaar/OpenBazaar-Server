@@ -34,10 +34,6 @@ class WSProtocol(WebSocketServerProtocol):
 
         vendors = self.factory.db.VendorStore().get_vendors()
 
-        if len(vendors) - len(queried) == 0:
-            self.factory.mserver.querySeed(SEED)
-            vendors = self.factory.db.VendorStore().get_vendors()
-
         shuffle(vendors)
         to_query = []
         for vendor in vendors:
@@ -45,6 +41,9 @@ class WSProtocol(WebSocketServerProtocol):
                 to_query.append(vendor)
 
         def handle_response(metadata, node):
+            to_query.remove(node)
+            if len(to_query) == 0:
+                self.factory.mserver.querySeed(SEED)
             if metadata is not None:
                 vendor = {
                     "id": message_id,
