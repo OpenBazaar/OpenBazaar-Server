@@ -38,7 +38,12 @@ from obelisk.client import LibbitcoinClient
 
 def run(*args):
     TESTNET = args[0]
-    SSL = args[5]
+    LOGLEVEL = args[1]
+    PORT = args[2]
+    ALLOWIP = args[3]
+    SSL = args[4]
+    RESTPORT = args[5]
+    WSPORT = args[6]
 
     # database
     db = Database(TESTNET)
@@ -48,20 +53,19 @@ def run(*args):
 
     # logging
     logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
-    log.addObserver(FileLogObserver(logFile, level=args[1]).emit)
-    log.addObserver(FileLogObserver(level=args[1]).emit)
+    log.addObserver(FileLogObserver(logFile, level=LOGLEVEL).emit)
+    log.addObserver(FileLogObserver(level=LOGLEVEL).emit)
     logger = Logger(system="OpenBazaard")
 
     # NAT traversal
-    port = args[2]
     p = PortMapper()
-    threading.Thread(target=p.add_port_mapping, args=(port, port, "UDP")).start()
+    threading.Thread(target=p.add_port_mapping, args=(PORT, PORT, "UDP")).start()
     logger.info("Finding NAT Type...")
     while True:
         # sometimes the stun server returns a code the client
         # doesn't understand so we have to try again
         try:
-            response = stun.get_ip_info(source_port=port)
+            response = stun.get_ip_info(source_port=PORT)
             break
         except Exception:
             pass
@@ -116,36 +120,36 @@ def run(*args):
 
     # websockets api
     if SSL:
-        ws_factory = WSFactory("wss://127.0.0.1:" + str(args[7]), mserver, kserver, only_ip=args[4])
+        ws_factory = WSFactory("wss://127.0.0.1:" + str(WSPORT), mserver, kserver, only_ip=ALLOWIP)
         contextFactory = ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT)
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory, contextFactory)
     else:
-        ws_factory = WSFactory("ws://127.0.0.1:" + str(args[7]), mserver, kserver, only_ip=args[4])
+        ws_factory = WSFactory("ws://127.0.0.1:" + str(WSPORT), mserver, kserver, only_ip=ALLOWIP)
         ws_factory.protocol = WSProtocol
         listenWS(ws_factory)
 
-    if args[4] != "127.0.0.1" and args[4] != "0.0.0.0":
+    if ALLOWIP != "127.0.0.1" and ALLOWIP != "0.0.0.0":
         ws_interface = "0.0.0.0"
     else:
-        ws_interface = args[4]
+        ws_interface = ALLOWIP
     webdir = File(".")
     web = Site(webdir)
 
-    reactor.listenTCP(args[7] - 1, web, interface=ws_interface)
+    reactor.listenTCP(WSPORT - 1, web, interface=ws_interface)
 
     # rest api
     api = OpenBazaarAPI(mserver, kserver, protocol)
-    if args[3] != "127.0.0.1" and args[3] != "0.0.0.0":
+    if ALLOWIP != "127.0.0.1" and ALLOWIP != "0.0.0.0":
         rest_interface = "0.0.0.0"
-        site = OnlyIP(api, args[3], timeout=None)
+        site = OnlyIP(api, ALLOWIP, timeout=None)
     else:
-        rest_interface = args[3]
+        rest_interface = ALLOWIP
         site = Site(api, timeout=None)
     if SSL:
-        reactor.listenSSL(args[6], site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
+        reactor.listenSSL(RESTPORT, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
     else:
-        reactor.listenTCP(args[6], site, interface=rest_interface)
+        reactor.listenTCP(RESTPORT, site, interface=rest_interface)
 
     # blockchain
     if TESTNET:
@@ -163,7 +167,7 @@ def run(*args):
 
     protocol.set_servers(ws_factory, libbitcoin_client)
 
-    logger.info("Startup took %s seconds" % str(round(time.time() - args[8], 2)))
+    logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
     reactor.run()
 
@@ -209,12 +213,10 @@ commands:
             parser.add_argument('-l', '--loglevel', default="info",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
-            parser.add_argument('-r', '--restallowip', default="127.0.0.1",
-                                help="only allow rest api connections from this ip")
-            parser.add_argument('-w', '--wsallowip', default="127.0.0.1",
-                                help="only allow websockets connections from this ip")
-            parser.add_argument('--restapiport', help="set the rest api port", default=18469)
-            parser.add_argument('--websocketport', help="set the websocket api port", default=18466)
+            parser.add_argument('-a', '--allowip', default="127.0.0.1",
+                                help="only allow api connections from this ip")
+            parser.add_argument('-r', '--restapiport', help="set the rest api port", default=18469)
+            parser.add_argument('-w', '--websocketport', help="set the websocket api port", default=18466)
             parser.add_argument('--pidfile', help="name of the pid file", default="openbazaard.pid")
             args = parser.parse_args(sys.argv[2:])
             OKBLUE = '\033[94m'
@@ -251,10 +253,10 @@ commands:
                 port = 18467 if not args.testnet else 28467
             if args.daemon and platform.system().lower() in unix:
                 self.daemon.pidfile = "/tmp/" + args.pidfile
-                self.daemon.start(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl,
+                self.daemon.start(args.testnet, args.loglevel, port, args.allowip, args.ssl,
                                   int(args.restapiport), int(args.websocketport), time.time())
             else:
-                run(args.testnet, args.loglevel, port, args.restallowip, args.wsallowip, args.ssl,
+                run(args.testnet, args.loglevel, port, args.allowip, args.ssl,
                     int(args.restapiport), int(args.websocketport), time.time())
 
         def stop(self):
