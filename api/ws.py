@@ -25,11 +25,12 @@ class WSProtocol(WebSocketServerProtocol):
         self.factory.register(self)
 
     def get_vendors(self, message_id):
-        if message_id in self.factory.outstanding:
-            queried = self.factory.outstanding[message_id]
+        if message_id in self.factory.outstanding_vendors:
+            queried = self.factory.outstanding_vendors[message_id]
         else:
             queried = []
-            self.factory.outstanding[message_id] = queried
+            self.factory.outstanding_vendors = {}
+            self.factory.outstanding_vendors[message_id] = queried
 
         vendors = self.factory.db.VendorStore().get_vendors()
 
@@ -114,8 +115,9 @@ class WSProtocol(WebSocketServerProtocol):
         self.factory.kserver.get("moderators").addCallback(parse_response)
 
     def get_homepage_listings(self, message_id):
-        if message_id not in self.factory.outstanding:
-            self.factory.outstanding[message_id] = []
+        if message_id not in self.factory.outstanding_listings:
+            self.factory.outstanding_listings = {}
+            self.factory.outstanding_listings[message_id] = []
         vendors = self.factory.db.VendorStore().get_vendors()
 
         if len(vendors) == 0:
@@ -128,7 +130,7 @@ class WSProtocol(WebSocketServerProtocol):
             count = 0
             if listings is not None:
                 for l in listings.listing:
-                    if l.contract_hash not in self.factory.outstanding[message_id]:
+                    if l.contract_hash not in self.factory.outstanding_listings[message_id]:
                         listing_json = {
                             "id": message_id,
                             "listing":
@@ -155,7 +157,7 @@ class WSProtocol(WebSocketServerProtocol):
                             self.factory.mserver.get_image(node, listings.avatar_hash)
                         self.sendMessage(json.dumps(listing_json, indent=4), False)
                         count += 1
-                        self.factory.outstanding[message_id].append(l.contract_hash)
+                        self.factory.outstanding_listings[message_id].append(l.contract_hash)
                         if count == 3:
                             break
                 vendors.remove(node)
@@ -272,7 +274,8 @@ class WSFactory(WebSocketServerFactory):
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
-        self.outstanding = {}
+        self.outstanding_listings = {}
+        self.outstanding_vendors = {}
         self.clients = []
         self.only_ip = only_ip
 
