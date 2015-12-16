@@ -88,6 +88,7 @@ class KademliaProtocolTest(unittest.TestCase):
         data = m.SerializeToString()
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
         expected_message = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -115,6 +116,7 @@ class KademliaProtocolTest(unittest.TestCase):
         del m.arguments[-4:]
         m.arguments.append("True")
         expected_message = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -149,6 +151,7 @@ class KademliaProtocolTest(unittest.TestCase):
         del m.arguments[-4:]
         m.arguments.append("True")
         expected_message1 = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
         self.assertTrue(
             self.storage.getSpecific(digest("Keyword"), "Key") ==
@@ -211,6 +214,7 @@ class KademliaProtocolTest(unittest.TestCase):
         data = m.SerializeToString()
         m.arguments.extend([self.public_ip, str(self.port)])
         expected_message = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -244,6 +248,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.extend([node2.getProto().SerializeToString(), node1.getProto().SerializeToString(),
                             node3.getProto().SerializeToString()])
         expected_message = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -269,6 +274,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.arguments.extend([digest("Keyword"), "Key",
                             self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
         data = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
         self.assertTrue(
             self.storage.getSpecific(digest("Keyword"), "Key") ==
@@ -323,6 +329,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.testnet = False
         m.arguments.append(digest("Keyword"))
         data = m.SerializeToString()
+        self.handler.on_connection_made()
         self.handler.receive_message(data)
 
         del m.arguments[-1]

@@ -27,7 +27,7 @@ class BanScore(object):
                 self.ban(PING)
         elif message.command == STUN:
             self.scores[STUN] += 1
-            if self.scores[STUN] > 0:
+            if self.scores[STUN] > 1:
                 self.ban(STUN)
         elif message.command == HOLE_PUNCH:
             if self.peer_ip[0] != SEED_NODE[0] or self.peer_ip[0] != SEED_NODE_TESTNET[0]:
