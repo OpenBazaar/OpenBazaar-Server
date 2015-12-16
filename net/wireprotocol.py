@@ -55,7 +55,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             if self.connection is None or self.connection.state == State.CONNECTING:
                 return task.deferLater(reactor, 1, self.on_connection_made)
             if self.connection.state == State.CONNECTED:
-                self.ban_score = BanScore(self.connection.dest_addr[0], self.processors[0].multiplexer)
+                self.ban_score = BanScore((str(self.connection.dest_addr[0]),
+                                           int(self.connection.dest_addr[1])), self.processors[0].multiplexer)
                 self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
                 self.log.info("connected to %s" % self.addr)
 
