@@ -10,6 +10,7 @@ from protos.message import Message
 from log import Logger
 from dht.node import Node
 from protos.message import PING, NOT_FOUND
+from net.dos import BanScore
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -48,11 +49,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.keep_alive_loop.start(300 if nat_type == "Full Cone" else 30, now=False)
             self.on_connection_made()
             self.addr = None
+            self.ban_score = None
 
         def on_connection_made(self):
             if self.connection is None or self.connection.state == State.CONNECTING:
                 return task.deferLater(reactor, 1, self.on_connection_made)
             if self.connection.state == State.CONNECTED:
+                self.ban_score = BanScore(self.connection.dest_addr[0], self.processors[0].multiplexer)
                 self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
                 self.log.info("connected to %s" % self.addr)
 
@@ -67,7 +70,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  m.sender.signedPublicKey, m.sender.vendor)
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
-                        processor.receive_message(datagram, self.connection)
+                        processor.receive_message(datagram, self.connection, self.ban_score)
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received unknown message from %s, ignoring" % self.addr)

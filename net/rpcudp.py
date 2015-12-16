@@ -44,7 +44,7 @@ class RPCProtocol:
         self._outstanding = {}
         self.log = Logger(system=self)
 
-    def receive_message(self, datagram, connection):
+    def receive_message(self, datagram, connection, ban_score):
         m = Message()
         try:
             m.ParseFromString(datagram)
@@ -94,6 +94,7 @@ class RPCProtocol:
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         elif m.command != NOT_FOUND:
+            ban_score.process_message(m)
             self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
