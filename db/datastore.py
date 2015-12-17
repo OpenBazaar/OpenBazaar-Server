@@ -549,11 +549,7 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, status,
      thumbnail, seller, contract_type FROM purchases ''')
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret
+            return cursor.fetchall()
 
         def get_unfunded(self):
             cursor = self.db.cursor()
@@ -615,11 +611,7 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, status,
     thumbnail, buyer, contract_type FROM sales ''')
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret
+            return cursor.fetchall()
 
         def get_unfunded(self):
             cursor = self.db.cursor()
