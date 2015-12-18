@@ -17,7 +17,8 @@ class BanScore(object):
             STORE: 0,
             INV: 0,
         }
-        task.LoopingCall(self.adjust_scores).start(30)
+        self.scoring_loop = task.LoopingCall(self.adjust_scores)
+        self.scoring_loop.start(30)
         self.log = Logger(system=self)
 
     def process_message(self, message):

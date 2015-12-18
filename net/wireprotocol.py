@@ -83,6 +83,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.connection.unregister()
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
+                self.ban_score.scoring_loop.stop()
             try:
                 self.keep_alive_loop.stop()
             except Exception:
