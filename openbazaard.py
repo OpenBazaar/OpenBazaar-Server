@@ -181,7 +181,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaard v0.1',
+                description='OpenBazaar-Server v0.1.0',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
@@ -219,6 +219,7 @@ commands:
             parser.add_argument('-w', '--websocketport', help="set the websocket api port", default=18466)
             parser.add_argument('--pidfile', help="name of the pid file", default="openbazaard.pid")
             args = parser.parse_args(sys.argv[2:])
+
             OKBLUE = '\033[94m'
             ENDC = '\033[0m'
             print "________             " + OKBLUE + "         __________" + ENDC

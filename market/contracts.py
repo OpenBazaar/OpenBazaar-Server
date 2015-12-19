@@ -350,8 +350,8 @@ class Contract(object):
                     "shipping_origin"].upper())
                 if shipping_origin == country.upper():
                     if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
-                            "bitcoin"]["domestic"]) * quantity
+                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
+                                                    "flat_fee"]["bitcoin"]["domestic"]) * quantity
                     else:
                         price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
                             "price"]["domestic"]
@@ -363,12 +363,11 @@ class Contract(object):
                             conversion_rate = response.read()
                         except URLError:
                             return False
-                        shipping_amount = round(
-                            float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity, 8)
+                        shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
                 else:
                     if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
-                            "bitcoin"]["international"]) * quantity
+                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
+                                                    "flat_fee"]["bitcoin"]["international"]) * quantity
                     else:
                         price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
                             "price"]["international"]
@@ -380,11 +379,10 @@ class Contract(object):
                             conversion_rate = response.read()
                         except URLError:
                             return False
-                        shipping_amount = round(
-                            float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity, 8)
+                        shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
                 amount_to_pay += shipping_amount
 
-        order_json["buyer_order"]["order"]["payment"]["amount"] = amount_to_pay
+        order_json["buyer_order"]["order"]["payment"]["amount"] = round(amount_to_pay, 8)
 
         self.contract["buyer_order"] = order_json["buyer_order"]
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
@@ -961,8 +959,8 @@ class Contract(object):
                                 conversion_rate = response.read()
                             except URLError:
                                 return False
-                            shipping_amount = round(float("{0:.8f}".format(float(price) /
-                                                                           float(conversion_rate))) * quantity, 8)
+                            shipping_amount = float("{0:.8f}".format(float(price) /
+                                                                     float(conversion_rate))) * quantity
                     else:
                         if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
                             shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
@@ -979,11 +977,11 @@ class Contract(object):
                                 conversion_rate = response.read()
                             except URLError:
                                 return False
-                            shipping_amount = round(float("{0:.8f}".format(float(price) /
-                                                                           float(conversion_rate))) * quantity, 8)
+                            shipping_amount = float("{0:.8f}".format(float(price) /
+                                                                     float(conversion_rate))) * quantity
                     asking_price += shipping_amount
 
-            if float(asking_price) > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
+            if round(float(asking_price), 8) > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
                 raise Exception("Insuffient Payment")
 
             if "moderator" in self.contract["buyer_order"]["order"]:
