@@ -3,7 +3,7 @@ from os import getcwd
 from os.path import expanduser, join, isfile
 import ConfigParser
 
-PROTOCOL_VERSION = 7
+PROTOCOL_VERSION = 8
 
 dataFolderPath = expanduser('~')
 currentPath = getcwd()

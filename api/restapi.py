@@ -937,7 +937,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
-    @POST('^/api/v1/get_order')
+    @GET('^/api/v1/get_order')
     def get_order(self, request):
         if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
             filepath = file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"

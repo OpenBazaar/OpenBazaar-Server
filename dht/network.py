@@ -161,8 +161,9 @@ class Server(object):
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
         self.log.info("bootstrapping with %s addresses, finding neighbors..." % len(addrs))
 
+        d = defer.Deferred()
+
         def initTable(results):
-            nodes = []
             for addr, result in results.items():
                 if result[0]:
                     n = objects.Node()
@@ -175,17 +176,16 @@ class Server(object):
                         hash_pow = h[64:128]
                         if int(hash_pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
-                        nodes.append(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
+                        self.protocol.router.addContact(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
                     except Exception:
                         self.log.warning("bootstrap node returned invalid GUID")
-            spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
-            return spider.find()
-
+            d.callback(True)
         ds = {}
         for addr in addrs:
             if addr != (self.node.ip, self.node.port):
                 ds[addr] = self.protocol.ping((addr[0], addr[1]))
-        return deferredDict(ds).addCallback(initTable)
+        deferredDict(ds).addCallback(initTable)
+        return d
 
     def inetVisibleIP(self):
         """
