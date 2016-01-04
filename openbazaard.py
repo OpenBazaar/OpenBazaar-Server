@@ -202,8 +202,8 @@ commands:
 
             parser = argparse.ArgumentParser(
                 description="Start the OpenBazaar server",
-                usage='''usage:
-        python openbazaard.py start [-d DAEMON]''')
+                usage="python openbazaard.py start [<args>]"
+            )
             parser.add_argument('-d', '--daemon', action='store_true',
                                 help="run the server in the background as a daemon")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")

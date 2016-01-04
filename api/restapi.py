@@ -936,3 +936,24 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/get_order')
+    def get_order(self, request):
+        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "store/listings/unfunded/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "store/listings/unfunded/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "store/listings/in progress/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "store/listings/trade receipts/" + request.args["order_id"][0] + ".json"):
+            filepath = file_path = DATA_FOLDER + "store/listings/trade receipts/" + request.args["order_id"][0] + ".json"
+
+        with open(file_path, 'r') as filename:
+            order = json.load(filename, object_pairs_hook=OrderedDict)
+        request.write(json.dumps(order, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
