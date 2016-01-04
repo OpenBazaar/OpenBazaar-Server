@@ -15,13 +15,12 @@ To install all Python requirements, run:
 
 ```bash
 pip install -r requirements.txt
-pip install -r test_requirements.txt
 ```
 
-After that, run:
-
-
-```bash
+Running Unit Tests (optional and non-Windows only)
+```
+pip install -r test_requirements.txt
+bash
 make
 ```
 

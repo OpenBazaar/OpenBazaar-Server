@@ -14,7 +14,7 @@ RUN pip install --upgrade pip virtualenv
 RUN pip install mock coverage nose pylint
 RUN git clone https://github.com/OpenBazaar/OpenBazaar-Server.git
 WORKDIR /OpenBazaar-Server/
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && pip install -r test_requirements.txt
 RUN make
 RUN adduser --disabled-password --gecos \"\" openbazaar
 RUN chown -R openbazaar:openbazaar /OpenBazaar-Server
