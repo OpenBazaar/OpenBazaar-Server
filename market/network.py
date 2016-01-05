@@ -97,7 +97,7 @@ class Server(object):
                     contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
 
                     # TODO: verify the guid in the contract matches this node's guid
-                    signature = contract["vendor_offer"]["signature"]
+                    signature = contract["vendor_offer"]["signatures"]["guid"]
                     pubkey = node_to_ask.signed_pubkey[64:]
                     verify_obj = json.dumps(contract["vendor_offer"]["listing"], indent=4)
 
