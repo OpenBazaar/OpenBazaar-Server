@@ -943,7 +943,7 @@ class Contract(object):
             verify_obj = json.dumps(self.contract["buyer_order"]["order"], indent=4)
 
             verify_key = nacl.signing.VerifyKey(sender_key)
-            verify_key.verify(verify_obj, unhexlify(self.contract["buyer_order"]["signatures"]["guid"]))
+            verify_key.verify(verify_obj, base64.b64decode(self.contract["buyer_order"]["signatures"]["guid"]))
 
             bitcoin_key = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
             bitcoin_sig = self.contract["buyer_order"]["signatures"]["bitcoin"]
