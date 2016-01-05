@@ -252,6 +252,7 @@ class Contract(object):
 
     def add_purchase_info(self,
                           quantity,
+                          refund_address,
                           ship_to=None,
                           shipping_address=None,
                           city=None,
@@ -263,6 +264,16 @@ class Contract(object):
         """
         Update the contract with the buyer's purchase information.
         """
+
+        if not self.testnet and not (refund_address[:1] == "1" or refund_address[:1] == "3"):
+            raise Exception("Bitcoin address is not a mainnet address")
+        elif self.testnet and not \
+                (refund_address[:1] == "n" or refund_address[:1] == "m" or refund_address[:1] == "2"):
+            raise Exception("Bitcoin address is not a testnet address")
+        try:
+            bitcoin.b58check_to_hex(refund_address)
+        except AssertionError:
+            raise Exception("Invalid Bitcoin address")
 
         profile = Profile(self.db).get()
         order_json = {
@@ -278,7 +289,8 @@ class Contract(object):
                             "encryption": self.keychain.encryption_pubkey.encode("hex")
                         }
                     },
-                    "payment": {}
+                    "payment": {},
+                    "refund_address": refund_address
                 }
             }
         }

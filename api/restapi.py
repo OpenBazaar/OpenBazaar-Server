@@ -573,6 +573,7 @@ class OpenBazaarAPI(APIResource):
             c = Contract(self.db, hash_value=unhexlify(request.args["id"][0]), testnet=self.protocol.testnet)
             payment = c.\
                 add_purchase_info(int(request.args["quantity"][0]),
+                                  request.args["refund_address"][0],
                                   request.args["ship_to"][0] if "ship_to" in request.args else None,
                                   request.args["address"][0] if "address" in request.args else None,
                                   request.args["city"][0] if "city" in request.args else None,
