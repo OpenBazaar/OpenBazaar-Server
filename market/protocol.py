@@ -147,6 +147,7 @@ class MarketProtocol(RPCProtocol):
             m.name = proto.name
             m.handle = proto.handle
             m.avatar_hash = proto.avatar_hash
+            m.short_description = proto.short_description
             m.nsfw = proto.nsfw
             for listener in self.listeners:
                 try:
