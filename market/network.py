@@ -332,6 +332,7 @@ class Server(object):
         m.name = proto.name
         m.handle = proto.handle
         m.avatar_hash = proto.avatar_hash
+        m.short_description = proto.short_description
         m.nsfw = proto.nsfw
         f = objects.Followers.Follower()
         f.guid = self.kserver.node.id
