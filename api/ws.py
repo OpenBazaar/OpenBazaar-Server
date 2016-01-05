@@ -194,7 +194,9 @@ class WSProtocol(WebSocketServerProtocol):
                             "currency_code": l.currency_code,
                             "nsfw": l.nsfw,
                             "origin": str(CountryCode.Name(l.origin)),
-                            "ships_to": []
+                            "ships_to": [],
+                            "avatar_hash": l.avatar_hash,
+                            "handle": l.handle
                         }
                 }
                 for country in l.ships_to:
