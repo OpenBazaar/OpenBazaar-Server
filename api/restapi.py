@@ -941,17 +941,17 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_order')
     def get_order(self, request):
         if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "store/listings/unfunded/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "store/listings/unfunded/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "store/listings/unfunded/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "store/listings/in progress/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "store/listings/in progress/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "store/listings/trade receipts/" + request.args["order_id"][0] + ".json"):
-            filepath = file_path = DATA_FOLDER + "store/listings/trade receipts/" + request.args["order_id"][0] + ".json"
+            file_path = DATA_FOLDER + "store/listings/trade receipts/" + request.args["order_id"][0] + ".json"
 
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)

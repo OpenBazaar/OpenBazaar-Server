@@ -16,6 +16,7 @@ class BanScore(object):
             STUN: 0,
             STORE: 0,
             INV: 0,
+            VALUES: 0,
         }
         self.scoring_loop = task.LoopingCall(self.adjust_scores)
         self.scoring_loop.start(30)

@@ -362,8 +362,8 @@ class Contract(object):
                     "shipping_origin"].upper())
                 if shipping_origin == country.upper():
                     if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
-                        shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
-                                                    "flat_fee"]["bitcoin"]["domestic"]) * quantity
+                        shipping_amount = float(self.contract["vendor_offer"]["listing"][
+                            "shipping"]["flat_fee"]["bitcoin"]["domestic"]) * quantity
                     else:
                         price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
                             "price"]["domestic"]
@@ -379,7 +379,7 @@ class Contract(object):
                 else:
                     if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
                         shipping_amount = float(self.contract["vendor_offer"]["listing"]["shipping"][
-                                                    "flat_fee"]["bitcoin"]["international"]) * quantity
+                            "flat_fee"]["bitcoin"]["international"]) * quantity
                     else:
                         price = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]["fiat"][
                             "price"]["international"]
