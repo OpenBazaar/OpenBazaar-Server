@@ -3,6 +3,7 @@ import json
 import time
 import os
 import pickle
+import obelisk
 from binascii import unhexlify
 from collections import OrderedDict
 
@@ -955,6 +956,35 @@ class OpenBazaarAPI(APIResource):
 
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
-        request.write(json.dumps(order, indent=4))
-        request.finish()
+
+        def height_fetched(ec, chain_height):
+            payment_address = order["buyer_order"]["order"]["payment"]["address"]
+            txs = []
+            def history_fetched(ec, history):
+                if ec:
+                    print ec
+                else:
+                    for tx_type, txid, i, height, value in history: # pylint: disable=W0612
+
+                        tx = {
+                            "txid": txid.encode("hex"),
+                            "value": round(float(value) / 100000000, 8),
+                            "confirmaions": chain_height - height
+                        }
+
+                        if tx_type == obelisk.PointIdent.Output:
+                            tx["type"] = "incoming"
+                        else:
+                            tx["type"] = "outgoing"
+                        txs.append(tx)
+                    order["bitcoin_txs"] = txs
+                    request.write(json.dumps(order, indent=4))
+                    request.finish()
+            self.protocol.blockchain.fetch_history2(payment_address, history_fetched)
+
+        if self.protocol.blockchain.connected:
+            self.protocol.blockchain.fetch_last_height(height_fetched)
+        else:
+            request.write(json.dumps(order, indent=4))
+            request.finish()
         return server.NOT_DONE_YET
