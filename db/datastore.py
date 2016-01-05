@@ -96,7 +96,7 @@ paymentTX TEXT, contract_type TEXT)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT)''')
+libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT, moderator_list BLOB)''')
 
         db.commit()
         return db
@@ -497,11 +497,7 @@ FROM notifications''')
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, signedPubkey, encryptionKey, encryptionSignature, bitcoinKey,
      bitcoinSignature, handle, name, description, avatar, fee FROM moderators WHERE guid=?''', (guid,))
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret[0]
+            return cursor.fetchone()
 
         def delete_moderator(self, guid):
             cursor = self.db.cursor()
@@ -667,3 +663,9 @@ terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 return None
             else:
                 return ret[0]
+
+        def set_moderators(self, moderator_list):
+            cursor = self.db.cursor()
+            cursor.execute('''INSERT OR REPLACE INTO settings(id, moderator_list) VALUES (?,?)''',
+                           (1, moderator_list))
+            self.db.commit()

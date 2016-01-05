@@ -44,22 +44,21 @@ message Profile {
         optional bool vendor              = 6 [default = false];
         optional bool moderator           = 7 [default = false];
         optional float moderation_fee     = 8 [default = 10.0];
-        repeated bytes moderator_list     = 9;
-        optional string handle            = 10;
-        optional string about             = 11;
-        optional string short_description = 12;
-        optional string website           = 13;
-        optional string email             = 14;
-        repeated SocialAccount social     = 15;
-        optional uint32 primary_color     = 16 [default = 551582];
-        optional uint32 secondary_color   = 17 [default = 3243448];
-        optional uint32 background_color  = 18 [default = 407379];
-        optional uint32 text_color        = 19 [default = 16777215];
-        optional uint32 follower_count    = 20 [default = 0];
-        optional uint32 following_count   = 21 [default = 0];
-        optional PublicKey pgp_key        = 22; // pgp signature covers guid
-        optional bytes avatar_hash        = 23;
-        optional bytes header_hash        = 24;
+        optional string handle            = 9;
+        optional string about             = 10;
+        optional string short_description = 11;
+        optional string website           = 12;
+        optional string email             = 13;
+        repeated SocialAccount social     = 14;
+        optional uint32 primary_color     = 15 [default = 551582];
+        optional uint32 secondary_color   = 16 [default = 3243448];
+        optional uint32 background_color  = 17 [default = 407379];
+        optional uint32 text_color        = 18 [default = 16777215];
+        optional uint32 follower_count    = 19 [default = 0];
+        optional uint32 following_count   = 20 [default = 0];
+        optional PublicKey pgp_key        = 21; // pgp signature covers guid
+        optional bytes avatar_hash        = 22;
+        optional bytes header_hash        = 23;
 
 	// Social media account for the profile
     message SocialAccount {

@@ -96,9 +96,6 @@ class OpenBazaarAPI(APIResource):
     def get_profile(self, request):
         def parse_profile(profile):
             if profile is not None:
-                mods = []
-                for mod in profile.moderator_list:
-                    mods.append(mod.encode("hex"))
                 profile_json = {
                     "profile": {
                         "name": profile.name,
@@ -107,7 +104,6 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
-                        "moderator_list": mods,
                         "handle": profile.handle,
                         "about": profile.about,
                         "short_description": profile.short_description,
@@ -337,10 +333,6 @@ class OpenBazaarAPI(APIResource):
                 u.vendor = str_to_bool(request.args["vendor"][0])
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
-            if "moderator_list" in request.args:
-                p.get().ClearField("moderator_list")
-                for moderator in request.args["moderator_list"]:
-                    u.moderator_list.append(unhexlify(moderator))
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -742,6 +734,24 @@ class OpenBazaarAPI(APIResource):
                 "terms_conditions": settings[12],
                 "refund_policy": settings[13]
             }
+            mods = []
+            mods_db = self.db.ModeratorStore()
+            try:
+                for guid in pickle.loads(settings[14]):
+                    info = mods_db.get_moderator(guid)
+                    if info is not None:
+                        m = {
+                            "guid": guid,
+                            "handle": info[6],
+                            "name": info[7],
+                            "avatar_hash": info[9].encode("hex"),
+                            "short_description": info[8],
+                            "fee": info[10]
+                        }
+                        mods.append(m)
+            except Exception:
+                pass
+            settings_json["moderators"] = mods
             request.write(json.dumps(settings_json, indent=4))
             request.finish()
         return server.NOT_DONE_YET
@@ -990,3 +1000,18 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps(order, indent=4))
             request.finish()
         return server.NOT_DONE_YET
+
+    @POST('^/api/v1/set_store_moderator')
+    def set_store_moderator(self, request):
+        try:
+            moderators = pickle.dumps(request.args["moderators"])
+            self.db.Settings().set_moderators(moderators)
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
+
