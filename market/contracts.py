@@ -404,9 +404,9 @@ class Contract(object):
 
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
         self.contract["buyer_order"]["signatures"] = {}
-        self.contract["vendor_offer"]["signatures"]["guid"] = \
+        self.contract["buyer_order"]["signatures"]["guid"] = \
             base64.b64encode(self.keychain.signing_key.sign(order)[:64])
-        self.contract["vendor_offer"]["signatures"]["bitcoin"] = \
+        self.contract["buyer_order"]["signatures"]["bitcoin"] = \
             bitcoin.encode_sig(*bitcoin.ecdsa_raw_sign(
                 order, bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
 
