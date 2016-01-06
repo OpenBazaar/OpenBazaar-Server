@@ -12,7 +12,7 @@ import "countries.proto";
 //An object containing information about the node.
 //Some fields are optional as they aren't needed in all situations.
 message Node {
-	required bytes guid            = 1;
+    required bytes guid            = 1;
 	required bytes signedPublicKey = 2; // <64 byte signature><32 byte public key>
 	optional string ip             = 3;
 	optional uint32 port           = 4;

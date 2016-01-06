@@ -666,6 +666,6 @@ terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
 
         def set_moderators(self, moderator_list):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT OR REPLACE INTO settings(id, moderator_list) VALUES (?,?)''',
-                           (1, moderator_list))
+            cursor.execute('''UPDATE settings SET moderator_list=? WHERE id=1''',
+                           (moderator_list,))
             self.db.commit()
