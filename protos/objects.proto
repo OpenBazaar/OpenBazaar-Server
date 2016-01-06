@@ -103,6 +103,8 @@ message Listings {
         required bool nsfw            = 7;
         required CountryCode origin   = 8;
         repeated CountryCode ships_to = 9;
+        optional bytes avatar_hash    = 10;
+        optional string handle        = 11;
     }
 }
 

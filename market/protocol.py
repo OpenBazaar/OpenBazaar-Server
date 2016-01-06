@@ -118,10 +118,13 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         try:
             proto = self.db.ListingsStore().get_proto()
+            p = Profile(self.db).get()
             l = Listings()
             l.ParseFromString(proto)
             for listing in l.listing:
                 if listing.contract_hash == contract_hash:
+                    listing.avatar_hash = p.avatar_hash
+                    listing.handle = p.handle
                     ser = listing.SerializeToString()
             return [ser, self.signing_key.sign(ser)[:64]]
         except Exception:
@@ -147,6 +150,7 @@ class MarketProtocol(RPCProtocol):
             m.name = proto.name
             m.handle = proto.handle
             m.avatar_hash = proto.avatar_hash
+            m.short_description = proto.short_description
             m.nsfw = proto.nsfw
             for listener in self.listeners:
                 try:

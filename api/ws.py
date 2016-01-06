@@ -129,36 +129,39 @@ class WSProtocol(WebSocketServerProtocol):
             count = 0
             if listings is not None:
                 for l in listings.listing:
-                    if l.contract_hash not in self.factory.outstanding_listings[message_id]:
-                        listing_json = {
-                            "id": message_id,
-                            "listing":
-                                {
-                                    "guid": node.id.encode("hex"),
-                                    "handle": listings.handle,
-                                    "avatar_hash": listings.avatar_hash.encode("hex"),
-                                    "title": l.title,
-                                    "contract_hash": l.contract_hash.encode("hex"),
-                                    "thumbnail_hash": l.thumbnail_hash.encode("hex"),
-                                    "category": l.category,
-                                    "price": l.price,
-                                    "currency_code": l.currency_code,
-                                    "nsfw": l.nsfw,
-                                    "origin": str(CountryCode.Name(l.origin)),
-                                    "ships_to": []
-                                }
-                        }
-                        for country in l.ships_to:
-                            listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                        if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
-                            self.factory.mserver.get_image(node, l.thumbnail_hash)
-                        if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
-                            self.factory.mserver.get_image(node, listings.avatar_hash)
-                        self.sendMessage(json.dumps(listing_json, indent=4), False)
-                        count += 1
-                        self.factory.outstanding_listings[message_id].append(l.contract_hash)
-                        if count == 3:
-                            break
+                    try:
+                        if l.contract_hash not in self.factory.outstanding_listings[message_id]:
+                            listing_json = {
+                                "id": message_id,
+                                "listing":
+                                    {
+                                        "guid": node.id.encode("hex"),
+                                        "handle": listings.handle,
+                                        "avatar_hash": listings.avatar_hash.encode("hex"),
+                                        "title": l.title,
+                                        "contract_hash": l.contract_hash.encode("hex"),
+                                        "thumbnail_hash": l.thumbnail_hash.encode("hex"),
+                                        "category": l.category,
+                                        "price": l.price,
+                                        "currency_code": l.currency_code,
+                                        "nsfw": l.nsfw,
+                                        "origin": str(CountryCode.Name(l.origin)),
+                                        "ships_to": []
+                                    }
+                            }
+                            for country in l.ships_to:
+                                listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
+                            if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                                self.factory.mserver.get_image(node, l.thumbnail_hash)
+                            if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
+                                self.factory.mserver.get_image(node, listings.avatar_hash)
+                            self.sendMessage(json.dumps(listing_json, indent=4), False)
+                            count += 1
+                            self.factory.outstanding_listings[message_id].append(l.contract_hash)
+                            if count == 3:
+                                break
+                    except Exception:
+                        pass
                 vendors.remove(node)
             else:
                 self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
@@ -194,7 +197,9 @@ class WSProtocol(WebSocketServerProtocol):
                             "currency_code": l.currency_code,
                             "nsfw": l.nsfw,
                             "origin": str(CountryCode.Name(l.origin)),
-                            "ships_to": []
+                            "ships_to": [],
+                            "avatar_hash": l.avatar_hash.encode("hex"),
+                            "handle": l.handle
                         }
                 }
                 for country in l.ships_to:
@@ -231,7 +236,7 @@ class WSProtocol(WebSocketServerProtocol):
                 payload = ast.literal_eval(payload)
                 request_json = json.loads(payload)
 
-            message_id = request_json["request"]["id"]
+            message_id = str(request_json["request"]["id"])
 
             if request_json["request"]["command"] == "get_vendors":
                 self.get_vendors(message_id)

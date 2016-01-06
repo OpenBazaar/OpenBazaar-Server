@@ -1,6 +1,7 @@
 __author__ = 'chris'
 
 import json
+import base64
 import random
 import time
 import pickle
@@ -231,23 +232,27 @@ class Contract(object):
                         "pubkeys": {
                             "signing": {
                                 "key": mod_info[1][64:].encode("hex"),
-                                "signature": mod_info[1][:64].encode("hex")
+                                "signature": base64.b64encode(mod_info[1][:64])
                             },
                             "encryption": {
                                 "key": mod_info[2].encode("hex"),
-                                "signature": mod_info[3].encode("hex")
+                                "signature": base64.b64encode(mod_info[3])
                             },
                             "bitcoin": {
                                 "key": mod_info[4].encode("hex"),
-                                "signature": mod_info[5].encode("hex")
+                                "signature": base64.b64encode(mod_info[5])
                             }
                         }
                     }
                     self.contract["vendor_offer"]["listing"]["moderators"].append(moderator)
 
         listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
-        self.contract["vendor_offer"]["signature"] = \
-            self.keychain.signing_key.sign(listing, encoder=nacl.encoding.HexEncoder)[:128]
+        self.contract["vendor_offer"]["signatures"] = {}
+        self.contract["vendor_offer"]["signatures"]["guid"] = \
+            base64.b64encode(self.keychain.signing_key.sign(listing)[:64])
+        self.contract["vendor_offer"]["signatures"]["bitcoin"] = \
+            bitcoin.encode_sig(*bitcoin.ecdsa_raw_sign(
+                listing, bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
         self.save()
 
     def add_purchase_info(self,
@@ -395,13 +400,16 @@ class Contract(object):
                 amount_to_pay += shipping_amount
 
         order_json["buyer_order"]["order"]["payment"]["amount"] = round(amount_to_pay, 8)
-
         self.contract["buyer_order"] = order_json["buyer_order"]
+
         order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
-        # TODO: This should also be signed with the bitcoin key. It's the only way a moderator
-        # will have to link this contract to a bitcoin transaction.
-        self.contract["buyer_order"]["signature"] = \
-            self.keychain.signing_key.sign(order, encoder=nacl.encoding.HexEncoder)[:128]
+        self.contract["buyer_order"]["signatures"] = {}
+        self.contract["buyer_order"]["signatures"]["guid"] = \
+            base64.b64encode(self.keychain.signing_key.sign(order)[:64])
+        self.contract["buyer_order"]["signatures"]["bitcoin"] = \
+            bitcoin.encode_sig(*bitcoin.ecdsa_raw_sign(
+                order, bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
+
         return (self.contract["buyer_order"]["order"]["payment"]["address"],
                 order_json["buyer_order"]["order"]["payment"]["amount"])
 
@@ -931,12 +939,17 @@ class Contract(object):
             if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash.encode("hex")):
                 raise Exception("Order for contract that doesn't exist")
 
-            # verify the signature on the order
-            verify_key = nacl.signing.VerifyKey(sender_key)
-            verify_key.verify(json.dumps(self.contract["buyer_order"]["order"], indent=4),
-                              unhexlify(self.contract["buyer_order"]["signature"]))
+            # verify the signatures on the order
+            verify_obj = json.dumps(self.contract["buyer_order"]["order"], indent=4)
 
-            # TODO: verify the bitcoin signature after we add it
+            verify_key = nacl.signing.VerifyKey(sender_key)
+            verify_key.verify(verify_obj, base64.b64decode(self.contract["buyer_order"]["signatures"]["guid"]))
+
+            bitcoin_key = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+            bitcoin_sig = self.contract["buyer_order"]["signatures"]["bitcoin"]
+            valid = bitcoin.ecdsa_raw_verify(verify_obj, bitcoin.decode_sig(bitcoin_sig), bitcoin_key)
+            if not valid:
+                raise Exception("Invalid Bitcoin signature")
 
             # verify buyer included the correct bitcoin amount for payment
             quantity = int(self.contract["buyer_order"]["order"]["quantity"])

@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import time
 import json
+import base64
 import os.path
 import nacl.signing
 import nacl.hash
@@ -96,28 +97,37 @@ class Server(object):
                     contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
 
                     # TODO: verify the guid in the contract matches this node's guid
-                    signature = contract["vendor_offer"]["signature"]
+                    signature = contract["vendor_offer"]["signatures"]["guid"]
                     pubkey = node_to_ask.signed_pubkey[64:]
+                    verify_obj = json.dumps(contract["vendor_offer"]["listing"], indent=4)
+
                     verify_key = nacl.signing.VerifyKey(pubkey)
-                    verify_key.verify(json.dumps(contract["vendor_offer"]["listing"], indent=4),
-                                      unhexlify(signature))
+                    verify_key.verify(verify_obj, base64.b64decode(signature))
+
+                    bitcoin_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
+                    bitcoin_sig = contract["vendor_offer"]["signatures"]["bitcoin"]
+                    valid = bitcoin.ecdsa_raw_verify(verify_obj, bitcoin.decode_sig(bitcoin_sig), bitcoin_key)
+                    if not valid:
+                        raise Exception("Invalid Bitcoin signature")
+
                     if "moderators" in contract["vendor_offer"]["listing"]:
                         for moderator in contract["vendor_offer"]["listing"]["moderators"]:
                             guid = moderator["guid"]
                             guid_key = moderator["pubkeys"]["signing"]["key"]
-                            guid_sig = moderator["pubkeys"]["signing"]["signature"]
+                            guid_sig = base64.b64decode(moderator["pubkeys"]["signing"]["signature"])
                             enc_key = moderator["pubkeys"]["encryption"]["key"]
-                            enc_sig = moderator["pubkeys"]["encryption"]["signature"]
+                            enc_sig = base64.b64decode(moderator["pubkeys"]["encryption"]["signature"])
                             bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
-                            bitcoin_sig = moderator["pubkeys"]["bitcoin"]["signature"]
-                            h = nacl.hash.sha512(unhexlify(guid_sig) + unhexlify(guid_key))
+                            bitcoin_sig = base64.b64decode(moderator["pubkeys"]["bitcoin"]["signature"])
+                            h = nacl.hash.sha512(guid_sig + unhexlify(guid_key))
                             pow_hash = h[64:128]
                             if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
                                 raise Exception('Invalid GUID')
                             verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
-                            verify_key.verify(unhexlify(enc_key), unhexlify(enc_sig))
-                            verify_key.verify(unhexlify(bitcoin_key), unhexlify(bitcoin_sig))
-                            # should probably also validate the handle here.
+                            verify_key.verify(unhexlify(guid_key), guid_sig)
+                            verify_key.verify(unhexlify(enc_key), enc_sig)
+                            verify_key.verify(unhexlify(bitcoin_key), bitcoin_sig)
+                            #TODO: should probably also validate the handle here.
                     self.cache(result[1][0])
                     if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
                         for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
@@ -332,6 +342,7 @@ class Server(object):
         m.name = proto.name
         m.handle = proto.handle
         m.avatar_hash = proto.avatar_hash
+        m.short_description = proto.short_description
         m.nsfw = proto.nsfw
         f = objects.Followers.Follower()
         f.guid = self.kserver.node.id
