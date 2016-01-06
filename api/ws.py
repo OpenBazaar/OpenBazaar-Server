@@ -233,7 +233,7 @@ class WSProtocol(WebSocketServerProtocol):
                 payload = ast.literal_eval(payload)
                 request_json = json.loads(payload)
 
-            message_id = request_json["request"]["id"]
+            message_id = str(request_json["request"]["id"])
 
             if request_json["request"]["command"] == "get_vendors":
                 self.get_vendors(message_id)
