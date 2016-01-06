@@ -195,7 +195,7 @@ class WSProtocol(WebSocketServerProtocol):
                             "nsfw": l.nsfw,
                             "origin": str(CountryCode.Name(l.origin)),
                             "ships_to": [],
-                            "avatar_hash": l.avatar_hash,
+                            "avatar_hash": l.avatar_hash.encode("hex"),
                             "handle": l.handle
                         }
                 }
