@@ -483,13 +483,12 @@ class KademliaProtocolTest(unittest.TestCase):
         def handle_response(resp, n):
             self.assertFalse(resp[0])
             self.assertIsNone(resp[1])
-            self.assertTrue(self.protocol.router.isNewNode(n))
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         d = defer.Deferred().addCallback(handle_response, n)
         self.protocol._outstanding["msgID"] = [d, self.addr1]
         self.protocol.router.addContact(n)
-        self.protocol.timeout(self.addr1, n)
+        self.protocol.timeout(self.addr1)
 
     def test_transferKeyValues(self):
         self._connecting_to_connected()

@@ -966,7 +966,7 @@ class OpenBazaarAPI(APIResource):
                 if ec:
                     print ec
                 else:
-                    for tx_type, txid, i, height, value in history: # pylint: disable=W0612
+                    for tx_type, txid, i, height, value in history:  # pylint: disable=W0612
 
                         tx = {
                             "txid": txid.encode("hex"),

@@ -78,12 +78,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            for processor in self.processors:
-                processor.timeout((self.connection.dest_addr[0], self.connection.dest_addr[1]), self.node)
             self.connection.unregister()
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
+            try:
                 self.ban_score.scoring_loop.stop()
+            except Exception:
+                pass
             try:
                 self.keep_alive_loop.stop()
             except Exception:
