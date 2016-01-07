@@ -1,7 +1,6 @@
 __author__ = 'chris'
 import sqlite3 as lite
 import os
-import json
 from constants import DATA_FOLDER
 from protos.objects import Listings, Followers, Following
 from dht.node import Node
