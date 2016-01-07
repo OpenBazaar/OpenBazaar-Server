@@ -11,7 +11,6 @@ from twisted.web.server import Site
 from twisted.web.static import File
 import stun
 import requests
-import threading
 
 from autobahn.twisted.websocket import listenWS
 
@@ -59,7 +58,7 @@ def run(*args):
 
     # NAT traversal
     p = PortMapper()
-    threading.Thread(target=p.add_port_mapping, args=(PORT, PORT, "UDP")).start()
+    p.add_port_mapping(PORT, PORT, "UDP")
     logger.info("Finding NAT Type...")
     while True:
         # sometimes the stun server returns a code the client
