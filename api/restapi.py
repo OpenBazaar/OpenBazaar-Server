@@ -737,7 +737,7 @@ class OpenBazaarAPI(APIResource):
             mods = []
             mods_db = self.db.ModeratorStore()
             try:
-                for guid in pickle.loads(settings[14]):
+                for guid in json.loads(settings[14]):
                     info = mods_db.get_moderator(guid)
                     if info is not None:
                         m = {
@@ -1004,7 +1004,7 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/set_store_moderator')
     def set_store_moderator(self, request):
         try:
-            moderators = pickle.dumps(request.args["moderators"])
+            moderators = json.dumps(request.args["moderators"])
             self.db.Settings().set_moderators(moderators)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()

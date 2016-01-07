@@ -1,6 +1,7 @@
 __author__ = 'chris'
 import sqlite3 as lite
 import os
+import json
 from constants import DATA_FOLDER
 from protos.objects import Listings, Followers, Following
 from dht.node import Node
@@ -646,26 +647,34 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
                    shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions, refund_policy):
             cursor = self.db.cursor()
+
+            cursor.execute('''SELECT moderator_list FROM settings WHERE id=1''')
+            mod_list = cursor.fetchone()
+            if mod_list is None:
+                mod_list = json.dumps([])
+            else:
+                mod_list = mod_list[0]
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
-terms_conditions, refund_policy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+terms_conditions, refund_policy, moderator_list) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked,
                             libbitcoinServer, ssl, seed, terms_conditions,
-                            refund_policy))
+                            refund_policy, mod_list))
             self.db.commit()
 
         def get(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT * FROM settings WHERE id=1''')
-            ret = cursor.fetchall()
-            if not ret:
-                return None
-            else:
-                return ret[0]
+            return cursor.fetchone()
 
         def set_moderators(self, moderator_list):
             cursor = self.db.cursor()
-            cursor.execute('''UPDATE settings SET moderator_list=? WHERE id=1''',
-                           (moderator_list,))
+            cursor.execute('''SELECT EXISTS(SELECT 1 FROM settings WHERE id=1);''')
+            if cursor.fetchone()[0] == 0:
+                cursor.execute('''INSERT INTO settings(id, shippingAddresses, blocked, moderator_list) VALUES (?,?,?,?)''',
+                               (1, json.dumps([""]), json.dumps([""]), moderator_list))
+            else:
+                cursor.execute('''UPDATE settings SET moderator_list=? WHERE id=1''',
+                               (moderator_list,))
             self.db.commit()
