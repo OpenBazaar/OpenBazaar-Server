@@ -645,36 +645,19 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             self.db.text_factory = str
 
         def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
-                   shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions, refund_policy):
+                   shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions,
+                   refund_policy, moderator_list):
             cursor = self.db.cursor()
-
-            cursor.execute('''SELECT moderator_list FROM settings WHERE id=1''')
-            mod_list = cursor.fetchone()
-            if mod_list is None:
-                mod_list = json.dumps([])
-            else:
-                mod_list = mod_list[0]
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
 terms_conditions, refund_policy, moderator_list) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked,
                             libbitcoinServer, ssl, seed, terms_conditions,
-                            refund_policy, mod_list))
+                            refund_policy, moderator_list))
             self.db.commit()
 
         def get(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT * FROM settings WHERE id=1''')
             return cursor.fetchone()
-
-        def set_moderators(self, moderator_list):
-            cursor = self.db.cursor()
-            cursor.execute('''SELECT EXISTS(SELECT 1 FROM settings WHERE id=1);''')
-            if cursor.fetchone()[0] == 0:
-                cursor.execute('''INSERT INTO settings(id, shippingAddresses, blocked, moderator_list) VALUES (?,?,?,?)''',
-                               (1, json.dumps([""]), json.dumps([""]), moderator_list))
-            else:
-                cursor.execute('''UPDATE settings SET moderator_list=? WHERE id=1''',
-                               (moderator_list,))
-            self.db.commit()

@@ -702,7 +702,8 @@ class OpenBazaarAPI(APIResource):
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
                 request.args["terms_conditions"][0],
-                request.args["refund_policy"][0]
+                request.args["refund_policy"][0],
+                json.dumps(request.args["moderators"] if request.args["moderators"] != "" else [])
             )
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
@@ -1000,18 +1001,3 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps(order, indent=4))
             request.finish()
         return server.NOT_DONE_YET
-
-    @POST('^/api/v1/set_store_moderator')
-    def set_store_moderator(self, request):
-        try:
-            moderators = json.dumps(request.args["moderators"])
-            self.db.Settings().set_moderators(moderators)
-            request.write(json.dumps({"success": True}, indent=4))
-            request.finish()
-            return server.NOT_DONE_YET
-        except Exception, e:
-            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
-            request.finish()
-            return server.NOT_DONE_YET
-
-
