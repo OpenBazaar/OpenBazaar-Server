@@ -103,7 +103,10 @@ class WSProtocol(WebSocketServerProtocol):
                         val.ParseFromString(mod)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                           None if not n.HasField("relayAddress") else
+                                           (n.relayAddress.ip, n.relayAddress.port),
+                                           n.natType, n.vendor)
                         if n.guid == KeyChain(self.factory.db).guid:
                             parse_profile(Profile(self.factory.db).get(), node_to_ask)
                         else:
@@ -175,10 +178,11 @@ class WSProtocol(WebSocketServerProtocol):
                                                     message_type.upper(), message, time.time(), "", "", True)
 
         def send(node_to_send):
-            n = node_to_send if node_to_send is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
+            n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
             self.factory.mserver.send_message(n, recipient_encryption_key,
                                               Plaintext_Message.Type.Value(message_type.upper()),
-                                              message, subject)
+                                              message, subject,
+                                              store_only=True if node_to_send is None else False)
         self.factory.kserver.resolve(unhexlify(guid)).addCallback(send)
 
     def search(self, message_id, keyword):
