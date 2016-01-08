@@ -29,14 +29,14 @@ class Database(object):
             DATABASE = filepath
         if not os.path.exists(DATA_FOLDER + "cache/"):
             os.makedirs(DATA_FOLDER + "cache/")
-        if not os.path.exists(DATA_FOLDER + "store/listings/contracts/"):
-            os.makedirs(DATA_FOLDER + "store/listings/contracts/")
-        if not os.path.exists(DATA_FOLDER + "store/listings/in progress/"):
-            os.makedirs(DATA_FOLDER + "store/listings/in progress/")
-        if not os.path.exists(DATA_FOLDER + "store/listings/unfunded/"):
-            os.makedirs(DATA_FOLDER + "store/listings/unfunded/")
-        if not os.path.exists(DATA_FOLDER + "store/listings/trade receipts/"):
-            os.makedirs(DATA_FOLDER + "store/listings/trade receipts/")
+        if not os.path.exists(DATA_FOLDER + "store/contracts/listings/"):
+            os.makedirs(DATA_FOLDER + "store/contracts/listings/")
+        if not os.path.exists(DATA_FOLDER + "store/contracts/in progress/"):
+            os.makedirs(DATA_FOLDER + "store/contracts/in progress/")
+        if not os.path.exists(DATA_FOLDER + "store/contracts/unfunded/"):
+            os.makedirs(DATA_FOLDER + "store/contracts/unfunded/")
+        if not os.path.exists(DATA_FOLDER + "store/contracts/trade receipts/"):
+            os.makedirs(DATA_FOLDER + "store/contracts/trade receipts/")
         if not os.path.exists(DATA_FOLDER + "store/media/"):
             os.makedirs(DATA_FOLDER + "store/media/")
         if not os.path.exists(DATA_FOLDER + "purchases/in progress/"):
