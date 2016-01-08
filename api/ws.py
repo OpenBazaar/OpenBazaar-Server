@@ -214,7 +214,10 @@ class WSProtocol(WebSocketServerProtocol):
                         val.ParseFromString(v)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey, True)
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                           None if not n.HasField("relayAddress") else
+                                           (n.relayAddress.ip, n.relayAddress.port),
+                                           n.natType, n.vendor)
                         if n.guid == KeyChain(self.factory.db).guid:
                             proto = self.factory.db.ListingsStore().get_proto()
                             l = Listings()
