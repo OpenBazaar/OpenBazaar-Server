@@ -2,7 +2,8 @@ import os
 import unittest
 
 from db.datastore import Database
-from protos.objects import Profile, Listings, Following, Metadata, Followers
+from dht.utils import digest
+from protos.objects import Profile, Listings, Following, Metadata, Followers, Node, FULL_CONE
 from protos.countries import CountryCode
 
 
@@ -181,7 +182,15 @@ class DatastoreTest(unittest.TestCase):
     def test_vendorStore(self):
         v = self.vs.get_vendors()
         self.assertEqual(v, [])
-        self.vs.save_vendor(self.u.guid, "serializedNode")
+        addr = Node.IPAddress()
+        addr.ip = "127.0.0.1"
+        addr.port = 1234
+        n = Node()
+        n.guid = digest("abcdefg")
+        n.signedPublicKey = digest("signed pubkey")
+        n.nodeAddress.MergeFrom(addr)
+        n.natType = FULL_CONE
+        self.vs.save_vendor(self.u.guid, n.SerializeToString())
         v = self.vs.get_vendors()
         self.assertIsNot(v, [])
         self.vs.delete_vendor(self.u.guid)

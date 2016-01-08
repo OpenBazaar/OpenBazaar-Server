@@ -477,7 +477,7 @@ imageHash, read FROM notifications''')
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO vendors(guid, serializedNode)
-    VALUES (?,?,?,?)''', (guid, serialized_node))
+    VALUES (?,?)''', (guid, serialized_node))
             except Exception as e:
                 print e.message
             self.db.commit()
@@ -489,7 +489,7 @@ imageHash, read FROM notifications''')
             nodes = []
             for n in ret:
                 proto = objects.Node()
-                proto.ParseFromString(n)
+                proto.ParseFromString(n[0])
                 node = Node(proto.guid,
                             proto.nodeAddress.ip,
                             proto.nodeAddress.port,
