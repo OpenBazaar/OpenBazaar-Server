@@ -2,14 +2,11 @@ __author__ = 'chris'
 
 import os
 import sqlite3 as lite
-from binascii import unhexlify
 from collections import Counter
 from constants import DATA_FOLDER
 from dht.node import Node
 from protos import objects
 from protos.objects import Listings, Followers, Following
-
-
 
 
 class Database(object):
@@ -370,7 +367,7 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolic
         def get_messages(self, guid, message_type):
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
-    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND message_type=?''',
+    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=?''',
                            (guid, message_type))
             return cursor.fetchall()
 
@@ -424,13 +421,13 @@ WHERE guid=? and messageType="CHAT"''', (g[0],))
             cursor = self.db.cursor()
             cursor.execute('''INSERT INTO notifications(id, guid, handle, type, orderId, title, timestamp,
 imageHash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
-                                                  image_hash, 0))
+                                                 image_hash, 0))
             self.db.commit()
 
         def get_notifications(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, guid, handle, type, orderId, title, timestamp, imageHash, read
-FROM notifications''')
+            cursor.execute('''SELECT id, guid, handle, type, orderId, title, timestamp,
+imageHash, read FROM notifications''')
             return cursor.fetchall()
 
         def mark_as_read(self, notif_id):

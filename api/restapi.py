@@ -964,7 +964,8 @@ class OpenBazaarAPI(APIResource):
             file_path = DATA_FOLDER + "store/contracts/unfunded/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"
-        elif os.path.exists(DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"):
+        elif os.path.exists(DATA_FOLDER +
+                            "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"
 
         with open(file_path, 'r') as filename:

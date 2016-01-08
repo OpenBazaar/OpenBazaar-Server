@@ -181,7 +181,7 @@ class DatastoreTest(unittest.TestCase):
     def test_vendorStore(self):
         v = self.vs.get_vendors()
         self.assertEqual(v, [])
-        self.vs.save_vendor(self.u.guid, '127.0.0.1', '80', '')
+        self.vs.save_vendor(self.u.guid, "serializedNode")
         v = self.vs.get_vendors()
         self.assertIsNot(v, [])
         self.vs.delete_vendor(self.u.guid)
