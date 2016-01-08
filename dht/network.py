@@ -197,7 +197,7 @@ class Server(object):
         ds = {}
         for addr in addrs:
             if addr != (self.node.ip, self.node.port):
-                ds[addr] = self.protocol.ping(Node(None, addr[0], addr[1], None, None, objects.FULL_CONE))
+                ds[addr] = self.protocol.ping(Node(None, addr[0], addr[1], nat_type=objects.FULL_CONE))
         deferredDict(ds).addCallback(initTable)
         return d
 

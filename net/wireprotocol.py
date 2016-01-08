@@ -24,7 +24,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     the appropriate classes for processing.
     """
 
-    def __init__(self, ip_address, nat_type, testnet=False):
+    def __init__(self, ip_address, nat_type, testnet=False, relaying=False):
         """
         Initialize the new protocol with the connection handler factory.
 
@@ -39,7 +39,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.relay_node = None
         self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
         self.log = Logger(system=self)
-        ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
+        ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
 
     class ConnHandler(Handler):
 

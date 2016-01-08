@@ -1,11 +1,15 @@
 __author__ = 'chris'
-import sqlite3 as lite
+
 import os
-from constants import DATA_FOLDER
-from protos.objects import Listings, Followers, Following
-from dht.node import Node
+import sqlite3 as lite
 from binascii import unhexlify
 from collections import Counter
+from constants import DATA_FOLDER
+from dht.node import Node
+from protos import objects
+from protos.objects import Listings, Followers, Following
+
+
 
 
 class Database(object):
@@ -67,36 +71,35 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
-        cursor.execute('''CREATE TABLE messages(guid TEXT, handle TEXT, signed_pubkey BLOB,
-    encryption_pubkey BLOB, subject TEXT, message_type TEXT, message TEXT, timestamp INTEGER,
-    avatar_hash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
-        cursor.execute('''CREATE INDEX index_messages_guid ON messages(guid);''')
+        cursor.execute('''CREATE TABLE messages(guid TEXT PRIMARY KEY, handle TEXT, signedPubkey BLOB,
+    encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
+    avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
         cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
 
 
         cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
-    order_id TEXT, title TEXT, timestamp INTEGER, image_hash BLOB, read INTEGER)''')
+    orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
 
         cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
-    timestamp INTEGER, avatar_hash BLOB)''')
+    timestamp INTEGER, avatarHash BLOB)''')
 
-        cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, ip TEXT, port INTEGER, signedPubkey BLOB)''')
+        cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, serializedNode BLOB)''')
 
         cursor.execute('''CREATE TABLE moderators(guid TEXT PRIMARY KEY, signedPubkey BLOB, encryptionKey BLOB,
     encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
     avatar BLOB, fee FLOAT)''')
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
-timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, seller TEXT,
-proofSig BLOB, contract_type TEXT)''')
+timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
+proofSig BLOB, contractType TEXT)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
-paymentTX TEXT, contract_type TEXT)''')
+paymentTX TEXT, contractType TEXT)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_policy TEXT, moderator_list BLOB)''')
+libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB)''')
 
         db.commit()
         return db
@@ -227,6 +230,9 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
             return ret[0]
 
     class KeyStore(object):
+        """
+        Stores the keys for this node.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -252,6 +258,10 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
             self.db.commit()
 
     class FollowData(object):
+        """
+        A class for saving and retrieving follower and following data
+        for this node.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -339,6 +349,10 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
                 return proto[0]
 
     class MessageStore(object):
+        """
+        Stores all of the chat messages for this node and allows retrieval of
+        messages and conversations as well as marking as read.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -347,16 +361,16 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
                          message_type, message, timestamp, avatar_hash, signature, is_outgoing):
             outgoing = 1 if is_outgoing else 0
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO messages(guid, handle, signed_pubkey, encryption_pubkey, subject,
-    message_type, message, timestamp, avatar_hash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+            cursor.execute('''INSERT INTO messages(guid, handle, signedPubkey, encryptionPubkey, subject,
+    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
                             message, timestamp, avatar_hash, signature, outgoing, 0))
             self.db.commit()
 
         def get_messages(self, guid, message_type):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, handle, signed_pubkey, encryption_pubkey, subject, message_type, message,
-    timestamp, avatar_hash, signature, outgoing, read FROM messages WHERE guid=? AND message_type=?''',
+            cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
+    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND message_type=?''',
                            (guid, message_type))
             return cursor.fetchall()
 
@@ -367,8 +381,8 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, terms_conditions TEXT, refund_pol
             ret = []
             unread = self.get_unread()
             for g in guids:
-                cursor.execute('''SELECT avatar_hash, message, max(timestamp), encryption_pubkey FROM messages
-WHERE guid=? and message_type="CHAT"''', (g[0],))
+                cursor.execute('''SELECT avatarHash, message, max(timestamp), encryptionPubkey FROM messages
+WHERE guid=? and messageType="CHAT"''', (g[0],))
                 val = cursor.fetchone()
                 if val is not None:
                     ret.append({"guid": g[0],
@@ -395,24 +409,27 @@ WHERE guid=? and message_type="CHAT"''', (g[0],))
 
         def delete_message(self, guid):
             cursor = self.db.cursor()
-            cursor.execute('''DELETE FROM messages WHERE guid=? AND message_type="CHAT"''', (guid, ))
+            cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
             self.db.commit()
 
     class NotificationStore(object):
+        """
+        All notifications are stored here.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
         def save_notification(self, notif_id, guid, handle, notif_type, order_id, title, timestamp, image_hash):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO notifications(id, guid, handle, type, order_id, title, timestamp,
-image_hash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
+            cursor.execute('''INSERT INTO notifications(id, guid, handle, type, orderId, title, timestamp,
+imageHash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
                                                   image_hash, 0))
             self.db.commit()
 
         def get_notifications(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, guid, handle, type, order_id, title, timestamp, image_hash, read
+            cursor.execute('''SELECT id, guid, handle, type, orderId, title, timestamp, imageHash, read
 FROM notifications''')
             return cursor.fetchall()
 
@@ -427,19 +444,22 @@ FROM notifications''')
             self.db.commit()
 
     class BroadcastStore(object):
+        """
+        Stores broadcast messages that our node receives.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
         def save_broadcast(self, broadcast_id, guid, handle, message, timestamp, avatar_hash):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO broadcasts(id, guid, handle, message, timestamp, avatar_hash)
+            cursor.execute('''INSERT INTO broadcasts(id, guid, handle, message, timestamp, avatarHash)
     VALUES (?,?,?,?,?,?)''', (broadcast_id, guid, handle, message, timestamp, avatar_hash))
             self.db.commit()
 
         def get_broadcasts(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, guid, handle, message, timestamp, avatar_hash FROM broadcasts''')
+            cursor.execute('''SELECT id, guid, handle, message, timestamp, avatarHash FROM broadcasts''')
             return cursor.fetchall()
 
         def delete_broadcast(self, broadcast_id):
@@ -448,26 +468,39 @@ FROM notifications''')
             self.db.commit()
 
     class VendorStore(object):
+        """
+        Stores a list of vendors this node has heard about. Useful for
+        filling out data in the homepage.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def save_vendor(self, guid, ip, port, signed_pubkey):
+        def save_vendor(self, guid, serialized_node):
             cursor = self.db.cursor()
             try:
-                cursor.execute('''INSERT OR REPLACE INTO vendors(guid, ip, port, signedPubkey)
-    VALUES (?,?,?,?)''', (guid, ip, port, signed_pubkey))
+                cursor.execute('''INSERT OR REPLACE INTO vendors(guid, serializedNode)
+    VALUES (?,?,?,?)''', (guid, serialized_node))
             except Exception as e:
                 print e.message
             self.db.commit()
 
         def get_vendors(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, ip, port, signedPubkey FROM vendors''')
+            cursor.execute('''SELECT serializedNode FROM vendors''')
             ret = cursor.fetchall()
             nodes = []
             for n in ret:
-                node = Node(unhexlify(n[0]), n[1], n[2], n[3], True)
+                proto = objects.Node()
+                proto.ParseFromString(n)
+                node = Node(proto.guid,
+                            proto.nodeAddress.ip,
+                            proto.nodeAddress.port,
+                            proto.signedPublicKey,
+                            None if not proto.HasField("relayAddress") else
+                            (proto.relayAddress.ip, proto.relayAddress.port),
+                            proto.natType,
+                            proto.vendor)
                 nodes.append(node)
             return nodes
 
@@ -477,6 +510,10 @@ FROM notifications''')
             self.db.commit()
 
     class ModeratorStore(object):
+        """
+        Stores a list of known moderators. A moderator must be saved here
+        for it to be used in a new listing.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -510,18 +547,21 @@ FROM notifications''')
             self.db.commit()
 
     class Purchases(object):
+        """
+        Stores a list of this node's purchases.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
         def new_purchase(self, order_id, title, description, timestamp, btc,
-                         address, status, thumbnail, seller, proofSig, contract_type):
+                         address, status, thumbnail, vendor, proofSig, contract_type):
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, description, timestamp, btc,
-address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address,
-                                status, thumbnail, seller, proofSig, contract_type))
+                                status, thumbnail, vendor, proofSig, contract_type))
             except Exception as e:
                 print e.message
             self.db.commit()
@@ -529,7 +569,7 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
         def get_purchase(self, order_id):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-     thumbnail, seller, contract_type, proofSig FROM purchases WHERE id=?''', (order_id,))
+     thumbnail, vendor, contractType, proofSig FROM purchases WHERE id=?''', (order_id,))
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -544,7 +584,7 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, status,
-     thumbnail, seller, contract_type FROM purchases ''')
+     thumbnail, vendor, contractType FROM purchases ''')
             return cursor.fetchall()
 
         def get_unfunded(self):
@@ -572,6 +612,9 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
                 return ret[0]
 
     class Sales(object):
+        """
+        Stores a list of this node's sales.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -581,7 +624,7 @@ address, status, thumbnail, seller, proofSig, contract_type) VALUES (?,?,?,?,?,?
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO sales(id, title, description, timestamp, btc, address,
-status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address, status,
                                 thumbnail, buyer, contract_type))
             except Exception as e:
@@ -591,7 +634,7 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         def get_sale(self, order_id):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-    thumbnail, buyer, contract_type FROM sales WHERE id=?''', (order_id,))
+    thumbnail, buyer, contractType FROM sales WHERE id=?''', (order_id,))
             ret = cursor.fetchall()
             if not ret:
                 return None
@@ -606,7 +649,7 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, description, timestamp, btc, status,
-    thumbnail, buyer, contract_type FROM sales ''')
+    thumbnail, buyer, contractType FROM sales ''')
             return cursor.fetchall()
 
         def get_unfunded(self):
@@ -639,6 +682,9 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
                 return ret[0]
 
     class Settings(object):
+        """
+        Stores the UI settings.
+        """
         def __init__(self):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
@@ -649,7 +695,7 @@ status, thumbnail, buyer, contract_type) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             cursor = self.db.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
-terms_conditions, refund_policy, moderator_list) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+termsConditions, refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked,
                             libbitcoinServer, ssl, seed, terms_conditions,

@@ -92,8 +92,7 @@ class RPCProtocol:
                 return False
 
         if m.sender.vendor:
-            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.nodeAddress.ip,
-                                              m.sender.nodeAddress.port, m.sender.signedPublicKey)
+            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.SerializeToString())
 
         msgID = m.messageID
         if m.command == NOT_FOUND:

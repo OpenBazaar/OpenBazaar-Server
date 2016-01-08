@@ -84,7 +84,8 @@ def run(*args):
         mserver.get_messages(mlistener)
         task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
 
-    protocol = OpenBazaarProtocol((ip_address, port), nat_type, testnet=TESTNET)
+    protocol = OpenBazaarProtocol((ip_address, port), nat_type, testnet=TESTNET,
+                                  relaying=True if nat_type == FULL_CONE else False)
 
     # kademlia
     storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.DATABASE)
