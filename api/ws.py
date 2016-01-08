@@ -4,7 +4,7 @@ import ast
 import json
 import os
 import time
-from constants import DATA_FOLDER, SEED
+from constants import DATA_FOLDER, SEEDS
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
@@ -43,7 +43,7 @@ class WSProtocol(WebSocketServerProtocol):
         def handle_response(metadata, node):
             to_query.remove(node)
             if len(to_query) == 0:
-                self.factory.mserver.querySeed(SEED)
+                self.factory.mserver.querySeed(SEEDS)
             if metadata is not None:
                 vendor = {
                     "id": message_id,
@@ -120,7 +120,7 @@ class WSProtocol(WebSocketServerProtocol):
         vendors = self.factory.db.VendorStore().get_vendors()
 
         if len(vendors) == 0:
-            self.factory.mserver.querySeed(SEED)
+            self.factory.mserver.querySeed(SEEDS)
             vendors = self.factory.db.VendorStore().get_vendors()
 
         shuffle(vendors)

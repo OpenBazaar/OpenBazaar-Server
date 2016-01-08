@@ -1,9 +1,8 @@
 __author__ = 'chris'
-from twisted.internet import reactor, task
-from protos.message import Command, PING, STUN, STORE, HOLE_PUNCH, INV, VALUES
-from log import Logger
-from constants import SEED_NODE, SEED_NODE_TESTNET
 
+from log import Logger
+from protos.message import Command, PING, STUN, STORE, INV, VALUES
+from twisted.internet import reactor, task
 
 class BanScore(object):
 
@@ -31,9 +30,6 @@ class BanScore(object):
             self.scores[STUN] += 1
             if self.scores[STUN] > 1:
                 self.ban(STUN)
-        elif message.command == HOLE_PUNCH:
-            if self.peer_ip[0] != SEED_NODE[0] or self.peer_ip[0] != SEED_NODE_TESTNET[0]:
-                self.ban(HOLE_PUNCH)
         elif message.command == STORE:
             args = tuple(message.arguments)
             for arg in args:

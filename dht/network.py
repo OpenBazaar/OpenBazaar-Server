@@ -26,7 +26,8 @@ from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
 
-from constants import SEED
+from constants import SEEDS
+from random import shuffle
 
 
 def _anyRespondSuccess(responses):
@@ -164,6 +165,7 @@ class Server(object):
         d = defer.Deferred()
 
         def initTable(results):
+            potential_relay_nodes = []
             for addr, result in results.items():
                 if result[0]:
                     n = objects.Node()
@@ -176,14 +178,26 @@ class Server(object):
                         hash_pow = h[64:128]
                         if int(hash_pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
-                        self.protocol.router.addContact(Node(n.guid, addr[0], addr[1], n.signedPublicKey))
+                        node = Node(n.guid, addr[0], addr[1], n.signedPublicKey,
+                                    None if not n.HasField("relayAddress") else
+                                    (n.relayAddress.ip, n.relayAddress.port),
+                                    n.natType,
+                                    n.vendor)
+                        self.protocol.router.addContact(node)
+                        if n.natType == objects.FULL_CONE:
+                            potential_relay_nodes.append((addr[0], addr[1]))
                     except Exception:
                         self.log.warning("bootstrap node returned invalid GUID")
+
+            if len(potential_relay_nodes) > 0 and self.node.nat_type != objects.FULL_CONE:
+                shuffle(potential_relay_nodes)
+                self.node.relay_node = potential_relay_nodes[0]
+
             d.callback(True)
         ds = {}
         for addr in addrs:
             if addr != (self.node.ip, self.node.port):
-                ds[addr] = self.protocol.ping((addr[0], addr[1]))
+                ds[addr] = self.protocol.ping(Node(None, addr[0], addr[1], None, None, objects.FULL_CONE))
         deferredDict(ds).addCallback(initTable)
         return d
 
@@ -366,10 +380,10 @@ class Server(object):
                 s.bootstrap(data['neighbors'])
         else:
             if callback is not None:
-                s.bootstrap(s.querySeed(SEED))\
+                s.bootstrap(s.querySeed(SEEDS))\
                     .addCallback(callback)
             else:
-                s.bootstrap(s.querySeed(SEED))
+                s.bootstrap(s.querySeed(SEEDS))
         return s
 
     def saveStateRegularly(self, fname, frequency=600):

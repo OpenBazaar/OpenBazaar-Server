@@ -301,78 +301,63 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def callGetContract(self, nodeToAsk, contract_hash):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_contract(address, contract_hash)
+        d = self.get_contract(nodeToAsk, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetImage(self, nodeToAsk, image_hash):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_image(address, image_hash)
+        d = self.get_image(nodeToAsk, image_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetProfile(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_profile(address)
+        d = self.get_profile(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetUserMetadata(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_user_metadata(address)
+        d = self.get_user_metadata(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetListings(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_listings(address)
+        d = self.get_listings(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetContractMetadata(self, nodeToAsk, contract_hash):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_contract_metadata(address, contract_hash)
+        d = self.get_contract_metadata(nodeToAsk, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callFollow(self, nodeToAsk, proto, signature):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.follow(address, proto, signature)
+        d = self.follow(nodeToAsk, proto, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callUnfollow(self, nodeToAsk, signature):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.unfollow(address, signature)
+        d = self.unfollow(nodeToAsk, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetFollowers(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_followers(address)
+        d = self.get_followers(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetFollowing(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.get_following(address)
+        d = self.get_following(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callBroadcast(self, nodeToAsk, message, signature):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.broadcast(address, message, signature)
+        d = self.broadcast(nodeToAsk, message, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callMessage(self, nodeToAsk, ehemeral_pubkey, ciphertext):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.message(address, ehemeral_pubkey, ciphertext)
+        d = self.message(nodeToAsk, ehemeral_pubkey, ciphertext)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callOrder(self, nodeToAsk, ephem_pubkey, encrypted_contract):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.order(address, ephem_pubkey, encrypted_contract)
+        d = self.order(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callOrderConfirmation(self, nodeToAsk, ephem_pubkey, encrypted_contract):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.order_confirmation(address, ephem_pubkey, encrypted_contract)
+        d = self.order_confirmation(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callCompleteOrder(self, nodeToAsk, ephem_pubkey, encrypted_contract):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.complete_order(address, ephem_pubkey, encrypted_contract)
+        d = self.complete_order(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

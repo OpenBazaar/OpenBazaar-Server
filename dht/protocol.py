@@ -136,38 +136,31 @@ class KademliaProtocol(RPCProtocol):
         return ["True"]
 
     def callFindNode(self, nodeToAsk, nodeToFind):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.find_node(address, nodeToFind.id)
+        d = self.find_node(nodeToAsk, nodeToFind.id)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callFindValue(self, nodeToAsk, nodeToFind):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.find_value(address, nodeToFind.id)
+        d = self.find_value(nodeToAsk, nodeToFind.id)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callPing(self, nodeToAsk):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.ping(address)
+        d = self.ping(nodeToAsk)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callStore(self, nodeToAsk, keyword, key, value, ttl):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.store(address, keyword, key, value, str(int(round(ttl))))
+        d = self.store(nodeToAsk, keyword, key, value, str(int(round(ttl))))
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callDelete(self, nodeToAsk, keyword, key, signature):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.delete(address, keyword, key, signature)
+        d = self.delete(nodeToAsk, keyword, key, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callInv(self, nodeToAsk, serlialized_inv_list):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.inv(address, *serlialized_inv_list)
+        d = self.inv(nodeToAsk, *serlialized_inv_list)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callValues(self, nodeToAsk, serlialized_values_list):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.values(address, *serlialized_values_list)
+        d = self.values(nodeToAsk, *serlialized_values_list)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def transferKeyValues(self, node):

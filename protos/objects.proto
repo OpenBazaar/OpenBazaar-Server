@@ -12,12 +12,25 @@ import "countries.proto";
 //An object containing information about the node.
 //Some fields are optional as they aren't needed in all situations.
 message Node {
-    required bytes guid            = 1;
-	required bytes signedPublicKey = 2; // <64 byte signature><32 byte public key>
-	optional string ip             = 3;
-	optional uint32 port           = 4;
-	optional bool vendor           = 5 [default = false];
+    required bytes guid             = 1;
+	required bytes signedPublicKey  = 2; // <64 byte signature><32 byte public key>
+	required NATType natType        = 3;
+	required IPAddress nodeAddress  = 4;
+	optional IPAddress relayAddress = 5;
+	optional bool vendor            = 6 [default = false];
+
+	message IPAddress {
+	    required string ip    = 1;
+	    required uint32 port  = 2;
+	}
 }
+
+enum NATType {
+    FULL_CONE  = 1;
+    RESTRICTED = 2;
+    SYMMETRIC  = 3;
+}
+
 
 //The value returned by a FIND_VALUE rpc call
 //Typically a list of these will be returned for any given keyword.
