@@ -89,22 +89,20 @@ def run(*args):
 
     # kademlia
     storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.DATABASE)
+    relay_node = None
+    if nat_type != FULL_CONE:
+        for seed in SEEDS:
+            try:
+                relay_node = (socket.gethostbyname(seed[0].split(":")[0]),
+                              28469 if TESTNET else 18469)
+                break
+            except socket.gaierror:
+                pass
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
-                                   on_bootstrap_complete, storage=storage)
-        kserver.node.nat_type = nat_type
+                                   on_bootstrap_complete, nat_type, relay_node, storage=storage)
     except Exception:
-        if nat_type != FULL_CONE:
-            for seed in SEEDS:
-                try:
-                    relay_node = (socket.gethostbyname(seed[0].split(":")[0]),
-                                  28469 if TESTNET else 18469)
-                    break
-                except socket.gaierror:
-                    pass
-        else:
-            relay_node = None
         node = Node(keys.guid, ip_address, port, keys.guid_signed_pubkey,
                     relay_node, nat_type, Profile(db).get().vendor)
         protocol.relay_node = node.relay_node

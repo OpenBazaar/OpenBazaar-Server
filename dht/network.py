@@ -7,6 +7,7 @@ Copyright (c) 2015 OpenBazaar
 
 import pickle
 import httplib
+import socket
 from binascii import hexlify
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
@@ -197,7 +198,7 @@ class Server(object):
         ds = {}
         for addr in addrs:
             if addr != (self.node.ip, self.node.port):
-                ds[addr] = self.protocol.ping(Node(None, addr[0], addr[1], nat_type=objects.FULL_CONE))
+                ds[addr] = self.protocol.ping(Node(digest("null"), addr[0], addr[1], nat_type=objects.FULL_CONE))
         deferredDict(ds).addCallback(initTable)
         return d
 
@@ -361,7 +362,7 @@ class Server(object):
             pickle.dump(data, f)
 
     @classmethod
-    def loadState(cls, fname, ip_address, port, multiplexer, db, callback=None, storage=None):
+    def loadState(cls, fname, ip_address, port, multiplexer, db, nat_type, relay_node, callback=None, storage=None):
         """
         Load the state of this node (the alpha/ksize/id/immediate neighbors)
         from a cache file with the given fname.
@@ -370,7 +371,8 @@ class Server(object):
             data = pickle.load(f)
         if data['testnet'] != multiplexer.testnet:
             raise Exception('Cache uses wrong network parameters')
-        n = Node(data['id'], ip_address, port, data['signed_pubkey'], data['vendor'])
+
+        n = Node(data['id'], ip_address, port, data['signed_pubkey'], relay_node, nat_type, data['vendor'])
         s = Server(n, db, data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
         if len(data['neighbors']) > 0:
