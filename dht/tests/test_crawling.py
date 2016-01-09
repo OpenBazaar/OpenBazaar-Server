@@ -180,7 +180,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
             ack=0,
             syn=True
         )
-        self.con.receive_packet(remote_synack_packet)
+        self.con.receive_packet(remote_synack_packet, self.addr1)
 
         self.clock.advance(0)
         connection.REACTOR.runUntilCurrent()
@@ -315,7 +315,7 @@ class NodeSpiderCrawlTest(unittest.TestCase):
             ack=0,
             syn=True
         )
-        self.con.receive_packet(remote_synack_packet)
+        self.con.receive_packet(remote_synack_packet, self.addr1)
 
         self.clock.advance(0)
         connection.REACTOR.runUntilCurrent()
