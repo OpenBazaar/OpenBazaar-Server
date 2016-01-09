@@ -99,10 +99,10 @@ def run(*args):
                     try:
                         n.ParseFromString(proto)
                         node = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
-                               None if not n.HasField("relayAddress") else
-                               (n.relayAddress.ip, n.relayAddress.port),
-                               n.natType,
-                               n.vendor)
+                                    None if not n.HasField("relayAddress") else
+                                    (n.relayAddress.ip, n.relayAddress.port),
+                                    n.natType,
+                                    n.vendor)
                         self.nodes[(node.ip, node.port)] = node
                     except Exception:
                         pass
@@ -158,9 +158,9 @@ def run(*args):
                 elif request.args["format"][0] == "protobuf":
                     proto = peers.PeerSeeds()
                     for node in nodes[:50]:
-                        proto.peer_data.append(node.SerializeToString())
+                        proto.serializedNode.append(node.SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))
@@ -169,17 +169,17 @@ def run(*args):
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     for node in nodes:
                         if node.vendor is True:
-                            proto.peer_data.append(node.getProto().SerializeToString())
+                            proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))
                 else:
                     for node in nodes[:50]:
-                        proto.peer_data.append(node.SerializeToString())
+                        proto.serializedNode.append(node.SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))

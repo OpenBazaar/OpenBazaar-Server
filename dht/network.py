@@ -7,7 +7,6 @@ Copyright (c) 2015 OpenBazaar
 
 import pickle
 import httplib
-import socket
 from binascii import hexlify
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
@@ -124,13 +123,13 @@ class Server(object):
                     reread_data = data.decode("zlib")
                     proto = peers.PeerSeeds()
                     proto.ParseFromString(reread_data)
-                    for peer in proto.peer_data:
+                    for peer in proto.serializedNode:
                         n = objects.Node()
                         n.ParseFromString(peer)
                         tup = (str(n.nodeAddress.ip), n.nodeAddress.port)
                         nodes.append(tup)
                     verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-                    verify_key.verify("".join(proto.peer_data), proto.signature)
+                    verify_key.verify("".join(proto.serializedNode), proto.signature)
                     self.log.info("%s returned %s addresses" % (seed, len(nodes)))
                 except Exception, e:
                     self.log.error("failed to query seed: %s" % str(e))
