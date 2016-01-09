@@ -158,7 +158,7 @@ def run(*args):
                 elif request.args["format"][0] == "protobuf":
                     proto = peers.PeerSeeds()
                     for node in nodes[:50]:
-                        proto.serializedNode.append(node.SerializeToString())
+                        proto.serializedNode.append(node.getProto().SerializeToString())
 
                     sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
@@ -177,7 +177,7 @@ def run(*args):
                     request.write(uncompressed_data.encode("zlib"))
                 else:
                     for node in nodes[:50]:
-                        proto.serializedNode.append(node.SerializeToString())
+                        proto.serializedNode.append(node.getProto().SerializeToString())
 
                     sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
