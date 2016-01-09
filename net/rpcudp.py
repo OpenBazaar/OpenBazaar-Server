@@ -12,6 +12,7 @@ from base64 import b64encode
 from binascii import hexlify
 from constants import PROTOCOL_VERSION
 from dht.node import Node
+from dht.utils import digest
 from hashlib import sha1
 from log import Logger
 from protos.message import Message, Command, NOT_FOUND, HOLE_PUNCH
@@ -216,7 +217,7 @@ class RPCProtocol:
             self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
 
             if self.multiplexer[address].state != State.CONNECTED and node.nat_type == RESTRICTED:
-                self.hole_punch(Node(None, node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
+                self.hole_punch(Node(digest("null"), node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
                                 address[0], address[1], "True")
                 self.log.debug("sending hole punch message to %s" % address[0] + ":" + address[1])
 
