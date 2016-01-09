@@ -125,9 +125,9 @@ class Server(object):
                     proto = peers.PeerSeeds()
                     proto.ParseFromString(reread_data)
                     for peer in proto.peer_data:
-                        p = peers.PeerData()
-                        p.ParseFromString(peer)
-                        tup = (str(p.ip_address), p.port)
+                        n = objects.Node()
+                        n.ParseFromString(peer)
+                        tup = (str(n.nodeAddress.ip), n.nodeAddress.port)
                         nodes.append(tup)
                     verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
                     verify_key.verify("".join(proto.peer_data), proto.signature)

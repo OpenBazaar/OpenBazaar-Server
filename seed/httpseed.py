@@ -98,7 +98,11 @@ def run(*args):
                     n = objects.Node()
                     try:
                         n.ParseFromString(proto)
-                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
+                        node = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                               None if not n.HasField("relayAddress") else
+                               (n.relayAddress.ip, n.relayAddress.port),
+                               n.natType,
+                               n.vendor)
                         self.nodes[(node.ip, node.port)] = node
                     except Exception:
                         pass
@@ -138,7 +142,6 @@ def run(*args):
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port
                                 node_dic["guid"] = node.id.encode("hex")
-                                node_dic["signed_pubkey"] = node.signed_pubkey.encode("hex")
                                 json_list.append(node_dic)
                         sig = signing_key.sign(str(json_list))
                         resp = {"peers": json_list, "signature": hexlify(sig[:64])}
@@ -155,11 +158,7 @@ def run(*args):
                 elif request.args["format"][0] == "protobuf":
                     proto = peers.PeerSeeds()
                     for node in nodes[:50]:
-                        peer = peers.PeerData()
-                        peer.ip_address = node.ip
-                        peer.port = node.port
-                        peer.vendor = node.vendor
-                        proto.peer_data.append(peer.SerializeToString())
+                        proto.peer_data.append(node.SerializeToString())
 
                     sig = signing_key.sign("".join(proto.peer_data))[:64]
                     proto.signature = sig
@@ -170,13 +169,7 @@ def run(*args):
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     for node in nodes:
                         if node.vendor is True:
-                            peer = peers.PeerData()
-                            peer.ip_address = node.ip
-                            peer.port = node.port
-                            peer.vendor = node.vendor
-                            peer.guid = node.id
-                            peer.signedPubkey = node.signed_pubkey
-                            proto.peer_data.append(peer.SerializeToString())
+                            proto.peer_data.append(node.getProto().SerializeToString())
 
                     sig = signing_key.sign("".join(proto.peer_data))[:64]
                     proto.signature = sig
@@ -184,11 +177,7 @@ def run(*args):
                     request.write(uncompressed_data.encode("zlib"))
                 else:
                     for node in nodes[:50]:
-                        peer = peers.PeerData()
-                        peer.ip_address = node.ip
-                        peer.port = node.port
-                        peer.vendor = node.vendor
-                        proto.peer_data.append(peer.SerializeToString())
+                        proto.peer_data.append(node.SerializeToString())
 
                     sig = signing_key.sign("".join(proto.peer_data))[:64]
                     proto.signature = sig

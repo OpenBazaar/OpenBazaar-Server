@@ -488,17 +488,20 @@ imageHash, read FROM notifications''')
             ret = cursor.fetchall()
             nodes = []
             for n in ret:
-                proto = objects.Node()
-                proto.ParseFromString(n[0])
-                node = Node(proto.guid,
-                            proto.nodeAddress.ip,
-                            proto.nodeAddress.port,
-                            proto.signedPublicKey,
-                            None if not proto.HasField("relayAddress") else
-                            (proto.relayAddress.ip, proto.relayAddress.port),
-                            proto.natType,
-                            proto.vendor)
-                nodes.append(node)
+                try:
+                    proto = objects.Node()
+                    proto.ParseFromString(n[0])
+                    node = Node(proto.guid,
+                                proto.nodeAddress.ip,
+                                proto.nodeAddress.port,
+                                proto.signedPublicKey,
+                                None if not proto.HasField("relayAddress") else
+                                (proto.relayAddress.ip, proto.relayAddress.port),
+                                proto.natType,
+                                proto.vendor)
+                    nodes.append(node)
+                except Exception, e:
+                    print e.message
             return nodes
 
         def delete_vendor(self, guid):
