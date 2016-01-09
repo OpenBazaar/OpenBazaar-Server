@@ -101,7 +101,7 @@ def run(*args):
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
-                                   on_bootstrap_complete, nat_type, relay_node, storage=storage)
+                                   nat_type, relay_node, on_bootstrap_complete, storage)
     except Exception:
         node = Node(keys.guid, ip_address, port, keys.guid_signed_pubkey,
                     relay_node, nat_type, Profile(db).get().vendor)

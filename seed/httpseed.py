@@ -70,7 +70,7 @@ def run(*args):
     protocol = OpenBazaarProtocol((ip_address, port), objects.FULL_CONE, testnet=TESTNET)
 
     try:
-        kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)
+        kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db, objects.FULL_CONE, None)
     except Exception:
         kserver = Server(this_node, db)
         kserver.protocol.connect_multiplexer(protocol)
