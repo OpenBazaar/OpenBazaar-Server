@@ -1,6 +1,6 @@
 protobuf==2.6.1
 Twisted==14.0.2
-txrudp==0.4.2
+txrudp==0.5.0
 pystun==0.1.0
 bitcoin==1.1.36
 gnupg==2.0.2
