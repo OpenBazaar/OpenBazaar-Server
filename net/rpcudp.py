@@ -3,19 +3,21 @@ Copyright (c) 2014 Brian Muller
 Copyright (c) 2015 OpenBazaar
 """
 
-import random
 import abc
+import random
 import nacl.signing
 import nacl.encoding
 import nacl.hash
-from binascii import hexlify
-from hashlib import sha1
 from base64 import b64encode
-from twisted.internet import defer, reactor
+from binascii import hexlify
+from constants import PROTOCOL_VERSION
+from dht.node import Node
+from dht.utils import digest
+from hashlib import sha1
 from log import Logger
-from protos.message import Message, Command, NOT_FOUND
-from dht import node
-from constants import PROTOCOL_VERSION, SEED_NODE, SEED_NODE_TESTNET
+from protos.message import Message, Command, NOT_FOUND, HOLE_PUNCH
+from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
+from twisted.internet import defer, reactor
 from txrudp.connection import State
 
 
@@ -49,7 +51,14 @@ class RPCProtocol:
         m = Message()
         try:
             m.ParseFromString(datagram)
-            sender = node.Node(m.sender.guid, m.sender.ip, m.sender.port, m.sender.signedPublicKey, m.sender.vendor)
+            sender = Node(m.sender.guid,
+                          m.sender.nodeAddress.ip,
+                          m.sender.nodeAddress.port,
+                          m.sender.signedPublicKey,
+                          None if not m.sender.HasField("relayAddress") else
+                          (m.sender.relayAddress.ip, m.sender.relayAddress.port),
+                          m.sender.natType,
+                          m.sender.vendor)
         except Exception:
             # If message isn't formatted property then ignore
             self.log.warning("received unknown message from %s, ignoring" % str(connection.dest_addr))
@@ -84,8 +93,7 @@ class RPCProtocol:
                 return False
 
         if m.sender.vendor:
-            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.ip,
-                                              m.sender.port, m.sender.signedPublicKey)
+            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.SerializeToString())
 
         msgID = m.messageID
         if m.command == NOT_FOUND:
@@ -141,19 +149,20 @@ class RPCProtocol:
                 m.arguments.append(str(arg))
         connection.send_message(m.SerializeToString())
 
-    def timeout(self, address):
+    def timeout(self, node):
         """
         This timeout is called by the txrudp connection handler. We will run through the
         outstanding messages and callback false on any waiting on this IP address.
         """
+        address = (node.ip, node.port)
         for msgID, val in self._outstanding.items():
             if address == val[1]:
                 val[0].callback((False, None))
                 del self._outstanding[msgID]
+
+        if node.id is not None:
+            self.router.removeContact(node)
         try:
-            node_to_remove = self.multiplexer[address].handler.node
-            if node_to_remove is not None:
-                self.router.removeContact(node_to_remove)
             self.multiplexer[address].shutdown()
         except Exception:
             pass
@@ -165,7 +174,7 @@ class RPCProtocol:
         the other node to punch through our NAT.
         """
         if relay == "True":
-            self.hole_punch((ip, int(port)), sender.ip, sender.port)
+            self.hole_punch(Node(None, ip, int(port), nat_type=FULL_CONE), sender.ip, sender.port)
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
             # pylint: disable=W0612
@@ -181,25 +190,8 @@ class RPCProtocol:
         except AttributeError:
             pass
 
-        def func(address, *args):
+        def func(node, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
-            d = defer.Deferred()
-            if name != "hole_punch":
-                seed = SEED_NODE_TESTNET if self.multiplexer.testnet else SEED_NODE
-                if address in self.multiplexer and self.multiplexer[address].state == State.CONNECTED:
-                    timeout = timeout = reactor.callLater(self._waitTimeout, self.timeout, address)
-                else:
-                    timeout = reactor.callLater(self._waitTimeout, self.hole_punch, seed,
-                                                address[0], address[1], "True", msgID)
-                self._outstanding[msgID] = [d, address, timeout]
-                self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
-            elif args[3] in self._outstanding:
-                prev_msgID = args[3]
-                args = args[:3]
-                deferred, addr, hp = self._outstanding[prev_msgID]  # pylint: disable=W0612
-                timeout = reactor.callLater(3, self.timeout, addr)
-                self._outstanding[prev_msgID] = [deferred, addr, timeout]
-                self.log.debug("sending hole punch message to %s" % args[0] + ":" + str(args[1]))
 
             m = Message()
             m.messageID = msgID
@@ -211,7 +203,24 @@ class RPCProtocol:
             m.testnet = self.multiplexer.testnet
             data = m.SerializeToString()
 
-            self.multiplexer.send_message(data, address)
+            address = (node.ip, node.port)
+            relay_addr = None
+            if node.nat_type == SYMMETRIC:
+                relay_addr = node.relay_node
+
+            d = defer.Deferred()
+            if m.command != HOLE_PUNCH:
+                timeout = timeout = reactor.callLater(self._waitTimeout, self.timeout, node)
+                self._outstanding[msgID] = [d, address, timeout]
+
+            self.multiplexer.send_message(data, address, relay_addr)
+            self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
+
+            if self.multiplexer[address].state != State.CONNECTED and node.nat_type == RESTRICTED:
+                self.hole_punch(Node(digest("null"), node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
+                                address[0], address[1], "True")
+                self.log.debug("sending hole punch message to %s" % address[0] + ":" + address[1])
+
             return d
 
         return func

@@ -68,13 +68,16 @@ class Server(object):
                 reread_data = data.decode("zlib")
                 proto = peers.PeerSeeds()
                 proto.ParseFromString(reread_data)
-                v = self.db.VendorStore()
-                for peer in proto.peer_data:
-                    p = peers.PeerData()
-                    p.ParseFromString(peer)
-                    v.save_vendor(p.guid.encode("hex"), p.ip_address, p.port, p.signedPubkey)
                 verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
-                verify_key.verify("".join(proto.peer_data), proto.signature)
+                verify_key.verify("".join(proto.serializedNode), proto.signature)
+                v = self.db.VendorStore()
+                for peer in proto.serializedNode:
+                    try:
+                        n = objects.Node()
+                        n.ParseFromString(peer)
+                        v.save_vendor(n.guid.encode("hex"), peer)
+                    except Exception:
+                        pass
             except Exception, e:
                 self.log.error("failed to query seed: %s" % str(e))
 

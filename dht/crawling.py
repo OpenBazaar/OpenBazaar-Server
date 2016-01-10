@@ -218,7 +218,10 @@ class RPCFindResponse(object):
             try:
                 n = objects.Node()
                 n.ParseFromString(node)
-                newNode = Node(n.guid, n.ip, n.port, signed_pubkey=n.signedPublicKey, vendor=n.vendor)
+                newNode = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                               None if not n.HasField("relayAddress") else (n.relayAddress.ip, n.relayAddress.port),
+                               n.natType,
+                               n.vendor)
                 nodes.append(newNode)
             except Exception:
                 pass

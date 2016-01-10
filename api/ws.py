@@ -4,7 +4,7 @@ import ast
 import json
 import os
 import time
-from constants import DATA_FOLDER, SEED
+from constants import DATA_FOLDER
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
@@ -42,8 +42,6 @@ class WSProtocol(WebSocketServerProtocol):
 
         def handle_response(metadata, node):
             to_query.remove(node)
-            if len(to_query) == 0:
-                self.factory.mserver.querySeed(SEED)
             if metadata is not None:
                 vendor = {
                     "id": message_id,
@@ -103,7 +101,10 @@ class WSProtocol(WebSocketServerProtocol):
                         val.ParseFromString(mod)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey)
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                           None if not n.HasField("relayAddress") else
+                                           (n.relayAddress.ip, n.relayAddress.port),
+                                           n.natType, n.vendor)
                         if n.guid == KeyChain(self.factory.db).guid:
                             parse_profile(Profile(self.factory.db).get(), node_to_ask)
                         else:
@@ -117,12 +118,8 @@ class WSProtocol(WebSocketServerProtocol):
         if message_id not in self.factory.outstanding_listings:
             self.factory.outstanding_listings = {}
             self.factory.outstanding_listings[message_id] = []
+
         vendors = self.factory.db.VendorStore().get_vendors()
-
-        if len(vendors) == 0:
-            self.factory.mserver.querySeed(SEED)
-            vendors = self.factory.db.VendorStore().get_vendors()
-
         shuffle(vendors)
 
         def handle_response(listings, node):
@@ -175,10 +172,11 @@ class WSProtocol(WebSocketServerProtocol):
                                                     message_type.upper(), message, time.time(), "", "", True)
 
         def send(node_to_send):
-            n = node_to_send if node_to_send is not None else Node(unhexlify(guid), "123.4.5.6", 1234)
+            n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
             self.factory.mserver.send_message(n, recipient_encryption_key,
                                               Plaintext_Message.Type.Value(message_type.upper()),
-                                              message, subject)
+                                              message, subject,
+                                              store_only=True if node_to_send is None else False)
         self.factory.kserver.resolve(unhexlify(guid)).addCallback(send)
 
     def search(self, message_id, keyword):
@@ -214,7 +212,10 @@ class WSProtocol(WebSocketServerProtocol):
                         val.ParseFromString(v)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.ip, n.port, n.signedPublicKey, True)
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                           None if not n.HasField("relayAddress") else
+                                           (n.relayAddress.ip, n.relayAddress.port),
+                                           n.natType, n.vendor)
                         if n.guid == KeyChain(self.factory.db).guid:
                             proto = self.factory.db.ListingsStore().get_proto()
                             l = Listings()

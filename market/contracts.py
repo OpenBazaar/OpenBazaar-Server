@@ -495,7 +495,7 @@ class Contract(object):
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
         self.db.Sales().update_status(order_id, 2)
-        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
@@ -700,10 +700,10 @@ class Contract(object):
             self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
 
         self.db.Sales().update_status(order_id, 3)
-        file_path = DATA_FOLDER + "store/listings/trade receipts/" + order_id + ".json"
+        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
-        file_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -749,7 +749,7 @@ class Contract(object):
                                              proofSig,
                                              self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
-            file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
+            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
             self.db.Sales().new_sale(order_id,
                                      self.contract["vendor_offer"]["listing"]["item"]["title"],
                                      self.contract["vendor_offer"]["listing"]["item"]["description"],
@@ -817,8 +817,8 @@ class Contract(object):
                         self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
                         self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                     else:
-                        unfunded_path = DATA_FOLDER + "store/listings/unfunded/" + order_id + ".json"
-                        in_progress_path = DATA_FOLDER + "store/listings/in progress/" + order_id + ".json"
+                        unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
+                        in_progress_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
                         buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
                         if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
                             handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
@@ -887,7 +887,7 @@ class Contract(object):
         file_name += digest(json.dumps(self.contract, indent=4)).encode("hex")[:8]
 
         # save the json contract to the file system
-        file_path = DATA_FOLDER + "store/listings/contracts/" + file_name + ".json"
+        file_path = DATA_FOLDER + "store/contracts/listings/" + file_name + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
@@ -1082,7 +1082,7 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
                 if is_purchase:
                     file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
                 else:
-                    file_path = DATA_FOLDER + "store/listings/unfunded/" + order_id[0] + ".json"
+                    file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"
                 with open(file_path, 'r') as filename:
                     order = json.load(filename, object_pairs_hook=OrderedDict)
                 c = Contract(db, contract=order, testnet=testnet)

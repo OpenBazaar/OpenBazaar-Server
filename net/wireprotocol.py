@@ -1,16 +1,19 @@
 __author__ = 'chris'
-from zope.interface.verify import verifyObject
-from txrudp.rudp import ConnectionMultiplexer
+import socket
+from constants import SEEDS
+from dht.node import Node
+from interfaces import MessageProcessor
+from log import Logger
+from net.dos import BanScore
+from protos.message import Message, PING, NOT_FOUND
+from protos.objects import FULL_CONE
+from random import shuffle
+from twisted.internet import task, reactor
+from twisted.internet.task import LoopingCall
 from txrudp.connection import HandlerFactory, Handler, State
 from txrudp.crypto_connection import CryptoConnectionFactory
-from twisted.internet.task import LoopingCall
-from twisted.internet import task, reactor
-from interfaces import MessageProcessor
-from protos.message import Message
-from log import Logger
-from dht.node import Node
-from protos.message import PING, NOT_FOUND
-from net.dos import BanScore
+from txrudp.rudp import ConnectionMultiplexer
+from zope.interface.verify import verifyObject
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -21,7 +24,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     the appropriate classes for processing.
     """
 
-    def __init__(self, ip_address, nat_type, testnet=False):
+    def __init__(self, ip_address, nat_type, testnet=False, relaying=False):
         """
         Initialize the new protocol with the connection handler factory.
 
@@ -33,20 +36,22 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.ws = None
         self.blockchain = None
         self.processors = []
-        self.factory = self.ConnHandlerFactory(self.processors, nat_type)
+        self.relay_node = None
+        self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
         self.log = Logger(system=self)
-        ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0])
+        ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
 
     class ConnHandler(Handler):
 
-        def __init__(self, processors, nat_type, *args, **kwargs):
+        def __init__(self, processors, nat_type, relay_node, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
             self.log = Logger(system=self)
             self.processors = processors
             self.connection = None
             self.node = None
+            self.relay_node = relay_node
             self.keep_alive_loop = LoopingCall(self.keep_alive)
-            self.keep_alive_loop.start(300 if nat_type == "Full Cone" else 30, now=False)
+            self.keep_alive_loop.start(300 if nat_type == FULL_CONE else 30, now=False)
             self.on_connection_made()
             self.addr = None
             self.ban_score = None
@@ -67,8 +72,14 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             m = Message()
             try:
                 m.ParseFromString(datagram)
-                self.node = Node(m.sender.guid, m.sender.ip, m.sender.port,
-                                 m.sender.signedPublicKey, m.sender.vendor)
+                self.node = Node(m.sender.guid,
+                                 m.sender.nodeAddress.ip,
+                                 m.sender.nodeAddress.port,
+                                 m.sender.signedPublicKey,
+                                 None if not m.sender.HasField("relayAddress") else
+                                 (m.sender.relayAddress.ip, m.sender.relayAddress.port),
+                                 m.sender.natType,
+                                 m.sender.vendor)
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
                         processor.receive_message(datagram, self.connection, self.ban_score)
@@ -89,21 +100,45 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.keep_alive_loop.stop()
             except Exception:
                 pass
+            if self.relay_node == (self.connection.dest_addr[0], self.connection.dest_addr[1]):
+                self.log.info("Disconnected from relay node. Picking new one...")
+                self.change_relay_node()
 
         def keep_alive(self):
             for processor in self.processors:
                 if PING in processor and self.node is not None:
                     processor.callPing(self.node)
 
+        def change_relay_node(self):
+            potential_relay_nodes = []
+            for bucket in self.processors[0].router.buckets:
+                for node in bucket.nodes.values():
+                    if node.nat_type == FULL_CONE:
+                        potential_relay_nodes.append((node.ip, node.port))
+            if len(potential_relay_nodes) == 0:
+                for seed in SEEDS:
+                    try:
+                        potential_relay_nodes.append((socket.gethostbyname(seed[0].split(":")[0]),
+                                                      28469 if self.processors[0].TESTNET else 18469))
+                    except socket.gaierror:
+                        pass
+            shuffle(potential_relay_nodes)
+            self.relay_node = potential_relay_nodes[0]
+            for processor in self.processors:
+                if PING in processor:
+                    processor.callPing(Node(None, self.relay_node[0], self.relay_node[1],
+                                            relay_node=None, nat_type=FULL_CONE))
+
     class ConnHandlerFactory(HandlerFactory):
 
-        def __init__(self, processors, nat_type):
+        def __init__(self, processors, nat_type, relay_node):
             super(OpenBazaarProtocol.ConnHandlerFactory, self).__init__()
             self.processors = processors
             self.nat_type = nat_type
+            self.relay_node = relay_node
 
         def make_new_handler(self, *args, **kwargs):
-            return OpenBazaarProtocol.ConnHandler(self.processors, self.nat_type)
+            return OpenBazaarProtocol.ConnHandler(self.processors, self.nat_type, self.relay_node)
 
     def register_processor(self, processor):
         """Add a new class which implements the `MessageProcessor` interface."""
@@ -119,7 +154,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.ws = ws
         self.blockchain = blockchain
 
-    def send_message(self, datagram, address):
+    def send_message(self, datagram, address, relay_addr):
         """
         Sends a datagram over the wire to the given address. It will create a new rudp connection if one
         does not already exist for this peer.
@@ -127,10 +162,15 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         Args:
             datagram: the raw data to send over the wire
             address: a `tuple` of (ip address, port) of the recipient.
+            relay_addr: a `tuple` of (ip address, port) of the relay address
+                or `None` if no relaying is required.
         """
         if address not in self:
-            con = self.make_new_connection(self.ip_address, address)
+            con = self.make_new_connection(self.ip_address, address, relay_addr)
         else:
             con = self[address]
+        if relay_addr is not None and relay_addr != con.relay_addr:
+            con.set_relay_address(relay_addr)
+
         con.send_message(datagram)
 

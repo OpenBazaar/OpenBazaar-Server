@@ -10,23 +10,34 @@ from protos import objects
 
 class Node(object):
     def __init__(self, node_id, ip=None, port=None, signed_pubkey=None,
-                 vendor=False):
+                 relay_node=None, nat_type=None, vendor=False):
         self.id = node_id
         self.ip = ip
         self.port = port
         self.signed_pubkey = signed_pubkey
+        self.relay_node = relay_node
+        self.nat_type = nat_type
         self.vendor = vendor
         self.long_id = long(node_id.encode('hex'), 16)
 
     def getProto(self):
+        node_address = objects.Node.IPAddress()
+        node_address.ip = self.ip
+        node_address.port = self.port
+
         n = objects.Node()
         n.guid = self.id
         n.signedPublicKey = self.signed_pubkey
+        n.natType = self.nat_type
+        n.nodeAddress.MergeFrom(node_address)
         n.vendor = self.vendor
-        if self.ip is not None:
-            n.ip = self.ip
-        if self.port is not None:
-            n.port = self.port
+
+        if self.relay_node is not None:
+            relay_address = objects.Node.IPAddress()
+            relay_address.ip = self.relay_node[0]
+            relay_address.port = self.relay_node[1]
+            n.relayAddress.MergeFrom(relay_address)
+
         return n
 
     def sameHomeAs(self, node):

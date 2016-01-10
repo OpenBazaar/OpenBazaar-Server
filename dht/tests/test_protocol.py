@@ -50,15 +50,15 @@ class KademliaProtocolTest(unittest.TestCase):
         signed_pubkey = self.signing_key.sign(str(verify_key))
         h = nacl.hash.sha512(signed_pubkey)
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, True)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, None, objects.FULL_CONE, True)
         self.db = datastore.Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr, "Full Cone")
+        self.wire_protocol = OpenBazaarProtocol(self.own_addr, objects.FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
         self.handler.connection = self.con
 
         transport = mock.Mock(spec_set=udp.Port)
@@ -230,9 +230,9 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_rpc_find_node(self):
         self._connecting_to_connected()
 
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"), nat_type=objects.FULL_CONE)
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"), nat_type=objects.FULL_CONE)
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"), nat_type=objects.FULL_CONE)
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -315,9 +315,9 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_rpc_find_without_value(self):
         self._connecting_to_connected()
 
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, digest("key1"), nat_type=objects.FULL_CONE)
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, digest("key2"), nat_type=objects.FULL_CONE)
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, digest("key3"), nat_type=objects.FULL_CONE)
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)
@@ -351,7 +351,7 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_callPing(self):
         self._connecting_to_connected()
 
-        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        n = Node(digest("guid"), self.addr1[0], self.addr1[1], digest("pubkey"), None, objects.FULL_CONE, False)
         self.wire_protocol[self.addr1] = self.con
         self.protocol.callPing(n)
 
@@ -371,7 +371,7 @@ class KademliaProtocolTest(unittest.TestCase):
     def test_callStore(self):
         self._connecting_to_connected()
 
-        n = Node(digest("S"), self.addr1[0], self.addr1[1])
+        n = Node(digest("guid"), self.addr1[0], self.addr1[1], digest("pubkey"), None, objects.FULL_CONE, False)
         self.wire_protocol[self.addr1] = self.con
         self.protocol.callStore(n, digest("Keyword"), digest("Key"),
                                 self.protocol.sourceNode.getProto().SerializeToString(), 10)
@@ -488,7 +488,7 @@ class KademliaProtocolTest(unittest.TestCase):
         d = defer.Deferred().addCallback(handle_response, n)
         self.protocol._outstanding["msgID"] = [d, self.addr1]
         self.protocol.router.addContact(n)
-        self.protocol.timeout(self.addr1)
+        self.protocol.timeout(n)
 
     def test_transferKeyValues(self):
         self._connecting_to_connected()
@@ -549,7 +549,7 @@ class KademliaProtocolTest(unittest.TestCase):
             ack=0,
             syn=True
         )
-        self.con.receive_packet(remote_synack_packet)
+        self.con.receive_packet(remote_synack_packet, self.addr1)
 
         self.clock.advance(0)
         connection.REACTOR.runUntilCurrent()

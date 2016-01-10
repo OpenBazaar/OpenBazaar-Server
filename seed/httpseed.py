@@ -1,35 +1,32 @@
 __author__ = 'chris'
-import sys
-import pickle
-import json
-import random
 import argparse
-import platform
-from binascii import hexlify
-from random import shuffle
+import json
 import os
-
-from twisted.internet import task, reactor
-from twisted.web import resource, server
+import pickle
+import platform
+import random
 import stun
-import nacl.signing
-import nacl.hash
+import sys
 import nacl.encoding
-from twisted.python import log, logfile
-
-from daemon import Daemon
-from seed import peers
-from dht.node import Node
-from dht.network import Server
-from dht.crawling import NodeSpiderCrawl
-from dht.utils import digest, deferredDict
-from protos import objects
-from net.wireprotocol import OpenBazaarProtocol
-from market import network
-from keyutils.keys import KeyChain
-from db.datastore import Database
+import nacl.hash
+import nacl.signing
+from binascii import hexlify
 from constants import DATA_FOLDER
+from daemon import Daemon
+from db.datastore import Database
+from dht.crawling import NodeSpiderCrawl
+from dht.network import Server
+from dht.node import Node
+from dht.utils import digest, deferredDict
+from keyutils.keys import KeyChain
 from log import Logger, FileLogObserver
+from net.wireprotocol import OpenBazaarProtocol
+from protos import objects
+from random import shuffle
+from seed import peers
+from twisted.internet import task, reactor
+from twisted.python import log, logfile
+from twisted.web import resource, server
 
 
 def run(*args):
@@ -68,22 +65,18 @@ def run(*args):
     port = response[2]
 
     # Start the kademlia server
-    this_node = Node(keychain.guid, ip_address, port, keychain.guid_signed_pubkey, vendor=False)
-    protocol = OpenBazaarProtocol((ip_address, port), response[0], testnet=TESTNET)
+    this_node = Node(keychain.guid, ip_address, port,
+                     keychain.guid_signed_pubkey, None, objects.FULL_CONE, False)
+    protocol = OpenBazaarProtocol((ip_address, port), objects.FULL_CONE, testnet=TESTNET)
 
     try:
-        kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db)
+        kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db, objects.FULL_CONE, None)
     except Exception:
         kserver = Server(this_node, db)
         kserver.protocol.connect_multiplexer(protocol)
 
     protocol.register_processor(kserver.protocol)
     kserver.saveStateRegularly('cache.pickle', 10)
-
-    # start the market server
-    mserver = network.Server(kserver, keychain.signing_key, db)
-    mserver.protocol.connect_multiplexer(protocol)
-    protocol.register_processor(mserver.protocol)
 
     reactor.listenUDP(port, protocol)
 
@@ -105,7 +98,11 @@ def run(*args):
                     n = objects.Node()
                     try:
                         n.ParseFromString(proto)
-                        node = Node(n.guid, n.ip, n.port, n.signedPublicKey, n.vendor)
+                        node = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                    None if not n.HasField("relayAddress") else
+                                    (n.relayAddress.ip, n.relayAddress.port),
+                                    n.natType,
+                                    n.vendor)
                         self.nodes[(node.ip, node.port)] = node
                     except Exception:
                         pass
@@ -145,7 +142,6 @@ def run(*args):
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port
                                 node_dic["guid"] = node.id.encode("hex")
-                                node_dic["signed_pubkey"] = node.signed_pubkey.encode("hex")
                                 json_list.append(node_dic)
                         sig = signing_key.sign(str(json_list))
                         resp = {"peers": json_list, "signature": hexlify(sig[:64])}
@@ -162,13 +158,9 @@ def run(*args):
                 elif request.args["format"][0] == "protobuf":
                     proto = peers.PeerSeeds()
                     for node in nodes[:50]:
-                        peer = peers.PeerData()
-                        peer.ip_address = node.ip
-                        peer.port = node.port
-                        peer.vendor = node.vendor
-                        proto.peer_data.append(peer.SerializeToString())
+                        proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))
@@ -177,27 +169,17 @@ def run(*args):
                 if "type" in request.args and request.args["type"][0] == "vendors":
                     for node in nodes:
                         if node.vendor is True:
-                            peer = peers.PeerData()
-                            peer.ip_address = node.ip
-                            peer.port = node.port
-                            peer.vendor = node.vendor
-                            peer.guid = node.id
-                            peer.signedPubkey = node.signed_pubkey
-                            proto.peer_data.append(peer.SerializeToString())
+                            proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))
                 else:
                     for node in nodes[:50]:
-                        peer = peers.PeerData()
-                        peer.ip_address = node.ip
-                        peer.port = node.port
-                        peer.vendor = node.vendor
-                        proto.peer_data.append(peer.SerializeToString())
+                        proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.peer_data))[:64]
+                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
                     proto.signature = sig
                     uncompressed_data = proto.SerializeToString()
                     request.write(uncompressed_data.encode("zlib"))

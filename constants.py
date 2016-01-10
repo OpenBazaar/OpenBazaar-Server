@@ -3,7 +3,7 @@ from os import getcwd
 from os.path import expanduser, join, isfile
 import ConfigParser
 
-PROTOCOL_VERSION = 9
+PROTOCOL_VERSION = 10
 
 dataFolderPath = expanduser('~')
 currentPath = getcwd()
@@ -35,42 +35,6 @@ else:
                 data_f2 = optionDataFolder
         except ConfigParser.Error, error:
             data_f2 = dataFolderPath + "/OpenBazaar/"
-
-        # Extract Config SEED_NODE
-        seed_n = ''
-        seed_n_p = ''
-        nameOptionSN = 'SEED_NODE'
-
-        try:
-            optionSeedNode = fc.get(mySection, nameOptionSN)
-            # if have value
-            if optionSeedNode:
-                if ':' in fc.get(mySection, nameOptionSN):
-                    seed_n = fc.get(mySection, nameOptionSN).split(':')[0]
-                    try:
-                        seed_n_p = int(fc.get(mySection, nameOptionSN).split(':')[1])
-                    except ValueError, error:
-                        print error
-        except ConfigParser.Error, error:
-            print error
-
-        # Extract Config SEED_NODE_TESTNET
-        seed_n_t = ''
-        seed_n_t_p = ''
-        nameOptionSNT = 'SEED_NODE_TESTNET'
-
-        try:
-            optionSeeNodeTest = fc.get(mySection, nameOptionSNT)
-            # if have value
-            if optionSeeNodeTest:
-                if ':' in fc.get(mySection, nameOptionSNT):
-                    seed_n_t = fc.get(mySection, nameOptionSNT).split(':')[0]
-                    try:
-                        seed_n_t_p = int(fc.get(mySection, nameOptionSNT).split(':')[1])
-                    except ValueError, error:
-                        print error
-        except ConfigParser.Error, error:
-            print error
 
         # Extract Config KSIZE
         ks = ''
@@ -201,8 +165,6 @@ else:
 
         # Constant Assignment
         DATA_FOLDER = data_f2
-        SEED_NODE = (seed_n, seed_n_p)
-        SEED_NODE_TESTNET = (seed_n_t, seed_n_t_p)
         KSIZE = ks
         ALPHA = alp
         TRANSACTION_FEE = trans_f
@@ -210,7 +172,7 @@ else:
         LIBBITCOIN_SERVER_TESTNET = libbitcoin_s_t
         SSL_CERT = ssl_crt
         SSL_KEY = ssl_key
-        SEED = goodSeeds
+        SEEDS = goodSeeds
 
     except ConfigParser.Error, error:
         print error

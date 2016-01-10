@@ -28,17 +28,27 @@ class NodeTest(unittest.TestCase):
     def test_create_proto(self):
         rid = hashlib.sha1(str(random.getrandbits(255))).digest()
         pubkey = digest("pubkey")
-        vendor = True
+
+        addr = objects.Node.IPAddress()
+        addr.ip = "127.0.0.1"
+        addr.port = 1234
+
+        relay_addr = objects.Node.IPAddress()
+        relay_addr.ip = "127.0.0.1"
+        relay_addr.port = 1234
 
         n1 = objects.Node()
         n1.guid = rid
         n1.signedPublicKey = pubkey
         n1.vendor = False
-        n2 = Node(rid, signed_pubkey=digest("pubkey"))
+        n1.nodeAddress.MergeFrom(addr)
+        n1.natType = objects.FULL_CONE
+        n2 = Node(rid, "127.0.0.1", 1234, digest("pubkey"), None, objects.FULL_CONE, False)
         self.assertEqual(n1, n2.getProto())
 
         n1.vendor = True
-        n2 = Node(rid, signed_pubkey=pubkey, vendor=vendor)
+        n1.relayAddress.MergeFrom(relay_addr)
+        n2 = Node(rid, "127.0.0.1", 1234, digest("pubkey"), ("127.0.0.1", 1234), objects.FULL_CONE, True)
         self.assertEqual(n1, n2.getProto())
 
     def test_tuple(self):

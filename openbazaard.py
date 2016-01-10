@@ -1,38 +1,38 @@
 __author__ = 'chris'
-import time
-import pickle
-import sys
-import argparse
-import platform
 
+import argparse
+import pickle
+import platform
+import requests
+import socket
+import stun
+import sys
+import time
+from api.ws import WSFactory, WSProtocol
+from api.restapi import OpenBazaarAPI
+from autobahn.twisted.websocket import listenWS
+from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
+    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS
+from daemon import Daemon
+from db.datastore import Database
+from dht.network import Server
+from dht.node import Node
+from dht.storage import PersistentStorage, ForgetfulStorage
+from keyutils.keys import KeyChain
+from log import Logger, FileLogObserver
+from market import network
+from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
+from market.contracts import check_unfunded_for_payment
+from market.profile import Profile
+from net.sslcontext import ChainedOpenSSLContextFactory
+from net.upnp import PortMapper
+from net.wireprotocol import OpenBazaarProtocol
+from obelisk.client import LibbitcoinClient
+from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
 from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from twisted.web.server import Site
 from twisted.web.static import File
-import stun
-import requests
-
-from autobahn.twisted.websocket import listenWS
-
-from daemon import Daemon
-from db.datastore import Database
-from keyutils.keys import KeyChain
-from dht.network import Server
-from dht.node import Node
-from net.wireprotocol import OpenBazaarProtocol
-from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
-    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEED, SEED_NODE, SEED_NODE_TESTNET
-from market import network
-from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
-from api.ws import WSFactory, WSProtocol
-from api.restapi import OpenBazaarAPI
-from dht.storage import PersistentStorage, ForgetfulStorage
-from market.profile import Profile
-from market.contracts import check_unfunded_for_payment
-from log import Logger, FileLogObserver
-from net.upnp import PortMapper
-from net.sslcontext import ChainedOpenSSLContextFactory
-from obelisk.client import LibbitcoinClient
 
 
 def run(*args):
@@ -69,36 +69,48 @@ def run(*args):
         except Exception:
             pass
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
-    nat_type = response[0]
     ip_address = response[1]
     port = response[2]
 
-    # TODO: use TURN if symmetric NAT
+    if response[0] == "Full Cone":
+        nat_type = FULL_CONE
+    elif response[0] == "Restric NAT":
+        nat_type = RESTRICTED
+    else:
+        nat_type = SYMMETRIC
 
     def on_bootstrap_complete(resp):
         logger.info("bootstrap complete")
         mserver.get_messages(mlistener)
         task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
 
-    protocol = OpenBazaarProtocol((ip_address, port), response[0], testnet=TESTNET)
+    protocol = OpenBazaarProtocol((ip_address, port), nat_type, testnet=TESTNET,
+                                  relaying=True if nat_type == FULL_CONE else False)
 
     # kademlia
-    node = Node(keys.guid, ip_address, port, signed_pubkey=keys.guid_signed_pubkey, vendor=Profile(db).get().vendor)
-
     storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.DATABASE)
+    relay_node = None
+    if nat_type != FULL_CONE:
+        for seed in SEEDS:
+            try:
+                relay_node = (socket.gethostbyname(seed[0].split(":")[0]),
+                              28469 if TESTNET else 18469)
+                break
+            except socket.gaierror:
+                pass
 
     try:
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
-                                   on_bootstrap_complete, storage=storage)
+                                   nat_type, relay_node, on_bootstrap_complete, storage)
     except Exception:
+        node = Node(keys.guid, ip_address, port, keys.guid_signed_pubkey,
+                    relay_node, nat_type, Profile(db).get().vendor)
+        protocol.relay_node = node.relay_node
         kserver = Server(node, db, KSIZE, ALPHA, storage=storage)
         kserver.protocol.connect_multiplexer(protocol)
-        kserver.bootstrap(kserver.querySeed(SEED)).addCallback(on_bootstrap_complete)
+        kserver.bootstrap(kserver.querySeed(SEEDS)).addCallback(on_bootstrap_complete)
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
     protocol.register_processor(kserver.protocol)
-
-    if nat_type != "Full Cone":
-        kserver.protocol.ping(SEED_NODE_TESTNET if TESTNET else SEED_NODE)
 
     # market
     mserver = network.Server(kserver, keys.signing_key, db)
