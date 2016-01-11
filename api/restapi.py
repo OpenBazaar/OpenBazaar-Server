@@ -920,6 +920,7 @@ class OpenBazaarAPI(APIResource):
             with open(file_path, 'r') as filename:
                 order = json.load(filename, object_pairs_hook=OrderedDict)
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
+            self.protocol.blockchain.refresh_connection()
             c.blockchain = self.protocol.blockchain
             c.notification_listener = self.mserver.protocol.get_notification_listener()
             c.is_purchase = True

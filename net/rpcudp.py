@@ -32,13 +32,11 @@ class RPCProtocol:
     def __init__(self, sourceNode, router, waitTimeout=4):
         """
         Args:
-            proto: A protobuf `Node` object containing info about this node.
+            sourceNode: A protobuf `Node` object containing info about this node.
             router: A `RoutingTable` object from dht.routing. Implies a `network.Server` object
                     must be started first.
             waitTimeout: Consider it a connetion failure if no response
                     within this time window.
-            noisy: Whether or not to log the output for this class.
-            testnet: The network parameters to use.
 
         """
         self.sourceNode = sourceNode
@@ -47,30 +45,23 @@ class RPCProtocol:
         self._outstanding = {}
         self.log = Logger(system=self)
 
-    def receive_message(self, datagram, connection, ban_score):
-        m = Message()
-        try:
-            m.ParseFromString(datagram)
-            sender = Node(m.sender.guid,
-                          m.sender.nodeAddress.ip,
-                          m.sender.nodeAddress.port,
-                          m.sender.signedPublicKey,
-                          None if not m.sender.HasField("relayAddress") else
-                          (m.sender.relayAddress.ip, m.sender.relayAddress.port),
-                          m.sender.natType,
-                          m.sender.vendor)
-        except Exception:
-            # If message isn't formatted property then ignore
-            self.log.warning("received unknown message from %s, ignoring" % str(connection.dest_addr))
-            return False
+    def receive_message(self, message, connection, ban_score):
+        sender = Node(message.sender.guid,
+                      message.sender.nodeAddress.ip,
+                      message.sender.nodeAddress.port,
+                      message.sender.signedPublicKey,
+                      None if not message.sender.HasField("relayAddress") else
+                      (message.sender.relayAddress.ip, message.sender.relayAddress.port),
+                      message.sender.natType,
+                      message.sender.vendor)
 
-        if m.testnet != self.multiplexer.testnet:
+        if message.testnet != self.multiplexer.testnet:
             self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
             connection.shutdown()
             return False
 
-        if m.protoVer < PROTOCOL_VERSION:
+        if message.protoVer < PROTOCOL_VERSION:
             self.log.warning("received message from %s with incompatible protocol version." %
                              str(connection.dest_addr))
             connection.shutdown()
@@ -79,12 +70,12 @@ class RPCProtocol:
         # Check that the GUID is valid. If not, ignore
         if self.router.isNewNode(sender):
             try:
-                pubkey = m.sender.signedPublicKey[len(m.sender.signedPublicKey) - 32:]
+                pubkey = message.sender.signedPublicKey[len(message.sender.signedPublicKey) - 32:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(m.sender.signedPublicKey)
-                h = nacl.hash.sha512(m.sender.signedPublicKey)
+                verify_key.verify(message.sender.signedPublicKey)
+                h = nacl.hash.sha512(message.sender.signedPublicKey)
                 pow_hash = h[64:128]
-                if int(pow_hash[:6], 16) >= 50 or hexlify(m.sender.guid) != h[:40]:
+                if int(pow_hash[:6], 16) >= 50 or hexlify(message.sender.guid) != h[:40]:
                     raise Exception('Invalid GUID')
 
             except Exception:
@@ -92,19 +83,20 @@ class RPCProtocol:
                 connection.shutdown()
                 return False
 
-        if m.sender.vendor:
-            self.db.VendorStore().save_vendor(m.sender.guid.encode("hex"), m.sender.SerializeToString())
+        if message.sender.vendor:
+            self.db.VendorStore().save_vendor(message.sender.guid.encode("hex"),
+                                              message.sender.SerializeToString())
 
-        msgID = m.messageID
-        if m.command == NOT_FOUND:
+        msgID = message.messageID
+        if message.command == NOT_FOUND:
             data = None
         else:
-            data = tuple(m.arguments)
+            data = tuple(message.arguments)
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
-        elif m.command != NOT_FOUND:
+        elif message.command != NOT_FOUND:
             #ban_score.process_message(m)
-            self._acceptRequest(msgID, str(Command.Name(m.command)).lower(), data, sender, connection)
+            self._acceptRequest(msgID, str(Command.Name(message.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
         if data is not None:

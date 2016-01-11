@@ -82,7 +82,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  m.sender.vendor)
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
-                        processor.receive_message(datagram, self.connection, self.ban_score)
+                        processor.receive_message(m, self.connection, self.ban_score)
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received unknown message from %s, ignoring" % self.addr)
