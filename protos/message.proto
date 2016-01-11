@@ -11,46 +11,46 @@ import "objects.proto";
 
 //This is the message structure for OpenBazaar messages going over the wire
 message Message {
-	required bytes messageID        = 1;
-	required Node sender            = 2;
-	required Command command        = 3;
-	required uint32 protoVer        = 4;
-	repeated bytes arguments        = 5;
-	optional bool testnet           = 6 [default = false];
+    required bytes messageID        = 1;
+    required Node sender            = 2;
+    required Command command        = 3;
+    required uint32 protoVer        = 4;
+    repeated bytes arguments        = 5;
+    optional bool testnet           = 6 [default = false];
 }
 
 //A list of commands accepted by nodes
 enum Command {
-	PING                    = 1;
-	STUN                    = 2;
-	HOLE_PUNCH              = 3;
-	STORE                   = 4;
-	DELETE                  = 5;
-	INV					    = 6;
-	VALUES                  = 7;
-	BROADCAST               = 8;
-	MESSAGE                 = 9;
-	FOLLOW                  = 10;
-	UNFOLLOW                = 11;
-	ORDER                   = 12;
-	ORDER_CONFIRMATION      = 13;
-	COMPLETE_ORDER          = 14;
-	FIND_NODE               = 15;
-	FIND_VALUE              = 16;
-	GET_CONTRACT            = 17;
-	GET_IMAGE               = 18;
-	GET_PROFILE             = 19;
-	GET_LISTINGS            = 20;
-	GET_USER_METADATA       = 21;
-	GET_CONTRACT_METADATA   = 22;
-	GET_FOLLOWING           = 23;
-	GET_FOLLOWERS           = 24;
-	DISPUTE_OPEN            = 25;
-	DISPUTE_CLOSE           = 26;
+    PING                    = 1;
+    STUN                    = 2;
+    HOLE_PUNCH              = 3;
+    STORE                   = 4;
+    DELETE                  = 5;
+    INV                     = 6;
+    VALUES                  = 7;
+    BROADCAST               = 8;
+    MESSAGE                 = 9;
+    FOLLOW                  = 10;
+    UNFOLLOW                = 11;
+    ORDER                   = 12;
+    ORDER_CONFIRMATION      = 13;
+    COMPLETE_ORDER          = 14;
+    FIND_NODE               = 15;
+    FIND_VALUE              = 16;
+    GET_CONTRACT            = 17;
+    GET_IMAGE               = 18;
+    GET_PROFILE             = 19;
+    GET_LISTINGS            = 20;
+    GET_USER_METADATA       = 21;
+    GET_CONTRACT_METADATA   = 22;
+    GET_FOLLOWING           = 23;
+    GET_FOLLOWERS           = 24;
+    DISPUTE_OPEN            = 25;
+    DISPUTE_CLOSE           = 26;
 
-	// Error responses
-	BAD_REQUEST             = 400;
-	NOT_FOUND               = 404;
-	CALM_DOWN               = 420;
-	UNKNOWN_ERROR           = 520;
+    // Error responses
+    BAD_REQUEST             = 400;
+    NOT_FOUND               = 404;
+    CALM_DOWN               = 420;
+    UNKNOWN_ERROR           = 520;
 }
