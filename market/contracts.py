@@ -906,7 +906,7 @@ class Contract(object):
             data.currency_code = vendor_item["price_per_unit"]["fiat"][
                 "currency_code"]
         else:
-            data.price = float(vendor_item["price_per_unit"]["bitcoin"])
+            data.price = round(float(vendor_item["price_per_unit"]["bitcoin"]), 8)
             data.currency_code = "BTC"
         data.nsfw = vendor_item["nsfw"]
         if "shipping" not in self.contract["vendor_offer"]["listing"]:
