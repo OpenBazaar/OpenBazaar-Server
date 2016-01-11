@@ -753,12 +753,14 @@ class OpenBazaarAPI(APIResource):
             except Exception:
                 pass
             settings_json["moderators"] = mods
+            request.setHeader('content-type', "application/json")
             request.write(json.dumps(settings_json, indent=4))
             request.finish()
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/connected_peers')
     def get_connected_peers(self, request):
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(self.protocol.keys(), indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -776,6 +778,7 @@ class OpenBazaarAPI(APIResource):
                     "nat_type": objects.NATType.Name(node.nat_type)
                 }
                 nodes.append(n)
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(nodes, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -798,6 +801,7 @@ class OpenBazaarAPI(APIResource):
                 "read": False if n[8] == 0 else True
             }
             notification_list.append(notification_json)
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(notification_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -845,6 +849,7 @@ class OpenBazaarAPI(APIResource):
                 "read": False if m[11] == 0 else True
             }
             message_list.append(message_json)
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(message_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -852,6 +857,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_chat_conversations')
     def get_chat_conversations(self, request):
         messages = self.db.MessageStore().get_conversations()
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(messages, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -885,6 +891,7 @@ class OpenBazaarAPI(APIResource):
                 "contract_type": sale[8]
             }
             sales_list.append(sale_json)
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(sales_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -906,6 +913,7 @@ class OpenBazaarAPI(APIResource):
                 "contract_type": purchase[8]
             }
             purchases_list.append(purchase_json)
+        request.setHeader('content-type', "application/json")
         request.write(json.dumps(purchases_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
@@ -994,6 +1002,7 @@ class OpenBazaarAPI(APIResource):
                             tx["type"] = "outgoing"
                         txs.append(tx)
                     order["bitcoin_txs"] = txs
+                    request.setHeader('content-type', "application/json")
                     request.write(json.dumps(order, indent=4))
                     request.finish()
             self.protocol.blockchain.fetch_history2(payment_address, history_fetched)
@@ -1001,6 +1010,7 @@ class OpenBazaarAPI(APIResource):
         if self.protocol.blockchain.connected:
             self.protocol.blockchain.fetch_last_height(height_fetched)
         else:
+            request.setHeader('content-type', "application/json")
             request.write(json.dumps(order, indent=4))
             request.finish()
         return server.NOT_DONE_YET
