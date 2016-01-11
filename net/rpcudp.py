@@ -166,7 +166,7 @@ class RPCProtocol:
         the other node to punch through our NAT.
         """
         if relay == "True":
-            self.hole_punch(Node(None, ip, int(port), nat_type=FULL_CONE), sender.ip, sender.port)
+            self.hole_punch(Node(digest("null"), ip, int(port), nat_type=FULL_CONE), sender.ip, sender.port)
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
             # pylint: disable=W0612

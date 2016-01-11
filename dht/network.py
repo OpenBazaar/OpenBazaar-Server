@@ -323,6 +323,7 @@ class Server(object):
         Args:
             guid: the 20 raw bytes representing the guid.
         """
+        # TODO: should also check in the multiplexer to see if we are connected to this node
         node_to_find = Node(guid)
 
         def check_for_node(nodes):

@@ -772,7 +772,8 @@ class OpenBazaarAPI(APIResource):
                     "guid": node.id.encode("hex"),
                     "ip": node.ip,
                     "port": node.port,
-                    "vendor": node.vendor
+                    "vendor": node.vendor,
+                    "nat_type": objects.NATType.Name(node.nat_type)
                 }
                 nodes.append(n)
         request.write(json.dumps(nodes, indent=4))

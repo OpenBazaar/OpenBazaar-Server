@@ -1111,6 +1111,6 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
                 libbitcoin_client.fetch_history2(addr, history_fetched)
             except Exception:
                 pass
-
+    libbitcoin_client.refresh_connection()
     check(db.Purchases().get_unfunded(), True)
     check(db.Sales().get_unfunded(), False)
