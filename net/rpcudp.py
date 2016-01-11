@@ -35,7 +35,7 @@ class RPCProtocol:
             proto: A protobuf `Node` object containing info about this node.
             router: A `RoutingTable` object from dht.routing. Implies a `network.Server` object
                     must be started first.
-            waitTimeout: Consider it a connetion failure if no response
+            waitTimeout: Consider it a connection failure if no response
                     within this time window.
             noisy: Whether or not to log the output for this class.
             testnet: The network parameters to use.
