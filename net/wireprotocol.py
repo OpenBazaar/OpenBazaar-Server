@@ -53,13 +53,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.relay_node = relay_node
             self.keep_alive_loop = LoopingCall(self.keep_alive)
             self.keep_alive_loop.start(300 if nat_type == FULL_CONE else 30, now=False)
-            self.on_connection_made()
             self.addr = None
             self.ban_score = None
+            self.on_connection_made()
 
         def on_connection_made(self):
             if self.connection is None or self.connection.state == State.CONNECTING:
-                return task.deferLater(reactor, 1, self.on_connection_made)
+                return task.deferLater(reactor, .1, self.on_connection_made)
             if self.connection.state == State.CONNECTED:
                 self.ban_score = BanScore((str(self.connection.dest_addr[0]),
                                            int(self.connection.dest_addr[1])), self.processors[0].multiplexer)
@@ -90,7 +90,10 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
 
         def handle_shutdown(self):
-            self.connection.unregister()
+            try:
+                self.connection.unregister()
+            except Exception:
+                pass
 
             if self.node is None:
                 self.node = Node(digest("null"), str(self.connection.dest_addr[0]),
