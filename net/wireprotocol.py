@@ -2,6 +2,7 @@ __author__ = 'chris'
 import socket
 from constants import SEEDS
 from dht.node import Node
+from dht.utils import digest
 from interfaces import MessageProcessor
 from log import Logger
 from net.dos import BanScore
@@ -90,6 +91,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def handle_shutdown(self):
             self.connection.unregister()
+
+            if self.node is None:
+                self.node = Node(digest("null"), str(self.connection.dest_addr[0]),
+                                 int(self.connection.dest_addr[1]))
+            for processor in self.processors:
+                processor.timeout(self.node)
+
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
             try:

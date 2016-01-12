@@ -597,6 +597,15 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
 
+        def get_status(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT status FROM purchases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
         def update_outpoint(self, order_id, outpoint):
             cursor = self.db.cursor()
             cursor.execute('''UPDATE purchases SET outpoint=? WHERE id=?;''', (outpoint, order_id))
@@ -661,6 +670,15 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             cursor = self.db.cursor()
             cursor.execute('''UPDATE sales SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
+
+        def get_status(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT status FROM sales WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
 
         def update_outpoint(self, order_id, outpoint):
             cursor = self.db.cursor()

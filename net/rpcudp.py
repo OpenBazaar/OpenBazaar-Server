@@ -29,14 +29,16 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, sourceNode, router, waitTimeout=4):
+    def __init__(self, sourceNode, router, waitTimeout=15):
         """
         Args:
             sourceNode: A protobuf `Node` object containing info about this node.
             router: A `RoutingTable` object from dht.routing. Implies a `network.Server` object
                     must be started first.
-            waitTimeout: Consider it a connection failure if no response
-                    within this time window.
+            waitTimeout: Timeout for whole messages. Note the txrudp layer has a per-packet
+                    timeout but invalid responses wont trigger it. The waitTimeout on this
+                     layer needs to be long enough to allow whole messages (ex. images) to
+                     transmit.
 
         """
         self.sourceNode = sourceNode
@@ -152,8 +154,7 @@ class RPCProtocol:
                 val[0].callback((False, None))
                 del self._outstanding[msgID]
 
-        if node.id is not None:
-            self.router.removeContact(node)
+        self.router.removeContact(node)
         try:
             self.multiplexer[address].shutdown()
         except Exception:

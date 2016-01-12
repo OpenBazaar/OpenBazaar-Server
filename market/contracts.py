@@ -58,8 +58,22 @@ class Contract(object):
                 with open(file_path, 'r') as filename:
                     self.contract = json.load(filename, object_pairs_hook=OrderedDict)
             except Exception:
+                if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "purchases/unfunded/" + hash_value.encode("hex") + ".json"
+                elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "purchases/in progress/" + hash_value.encode("hex") + ".json"
+                elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "purchases/trade receipts/" + hash_value.encode("hex") + ".json"
+                elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "store/contracts/unfunded/" + hash_value.encode("hex") + ".json"
+                elif os.path.exists(DATA_FOLDER +
+                                    "store/contracts/in progress/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "store/contracts/in progress/" + hash_value.encode("hex") + ".json"
+                elif os.path.exists(DATA_FOLDER +
+                                    "store/contracts/trade receipts/" + hash_value.encode("hex") + ".json"):
+                    file_path = DATA_FOLDER + "store/contracts/trade receipts/" + hash_value.encode("hex") + ".json"
+
                 try:
-                    file_path = DATA_FOLDER + "purchases/in progress/" + hexlify(hash_value) + ".json"
                     with open(file_path, 'r') as filename:
                         self.contract = json.load(filename, object_pairs_hook=OrderedDict)
                 except Exception:
@@ -522,9 +536,13 @@ class Contract(object):
 
             # TODO: verify signature
             # TODO: verify payout object
+            purchase_db = self.db.Purchases()
+            status = purchase_db.get_status(contract_hash)
+            if status == 2 or status == 3:
+                raise Exception("Order confirmation already processed for this contract")
 
             # update the order status in the db
-            self.db.Purchases().update_status(contract_hash, 2)
+            purchase_db.update_status(contract_hash, 2)
             file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
 
             # update the contract in the file system
@@ -656,6 +674,10 @@ class Contract(object):
 
         # TODO: verify buyer signature
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+
+        if self.db.Sales().get_status(order_id) == 3:
+            raise Exception("Receipt already processed for this order")
+
         if "moderator" in self.contract["buyer_order"]["order"]:
             outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
