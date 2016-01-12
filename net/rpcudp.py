@@ -167,6 +167,8 @@ class RPCProtocol:
         the other node to punch through our NAT.
         """
         if relay == "True":
+            self.log.debug("relaying hole punch packet to %s:%s for %s:%s" %
+                           (ip, port, sender.ip, str(sender.port)))
             self.hole_punch(Node(digest("null"), ip, int(port), nat_type=FULL_CONE), sender.ip, sender.port)
         else:
             self.log.debug("punching through NAT for %s:%s" % (ip, port))
@@ -205,9 +207,9 @@ class RPCProtocol:
             if m.command != HOLE_PUNCH:
                 timeout = timeout = reactor.callLater(self._waitTimeout, self.timeout, node)
                 self._outstanding[msgID] = [d, address, timeout]
+                self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
 
             self.multiplexer.send_message(data, address, relay_addr)
-            self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
 
             if self.multiplexer[address].state != State.CONNECTED and node.nat_type == RESTRICTED:
                 self.hole_punch(Node(digest("null"), node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
