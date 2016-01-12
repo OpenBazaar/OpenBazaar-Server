@@ -1,9 +1,8 @@
-[![Build Status](https://travis-ci.org/OpenBazaar/OpenBazaar-Server.svg?branch=master)](https://travis-ci.org/OpenBazaar/OpenBazaar-Server)[![Coverage Status](https://coveralls.io/repos/OpenBazaar/OpenBazaar-Server/badge.svg?branch=master&service=github)](https://coveralls.io/github/OpenBazaar/OpenBazaar-Server?branch=master)
+[![Build Status](https://travis-ci.org/OpenBazaar/OpenBazaar-Server.svg?branch=master)](https://travis-ci.org/OpenBazaar/OpenBazaar-Server) [![Coverage Status](https://coveralls.io/repos/OpenBazaar/OpenBazaar-Server/badge.svg?branch=master&service=github)](https://coveralls.io/github/OpenBazaar/OpenBazaar-Server?branch=master) [![Slack Status](https://openbazaar-slackin-drwasho.herokuapp.com/badge.svg)](https://openbazaar-slackin-drwasho.herokuapp.com)
 
-This contains most of the backend networking for openbazaar. Going forward, the relevant parts of the current OpenBazaar repo will likely be merged into this.
-
-If you are looking to contribute to the OpenBazaar backend, this is the repo you want to work on.
-
+- This contains most of the backend networking for OpenBazaar. Going forward, the relevant parts of the current OpenBazaar repo will likely be merged into this.
+- If you are looking to contribute to the OpenBazaar backend, this is the repo you want to work on.
+- The reference client that interacts with the OpenBazaar backend [is found here](https://github.com/OpenBazaar/OpenBazaar-Client)
 
 Installation notes:
 ---------------------
