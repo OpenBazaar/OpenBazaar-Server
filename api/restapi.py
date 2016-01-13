@@ -964,6 +964,9 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/get_order')
     def get_order(self, request):
+        #TODO: if this is either a funded direct payment sale or complete moderated sale but
+        #TODO: the payout tx has not hit the blockchain, rebroadcast.
+
         if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"):
@@ -989,11 +992,10 @@ class OpenBazaarAPI(APIResource):
                     print ec
                 else:
                     for tx_type, txid, i, height, value in history:  # pylint: disable=W0612
-
                         tx = {
                             "txid": txid.encode("hex"),
                             "value": round(float(value) / 100000000, 8),
-                            "confirmaions": chain_height - height
+                            "confirmaions": chain_height - height + 1 if height != 0 else 0
                         }
 
                         if tx_type == obelisk.PointIdent.Output:

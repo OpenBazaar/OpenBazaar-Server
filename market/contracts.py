@@ -501,6 +501,7 @@ class Contract(object):
             for index in range(0, len(outpoints)):
                 tx = bitcoin.sign(tx, index, vendor_priv)
             self.blockchain.broadcast(tx)
+            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
             self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx))
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)

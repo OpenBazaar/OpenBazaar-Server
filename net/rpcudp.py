@@ -152,6 +152,8 @@ class RPCProtocol:
         for msgID, val in self._outstanding.items():
             if address == val[1]:
                 val[0].callback((False, None))
+                if self._outstanding[msgID][2].active():
+                    self._outstanding[msgID][2].cancel()
                 del self._outstanding[msgID]
 
         self.router.removeContact(node)

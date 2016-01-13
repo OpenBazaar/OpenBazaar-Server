@@ -486,7 +486,7 @@ class KademliaProtocolTest(unittest.TestCase):
 
         n = Node(digest("S"), self.addr1[0], self.addr1[1])
         d = defer.Deferred().addCallback(handle_response, n)
-        self.protocol._outstanding["msgID"] = [d, self.addr1]
+        self.protocol._outstanding["msgID"] = [d, self.addr1, reactor.callLater(5, handle_response)]
         self.protocol.router.addContact(n)
         self.protocol.timeout(n)
 
