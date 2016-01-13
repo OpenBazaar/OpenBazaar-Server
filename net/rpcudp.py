@@ -205,7 +205,7 @@ class RPCProtocol:
 
             d = defer.Deferred()
             if m.command != HOLE_PUNCH:
-                timeout = timeout = reactor.callLater(self._waitTimeout, self.timeout, node)
+                timeout = reactor.callLater(self._waitTimeout, self.timeout, node)
                 self._outstanding[msgID] = [d, address, timeout]
                 self.log.debug("calling remote function %s on %s (msgid %s)" % (name, address, b64encode(msgID)))
 
