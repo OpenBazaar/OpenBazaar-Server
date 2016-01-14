@@ -188,7 +188,6 @@ class Server(object):
                             potential_relay_nodes.append((addr[0], addr[1]))
                     except Exception:
                         self.log.warning("bootstrap node returned invalid GUID")
-
             if len(potential_relay_nodes) > 0 and self.node.nat_type != objects.FULL_CONE:
                 shuffle(potential_relay_nodes)
                 self.node.relay_node = potential_relay_nodes[0]

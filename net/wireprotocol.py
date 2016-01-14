@@ -180,7 +180,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             con = self.make_new_connection(self.ip_address, address, relay_addr)
         else:
             con = self[address]
-        if relay_addr is not None and relay_addr != con.relay_addr:
+        if relay_addr is not None and relay_addr != con.relay_addr and relay_addr != con.own_addr:
             con.set_relay_address(relay_addr)
 
         con.send_message(datagram)
