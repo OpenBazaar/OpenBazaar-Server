@@ -6,9 +6,9 @@ from dht.utils import digest
 from protos.objects import Profile, Listings, Following, Metadata, Followers, Node, FULL_CONE
 from protos.countries import CountryCode
 
-
 class DatastoreTest(unittest.TestCase):
     def setUp(self):
+
         self.db = Database(filepath="test.db")
         self.test_hash = "87e0555568bf5c7e4debd6645fc3f41e88df6ca8"
         self.test_hash2 = "97e0555568bf5c7e4debd6645fc3f41e88df6ca8"
@@ -104,10 +104,13 @@ class DatastoreTest(unittest.TestCase):
     def test_addListing(self):
         self.ls.delete_all_listings()
         self.ls.add_listing(self.lm)
+        self.ls.add_listing(self.lm)
+
         l = self.ls.get_proto()
         val = Listings()
         val.ParseFromString(l)
         self.assertEqual(self.lm, val.listing[0])
+        self.assertEqual(1, len(val.listing))
 
     def test_deleteListing(self):
         self.ls.delete_all_listings()
@@ -141,20 +144,39 @@ class DatastoreTest(unittest.TestCase):
         following = self.fd.get_following()
         self.assertIsNotNone(following)
 
+        self.fd.follow(self.u)
         self.assertTrue(self.fd.is_following(self.u.guid))
 
         self.fd.unfollow(self.u.guid)
+        self.fd.unfollow(self.f)
         following = self.fd.get_following()
         self.assertEqual(following, '')
         self.assertFalse(self.fd.is_following(self.u.guid))
 
     def test_deleteFollower(self):
         self.fd.set_follower(self.f)
+        self.fd.set_follower(self.f)
         f = self.fd.get_followers()
         self.assertIsNotNone(f)
         self.fd.delete_follower(self.f.guid)
         f = self.fd.get_followers()
         self.assertEqual(f, '')
+
+    def test_convesations(self):
+        conversations = self.ms.get_conversations()
+        self.assertTrue(len(conversations) == 0)
+        self.ms.save_message(self.u.guid, self.m.handle, self.u.signed_pubkey,
+                             '', 'SUBJECT', 'CHAT', 'MESSAGE', '0000-00-00 00:00:00',
+                             '', '', '0')
+        # msgs = self.ms.get_unread()
+        # self.assertEqual(1, len(msgs))
+
+        # self.ms.mark_as_read(self.u.guid)
+        # msgs = self.ms.get_unread()
+        # self.assertEqual(0, len(msgs))
+
+        conversations = self.ms.get_conversations()
+        self.assertIsNotNone(conversations)
 
     def test_saveMessage(self):
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')
@@ -175,6 +197,8 @@ class DatastoreTest(unittest.TestCase):
                                   '0000-00-00 00:00:00', '', 0)
         n = self.ns.get_notifications()
         self.assertIsNotNone(n)
+        self.ns.mark_as_read("1234")
+
         self.ns.delete_notification("1234")
         n = self.ns.get_notifications()
         self.assertTrue(len(n) == 0)
