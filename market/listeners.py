@@ -4,7 +4,7 @@ import time
 import random
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
-from protos.objects import Plaintext_Message, Following
+from protos.objects import PlaintextMessage, Following
 from dht.utils import digest
 
 
@@ -16,28 +16,30 @@ class MessageListenerImpl(object):
         self.db = database.MessageStore()
 
     def notify(self, plaintext, signature):
+        try:
+            self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.signed_pubkey,
+                                 plaintext.encryption_pubkey, plaintext.subject,
+                                 PlaintextMessage.Type.Name(plaintext.type), plaintext.message,
+                                 plaintext.timestamp, plaintext.avatar_hash, signature, False)
 
-        self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.signed_pubkey,
-                             plaintext.encryption_pubkey, plaintext.subject,
-                             Plaintext_Message.Type.Name(plaintext.type), plaintext.message,
-                             plaintext.timestamp, plaintext.avatar_hash, signature, False)
+            # TODO: should probably resolve the handle and make sure it matches the guid so the sender can't spoof it
 
-        # TODO: should probably resolve the handle and make sure it matches the guid so the sender can't spoof it
-
-        message_json = {
-            "message": {
-                "sender": plaintext.sender_guid.encode("hex"),
-                "subject": plaintext.subject,
-                "message_type": Plaintext_Message.Type.Name(plaintext.type),
-                "message": plaintext.message,
-                "timestamp": plaintext.timestamp,
-                "avatar_hash": plaintext.avatar_hash.encode("hex"),
-                "encryption_key": plaintext.encryption_pubkey.encode("hex")
+            message_json = {
+                "message": {
+                    "sender": plaintext.sender_guid.encode("hex"),
+                    "subject": plaintext.subject,
+                    "message_type": PlaintextMessage.Type.Name(plaintext.type),
+                    "message": plaintext.message,
+                    "timestamp": plaintext.timestamp,
+                    "avatar_hash": plaintext.avatar_hash.encode("hex"),
+                    "encryption_key": plaintext.encryption_pubkey.encode("hex")
+                }
             }
-        }
-        if plaintext.handle:
-            message_json["message"]["handle"] = plaintext.handle
-        self.ws.push(json.dumps(message_json, indent=4))
+            if plaintext.handle:
+                message_json["message"]["handle"] = plaintext.handle
+            self.ws.push(json.dumps(message_json, indent=4))
+        except Exception:
+            pass
 
 
 class BroadcastListenerImpl(object):

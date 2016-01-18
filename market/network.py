@@ -489,7 +489,7 @@ class Server(object):
         will be placed in the dht for the node to pick up later.
         """
         pro = Profile(self.db).get()
-        p = objects.Plaintext_Message()
+        p = objects.PlaintextMessage()
         p.sender_guid = self.kserver.node.id
         p.signed_pubkey = self.kserver.node.signed_pubkey
         p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
@@ -538,7 +538,7 @@ class Server(object):
                             box = Box(PrivateKey(self.signing_key.encode()), PublicKey(value.valueKey))
                             ciphertext = value.serializedData
                             plaintext = box.decrypt(ciphertext).decode("zlib")
-                            p = objects.Plaintext_Message()
+                            p = objects.PlaintextMessage()
                             p.ParseFromString(plaintext)
                             signature = p.signature
                             p.ClearField("signature")
@@ -548,11 +548,11 @@ class Server(object):
                             pow_hash = h[64:128]
                             if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40]:
                                 raise Exception('Invalid guid')
-                            if p.type == objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"):
+                            if p.type == objects.PlaintextMessage.Type.Value("ORDER_CONFIRMATION"):
                                 c = Contract(self.db, hash_value=p.subject)
                                 c.accept_order_confirmation(self.protocol.get_notification_listener(),
                                                             confirmation_json=p.message)
-                            elif p.type == objects.Plaintext_Message.Type.Value("RECEIPT"):
+                            elif p.type == objects.PlaintextMessage.Type.Value("RECEIPT"):
                                 c = Contract(self.db, hash_value=p.subject)
                                 c.accept_receipt(self.protocol.get_notification_listener(),
                                                  self.protocol.multiplexer.blockchain,
@@ -617,7 +617,7 @@ class Server(object):
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
                     self.send_message(Node(unhexlify(guid)),
                                       contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"],
-                                      objects.Plaintext_Message.Type.Value("ORDER_CONFIRMATION"),
+                                      objects.PlaintextMessage.Type.Value("ORDER_CONFIRMATION"),
                                       json.dumps(contract.contract["vendor_order_confirmation"]),
                                       order_id,
                                       store_only=True)
@@ -657,7 +657,7 @@ class Server(object):
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
                     self.send_message(Node(unhexlify(guid)),
                                       contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"],
-                                      objects.Plaintext_Message.Type.Value("RECEIPT"),
+                                      objects.PlaintextMessage.Type.Value("RECEIPT"),
                                       json.dumps(contract.contract["buyer_receipt"]),
                                       order_id,
                                       store_only=True)
@@ -700,11 +700,16 @@ class Server(object):
                     enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
             except Exception:
                 return False
+        keychain = KeyChain(self.db)
         contract_dict = contract
         if "vendor_order_confirmation" in contract_dict:
             del contract_dict["vendor_order_confirmation"]
         order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
-        contract["dispute_claim"] = claim
+        contract["dispute"] = {}
+        contract["dispute"]["claim"] = claim
+        contract["dispute"]["guid"] = keychain.guid.encode("hex")
+        contract["dispute"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
+        contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(claim)[:64])
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
@@ -715,7 +720,7 @@ class Server(object):
                 if not response[0]:
                     self.send_message(Node(unhexlify(recipient_guid)),
                                       public_key,
-                                      objects.Plaintext_Message.Type.Value("DISPUTE"),
+                                      objects.PlaintextMessage.Type.Value("DISPUTE"),
                                       contract,
                                       order_id,
                                       store_only=True)

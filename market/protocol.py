@@ -1,29 +1,30 @@
 __author__ = 'chris'
 
 import json
-from collections import OrderedDict
-
 import nacl.signing
 import nacl.utils
 import nacl.encoding
 import nacl.hash
-from nacl.public import PrivateKey, PublicKey, Box
-from zope.interface import implements
-from zope.interface.verify import verifyObject
-from zope.interface.exceptions import DoesNotImplement
-
-from net.rpcudp import RPCProtocol
-from interfaces import MessageProcessor
+import time
+from binascii import unhexlify
+from collections import OrderedDict
+from dht.utils import digest
+from interfaces import MessageProcessor, BroadcastListener, MessageListener, NotificationListener
+from keyutils.bip32utils import derive_childkey
+from keyutils.keys import KeyChain
 from log import Logger
+from market.contracts import Contract
+from market.profile import Profile
+from nacl.public import PrivateKey, PublicKey, Box
+from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
     GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN, \
     DISPUTE_CLOSE
-from market.contracts import Contract
-from market.profile import Profile
-from protos.objects import Metadata, Listings, Followers, Plaintext_Message
-from interfaces import BroadcastListener, MessageListener, NotificationListener
-from keyutils.bip32utils import derive_childkey
+from protos.objects import Metadata, Listings, Followers, PlaintextMessage
+from zope.interface import implements
+from zope.interface.exceptions import DoesNotImplement
+from zope.interface.verify import verifyObject
 
 
 class MarketProtocol(RPCProtocol):
@@ -218,7 +219,7 @@ class MarketProtocol(RPCProtocol):
         try:
             box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
             plaintext = box.decrypt(encrypted)
-            p = Plaintext_Message()
+            p = PlaintextMessage()
             p.ParseFromString(plaintext)
             signature = p.signature
             p.ClearField("signature")
@@ -300,6 +301,106 @@ class MarketProtocol(RPCProtocol):
             self.log.error("unable to parse receipt from %s" % sender)
             return ["False"]
 
+    def rpc_dispute_open(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            contract = json.loads(order, object_pairs_hook=OrderedDict)
+
+            if "vendor_order_confirmation" in contract:
+                del contract["vendor_order_confirmation"]
+            if "buyer_receipt" in contract:
+                del contract["buyer_receipt"]
+
+            order_id = digest(json.dumps(contract, indent=4)).encode("hex")
+            own_guid = KeyChain(self.db).guid.encode("hex")
+            message_listener = self.get_message_listener()
+            notification_listener = self.get_notification_listener()
+
+            if contract["dispute"]["guid"] == contract["vendor_offer"]["listing"]["id"]["guid"]:
+                guid = unhexlify(contract["vendor_offer"]["listing"]["id"]["guid"])
+                signing_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
+                if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
+                    handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+                else:
+                    handle = ""
+                encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
+            elif contract["dispute"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
+                guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
+                signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
+                if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
+                    handle = contract["buyer_order"]["order"]["id"]["blockchain_id"]
+                else:
+                    handle = ""
+                encryption_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"])
+            else:
+                raise Exception("Dispute guid not in contract")
+
+            verify_key = nacl.signing.VerifyKey(signing_key)
+            verify_key.verify(contract["dispute"]["claim"], contract["dispute"]["signature"])
+
+            p = PlaintextMessage()
+            p.sender_guid = guid
+            p.handle = handle
+            p.signed_pubkey = signing_key
+            p.encryption_pubkey = encryption_key
+            p.subject = order_id
+            p.type= PlaintextMessage.Type.Value("DISPUTE")
+            p.message = contract["dispute"]["claim"]
+            p.timestamp = time.time()
+            p.avatar_hash = contract["dispute"]["avatar_hash"]
+
+            if self.db.Purchases().get_purchase(order_id) is not None:
+                self.db.Purchases().update_status(order_id, 4)
+
+            elif self.db.Sales().get_sale(order_id) is not None:
+                self.db.Purchases().update_status(order_id, 4)
+
+            elif "moderators" in contract["vendor_offer"]["listing"]:
+                is_selected = False
+                for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+                    if moderator["guid"] == own_guid:
+                        is_selected = True
+                if not is_selected:
+                    raise Exception("Not a moderator for this contract")
+                else:
+                    if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
+                        vendor = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+                    else:
+                        vendor = contract["vendor_offer"]["listing"]["id"]["guid"]
+                    if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
+                        buyer = contract["buyer_order"]["order"]["id"]["blockchain_id"]
+                    else:
+                        buyer = contract["buyer_order"]["order"]["id"]["guid"]
+
+                    c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                                 testnet=self.multiplexer.testnet)
+                    validation = c.validate_for_moderation()
+
+                    self.db.Cases().new_case(order_id,
+                                             contract["vendor_offer"]["listing"]["item"]["title"],
+                                             time.time(),
+                                             contract["buyer_order"]["order"]["date"],
+                                             contract["buyer_order"]["order"],
+                                             float(contract["buyer_order"]["order"]["payment"]["amount"]),
+                                             contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
+                                             buyer, vendor, validation)
+            else:
+                raise Exception("Order ID for dispute not found")
+
+            message_listener.notify(p, "")
+            notification_listener.notify(guid, handle, "dispute", order_id,
+                                         contract["vendor_offer"]["listing"]["item"]["title"],
+                                         contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+
+
+            self.router.addContact(sender)
+            self.log.info("dispute opened for order %s" % order_id)
+            return ["True"]
+        except Exception:
+            self.log.error("unable to parse disputed contract from %s" % sender)
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
@@ -360,6 +461,10 @@ class MarketProtocol(RPCProtocol):
         d = self.complete_order(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
+    def callDisputeOpen(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
     def handleCallResponse(self, result, node):
         """
         If we get a response, add the node to the routing table.  If
@@ -376,6 +481,13 @@ class MarketProtocol(RPCProtocol):
         for listener in self.listeners:
             try:
                 verifyObject(NotificationListener, listener)
+                return listener
+            except DoesNotImplement:
+                pass
+    def get_message_listener(self):
+        for listener in self.listeners:
+            try:
+                verifyObject(MessageListener, listener)
                 return listener
             except DoesNotImplement:
                 pass

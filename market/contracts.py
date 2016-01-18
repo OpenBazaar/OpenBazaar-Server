@@ -1,30 +1,30 @@
 __author__ = 'chris'
 
-import json
+
 import base64
-import random
-import time
-import pickle
-import nacl.signing
 import bitcoin
-from hashlib import sha256
+import json
+import nacl.encoding
+import nacl.signing
+import os
+import pickle
+import random
+import re
+import time
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
-from urllib2 import Request, urlopen, URLError
-from market.utils import deserialize
-
-import re
-import os
-import nacl.encoding
-from protos.objects import Listings
-from protos.countries import CountryCode
+from constants import DATA_FOLDER, TRANSACTION_FEE
+from datetime import datetime
 from dht.utils import digest
-from constants import DATA_FOLDER
-from market.profile import Profile
-from keyutils.keys import KeyChain
+from hashlib import sha256
 from keyutils.bip32utils import derive_childkey
+from keyutils.keys import KeyChain
 from log import Logger
-from constants import TRANSACTION_FEE
+from urllib2 import Request, urlopen, URLError
+from market.profile import Profile
+from market.utils import deserialize
+from protos.countries import CountryCode
+from protos.objects import Listings
 
 
 class Contract(object):
@@ -299,6 +299,7 @@ class Contract(object):
             "buyer_order": {
                 "order": {
                     "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "date": str(datetime.utcnow()) + " UTC",
                     "quantity": quantity,
                     "id": {
                         "guid": self.keychain.guid.encode("hex"),
@@ -962,6 +963,12 @@ class Contract(object):
             if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash.encode("hex")):
                 raise Exception("Order for contract that doesn't exist")
 
+            # verify timestamp is within a reasonable time from now
+            timestamp = self.contract["buyer_order"]["order"]["date"]
+            dt = datetime.strptime(timestamp[:len(timestamp)-4], "%Y-%m-%d %H:%M:%S.%f")
+            if abs((datetime.utcnow() - dt).total_seconds()) > 600:
+                raise Exception("Timestamp on order not within 10 minutes of now")
+
             # verify the signatures on the order
             verify_obj = json.dumps(self.contract["buyer_order"]["order"], indent=4)
 
@@ -1089,6 +1096,9 @@ class Contract(object):
 
         except Exception:
             return False
+
+    def validate_for_moderation(self):
+        a = 1
 
     def __repr__(self):
         return json.dumps(self.contract, indent=4)

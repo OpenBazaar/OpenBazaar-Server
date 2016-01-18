@@ -322,8 +322,12 @@ class Server(object):
         Args:
             guid: the 20 raw bytes representing the guid.
         """
-        # TODO: should also check in the multiplexer to see if we are connected to this node
+
         node_to_find = Node(guid)
+
+        for connection in self.protocol.multiplexer.values():
+            if connection.handler.node is not None and connection.handler.node.id == node_to_find.id:
+                return defer.succeed(connection.handler.node)
 
         def check_for_node(nodes):
             for node in nodes:

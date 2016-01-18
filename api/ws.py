@@ -10,7 +10,7 @@ from keyutils.keys import KeyChain
 from random import shuffle
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from protos.countries import CountryCode
-from protos.objects import Plaintext_Message, Value, Listings
+from protos.objects import PlaintextMessage, Value, Listings
 from protos import objects
 from binascii import unhexlify
 from dht.node import Node
@@ -174,7 +174,7 @@ class WSProtocol(WebSocketServerProtocol):
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
             self.factory.mserver.send_message(n, recipient_encryption_key,
-                                              Plaintext_Message.Type.Value(message_type.upper()),
+                                              PlaintextMessage.Type.Value(message_type.upper()),
                                               message, subject,
                                               store_only=True if node_to_send is None else False)
         self.factory.kserver.resolve(unhexlify(guid)).addCallback(send)
