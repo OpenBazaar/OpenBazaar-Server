@@ -45,7 +45,7 @@ class SpiderCrawl(object):
         Get either a value or list of nodes.
 
         Args:
-            rpcmethod: The protocol's callfindValue or callFindNode.
+            rpcmethod: The protocol's callFindValue or callFindNode.
 
         The process:
           1. calls find_* to current ALPHA nearest not already queried nodes,
