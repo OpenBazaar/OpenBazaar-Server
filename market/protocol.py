@@ -325,6 +325,7 @@ class MarketProtocol(RPCProtocol):
                 else:
                     handle = ""
                 encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
+                proof_sig = contract["dispute"]["proof_sig"]
             elif contract["dispute"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
                 guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
                 signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
@@ -333,6 +334,7 @@ class MarketProtocol(RPCProtocol):
                 else:
                     handle = ""
                 encryption_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"])
+                proof_sig = None
             else:
                 raise Exception("Dispute guid not in contract")
 
@@ -345,7 +347,7 @@ class MarketProtocol(RPCProtocol):
             p.signed_pubkey = signing_key
             p.encryption_pubkey = encryption_key
             p.subject = order_id
-            p.type= PlaintextMessage.Type.Value("DISPUTE")
+            p.type = PlaintextMessage.Type.Value("DISPUTE")
             p.message = contract["dispute"]["claim"]
             p.timestamp = time.time()
             p.avatar_hash = contract["dispute"]["avatar_hash"]
@@ -359,7 +361,7 @@ class MarketProtocol(RPCProtocol):
             elif "moderators" in contract["vendor_offer"]["listing"]:
                 is_selected = False
                 for moderator in contract["vendor_offer"]["listing"]["moderators"]:
-                    if moderator["guid"] == own_guid:
+                    if moderator["guid"] == own_guid and contract["buyer_order"]["order"]["moderator"] == own_guid:
                         is_selected = True
                 if not is_selected:
                     raise Exception("Not a moderator for this contract")
@@ -375,7 +377,8 @@ class MarketProtocol(RPCProtocol):
 
                     c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                                  testnet=self.multiplexer.testnet)
-                    validation = c.validate_for_moderation()
+
+                    validation_failures = c.validate_for_moderation(proof_sig)
 
                     self.db.Cases().new_case(order_id,
                                              contract["vendor_offer"]["listing"]["item"]["title"],
@@ -384,7 +387,7 @@ class MarketProtocol(RPCProtocol):
                                              contract["buyer_order"]["order"],
                                              float(contract["buyer_order"]["order"]["payment"]["amount"]),
                                              contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
-                                             buyer, vendor, validation)
+                                             buyer, vendor, json.dumps(validation_failures))
             else:
                 raise Exception("Order ID for dispute not found")
 

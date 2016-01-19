@@ -691,6 +691,7 @@ class Server(object):
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
                 enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+                proof_sig = self.db.Purchases().get_proof_sig(order_id)
         except Exception:
             try:
                 file_path = DATA_FOLDER + "sales/in progress/" + order_id + ".json"
@@ -698,6 +699,7 @@ class Server(object):
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                     guid = contract["buyer_order"]["order"]["id"]["guid"]
                     enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+                    proof_sig = None
             except Exception:
                 return False
         keychain = KeyChain(self.db)
@@ -710,6 +712,8 @@ class Server(object):
         contract["dispute"]["guid"] = keychain.guid.encode("hex")
         contract["dispute"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
         contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(claim)[:64])
+        if proof_sig:
+            contract["dispute"]["proof_sig"] = base64.b64encode(proof_sig)
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:

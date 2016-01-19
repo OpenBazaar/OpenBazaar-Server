@@ -627,6 +627,16 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             else:
                 return ret[0]
 
+        def get_proof_sig(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT proofSig FROM purchases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
+
     class Sales(object):
         """
         Stores a list of this node's sales.
@@ -731,7 +741,8 @@ buyer, vendor, validation) VALUES (?,?,?,?,?,?,?,?,?)''',
 
         def get_all(self):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail, buyer, vendor, validation FROM cases ''')
+            cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
+buyer, vendor, validation FROM cases ''')
             return cursor.fetchall()
 
     class Settings(object):

@@ -22,7 +22,7 @@ class MessageListenerImpl(object):
                                  PlaintextMessage.Type.Name(plaintext.type), plaintext.message,
                                  plaintext.timestamp, plaintext.avatar_hash, signature, False)
 
-            # TODO: should probably resolve the handle and make sure it matches the guid so the sender can't spoof it
+            # TODO: should probably resolve the handle and make sure it matches the guid
 
             message_json = {
                 "message": {
