@@ -5,15 +5,12 @@ import nacl.signing
 import nacl.utils
 import nacl.encoding
 import nacl.hash
-import time
-from binascii import unhexlify
 from collections import OrderedDict
-from dht.utils import digest
 from interfaces import MessageProcessor, BroadcastListener, MessageListener, NotificationListener
 from keyutils.bip32utils import derive_childkey
-from keyutils.keys import KeyChain
 from log import Logger
 from market.contracts import Contract
+from market.moderation import process_dispute
 from market.profile import Profile
 from nacl.public import PrivateKey, PublicKey, Box
 from net.rpcudp import RPCProtocol
@@ -306,99 +303,10 @@ class MarketProtocol(RPCProtocol):
             box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             contract = json.loads(order, object_pairs_hook=OrderedDict)
-
-            if "vendor_order_confirmation" in contract:
-                del contract["vendor_order_confirmation"]
-            if "buyer_receipt" in contract:
-                del contract["buyer_receipt"]
-
-            order_id = digest(json.dumps(contract, indent=4)).encode("hex")
-            own_guid = KeyChain(self.db).guid.encode("hex")
-            message_listener = self.get_message_listener()
-            notification_listener = self.get_notification_listener()
-
-            if contract["dispute"]["guid"] == contract["vendor_offer"]["listing"]["id"]["guid"]:
-                guid = unhexlify(contract["vendor_offer"]["listing"]["id"]["guid"])
-                signing_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
-                if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
-                    handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
-                else:
-                    handle = ""
-                encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
-                proof_sig = contract["dispute"]["proof_sig"]
-            elif contract["dispute"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
-                guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
-                signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
-                if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
-                    handle = contract["buyer_order"]["order"]["id"]["blockchain_id"]
-                else:
-                    handle = ""
-                encryption_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"])
-                proof_sig = None
-            else:
-                raise Exception("Dispute guid not in contract")
-
-            verify_key = nacl.signing.VerifyKey(signing_key)
-            verify_key.verify(contract["dispute"]["claim"], contract["dispute"]["signature"])
-
-            p = PlaintextMessage()
-            p.sender_guid = guid
-            p.handle = handle
-            p.signed_pubkey = signing_key
-            p.encryption_pubkey = encryption_key
-            p.subject = order_id
-            p.type = PlaintextMessage.Type.Value("DISPUTE")
-            p.message = contract["dispute"]["claim"]
-            p.timestamp = time.time()
-            p.avatar_hash = contract["dispute"]["avatar_hash"]
-
-            if self.db.Purchases().get_purchase(order_id) is not None:
-                self.db.Purchases().update_status(order_id, 4)
-
-            elif self.db.Sales().get_sale(order_id) is not None:
-                self.db.Purchases().update_status(order_id, 4)
-
-            elif "moderators" in contract["vendor_offer"]["listing"]:
-                is_selected = False
-                for moderator in contract["vendor_offer"]["listing"]["moderators"]:
-                    if moderator["guid"] == own_guid and contract["buyer_order"]["order"]["moderator"] == own_guid:
-                        is_selected = True
-                if not is_selected:
-                    raise Exception("Not a moderator for this contract")
-                else:
-                    if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
-                        vendor = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
-                    else:
-                        vendor = contract["vendor_offer"]["listing"]["id"]["guid"]
-                    if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
-                        buyer = contract["buyer_order"]["order"]["id"]["blockchain_id"]
-                    else:
-                        buyer = contract["buyer_order"]["order"]["id"]["guid"]
-
-                    c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
-                                 testnet=self.multiplexer.testnet)
-
-                    validation_failures = c.validate_for_moderation(proof_sig)
-
-                    self.db.Cases().new_case(order_id,
-                                             contract["vendor_offer"]["listing"]["item"]["title"],
-                                             time.time(),
-                                             contract["buyer_order"]["order"]["date"],
-                                             contract["buyer_order"]["order"],
-                                             float(contract["buyer_order"]["order"]["payment"]["amount"]),
-                                             contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
-                                             buyer, vendor, json.dumps(validation_failures))
-            else:
-                raise Exception("Order ID for dispute not found")
-
-            message_listener.notify(p, "")
-            notification_listener.notify(guid, handle, "dispute", order_id,
-                                         contract["vendor_offer"]["listing"]["item"]["title"],
-                                         contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
-
-
+            process_dispute(contract, self.db, self.get_message_listener(),
+                            self.get_notification_listener(), self.multiplexer.testnet)
             self.router.addContact(sender)
-            self.log.info("dispute opened for order %s" % order_id)
+            self.log.info("Contract dispute opened by %s" % sender)
             return ["True"]
         except Exception:
             self.log.error("unable to parse disputed contract from %s" % sender)

@@ -1016,3 +1016,15 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps(order, indent=4))
             request.finish()
         return server.NOT_DONE_YET
+
+    @POST('^/api/v1/dispute_contract')
+    def dispute_contract(self, request):
+        try:
+            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET

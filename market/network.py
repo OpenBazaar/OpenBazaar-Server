@@ -1,31 +1,32 @@
 __author__ = 'chris'
 
-import time
-import json
 import base64
-import os.path
+import bitcoin
+import gnupg
+import httplib
+import json
 import nacl.signing
 import nacl.hash
 import nacl.encoding
 import nacl.utils
-import gnupg
-import bitcoin
-import httplib
-from dht.node import Node
-from nacl.public import PrivateKey, PublicKey, Box
-from twisted.internet import defer, reactor, task
-from market.protocol import MarketProtocol
-from dht.utils import digest
-from constants import DATA_FOLDER
-from protos import objects
-from market.profile import Profile
-from market.contracts import Contract
-from collections import OrderedDict
+import os.path
+import time
 from binascii import unhexlify
-from keyutils.keys import KeyChain
+from collections import OrderedDict
+from constants import DATA_FOLDER
+from dht.node import Node
+from dht.utils import digest
 from keyutils.bip32utils import derive_childkey
+from keyutils.keys import KeyChain
 from log import Logger
+from market.contracts import Contract
+from market.moderation import process_dispute
+from market.profile import Profile
+from market.protocol import MarketProtocol
+from nacl.public import PrivateKey, PublicKey, Box
+from protos import objects
 from seed import peers
+from twisted.internet import defer, reactor, task
 
 
 class Server(object):
@@ -557,6 +558,11 @@ class Server(object):
                                 c.accept_receipt(self.protocol.get_notification_listener(),
                                                  self.protocol.multiplexer.blockchain,
                                                  receipt_json=p.message)
+                            elif p.type == objects.PlaintextMessage.Type.Value("DISPUTE"):
+                                process_dispute(json.loads(p.message, object_pairs_hook=OrderedDict),
+                                                self.db, self.protocol.get_message_listener(),
+                                                self.protocol.get_notification_listener(),
+                                                self.protocol.multiplexer.testnet)
                             else:
                                 listener.notify(p, signature)
                         except Exception:
