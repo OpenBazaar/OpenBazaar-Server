@@ -2,6 +2,7 @@ import json
 import nacl.signing
 import time
 from binascii import unhexlify
+from constants import DATA_FOLDER
 from dht.utils import digest
 from keyutils.keys import KeyChain
 from market.contracts import Contract
@@ -31,16 +32,16 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     Returns: a `List` of `String` validation failures, if any.
 
     """
+    tmp_contract = contract
+    if "vendor_order_confirmation" in tmp_contract:
+        del tmp_contract["vendor_order_confirmation"]
+    if "buyer_receipt" in tmp_contract:
+        del tmp_contract["buyer_receipt"]
 
-    if "vendor_order_confirmation" in contract:
-        del contract["vendor_order_confirmation"]
-    if "buyer_receipt" in contract:
-        del contract["buyer_receipt"]
-
-    order_id = digest(json.dumps(contract, indent=4)).encode("hex")
+    order_id = digest(json.dumps(tmp_contract, indent=4)).encode("hex")
     own_guid = KeyChain(db).guid.encode("hex")
 
-    if contract["dispute"]["guid"] == contract["vendor_offer"]["listing"]["id"]["guid"]:
+    if contract["dispute"]["info"]["guid"] == contract["vendor_offer"]["listing"]["id"]["guid"]:
         guid = unhexlify(contract["vendor_offer"]["listing"]["id"]["guid"])
         signing_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
         if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
@@ -48,8 +49,8 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         else:
             handle = ""
         encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
-        proof_sig = contract["dispute"]["proof_sig"]
-    elif contract["dispute"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
+        proof_sig = contract["dispute"]["info"]["proof_sig"]
+    elif contract["dispute"]["info"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
         guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
         signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
         if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
@@ -62,7 +63,8 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         raise Exception("Dispute guid not in contract")
 
     verify_key = nacl.signing.VerifyKey(signing_key)
-    verify_key.verify(contract["dispute"]["claim"], contract["dispute"]["signature"])
+    verify_key.verify(json.dumps(contract["dispute"]["info"], indent=4),
+                      contract["dispute"]["signature"])
 
     p = PlaintextMessage()
     p.sender_guid = guid
@@ -70,10 +72,10 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     p.signed_pubkey = signing_key
     p.encryption_pubkey = encryption_key
     p.subject = order_id
-    p.type = PlaintextMessage.Type.Value("DISPUTE")
-    p.message = contract["dispute"]["claim"]
+    p.type = PlaintextMessage.Type.Value("DISPUTE_OPEN")
+    p.message = contract["dispute"]["info"]["claim"]
     p.timestamp = time.time()
-    p.avatar_hash = contract["dispute"]["avatar_hash"]
+    p.avatar_hash = contract["dispute"]["info"]["avatar_hash"]
 
     if db.Purchases().get_purchase(order_id) is not None:
         db.Purchases().update_status(order_id, 4)
@@ -82,6 +84,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         db.Purchases().update_status(order_id, 4)
 
     elif "moderators" in contract["vendor_offer"]["listing"]:
+        # TODO: make sure a case isn't already open in the db
         is_selected = False
         for moderator in contract["vendor_offer"]["listing"]["moderators"]:
             if moderator["guid"] == own_guid and contract["buyer_order"]["order"]["moderator"] == own_guid:
@@ -110,6 +113,9 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
                                 float(contract["buyer_order"]["order"]["payment"]["amount"]),
                                 contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
                                 buyer, vendor, json.dumps(validation_failures))
+
+            with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
+                outfile.write(json.dumps(contract, indent=4))
     else:
         raise Exception("Order ID for dispute not found")
 

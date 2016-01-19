@@ -1203,6 +1203,14 @@ class Contract(object):
             except Exception:
                 validation_failures.append("Vendor's signature in vendor_order_confirmation not valid;")
 
+        # check the moderator fee is correct
+        own_guid = self.keychain.guid.encode("hex")
+        for moderator in self.contract["vendor_offer"]["listing"]["moderators"]:
+            if moderator["guid"] == own_guid:
+                fee = float(moderator["fee"][:len(moderator["fee"]) -1])
+        if Profile(self.db).get().moderation_fee < fee:
+            validation_failures.append("Moderator fee in contract less than current moderation fee;")
+
         return validation_failures
 
     def __repr__(self):

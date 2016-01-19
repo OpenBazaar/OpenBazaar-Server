@@ -91,7 +91,7 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-proofSig BLOB, contractType TEXT)''')
+proofSig BLOB, contractType TEXT, disputeClaim TEXT)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
@@ -636,6 +636,10 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             else:
                 return ret[0]
 
+        def update_claim(self, order_id, claim):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE purchases SET disputeCliam=? WHERE id=?;''', (claim, order_id))
+            self.db.commit()
 
     class Sales(object):
         """

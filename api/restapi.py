@@ -1028,3 +1028,20 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/close_dispute')
+    def close_dispute(self, request):
+        try:
+            self.mserver.close_dispute(request.args["order_id"][0],
+                                       request.args["resolution"][0],
+                                       request.args["buyer_percentage"][0],
+                                       request.args["vendor_percentage"][0],
+                                       request.args["moderator_percentage"][0],
+                                       request.args["moderator_address"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET

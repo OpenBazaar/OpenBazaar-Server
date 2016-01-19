@@ -9,11 +9,12 @@ import nacl.signing
 import nacl.hash
 import nacl.encoding
 import nacl.utils
+import obelisk
 import os.path
 import time
 from binascii import unhexlify
 from collections import OrderedDict
-from constants import DATA_FOLDER
+from constants import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
 from dht.utils import digest
 from keyutils.bip32utils import derive_childkey
@@ -558,7 +559,7 @@ class Server(object):
                                 c.accept_receipt(self.protocol.get_notification_listener(),
                                                  self.protocol.multiplexer.blockchain,
                                                  receipt_json=p.message)
-                            elif p.type == objects.PlaintextMessage.Type.Value("DISPUTE"):
+                            elif p.type == objects.PlaintextMessage.Type.Value("DISPUTE_OPEN"):
                                 process_dispute(json.loads(p.message, object_pairs_hook=OrderedDict),
                                                 self.db, self.protocol.get_message_listener(),
                                                 self.protocol.get_notification_listener(),
@@ -697,7 +698,9 @@ class Server(object):
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
                 enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
-                proof_sig = self.db.Purchases().get_proof_sig(order_id)
+                purchase_db = self.db.Purchases()
+                proof_sig = purchase_db.get_proof_sig(order_id)
+                purchase_db.update_claim(order_id, claim)
         except Exception:
             try:
                 file_path = DATA_FOLDER + "sales/in progress/" + order_id + ".json"
@@ -709,17 +712,15 @@ class Server(object):
             except Exception:
                 return False
         keychain = KeyChain(self.db)
-        contract_dict = contract
-        if "vendor_order_confirmation" in contract_dict:
-            del contract_dict["vendor_order_confirmation"]
-        order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         contract["dispute"] = {}
-        contract["dispute"]["claim"] = claim
-        contract["dispute"]["guid"] = keychain.guid.encode("hex")
-        contract["dispute"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
-        contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(claim)[:64])
+        contract["dispute"]["info"] = {}
+        contract["dispute"]["info"]["claim"] = claim
+        contract["dispute"]["info"]["guid"] = keychain.guid.encode("hex")
+        contract["dispute"]["info"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
         if proof_sig:
-            contract["dispute"]["proof_sig"] = base64.b64encode(proof_sig)
+            contract["dispute"]["info"]["proof_sig"] = base64.b64encode(proof_sig)
+        info = json.dumps(contract["dispute"]["info"], indent=4)
+        contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(info)[:64])
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
@@ -730,7 +731,7 @@ class Server(object):
                 if not response[0]:
                     self.send_message(Node(unhexlify(recipient_guid)),
                                       public_key,
-                                      objects.PlaintextMessage.Type.Value("DISPUTE"),
+                                      objects.PlaintextMessage.Type.Value("DISPUTE_OPEN"),
                                       contract,
                                       order_id,
                                       store_only=True)
@@ -748,6 +749,63 @@ class Server(object):
 
         self.kserver.resolve(unhexlify(guid)).addCallback(get_node, guid, enc_key)
         self.kserver.resolve(unhexlify(mod_guid)).addCallback(get_node, mod_guid, mod_enc_key)
+
+    def close_dispute(self, order_id, resolution, buyer_percentage,
+                      vendor_percentage, moderator_percentage, moderator_address):
+        """
+        Called when a moderator closes a dispute. It will create a payout transactions refunding both
+        parties and send it to them in a dispute_close message.
+        """
+        try:
+            if not self.protocol.multiplexer.blockchain.connected:
+                raise Exception("Libbitcoin server not online")
+            with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
+                contract = json.load(filename, object_pairs_hook=OrderedDict)
+            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            buyer_address = contract["buyer_order"]["order"]["refund_address"]
+
+            payment_address = contract["buyer_order"]["order"]["payment"]["address"]
+
+            def history_fetched(ec, history):
+                outpoints = []
+                satoshis = 0
+                outputs = []
+                if ec:
+                    print ec
+                else:
+                    for tx_type, txid, i, height, value in history:  # pylint: disable=W0612
+                        if tx_type == obelisk.PointIdent.Output:
+                            satoshis += value
+                            outpoint = txid.encode("hex") + ":" + str(i)
+                            if outpoint not in outpoints:
+                                outpoints.append(outpoint)
+
+                    satoshis -= TRANSACTION_FEE
+                    moderator_fee = round(float(moderator_percentage * satoshis))
+                    satoshis -= moderator_fee
+
+                    outputs.append({'value': moderator_fee, 'address': moderator_address})
+                    if float(buyer_percentage) > 0:
+                        outputs.append({'value': round(float(buyer_percentage * satoshis)),
+                                        'address': buyer_address})
+                    if float(buyer_percentage) > 0:
+                        outputs.append({'value': round(float(vendor_percentage * satoshis)),
+                                        'address': vendor_address})
+                    tx = bitcoin.mktx(outpoints, outputs)
+                    chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+                    redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
+                    masterkey_m = bitcoin.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+                    moderator_priv = derive_childkey(masterkey_m, chaincode, bitcoin.MAINNET_PRIVATE)
+                    signatures = []
+                    for index in range(0, len(outpoints)):
+                        sig = bitcoin.multisign(tx, index, redeem_script, moderator_priv)
+                        signatures.append({"input_index": index, "signature": sig})
+
+                    # final step is to send these signatures to both parties.
+
+            self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
+        except Exception:
+            pass
 
 
     @staticmethod
