@@ -770,6 +770,7 @@ class Server(object):
                 outpoints = []
                 satoshis = 0
                 outputs = []
+                payout = {}
                 if ec:
                     print ec
                 else:
@@ -785,11 +786,17 @@ class Server(object):
                     satoshis -= moderator_fee
 
                     outputs.append({'value': moderator_fee, 'address': moderator_address})
+                    payout["moderator_fee"] = moderator_fee
+                    payout["transaction_fee"] = TRANSACTION_FEE
                     if float(buyer_percentage) > 0:
-                        outputs.append({'value': round(float(buyer_percentage * satoshis)),
+                        amt = round(float(buyer_percentage * satoshis))
+                        payout["buyer_payout"] = amt
+                        outputs.append({'value': amt,
                                         'address': buyer_address})
                     if float(buyer_percentage) > 0:
-                        outputs.append({'value': round(float(vendor_percentage * satoshis)),
+                        amt = round(float(vendor_percentage * satoshis))
+                        payout["vendor_payout"] = amt
+                        outputs.append({'value': amt,
                                         'address': vendor_address})
                     tx = bitcoin.mktx(outpoints, outputs)
                     chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
@@ -800,8 +807,9 @@ class Server(object):
                     for index in range(0, len(outpoints)):
                         sig = bitcoin.multisign(tx, index, redeem_script, moderator_priv)
                         signatures.append({"input_index": index, "signature": sig})
+                    payout["signatures"] = signatures
 
-                    # final step is to send these signatures to both parties.
+                    # final step is to send this payout object to both parties
 
             self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
         except Exception:
