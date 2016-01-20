@@ -11,6 +11,7 @@ import nacl.encoding
 import nacl.utils
 import obelisk
 import os.path
+import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
@@ -789,6 +790,7 @@ class Server(object):
                     satoshis -= moderator_fee
 
                     outputs.append({'value': moderator_fee, 'address': moderator_address})
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
                     dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = moderator_fee
                     dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = TRANSACTION_FEE
                     if float(buyer_percentage) > 0:
@@ -796,7 +798,7 @@ class Server(object):
                         dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': buyer_address})
-                    if float(buyer_percentage) > 0:
+                    if float(vendor_percentage) > 0:
                         amt = round(float(vendor_percentage * satoshis))
                         dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
                         outputs.append({'value': amt,
@@ -846,6 +848,66 @@ class Server(object):
         except Exception:
             pass
 
+    def release_funds(self, order_id):
+        """
+        This function should be called to release funds from a disputed contract after
+        the moderator has resolved the dispute and provided his signature.
+        """
+        if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+            outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
+        elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+
+        with open(file_path, 'r') as filename:
+            contract = json.load(filename, object_pairs_hook=OrderedDict)
+
+        vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+        buyer_address = contract["buyer_order"]["order"]["refund_address"]
+
+        for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+            if moderator["guid"] == contract["buyer_order"]["order"]["moderator"]:
+                masterkey_m = moderator["pubkeys"]["bitcoin"]["key"]
+
+        outputs = []
+
+        outputs.append({'value': contract["dispute_resolution"]["resolution"]["moderator_fee"],
+                        'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
+
+        if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
+            outputs.append({'value': contract["dispute_resolution"]["resolution"]["buyer_payout"],
+                            'address': buyer_address})
+
+        if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
+            outputs.append({'value': contract["dispute_resolution"]["resolution"]["vendor_payout"],
+                            'address': vendor_address})
+
+        tx = bitcoin.mktx(outpoints, outputs)
+        signatures = []
+        chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+        redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
+        masterkey = bitcoin.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+        childkey = derive_childkey(masterkey, chaincode, bitcoin.MAINNET_PRIVATE)
+
+        mod_key = derive_childkey(masterkey_m, chaincode)
+
+        valid_inputs = 0
+        for index in range(0, len(outpoints)):
+            sig = bitcoin.multisign(tx, index, redeem_script, childkey)
+            signatures.append({"input_index": index, "signature": sig})
+            for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
+                if s["input_index"] == index:
+                    if bitcoin.verify_tx_input(tx, index, redeem_script, s["signature"], mod_key):
+                        tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script),
+                                                           sig, str(s["signature"]))
+                        valid_inputs += 1
+
+        if valid_inputs == len(outpoints):
+            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+            self.protocol.multiplexer.blockchain.broadcast(tx)
+        else:
+            raise Exception("Failed to reconstruct transaction with moderator signature.")
 
     @staticmethod
     def cache(filename):

@@ -1045,3 +1045,15 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/release_funds')
+    def release_funds(self, request):
+        try:
+            self.mserver.release_funds(request.args["order_id"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
