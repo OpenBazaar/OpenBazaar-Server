@@ -97,7 +97,7 @@ class RPCProtocol:
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         elif message.command != NOT_FOUND:
-            #ban_score.process_message(m)
+            # ban_score.process_message(message)
             self._acceptRequest(msgID, str(Command.Name(message.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):

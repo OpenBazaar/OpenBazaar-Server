@@ -5,6 +5,7 @@ import sqlite3 as lite
 from collections import Counter
 from constants import DATA_FOLDER
 from dht.node import Node
+from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 
@@ -42,6 +43,8 @@ class Database(object):
             os.makedirs(DATA_FOLDER + "purchases/unfunded/")
         if not os.path.exists(DATA_FOLDER + "purchases/trade receipts/"):
             os.makedirs(DATA_FOLDER + "purchases/trade receipts/")
+        if not os.path.exists(DATA_FOLDER + "cases"):
+            os.makedirs(DATA_FOLDER + "cases")
         if not os.path.isfile(DATABASE):
             self.create_database()
             if os.path.exists(DATA_FOLDER + "cache.pickle"):
@@ -68,7 +71,7 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
-        cursor.execute('''CREATE TABLE messages(guid TEXT, handle TEXT, signedPubkey BLOB,
+        cursor.execute('''CREATE TABLE messages(msgID TEXT PRIMARY KEY, guid TEXT, handle TEXT, signedPubkey BLOB,
     encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
     avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
         cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
@@ -93,6 +96,9 @@ proofSig BLOB, contractType TEXT)''')
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
 paymentTX TEXT, contractType TEXT)''')
+
+        cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
+btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
@@ -357,10 +363,11 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolic
         def save_message(self, guid, handle, signed_pubkey, encryption_pubkey, subject,
                          message_type, message, timestamp, avatar_hash, signature, is_outgoing):
             outgoing = 1 if is_outgoing else 0
+            msgID = digest(message + str(timestamp)).encode("hex")
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO messages(guid, handle, signedPubkey, encryptionPubkey, subject,
-    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
-                           (guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
+            cursor.execute('''INSERT INTO messages(msgID, guid, handle, signedPubkey, encryptionPubkey, subject,
+    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                           (msgID, guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
                             message, timestamp, avatar_hash, signature, outgoing, 0))
             self.db.commit()
 
@@ -620,6 +627,15 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             else:
                 return ret[0]
 
+        def get_proof_sig(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT proofSig FROM purchases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
     class Sales(object):
         """
         Stores a list of this node's sales.
@@ -698,6 +714,51 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
                 return None
             else:
                 return ret[0]
+
+    class Cases(object):
+        """
+        Stores a list of this node's moderation cases.
+        """
+        def __init__(self):
+            self.db = lite.connect(DATABASE)
+            self.db.text_factory = str
+
+        def new_case(self, order_id, title, timestamp, order_date, btc,
+                     thumbnail, buyer, vendor, validation, claim):
+            cursor = self.db.cursor()
+            try:
+                cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
+buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                               (order_id, title, timestamp, order_date, btc,
+                                thumbnail, buyer, vendor, validation, claim, 0))
+            except Exception as e:
+                print e.message
+            self.db.commit()
+
+        def delete_case(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''DELETE FROM cases WHERE id=?''', (order_id,))
+            self.db.commit()
+
+        def get_all(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
+buyer, vendor, validation, claim, status FROM cases ''')
+            return cursor.fetchall()
+
+        def get_claim(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT claim FROM cases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
+
+        def update_status(self, order_id, status):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE cases SET status=? WHERE id=?;''', (status, order_id))
+            self.db.commit()
 
     class Settings(object):
         """

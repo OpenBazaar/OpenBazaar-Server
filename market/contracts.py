@@ -1,30 +1,30 @@
 __author__ = 'chris'
 
-import json
+
 import base64
-import random
-import time
-import pickle
-import nacl.signing
 import bitcoin
-from hashlib import sha256
+import json
+import nacl.encoding
+import nacl.signing
+import os
+import pickle
+import random
+import re
+import time
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
-from urllib2 import Request, urlopen, URLError
-from market.utils import deserialize
-
-import re
-import os
-import nacl.encoding
-from protos.objects import Listings
-from protos.countries import CountryCode
+from constants import DATA_FOLDER, TRANSACTION_FEE
+from datetime import datetime
 from dht.utils import digest
-from constants import DATA_FOLDER
-from market.profile import Profile
-from keyutils.keys import KeyChain
+from hashlib import sha256
 from keyutils.bip32utils import derive_childkey
+from keyutils.keys import KeyChain
 from log import Logger
-from constants import TRANSACTION_FEE
+from urllib2 import Request, urlopen, URLError
+from market.profile import Profile
+from market.utils import deserialize
+from protos.countries import CountryCode
+from protos.objects import Listings
 
 
 class Contract(object):
@@ -299,6 +299,7 @@ class Contract(object):
             "buyer_order": {
                 "order": {
                     "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "date": str(datetime.utcnow()) + " UTC",
                     "quantity": quantity,
                     "id": {
                         "guid": self.keychain.guid.encode("hex"),
@@ -506,7 +507,7 @@ class Contract(object):
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
-            self.keychain.signing_key.sign(confirmation, encoder=nacl.encoding.HexEncoder)[:128]
+            base64.b64encode(self.keychain.signing_key.sign(confirmation)[:64])
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
         self.db.Sales().update_status(order_id, 2)
@@ -641,7 +642,7 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["dispute"]["claim"] = claim
         receipt = json.dumps(receipt_json["buyer_receipt"]["receipt"], indent=4)
         receipt_json["buyer_receipt"]["signature"] = \
-            self.keychain.signing_key.sign(receipt, encoder=nacl.encoding.HexEncoder)[:128]
+            base64.b64encode(self.keychain.signing_key.sign(receipt)[:64])
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
         self.db.Purchases().update_status(order_id, 3)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
@@ -962,6 +963,12 @@ class Contract(object):
             if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash.encode("hex")):
                 raise Exception("Order for contract that doesn't exist")
 
+            # verify timestamp is within a reasonable time from now
+            timestamp = self.contract["buyer_order"]["order"]["date"]
+            dt = datetime.strptime(timestamp[:len(timestamp)-4], "%Y-%m-%d %H:%M:%S.%f")
+            if abs((datetime.utcnow() - dt).total_seconds()) > 600:
+                raise Exception("Timestamp on order not within 10 minutes of now")
+
             # verify the signatures on the order
             verify_obj = json.dumps(self.contract["buyer_order"]["order"], indent=4)
 
@@ -1089,6 +1096,122 @@ class Contract(object):
 
         except Exception:
             return False
+
+    def validate_for_moderation(self, proof_sig):
+        validation_failures = []
+
+        listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
+
+        contract_hash = digest(listing)
+        ref_hash = unhexlify(self.contract["buyer_order"]["order"]["ref_hash"])
+
+        # verify that the reference hash matches the contract
+        if contract_hash != ref_hash:
+            validation_failures.append("Reference hash in buyer_order doesn't match the listing hash;")
+
+        # validated the signatures on vendor_offer
+        vendor_guid_signature = self.contract["vendor_offer"]["signatures"]["guid"]
+        vendor_bitcoin_signature = self.contract["vendor_offer"]["signatures"]["bitcoin"]
+        vendor_guid_pubkey = unhexlify(self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
+        vendor_bitcoin_pubkey = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
+        verify_key = nacl.signing.VerifyKey(vendor_guid_pubkey)
+        try:
+            verify_key.verify(listing, base64.b64decode(vendor_guid_signature))
+        except Exception:
+            validation_failures.append("Guid signature in vendor_offer not valid;")
+
+        valid = bitcoin.ecdsa_raw_verify(listing,
+                                         bitcoin.decode_sig(vendor_bitcoin_signature),
+                                         vendor_bitcoin_pubkey)
+        if not valid:
+            validation_failures.append("Bitcoin signature in vendor_offer is not valid;")
+
+        # verify the signatures on the order
+        order = json.dumps(self.contract["buyer_order"]["order"], indent=4)
+        buyer_guid_signature = self.contract["buyer_order"]["signatures"]["guid"]
+        buyer_bitcoin_signature = self.contract["buyer_order"]["signatures"]["bitcoin"]
+        buyer_bitcoin_pubkey = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+        buyer_guid_pubkey = unhexlify(self.contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
+
+        verify_key = nacl.signing.VerifyKey(buyer_guid_pubkey)
+        try:
+            verify_key.verify(order, base64.b64decode(buyer_guid_signature))
+        except Exception:
+            validation_failures.append("Guid signature in buyer_order not valid;")
+
+        valid = bitcoin.ecdsa_raw_verify(order, bitcoin.decode_sig(buyer_bitcoin_signature), buyer_bitcoin_pubkey)
+        if not valid:
+            validation_failures.append("Bitcoin signature in buyer_order not valid;")
+
+        # If the buyer filed this claim, check the vendor's signature to show he accepted the order.
+        if proof_sig is not None:
+            address = self.contract["buyer_order"]["order"]["payment"]["address"]
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+            buyer_key = derive_childkey(masterkey_b, chaincode)
+            amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
+            listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+            verify_key = nacl.signing.VerifyKey(vendor_guid_pubkey)
+            try:
+                verify_key.verify(str(address) + str(amount) + str(listing_hash) + str(buyer_key),
+                                  base64.b64decode(proof_sig))
+            except Exception:
+                validation_failures.append("Vendor's order-acceptance signature not valid;")
+
+        # verify redeem script
+        chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+        for mod in self.contract["vendor_offer"]["listing"]["moderators"]:
+            if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
+                masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
+
+        if masterkey_m != bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey):
+            validation_failures.append("Moderator Bitcoin key doesn't match key in vendor_order;")
+
+        masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+        masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
+        buyer_key = derive_childkey(masterkey_b, chaincode)
+        vendor_key = derive_childkey(masterkey_v, chaincode)
+        moderator_key = derive_childkey(masterkey_m, chaincode)
+
+        redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+        if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
+            validation_failures.append("Bitcoin redeem script not valid for the keys in this contract;")
+
+        # verify address from redeem script
+        if self.testnet:
+            payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
+        else:
+            payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
+        if self.contract["buyer_order"]["order"]["payment"]["address"] != payment_address:
+            validation_failures.append("Bitcoin address invalid. Cannot be derived from reddem script;")
+
+        # validate vendor_order_confirmation
+        if "vendor_order_confirmation" in self.contract:
+            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            del contract_dict["vendor_order_confirmation"]
+            if "buyer_receipt" in contract_dict:
+                del contract_dict["buyer_receipt"]
+            contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+            ref_hash = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+            if ref_hash != contract_hash:
+                validation_failures.append("Reference hash in vendor_order_confirmation does not match order ID;")
+            vendor_signature = self.contract["vendor_order_confirmation"]["signature"]
+            confirmation = json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4)
+            verify_key = nacl.signing.VerifyKey(vendor_guid_pubkey)
+            try:
+                verify_key.verify(confirmation, base64.b64decode(vendor_signature))
+            except Exception:
+                validation_failures.append("Vendor's signature in vendor_order_confirmation not valid;")
+
+        # check the moderator fee is correct
+        own_guid = self.keychain.guid.encode("hex")
+        for moderator in self.contract["vendor_offer"]["listing"]["moderators"]:
+            if moderator["guid"] == own_guid:
+                fee = float(moderator["fee"][:len(moderator["fee"]) -1])
+        if Profile(self.db).get().moderation_fee < fee:
+            validation_failures.append("Moderator fee in contract less than current moderation fee;")
+
+        return validation_failures
 
     def __repr__(self):
         return json.dumps(self.contract, indent=4)

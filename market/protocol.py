@@ -1,29 +1,27 @@
 __author__ = 'chris'
 
 import json
-from collections import OrderedDict
-
 import nacl.signing
 import nacl.utils
 import nacl.encoding
 import nacl.hash
-from nacl.public import PrivateKey, PublicKey, Box
-from zope.interface import implements
-from zope.interface.verify import verifyObject
-from zope.interface.exceptions import DoesNotImplement
-
-from net.rpcudp import RPCProtocol
-from interfaces import MessageProcessor
+from collections import OrderedDict
+from interfaces import MessageProcessor, BroadcastListener, MessageListener, NotificationListener
+from keyutils.bip32utils import derive_childkey
 from log import Logger
+from market.contracts import Contract
+from market.moderation import process_dispute, close_dispute
+from market.profile import Profile
+from nacl.public import PrivateKey, PublicKey, Box
+from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
     GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN, \
     DISPUTE_CLOSE
-from market.contracts import Contract
-from market.profile import Profile
-from protos.objects import Metadata, Listings, Followers, Plaintext_Message
-from interfaces import BroadcastListener, MessageListener, NotificationListener
-from keyutils.bip32utils import derive_childkey
+from protos.objects import Metadata, Listings, Followers, PlaintextMessage
+from zope.interface import implements
+from zope.interface.exceptions import DoesNotImplement
+from zope.interface.verify import verifyObject
 
 
 class MarketProtocol(RPCProtocol):
@@ -218,7 +216,7 @@ class MarketProtocol(RPCProtocol):
         try:
             box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
             plaintext = box.decrypt(encrypted)
-            p = Plaintext_Message()
+            p = PlaintextMessage()
             p.ParseFromString(plaintext)
             signature = p.signature
             p.ClearField("signature")
@@ -300,6 +298,34 @@ class MarketProtocol(RPCProtocol):
             self.log.error("unable to parse receipt from %s" % sender)
             return ["False"]
 
+    def rpc_dispute_open(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            contract = json.loads(order, object_pairs_hook=OrderedDict)
+            process_dispute(contract, self.db, self.get_message_listener(),
+                            self.get_notification_listener(), self.multiplexer.testnet)
+            self.router.addContact(sender)
+            self.log.info("Contract dispute opened by %s" % sender)
+            return ["True"]
+        except Exception:
+            self.log.error("unable to parse disputed contract from %s" % sender)
+            return ["False"]
+
+    def rpc_dispute_close(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            contract = json.loads(order, object_pairs_hook=OrderedDict)
+            close_dispute(contract, self.db, self.get_message_listener(),
+                          self.get_notification_listener(), self.multiplexer.testnet)
+            self.router.addContact(sender)
+            self.log.info("Contract dispute closed by %s" % sender)
+            return ["True"]
+        except Exception:
+            self.log.error("unable to parse disputed close message from %s" % sender)
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
@@ -360,6 +386,14 @@ class MarketProtocol(RPCProtocol):
         d = self.complete_order(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
+    def callDisputeOpen(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callDisputeClose(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
     def handleCallResponse(self, result, node):
         """
         If we get a response, add the node to the routing table.  If
@@ -376,6 +410,13 @@ class MarketProtocol(RPCProtocol):
         for listener in self.listeners:
             try:
                 verifyObject(NotificationListener, listener)
+                return listener
+            except DoesNotImplement:
+                pass
+    def get_message_listener(self):
+        for listener in self.listeners:
+            try:
+                verifyObject(MessageListener, listener)
                 return listener
             except DoesNotImplement:
                 pass

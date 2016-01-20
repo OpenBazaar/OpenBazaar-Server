@@ -144,7 +144,7 @@ message Following {
     }
 }
 
-message Plaintext_Message {
+message PlaintextMessage {
     required bytes sender_guid       = 1;
     optional string handle           = 2;
     required bytes signed_pubkey     = 3;
@@ -158,8 +158,9 @@ message Plaintext_Message {
 
     enum Type {
         CHAT                 = 1;
-        DISPUTE              = 2;
-        ORDER_CONFIRMATION   = 3;
-        RECEIPT              = 4;
+        DISPUTE_OPEN         = 2;
+        DISPUTE_CLOSE        = 3;
+        ORDER_CONFIRMATION   = 4;
+        RECEIPT              = 5;
     }
 }
