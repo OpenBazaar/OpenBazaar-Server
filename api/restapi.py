@@ -980,6 +980,8 @@ class OpenBazaarAPI(APIResource):
         elif os.path.exists(DATA_FOLDER +
                             "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"):
+            file_path = DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"
 
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
@@ -1057,3 +1059,25 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @GET('^/api/v1/get_cases')
+    def get_cases(self, request):
+        cases = self.db.Cases().get_all()
+        cases_list = []
+        for case in cases:
+            purchase_json = {
+                "order_id": case[0],
+                "title": case[1],
+                "timestamp": case[2],
+                "order_date": case[3],
+                "btc_total": case[4],
+                "thumbnail_hash": case[5],
+                "buyer": case[6],
+                "vendor": case[7],
+                "validation": case[8]
+            }
+            cases_list.append(purchase_json)
+        request.setHeader('content-type', "application/json")
+        request.write(json.dumps(cases_list, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
