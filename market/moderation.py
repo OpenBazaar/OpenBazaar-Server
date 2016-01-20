@@ -112,7 +112,8 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
                                 contract["buyer_order"]["order"],
                                 float(contract["buyer_order"]["order"]["payment"]["amount"]),
                                 contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
-                                buyer, vendor, json.dumps(validation_failures))
+                                buyer, vendor, json.dumps(validation_failures),
+                                contract["dispute"]["info"]["claim"])
 
             with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
                 outfile.write(json.dumps(contract, indent=4))

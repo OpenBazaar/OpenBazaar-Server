@@ -91,14 +91,14 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-proofSig BLOB, contractType TEXT, disputeClaim TEXT)''')
+proofSig BLOB, contractType TEXT)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
 paymentTX TEXT, contractType TEXT)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
-btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT)''')
+btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
@@ -636,11 +636,6 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             else:
                 return ret[0]
 
-        def update_claim(self, order_id, claim):
-            cursor = self.db.cursor()
-            cursor.execute('''UPDATE purchases SET disputeCliam=? WHERE id=?;''', (claim, order_id))
-            self.db.commit()
-
     class Sales(object):
         """
         Stores a list of this node's sales.
@@ -728,12 +723,12 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def new_case(self, order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation):
+        def new_case(self, order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation, claim):
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation) VALUES (?,?,?,?,?,?,?,?,?)''',
-                               (order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation))
+buyer, vendor, validation, claim) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                               (order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation, claim))
             except Exception as e:
                 print e.message
             self.db.commit()
@@ -746,8 +741,17 @@ buyer, vendor, validation) VALUES (?,?,?,?,?,?,?,?,?)''',
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation FROM cases ''')
+buyer, vendor, validation, claim FROM cases ''')
             return cursor.fetchall()
+
+        def get_claim(self, order_id):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT claim FROM cases WHERE id=?''', (order_id,))
+            ret = cursor.fetchone()
+            if not ret:
+                return None
+            else:
+                return ret[0]
 
     class Settings(object):
         """

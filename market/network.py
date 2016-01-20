@@ -698,9 +698,7 @@ class Server(object):
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
                 enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
-                purchase_db = self.db.Purchases()
-                proof_sig = purchase_db.get_proof_sig(order_id)
-                purchase_db.update_claim(order_id, claim)
+                proof_sig = self.db.Purchases().get_proof_sig(order_id)
         except Exception:
             try:
                 file_path = DATA_FOLDER + "sales/in progress/" + order_id + ".json"
@@ -764,13 +762,18 @@ class Server(object):
             vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
+            buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
+            buyer_enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+            vendor_guid = contract["vendor_offer"]["listing"]["id"]["guid"]
+            vendor_enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+
             payment_address = contract["buyer_order"]["order"]["payment"]["address"]
 
             def history_fetched(ec, history):
                 outpoints = []
                 satoshis = 0
                 outputs = []
-                payout = {}
+                dispute_json = {"dispute_resolution": {"resolution": {}}}
                 if ec:
                     print ec
                 else:
@@ -786,16 +789,16 @@ class Server(object):
                     satoshis -= moderator_fee
 
                     outputs.append({'value': moderator_fee, 'address': moderator_address})
-                    payout["moderator_fee"] = moderator_fee
-                    payout["transaction_fee"] = TRANSACTION_FEE
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = moderator_fee
+                    dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = TRANSACTION_FEE
                     if float(buyer_percentage) > 0:
                         amt = round(float(buyer_percentage * satoshis))
-                        payout["buyer_payout"] = amt
+                        dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': buyer_address})
                     if float(buyer_percentage) > 0:
                         amt = round(float(vendor_percentage * satoshis))
-                        payout["vendor_payout"] = amt
+                        dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': vendor_address})
                     tx = bitcoin.mktx(outpoints, outputs)
@@ -807,9 +810,36 @@ class Server(object):
                     for index in range(0, len(outpoints)):
                         sig = bitcoin.multisign(tx, index, redeem_script, moderator_priv)
                         signatures.append({"input_index": index, "signature": sig})
-                    payout["signatures"] = signatures
+                    dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
+                    dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.Cases().get_claim(order_id)
+                    dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
+                    dispute_json["dispute_resolution"]["signature"] = \
+                        base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
+                                dispute_json["dispute_resolution"]["resolution"]))[:64])
 
-                    # final step is to send this payout object to both parties
+                    def get_node(node_to_ask, recipient_guid, public_key):
+                        def parse_response(response):
+                            if not response[0]:
+                                self.send_message(Node(unhexlify(recipient_guid)),
+                                                  public_key,
+                                                  objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
+                                                  dispute_json,
+                                                  order_id,
+                                                  store_only=True)
+
+                        if node_to_ask:
+                            skephem = PrivateKey.generate()
+                            pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+                            box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                            nonce = nacl.utils.random(Box.NONCE_SIZE)
+                            ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
+                            d = self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext)
+                            return d.addCallback(parse_response)
+                        else:
+                            return parse_response([False])
+
+                    self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
+                    self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
 
             self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
         except Exception:
