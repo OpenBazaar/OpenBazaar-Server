@@ -723,12 +723,14 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def new_case(self, order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation, claim):
+        def new_case(self, order_id, title, timestamp, order_date, btc,
+                     thumbnail, buyer, vendor, validation, claim):
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
 buyer, vendor, validation, claim) VALUES (?,?,?,?,?,?,?,?,?,?)''',
-                               (order_id, title, timestamp, order_date, btc, thumbnail, buyer, vendor, validation, claim))
+                               (order_id, title, timestamp, order_date, btc,
+                                thumbnail, buyer, vendor, validation, claim))
             except Exception as e:
                 print e.message
             self.db.commit()

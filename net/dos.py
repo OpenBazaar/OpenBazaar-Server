@@ -51,7 +51,7 @@ class BanScore(object):
                 self.scores[GET_LISTINGS] += 5
                 if self.scores[GET_LISTINGS] > 250:
                     self.ban(GET_LISTINGS)
-        except Exception, e:
+        except Exception:
             self.log.warning("Exception processing banscore for %s" % self.peer_ip[0])
 
     def ban(self, message_type):

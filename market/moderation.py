@@ -1,7 +1,9 @@
 import json
 import nacl.signing
+import os
 import time
 from binascii import unhexlify
+from collections import OrderedDict
 from constants import DATA_FOLDER
 from dht.utils import digest
 from keyutils.keys import KeyChain
@@ -28,9 +30,6 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         message_listener: a `MessageListenerImpl` object.
         notification_listener: a `NotificationListenerImpl` object.
         testnet: `bool` of whether we're on testnet or not.
-
-    Returns: a `List` of `String` validation failures, if any.
-
     """
     tmp_contract = contract
     if "vendor_order_confirmation" in tmp_contract:
@@ -121,6 +120,64 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         raise Exception("Order ID for dispute not found")
 
     message_listener.notify(p, "")
-    notification_listener.notify(guid, handle, "dispute", order_id,
+    notification_listener.notify(guid, handle, "dispute_open", order_id,
+                                 contract["vendor_offer"]["listing"]["item"]["title"],
+                                 contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+
+
+def close_dispute(resolution_json, db, message_listener, notification_listener, testnet):
+    """
+    This function processes a dispute close message received from the moderator. It will
+    store the resolution in the contract and send a notification to the listeners telling
+    them that the dispute is resolved.
+
+    Args:
+        resolution_json: The `dispute_resolution` portion of the contract received from the moderator.
+        db: a `Database` object.
+        message_listener: a `MessageListenerImpl` object.
+        notification_listener: a `NotificationListenerImpl` object.
+        testnet: `bool` of whether we're on testnet or not.
+    """
+
+    order_id = resolution_json["dispute_resolution"]["resolution"]["order_id"]
+
+    if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
+        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+    elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
+        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+
+    with open(file_path, 'r') as filename:
+        contract = json.load(filename, object_pairs_hook=OrderedDict)
+
+    for moderator in contract["vendor_offer"]["listing"]["moderators"]:
+        if moderator["guid"] == contract["buyer_order"]["order"]["moderator"]:
+            moderator_guid = unhexlify(moderator["guid"])
+            moderator_handle = moderator["blockchain_id"]
+            moderator_pubkey = unhexlify(moderator["pubkeys"]["signing"]["key"])
+            moderator_enc_key = unhexlify(moderator["pubkeys"]["encryption"]["key"])
+            moderator_avatar = unhexlify(moderator["avatar"])
+
+    verify_key = nacl.signing.VerifyKey(moderator_pubkey)
+    verify_key.verify(json.dumps(resolution_json["dispute_resolution"]["resolution"], indent=4),
+                      resolution_json["dispute_resolution"]["signature"])
+
+    contract["dispute_resolution"] = resolution_json["dispute_resolution"]
+
+    with open(file_path, 'wb') as outfile:
+        outfile.write(json.dumps(contract, indent=4))
+
+    p = PlaintextMessage()
+    p.sender_guid = moderator_guid
+    p.handle = moderator_handle
+    p.signed_pubkey = moderator_pubkey
+    p.encryption_pubkey = moderator_enc_key
+    p.subject = order_id
+    p.type = PlaintextMessage.Type.Value("DISPUTE_CLOSE")
+    p.message = resolution_json["dispute_resolution"]["resolution"]["decision"]
+    p.timestamp = time.time()
+    p.avatar_hash = moderator_avatar
+
+    message_listener.notify(p, "")
+    notification_listener.notify(moderator_guid, moderator_handle, "dispute_close", order_id,
                                  contract["vendor_offer"]["listing"]["item"]["title"],
                                  contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])

@@ -10,7 +10,7 @@ from interfaces import MessageProcessor, BroadcastListener, MessageListener, Not
 from keyutils.bip32utils import derive_childkey
 from log import Logger
 from market.contracts import Contract
-from market.moderation import process_dispute
+from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
 from nacl.public import PrivateKey, PublicKey, Box
 from net.rpcudp import RPCProtocol
@@ -312,6 +312,20 @@ class MarketProtocol(RPCProtocol):
             self.log.error("unable to parse disputed contract from %s" % sender)
             return ["False"]
 
+    def rpc_dispute_close(self, sender, pubkey, encrypted):
+        try:
+            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            order = box.decrypt(encrypted)
+            contract = json.loads(order, object_pairs_hook=OrderedDict)
+            close_dispute(contract, self.db, self.get_message_listener(),
+                          self.get_notification_listener(), self.multiplexer.testnet)
+            self.router.addContact(sender)
+            self.log.info("Contract dispute closed by %s" % sender)
+            return ["True"]
+        except Exception:
+            self.log.error("unable to parse disputed close message from %s" % sender)
+            return ["False"]
+
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
@@ -373,6 +387,10 @@ class MarketProtocol(RPCProtocol):
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callDisputeOpen(self, nodeToAsk, ephem_pubkey, encrypted_contract):
+        d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callDisputeClose(self, nodeToAsk, ephem_pubkey, encrypted_contract):
         d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
