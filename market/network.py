@@ -843,6 +843,7 @@ class Server(object):
 
                     self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
                     self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
+                    self.db.Cases().update_status(order_id, 1)
 
             self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
         except Exception:

@@ -98,7 +98,7 @@ timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpo
 paymentTX TEXT, contractType TEXT)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
-btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT)''')
+btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
@@ -728,9 +728,9 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
             cursor = self.db.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, timestamp, order_date, btc,
-                                thumbnail, buyer, vendor, validation, claim))
+                                thumbnail, buyer, vendor, validation, claim, 0))
             except Exception as e:
                 print e.message
             self.db.commit()
@@ -743,7 +743,7 @@ buyer, vendor, validation, claim) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         def get_all(self):
             cursor = self.db.cursor()
             cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim FROM cases ''')
+buyer, vendor, validation, claim, status FROM cases ''')
             return cursor.fetchall()
 
         def get_claim(self, order_id):
@@ -754,6 +754,11 @@ buyer, vendor, validation, claim FROM cases ''')
                 return None
             else:
                 return ret[0]
+
+        def update_status(self, order_id, status):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE cases SET status=? WHERE id=?;''', (status, order_id))
+            self.db.commit()
 
     class Settings(object):
         """
