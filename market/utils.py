@@ -1,6 +1,7 @@
-import bitcoin
+import bitcointools
 import binascii
 import re
+
 
 def deserialize(tx):
     """
@@ -10,8 +11,8 @@ def deserialize(tx):
 
     if isinstance(tx, str) and re.match('^[0-9a-fA-F]*$', tx):
         # pylint: disable=W0108
-        return bitcoin.json_changebase(deserialize(binascii.unhexlify(tx)),
-                                       lambda x: bitcoin.safe_hexlify(x))
+        return bitcointools.json_changebase(deserialize(binascii.unhexlify(tx)),
+                                            lambda x: bitcointools.safe_hexlify(x))
     # http://stackoverflow.com/questions/4851463/python-closure-write-to-variable-in-parent-scope
     # Python's scoping rules are demented, requiring me to make pos an object
     # so that it is call-by-reference
@@ -19,12 +20,12 @@ def deserialize(tx):
 
     def read_as_int(bytez):
         pos[0] += bytez
-        return bitcoin.decode(tx[pos[0]-bytez:pos[0]][::-1], 256)
+        return bitcointools.decode(tx[pos[0]-bytez:pos[0]][::-1], 256)
 
     def read_var_int():
         pos[0] += 1
 
-        val = bitcoin.from_byte_to_int(tx[pos[0]-1])
+        val = bitcointools.from_byte_to_int(tx[pos[0]-1])
         if val < 253:
             return val
         return read_as_int(pow(2, val - 252))

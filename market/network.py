@@ -1,7 +1,7 @@
 __author__ = 'chris'
 
 import base64
-import bitcoin
+import bitcointools as bitcoin
 import gnupg
 import httplib
 import json

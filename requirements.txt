@@ -2,7 +2,7 @@ protobuf==2.6.1
 Twisted==14.0.2
 txrudp==0.5.1
 pystun==0.1.0
-bitcoin==1.1.36
+bitcointools==1.1.42
 gnupg==2.0.2
 pynacl==0.3.0
 txrestapi==0.2

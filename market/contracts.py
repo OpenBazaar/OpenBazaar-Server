@@ -2,7 +2,7 @@ __author__ = 'chris'
 
 
 import base64
-import bitcoin
+import bitcointools as bitcoin
 import json
 import nacl.encoding
 import nacl.signing

@@ -1,7 +1,7 @@
 __author__ = 'chris'
 import json
 import time
-import bitcoin
+import bitcointools
 import nacl.signing
 import nacl.encoding
 from keyutils.guid import GUID
@@ -53,8 +53,8 @@ class KeyChain(object):
         self.guid_signed_pubkey = g.signed_pubkey
         self.db.set_key("guid", self.guid_privkey, self.guid_signed_pubkey)
 
-        self.bitcoin_master_privkey = bitcoin.bip32_master_key(bitcoin.sha256(self.guid_privkey))
-        self.bitcoin_master_pubkey = bitcoin.bip32_privtopub(self.bitcoin_master_privkey)
+        self.bitcoin_master_privkey = bitcointools.bip32_master_key(bitcointools.sha256(self.guid_privkey))
+        self.bitcoin_master_pubkey = bitcointools.bip32_privtopub(self.bitcoin_master_privkey)
         self.db.set_key("bitcoin", self.bitcoin_master_privkey, self.bitcoin_master_pubkey)
 
         self.encryption_key = PrivateKey(self.guid_privkey)
