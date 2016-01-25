@@ -43,3 +43,6 @@ Various options, including those related to logging and debugging, can be displa
 python openbazaard.py start --help
 ```
 
+License
+---------------------
+OpenBazaar Server is licensed under the [MIT License](LICENSE).
