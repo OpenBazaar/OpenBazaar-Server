@@ -104,6 +104,7 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
+                        "moderation_fee": profile.moderation_fee,
                         "handle": profile.handle,
                         "about": profile.about,
                         "short_description": profile.short_description,
