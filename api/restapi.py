@@ -333,6 +333,8 @@ class OpenBazaarAPI(APIResource):
                 u.vendor = str_to_bool(request.args["vendor"][0])
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
+            if "moderation_fee" in request.args:
+                u.moderation_fee = float(request.args["moderation_fee"][0])
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
