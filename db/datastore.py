@@ -362,6 +362,9 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolic
 
         def save_message(self, guid, handle, signed_pubkey, encryption_pubkey, subject,
                          message_type, message, timestamp, avatar_hash, signature, is_outgoing):
+            """
+            Store message in database.
+            """
             outgoing = 1 if is_outgoing else 0
             msgID = digest(message + str(timestamp)).encode("hex")
             cursor = self.db.cursor()
@@ -372,6 +375,9 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolic
             self.db.commit()
 
         def get_messages(self, guid, message_type):
+            """
+            Return all messages matching guid and message_type.
+            """
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
     timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=?''',
@@ -379,6 +385,12 @@ libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolic
             return cursor.fetchall()
 
         def get_conversations(self):
+            """
+            Get all 'conversations' composed of messages of type 'CHAT'.
+
+            Returns:
+              Array of dictionaries, one element for each guid. Dictionaries
+              include last message only."""
             cursor = self.db.cursor()
             cursor.execute('''SELECT DISTINCT guid FROM messages''',)
             guids = cursor.fetchall()
@@ -398,6 +410,9 @@ WHERE guid=? and messageType="CHAT"''', (g[0],))
             return ret
 
         def get_unread(self):
+            """
+            Get Counter of guids which have unread, incoming messages.
+            """
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0''',)
             ret = []
@@ -407,11 +422,17 @@ WHERE guid=? and messageType="CHAT"''', (g[0],))
             return Counter(ret)
 
         def mark_as_read(self, guid):
+            """
+            Mark all messages for guid as read.
+            """
             cursor = self.db.cursor()
             cursor.execute('''UPDATE messages SET read=? WHERE guid=?;''', (1, guid))
             self.db.commit()
 
         def delete_message(self, guid):
+            """
+            Delete all messages of type 'CHAT' for guid.
+            """
             cursor = self.db.cursor()
             cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
             self.db.commit()
