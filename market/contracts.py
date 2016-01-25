@@ -2,7 +2,7 @@ __author__ = 'chris'
 
 
 import base64
-import bitcointools as bitcoin
+import bitcointools
 import json
 import nacl.encoding
 import nacl.signing
@@ -145,7 +145,7 @@ class Contract(object):
                             "guid": self.keychain.guid.encode("hex"),
                             "pubkeys": {
                                 "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
+                                "bitcoin": bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
                                 "encryption": self.keychain.encryption_pubkey.encode("hex")
                             }
                         },
@@ -265,8 +265,8 @@ class Contract(object):
         self.contract["vendor_offer"]["signatures"]["guid"] = \
             base64.b64encode(self.keychain.signing_key.sign(listing)[:64])
         self.contract["vendor_offer"]["signatures"]["bitcoin"] = \
-            bitcoin.encode_sig(*bitcoin.ecdsa_raw_sign(
-                listing, bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
+            bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(
+                listing, bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
         self.save()
 
     def add_purchase_info(self,
@@ -290,7 +290,7 @@ class Contract(object):
                 (refund_address[:1] == "n" or refund_address[:1] == "m" or refund_address[:1] == "2"):
             raise Exception("Bitcoin address is not a testnet address")
         try:
-            bitcoin.b58check_to_hex(refund_address)
+            bitcointools.b58check_to_hex(refund_address)
         except AssertionError:
             raise Exception("Invalid Bitcoin address")
 
@@ -305,7 +305,7 @@ class Contract(object):
                         "guid": self.keychain.guid.encode("hex"),
                         "pubkeys": {
                             "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
-                            "bitcoin": bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
+                            "bitcoin": bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
                             "encryption": self.keychain.encryption_pubkey.encode("hex")
                         }
                     },
@@ -337,18 +337,18 @@ class Contract(object):
                     valid_mod = True
             if not valid_mod:
                 return False
-            masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+            masterkey_b = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
             masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
             vendor_key = derive_childkey(masterkey_v, chaincode)
             moderator_key = derive_childkey(masterkey_m, chaincode)
 
-            redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+            redeem_script = bitcointools.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
             order_json["buyer_order"]["order"]["payment"]["redeem_script"] = redeem_script
             if self.testnet:
-                payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
+                payment_address = bitcointools.p2sh_scriptaddr(redeem_script, 196)
             else:
-                payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
+                payment_address = bitcointools.p2sh_scriptaddr(redeem_script)
             order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
         else:
             chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
@@ -358,9 +358,9 @@ class Contract(object):
             vendor_key = derive_childkey(masterkey_v, chaincode)
 
             if self.testnet:
-                payment_address = bitcoin.pubkey_to_address(vendor_key, 111)
+                payment_address = bitcointools.pubkey_to_address(vendor_key, 111)
             else:
-                payment_address = bitcoin.pubkey_to_address(vendor_key)
+                payment_address = bitcointools.pubkey_to_address(vendor_key)
             order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
 
         price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
@@ -422,8 +422,8 @@ class Contract(object):
         self.contract["buyer_order"]["signatures"]["guid"] = \
             base64.b64encode(self.keychain.signing_key.sign(order)[:64])
         self.contract["buyer_order"]["signatures"]["bitcoin"] = \
-            bitcoin.encode_sig(*bitcoin.ecdsa_raw_sign(
-                order, bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
+            bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(
+                order, bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)))
 
         return (self.contract["buyer_order"]["order"]["payment"]["address"],
                 order_json["buyer_order"]["order"]["payment"]["amount"])
@@ -447,7 +447,7 @@ class Contract(object):
                 (payout_address[:1] == "n" or payout_address[:1] == "m" or payout_address[:1] == "2"):
             raise Exception("Bitcoin address is not a testnet address")
         try:
-            bitcoin.b58check_to_hex(payout_address)
+            bitcointools.b58check_to_hex(payout_address)
         except AssertionError:
             raise Exception("Invalid Bitcoin address")
         conf_json = {
@@ -476,13 +476,13 @@ class Contract(object):
                 del output["value"]
             value -= TRANSACTION_FEE
             outs = [{'value': value, 'address': payout_address}]
-            tx = bitcoin.mktx(outpoints, outs)
+            tx = bitcointools.mktx(outpoints, outs)
             signatures = []
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
-            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
+            masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
             for index in range(0, len(outpoints)):
-                sig = bitcoin.multisign(tx, index, redeem_script, vendor_priv)
+                sig = bitcointools.multisign(tx, index, redeem_script, vendor_priv)
                 signatures.append({"input_index": index, "signature": sig})
             conf_json["vendor_order_confirmation"]["invoice"]["payout"] = {}
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
@@ -495,15 +495,15 @@ class Contract(object):
                 del output["value"]
             value -= TRANSACTION_FEE
             outs = [{'value': value, 'address': payout_address}]
-            tx = bitcoin.mktx(outpoints, outs)
+            tx = bitcointools.mktx(outpoints, outs)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
-            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcoin.MAINNET_PRIVATE)
+            masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
             for index in range(0, len(outpoints)):
-                tx = bitcoin.sign(tx, index, vendor_priv)
+                tx = bitcointools.sign(tx, index, vendor_priv)
             self.blockchain.broadcast(tx)
-            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
-            self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx))
+            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
+            self.db.Sales().update_payment_tx(order_id, bitcointools.txhash(tx))
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
@@ -614,28 +614,28 @@ class Contract(object):
                 del output["value"]
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
             outs = [{'value': value, 'address': payout_address}]
-            tx = bitcoin.mktx(outpoints, outs)
+            tx = bitcointools.mktx(outpoints, outs)
             signatures = []
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            masterkey_b = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_privkey)
-            buyer_priv = derive_childkey(masterkey_b, chaincode, bitcoin.MAINNET_PRIVATE)
+            masterkey_b = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
+            buyer_priv = derive_childkey(masterkey_b, chaincode, bitcointools.MAINNET_PRIVATE)
             masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
             vendor_key = derive_childkey(masterkey_v, chaincode)
             valid_inputs = 0
             for index in range(0, len(outpoints)):
-                sig = bitcoin.multisign(tx, index, redeem_script, buyer_priv)
+                sig = bitcointools.multisign(tx, index, redeem_script, buyer_priv)
                 signatures.append({"input_index": index, "signature": sig})
                 for s in self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]:
                     if s["input_index"] == index:
-                        if bitcoin.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
-                            tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script),
-                                                               sig, str(s["signature"]))
+                        if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
+                            tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
+                                                                    sig, str(s["signature"]))
                             valid_inputs += 1
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             if valid_inputs == len(outpoints):
-                self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+                self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
                 self.blockchain.broadcast(tx)
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = bitcoin.txhash(tx)
+                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = bitcointools.txhash(tx)
             receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
             receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = value
         if claim:
@@ -688,7 +688,7 @@ class Contract(object):
                 del output["value"]
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
             outs = [{'value': value, 'address': payout_address}]
-            tx = bitcoin.mktx(outpoints, outs)
+            tx = bitcointools.mktx(outpoints, outs)
 
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
@@ -704,13 +704,13 @@ class Contract(object):
                     if s["input_index"] == index:
                         sig1 = str(s["signature"])
 
-                if bitcoin.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
-                    tx_signed = bitcoin.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
+                if bitcointools.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
+                    tx_signed = bitcointools.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
                 else:
                     raise Exception("Buyer sent invalid signature")
-            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx_signed))
+            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx_signed))
             self.blockchain.broadcast(tx_signed)
-            self.db.Sales().update_payment_tx(order_id, bitcoin.txhash(tx_signed))
+            self.db.Sales().update_payment_tx(order_id, bitcointools.txhash(tx_signed))
             title = self.contract["vendor_offer"]["listing"]["item"]["title"]
             if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
                 image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
@@ -738,7 +738,6 @@ class Contract(object):
         Saves the contract to the file system and db as an unfunded contract.
         Listens on the libbitcoin server for the multisig address to be funded.
         """
-
         self.notification_listener = notification_listener
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
@@ -808,14 +807,14 @@ class Contract(object):
                     output_script = 'a914' + digest(unhexlify(
                         self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
                 else:
-                    output_script = '76a914' + bitcoin.b58check_to_hex(
+                    output_script = '76a914' + bitcointools.b58check_to_hex(
                         self.contract["buyer_order"]["order"]["payment"]["address"]) +'88ac'
                 for output in transaction["outs"]:
                     if output["script"] == output_script:
                         self.amount_funded += output["value"]
                         if tx not in self.received_txs:
                             self.received_txs.append(tx)
-                        self.outpoints.append({"output": bitcoin.txhash(tx.encode("hex")) +
+                        self.outpoints.append({"output": bitcointools.txhash(tx.encode("hex")) +
                                                          ":" + str(output["index"]), "value": output["value"]})
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(
@@ -977,7 +976,7 @@ class Contract(object):
 
             bitcoin_key = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
             bitcoin_sig = self.contract["buyer_order"]["signatures"]["bitcoin"]
-            valid = bitcoin.ecdsa_raw_verify(verify_obj, bitcoin.decode_sig(bitcoin_sig), bitcoin_key)
+            valid = bitcointools.ecdsa_raw_verify(verify_obj, bitcointools.decode_sig(bitcoin_sig), bitcoin_key)
             if not valid:
                 raise Exception("Invalid Bitcoin signature")
 
@@ -1054,26 +1053,26 @@ class Contract(object):
                         masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
 
                 masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
-                masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+                masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
                 buyer_key = derive_childkey(masterkey_b, chaincode)
                 vendor_key = derive_childkey(masterkey_v, chaincode)
                 moderator_key = derive_childkey(masterkey_m, chaincode)
 
-                redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+                redeem_script = bitcointools.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
                 if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
                     raise Exception("Invalid redeem script")
             else:
                 # verify the direct payment address
                 chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
 
-                masterkey_v = bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
+                masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
                 vendor_key = derive_childkey(masterkey_v, chaincode)
 
                 # verify the payment address
                 if self.testnet:
-                    payment_address = bitcoin.pubkey_to_address(vendor_key, 111)
+                    payment_address = bitcointools.pubkey_to_address(vendor_key, 111)
                 else:
-                    payment_address = bitcoin.pubkey_to_address(vendor_key)
+                    payment_address = bitcointools.pubkey_to_address(vendor_key)
                 if payment_address != self.contract["buyer_order"]["order"]["payment"]["address"]:
                     raise Exception("Incorrect payment address")
 
@@ -1120,9 +1119,9 @@ class Contract(object):
         except Exception:
             validation_failures.append("Guid signature in vendor_offer not valid;")
 
-        valid = bitcoin.ecdsa_raw_verify(listing,
-                                         bitcoin.decode_sig(vendor_bitcoin_signature),
-                                         vendor_bitcoin_pubkey)
+        valid = bitcointools.ecdsa_raw_verify(listing,
+                                              bitcointools.decode_sig(vendor_bitcoin_signature),
+                                              vendor_bitcoin_pubkey)
         if not valid:
             validation_failures.append("Bitcoin signature in vendor_offer is not valid;")
 
@@ -1139,7 +1138,8 @@ class Contract(object):
         except Exception:
             validation_failures.append("Guid signature in buyer_order not valid;")
 
-        valid = bitcoin.ecdsa_raw_verify(order, bitcoin.decode_sig(buyer_bitcoin_signature), buyer_bitcoin_pubkey)
+        valid = bitcointools.ecdsa_raw_verify(order, bitcointools.decode_sig(buyer_bitcoin_signature),
+                                              buyer_bitcoin_pubkey)
         if not valid:
             validation_failures.append("Bitcoin signature in buyer_order not valid;")
 
@@ -1164,7 +1164,7 @@ class Contract(object):
             if mod["guid"] == self.contract["buyer_order"]["order"]["moderator"]:
                 masterkey_m = mod["pubkeys"]["bitcoin"]["key"]
 
-        if masterkey_m != bitcoin.bip32_extract_key(self.keychain.bitcoin_master_pubkey):
+        if masterkey_m != bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey):
             validation_failures.append("Moderator Bitcoin key doesn't match key in vendor_order;")
 
         masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
@@ -1173,15 +1173,15 @@ class Contract(object):
         vendor_key = derive_childkey(masterkey_v, chaincode)
         moderator_key = derive_childkey(masterkey_m, chaincode)
 
-        redeem_script = bitcoin.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
+        redeem_script = bitcointools.mk_multisig_script([buyer_key, vendor_key, moderator_key], 2)
         if redeem_script != self.contract["buyer_order"]["order"]["payment"]["redeem_script"]:
             validation_failures.append("Bitcoin redeem script not valid for the keys in this contract;")
 
         # verify address from redeem script
         if self.testnet:
-            payment_address = bitcoin.p2sh_scriptaddr(redeem_script, 196)
+            payment_address = bitcointools.p2sh_scriptaddr(redeem_script, 196)
         else:
-            payment_address = bitcoin.p2sh_scriptaddr(redeem_script)
+            payment_address = bitcointools.p2sh_scriptaddr(redeem_script)
         if self.contract["buyer_order"]["order"]["payment"]["address"] != payment_address:
             validation_failures.append("Bitcoin address invalid. Cannot be derived from reddem script;")
 

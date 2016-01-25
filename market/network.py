@@ -1,7 +1,7 @@
 __author__ = 'chris'
 
 import base64
-import bitcointools as bitcoin
+import bitcointools
 import gnupg
 import httplib
 import json
@@ -112,7 +112,8 @@ class Server(object):
 
                     bitcoin_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
                     bitcoin_sig = contract["vendor_offer"]["signatures"]["bitcoin"]
-                    valid = bitcoin.ecdsa_raw_verify(verify_obj, bitcoin.decode_sig(bitcoin_sig), bitcoin_key)
+                    valid = bitcointools.ecdsa_raw_verify(verify_obj, bitcointools.decode_sig(bitcoin_sig),
+                                                          bitcoin_key)
                     if not valid:
                         raise Exception("Invalid Bitcoin signature")
 
@@ -294,7 +295,7 @@ class Server(object):
 
         u = objects.Profile()
         k = u.PublicKey()
-        k.public_key = bitcoin.bip32_deserialize(KeyChain(self.db).bitcoin_master_pubkey)[5]
+        k.public_key = bitcointools.bip32_deserialize(KeyChain(self.db).bitcoin_master_pubkey)[5]
         k.signature = self.signing_key.sign(k.public_key)[:64]
         u.bitcoin_key.MergeFrom(k)
         u.moderator = True
@@ -803,14 +804,14 @@ class Server(object):
                         dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': vendor_address})
-                    tx = bitcoin.mktx(outpoints, outputs)
+                    tx = bitcointools.mktx(outpoints, outputs)
                     chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
                     redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
-                    masterkey_m = bitcoin.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-                    moderator_priv = derive_childkey(masterkey_m, chaincode, bitcoin.MAINNET_PRIVATE)
+                    masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+                    moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
                     signatures = []
                     for index in range(0, len(outpoints)):
-                        sig = bitcoin.multisign(tx, index, redeem_script, moderator_priv)
+                        sig = bitcointools.multisign(tx, index, redeem_script, moderator_priv)
                         signatures.append({"input_index": index, "signature": sig})
                     dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
                     dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
@@ -884,28 +885,28 @@ class Server(object):
             outputs.append({'value': contract["dispute_resolution"]["resolution"]["vendor_payout"],
                             'address': vendor_address})
 
-        tx = bitcoin.mktx(outpoints, outputs)
+        tx = bitcointools.mktx(outpoints, outputs)
         signatures = []
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
-        masterkey = bitcoin.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-        childkey = derive_childkey(masterkey, chaincode, bitcoin.MAINNET_PRIVATE)
+        masterkey = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+        childkey = derive_childkey(masterkey, chaincode, bitcointools.MAINNET_PRIVATE)
 
         mod_key = derive_childkey(masterkey_m, chaincode)
 
         valid_inputs = 0
         for index in range(0, len(outpoints)):
-            sig = bitcoin.multisign(tx, index, redeem_script, childkey)
+            sig = bitcointools.multisign(tx, index, redeem_script, childkey)
             signatures.append({"input_index": index, "signature": sig})
             for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
                 if s["input_index"] == index:
-                    if bitcoin.verify_tx_input(tx, index, redeem_script, s["signature"], mod_key):
-                        tx = bitcoin.apply_multisignatures(tx, index, str(redeem_script),
-                                                           sig, str(s["signature"]))
+                    if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], mod_key):
+                        tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
+                                                                sig, str(s["signature"]))
                         valid_inputs += 1
 
         if valid_inputs == len(outpoints):
-            self.log.info("Broadcasting payout tx %s to network" % bitcoin.txhash(tx))
+            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
             self.protocol.multiplexer.blockchain.broadcast(tx)
         else:
             raise Exception("Failed to reconstruct transaction with moderator signature.")

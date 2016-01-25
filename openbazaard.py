@@ -8,9 +8,8 @@ import socket
 import stun
 import sys
 import time
-from api.ws import WSFactory, WSProtocol
-from api.restapi import OpenBazaarAPI
-from autobahn.twisted.websocket import listenWS
+from api.ws import WSFactory
+from api.restapi import RestAPI
 from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
     LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS
 from daemon import Daemon
@@ -31,8 +30,7 @@ from obelisk.client import LibbitcoinClient
 from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
 from twisted.internet import reactor, task
 from twisted.python import log, logfile
-from twisted.web.server import Site
-from twisted.web.static import File
+from txws import WebSocketFactory
 
 
 def run(*args):
@@ -119,48 +117,22 @@ def run(*args):
 
     reactor.listenUDP(port, protocol)
 
-    class OnlyIP(Site):
-        def __init__(self, resource, ip, timeout=60 * 60 * 1):
-            self.ip = ip
-            Site.__init__(self, resource, timeout=timeout)
-
-        def buildProtocol(self, addr):
-            if addr.host == self.ip:
-                return Site.buildProtocol(self, addr)
-            return None
+    interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
 
     # websockets api
+    ws_api = WSFactory(mserver, kserver, only_ip=ALLOWIP)
     if SSL:
-        ws_factory = WSFactory("wss://127.0.0.1:" + str(WSPORT), mserver, kserver, only_ip=ALLOWIP)
-        contextFactory = ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT)
-        ws_factory.protocol = WSProtocol
-        listenWS(ws_factory, contextFactory)
+        reactor.listenSSL(RESTPORT, WebSocketFactory(ws_api),
+                          ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=interface)
     else:
-        ws_factory = WSFactory("ws://127.0.0.1:" + str(WSPORT), mserver, kserver, only_ip=ALLOWIP)
-        ws_factory.protocol = WSProtocol
-        listenWS(ws_factory)
-
-    if ALLOWIP != "127.0.0.1" and ALLOWIP != "0.0.0.0":
-        ws_interface = "0.0.0.0"
-    else:
-        ws_interface = ALLOWIP
-    webdir = File(".")
-    web = Site(webdir)
-
-    reactor.listenTCP(WSPORT - 1, web, interface=ws_interface)
+        reactor.listenTCP(WSPORT, WebSocketFactory(ws_api), interface=interface)
 
     # rest api
-    api = OpenBazaarAPI(mserver, kserver, protocol)
-    if ALLOWIP != "127.0.0.1" and ALLOWIP != "0.0.0.0":
-        rest_interface = "0.0.0.0"
-        site = OnlyIP(api, ALLOWIP, timeout=None)
-    else:
-        rest_interface = ALLOWIP
-        site = Site(api, timeout=None)
+    rest_api = RestAPI(mserver, kserver, protocol, only_ip=ALLOWIP)
     if SSL:
-        reactor.listenSSL(RESTPORT, site, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=rest_interface)
+        reactor.listenSSL(RESTPORT, rest_api, ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=interface)
     else:
-        reactor.listenTCP(RESTPORT, site, interface=rest_interface)
+        reactor.listenTCP(RESTPORT, rest_api, interface=interface)
 
     # blockchain
     if TESTNET:
@@ -169,16 +141,18 @@ def run(*args):
         libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER, log=Logger(service="LibbitcoinClient"))
 
     # listeners
-    nlistener = NotificationListenerImpl(ws_factory, db)
+    nlistener = NotificationListenerImpl(ws_api, db)
     mserver.protocol.add_listener(nlistener)
-    mlistener = MessageListenerImpl(ws_factory, db)
+    mlistener = MessageListenerImpl(ws_api, db)
     mserver.protocol.add_listener(mlistener)
-    blistener = BroadcastListenerImpl(ws_factory, db)
+    blistener = BroadcastListenerImpl(ws_api, db)
     mserver.protocol.add_listener(blistener)
 
-    protocol.set_servers(ws_factory, libbitcoin_client)
+    protocol.set_servers(ws_api, libbitcoin_client)
 
     logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
+
+    reactor.callLater(15, ws_api.push, "Hello world")
 
     reactor.run()
 

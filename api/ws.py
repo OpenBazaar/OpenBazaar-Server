@@ -8,21 +8,25 @@ from constants import DATA_FOLDER
 from market.profile import Profile
 from keyutils.keys import KeyChain
 from random import shuffle
-from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from protos.countries import CountryCode
 from protos.objects import PlaintextMessage, Value, Listings
 from protos import objects
 from binascii import unhexlify
 from dht.node import Node
+from twisted.internet.protocol import Protocol, Factory, connectionDone
 
 
-class WSProtocol(WebSocketServerProtocol):
+# pylint: disable=W0232
+class WSProtocol(Protocol):
     """
     Handles new incoming requests coming from a websocket.
     """
 
-    def onOpen(self):
+    def connectionMade(self):
         self.factory.register(self)
+
+    def connectionLost(self, reason=connectionDone):
+        self.factory.unregister(self)
 
     def get_vendors(self, message_id):
         if message_id in self.factory.outstanding_vendors:
@@ -55,7 +59,7 @@ class WSProtocol(WebSocketServerProtocol):
                             "nsfw": metadata.nsfw
                         }
                 }
-                self.sendMessage(json.dumps(vendor, indent=4), False)
+                self.transport.write(json.dumps(vendor, indent=4))
                 queried.append(node.id)
                 return True
             else:
@@ -92,7 +96,7 @@ class WSProtocol(WebSocketServerProtocol):
                                     "fee": profile.moderation_fee
                                 }
                         }
-                        self.sendMessage(json.dumps(moderator, indent=4), False)
+                        self.transport.write(json.dumps(moderator, indent=4))
                     else:
                         m.delete_moderator(node.id)
                 for mod in moderators:
@@ -152,7 +156,7 @@ class WSProtocol(WebSocketServerProtocol):
                                 self.factory.mserver.get_image(node, l.thumbnail_hash)
                             if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
                                 self.factory.mserver.get_image(node, listings.avatar_hash)
-                            self.sendMessage(json.dumps(listing_json, indent=4), False)
+                            self.transport.write(json.dumps(listing_json, indent=4))
                             count += 1
                             self.factory.outstanding_listings[message_id].append(l.contract_hash)
                             if count == 3:
@@ -202,7 +206,7 @@ class WSProtocol(WebSocketServerProtocol):
                 }
                 for country in l.ships_to:
                     listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                self.sendMessage(json.dumps(listing_json, indent=4), False)
+                self.transport.write(json.dumps(listing_json, indent=4))
 
         def parse_results(values):
             if values is not None:
@@ -230,7 +234,7 @@ class WSProtocol(WebSocketServerProtocol):
                         pass
         self.factory.kserver.get(keyword.lower()).addCallback(parse_results)
 
-    def onMessage(self, payload, isBinary):
+    def dataReceived(self, payload):
         try:
             request_json = json.loads(payload)
             if isinstance(request_json, unicode):
@@ -262,32 +266,26 @@ class WSProtocol(WebSocketServerProtocol):
         except Exception as e:
             print 'Exception occurred: %s' % e
 
-    def connectionLost(self, reason):
-        WebSocketServerProtocol.connectionLost(self, reason)
-        self.factory.unregister(self)
 
+class WSFactory(Factory):
 
-class WSFactory(WebSocketServerFactory):
-
-    """
-    Simple broadcast server broadcasting any message it receives to all
-    currently connected clients.
-    """
-
-    def __init__(self, url, mserver, kserver, only_ip="127.0.0.1", debug=False, debugCodePaths=False):
-        WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
+    def __init__(self, mserver, kserver, only_ip="127.0.0.1"):
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
         self.outstanding_listings = {}
         self.outstanding_vendors = {}
-        self.clients = []
+        self.protocol = WSProtocol
         self.only_ip = only_ip
+        self.clients = []
+
+    def buildProtocol(self, addr):
+        if addr.host != self.only_ip and self.only_ip != "0.0.0.0":
+            return
+        return Factory.buildProtocol(self, addr)
 
     def register(self, client):
-        if client.transport.getPeer().host != self.only_ip and self.only_ip != "0.0.0.0":
-            client.transport.loseConnection()
-        elif client not in self.clients:
+        if client not in self.clients:
             self.clients.append(client)
 
     def unregister(self, client):
@@ -296,4 +294,6 @@ class WSFactory(WebSocketServerFactory):
 
     def push(self, msg):
         for c in self.clients:
-            c.sendMessage(msg)
+            c.transport.write(msg)
+
+
