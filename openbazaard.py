@@ -152,8 +152,6 @@ def run(*args):
 
     logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
-    reactor.callLater(15, ws_api.push, "Hello world")
-
     reactor.run()
 
 if __name__ == "__main__":

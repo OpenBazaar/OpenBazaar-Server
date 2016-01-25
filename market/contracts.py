@@ -1,13 +1,11 @@
 __author__ = 'chris'
 
-
 import base64
 import bitcointools
 import json
 import nacl.encoding
 import nacl.signing
 import os
-import pickle
 import random
 import re
 import time
@@ -467,7 +465,7 @@ class Contract(object):
             conf_json["vendor_order_confirmation"]["invoice"]["comments"] = comments
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         # apply signatures
-        outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+        outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
         if "moderator" in self.contract["buyer_order"]["order"]:
             redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
             value = 0
@@ -607,7 +605,7 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
-            outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
+            outpoints = json.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             for output in outpoints:
@@ -681,7 +679,7 @@ class Contract(object):
             raise Exception("Receipt already processed for this order")
 
         if "moderator" in self.contract["buyer_order"]["order"]:
-            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+            outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             for output in outpoints:
@@ -814,8 +812,11 @@ class Contract(object):
                         self.amount_funded += output["value"]
                         if tx not in self.received_txs:
                             self.received_txs.append(tx)
-                        self.outpoints.append({"output": bitcointools.txhash(tx.encode("hex")) +
-                                                         ":" + str(output["index"]), "value": output["value"]})
+                        self.outpoints.append({
+                            "txid": bitcointools.txhash(tx.encode("hex")),
+                            "vout": str(output["index"]),
+                            "value": output["value"]
+                        })
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(
                         self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
@@ -837,7 +838,7 @@ class Contract(object):
                                                           order_id, title, image_hash)
                         # update the db
                         self.db.Purchases().update_status(order_id, 1)
-                        self.db.Purchases().update_outpoint(order_id, pickle.dumps(self.outpoints))
+                        self.db.Purchases().update_outpoint(order_id, json.dumps(self.outpoints))
                         self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                     else:
                         unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
@@ -850,7 +851,7 @@ class Contract(object):
                         self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
                                                           title, image_hash)
                         self.db.Sales().update_status(order_id, 1)
-                        self.db.Sales().update_outpoint(order_id, pickle.dumps(self.outpoints))
+                        self.db.Sales().update_outpoint(order_id, json.dumps(self.outpoints))
                         self.log.info("Received new order %s" % order_id)
 
                     os.rename(unfunded_path, in_progress_path)
