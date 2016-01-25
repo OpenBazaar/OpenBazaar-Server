@@ -562,7 +562,7 @@ class OpenBazaarAPI(APIResource):
                                              indent=4))
                     request.finish()
                 else:
-                    request.write(json.dumps({"success": False, "reason": "seller rejected contract"}, indent=4))
+                    request.write(json.dumps({"success": False, "reason": "vendor rejected contract"}, indent=4))
                     request.finish()
             options = None
             if "options" in request.args:
@@ -588,8 +588,8 @@ class OpenBazaarAPI(APIResource):
                 else:
                     request.write(json.dumps({"success": False, "reason": "unable to reach vendor"}, indent=4))
                     request.finish()
-            seller_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
-            self.kserver.resolve(seller_guid).addCallback(get_node)
+            vendor_guid = unhexlify(c.contract["vendor_offer"]["listing"]["id"]["guid"])
+            self.kserver.resolve(vendor_guid).addCallback(get_node)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

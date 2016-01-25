@@ -398,7 +398,7 @@ class Server(object):
 
         Args:
             fname: File name to save retularly to
-            frequencey: Frequency in seconds that the state should be saved.
+            frequency: Frequency in seconds that the state should be saved.
                         By default, 10 minutes.
         """
         loop = LoopingCall(self.saveState, fname)

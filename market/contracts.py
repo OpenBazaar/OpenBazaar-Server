@@ -517,7 +517,7 @@ class Contract(object):
 
     def accept_order_confirmation(self, notification_listener, confirmation_json=None):
         """
-        Validate the order confirmation sent over from the seller and update our node accordingly.
+        Validate the order confirmation sent over from the vendor and update our node accordingly.
         """
         self.notification_listener = notification_listener
         try:

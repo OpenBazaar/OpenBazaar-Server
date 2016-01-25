@@ -71,7 +71,7 @@ class NodeHeap(object):
         """
         Constructor.
 
-        @param node: The node to measure all distnaces from.
+        @param node: The node to measure all distances from.
         @param maxsize: The maximum size that this heap can grow to.
         """
         self.node = node
