@@ -815,7 +815,8 @@ class Contract(object):
                         self.outpoints.append({
                             "txid": bitcointools.txhash(tx.encode("hex")),
                             "vout": str(output["index"]),
-                            "value": output["value"]
+                            "value": output["value"],
+                            "scriptPubKey": output["script"]
                         })
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(

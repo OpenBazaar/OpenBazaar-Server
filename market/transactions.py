@@ -3,11 +3,12 @@ __author__ = 'chris'
 import struct
 from binascii import unhexlify
 from bitcoin import SelectParams
-from bitcoin.core import b2x, b2lx, COutPoint, CMutableTxOut, CMutableTxIn, CMutableTransaction, Hash160
-from bitcoin.core.script import CScript, OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG, SignatureHash, SIGHASH_ALL
+from bitcoin.core import x, lx, b2x, b2lx, COutPoint, CMutableTxOut, CMutableTxIn, CMutableTransaction
+from bitcoin.core.script import CScript, SIGHASH_ALL, SignatureHash
 from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from bitcoin.wallet import CBitcoinAddress, CBitcoinSecret
 from constants import TRANSACTION_FEE
+from io import BytesIO
 from log import Logger
 
 
@@ -18,33 +19,50 @@ class BitcoinTransaction(object):
     (all paid to the same address) and payout to a single address. At present this is the
     only way we make transactions in OpenBazaar so more advanced functionality is not needed.
     """
-
-    def __init__(self, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False):
+    def __init__(self, tx):
         """
-        Build the unsigned transaction.
+        Create a new transaction
 
         Args:
-            outpoints: A `list` of `dict` objects which contain a txid, vout, and value.
+            tx: a `CMutableTransaction` object
+        """
+        self.tx = tx
+        self.log = Logger(system=self)
+
+    @classmethod
+    def make(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False):
+        """
+        Build an unsigned transaction.
+
+        Args:
+            outpoints: A `list` of `dict` objects which contain a txid, vout, value, and scriptPubkey.
             output_address: The address to send the full value (minus the tx fee) of the inputs to.
             tx_fee: The Bitcoin network fee to be paid on this transaction.
+            testnet: Should this transaction be built for testnet?
         """
         SelectParams("testnet" if testnet else "mainnet")
-        self.log = Logger(system=self)
 
         # build the inputs from the outpoints object
         txins = []
         in_value = 0
-        self.outpoints = outpoints
         for outpoint in outpoints:
             in_value += outpoint["value"]
-            txin = CMutableTxIn(COutPoint(outpoint["txid"], outpoint["vout"]))
+            txin = CMutableTxIn(COutPoint(lx(outpoint["txid"]), outpoint["vout"]))
+            txin.scriptSig = CScript(x(outpoint["scriptPubKey"]))
             txins.append(txin)
 
         # build the output
         txout = CMutableTxOut(in_value - tx_fee, CBitcoinAddress(output_address).to_scriptPubKey())
 
         # make the transaction
-        self.tx = CMutableTransaction(txins, [txout])
+        tx = CMutableTransaction(txins, [txout])
+
+        return BitcoinTransaction(tx)
+
+    @classmethod
+    def from_serialized(cls, serialized_tx):
+        tx = CMutableTransaction.stream_deserialize(BytesIO(serialized_tx))
+        return BitcoinTransaction(tx)
 
     def sign(self, priv_key):
         """
@@ -53,8 +71,8 @@ class BitcoinTransaction(object):
         """
         seckey = CBitcoinSecret.from_secret_bytes(unhexlify(priv_key))
 
-        for i in range(len(self.outpoints)):
-            txin_scriptPubKey = CScript([OP_DUP, OP_HASH160, Hash160(seckey.pub), OP_EQUALVERIFY, OP_CHECKSIG])
+        for i in range(len(self.tx.vin)):
+            txin_scriptPubKey = self.tx.vin[i].scriptSig
             sighash = SignatureHash(txin_scriptPubKey, self.tx, i, SIGHASH_ALL)
             sig = seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)
             self.tx.vin[i].scriptSig = CScript([sig, seckey.pub])
@@ -76,3 +94,19 @@ class BitcoinTransaction(object):
         """
         libbitcoin_client.broadcast(self.get_raw_tx())
         self.log.info("Broadcasting payout tx %s to network" % b2lx(self.tx.GetHash()))
+
+    def get_outpoints(self):
+        """Get a list of deserialized outpoints"""
+        outpoints = []
+        for i in range(len(self.tx.vout)):
+            o = {
+                "txid": b2lx(self.tx.GetHash()),
+                "index": i,
+                "value": self.tx.vout[i].nValue,
+                "scriptPubKey": self.tx.vout[i].scriptPubKey.encode("hex")
+            }
+            outpoints.append(o)
+        return outpoints
+
+    def __repr__(self):
+        return repr(self.tx)
