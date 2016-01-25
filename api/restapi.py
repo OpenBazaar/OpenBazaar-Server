@@ -12,6 +12,7 @@ from txrestapi.methods import GET, POST, DELETE
 from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
+from twisted.web.server import Site
 from twisted.internet import defer, reactor
 from twisted.protocols.basic import FileSender
 
@@ -1084,3 +1085,16 @@ class OpenBazaarAPI(APIResource):
         request.write(json.dumps(cases_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
+
+
+class RestAPI(Site):
+
+    def __init__(self, mserver, kserver, openbazaar_protocol, only_ip="127.0.0.1", timeout=60 * 60 * 1):
+        self.only_ip = only_ip
+        api_resource = OpenBazaarAPI(mserver, kserver, openbazaar_protocol)
+        Site.__init__(self, api_resource, timeout=timeout)
+
+    def buildProtocol(self, addr):
+        if addr.host != self.only_ip and self.only_ip != "0.0.0.0":
+            return
+        return Site.buildProtocol(self, addr)

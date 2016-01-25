@@ -629,7 +629,7 @@ class Contract(object):
                     if s["input_index"] == index:
                         if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
                             tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
-                                                               sig, str(s["signature"]))
+                                                                    sig, str(s["signature"]))
                             valid_inputs += 1
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             if valid_inputs == len(outpoints):
@@ -795,7 +795,6 @@ class Contract(object):
         funding level. We need to keep a running balance and increment it when a new transaction
         is received. If the contract is fully funded, we push a notification to the websockets.
         """
-        print "3"
         try:
             # decode the transaction
             self.log.info("Bitcoin transaction detected")
@@ -1121,8 +1120,8 @@ class Contract(object):
             validation_failures.append("Guid signature in vendor_offer not valid;")
 
         valid = bitcointools.ecdsa_raw_verify(listing,
-                                         bitcointools.decode_sig(vendor_bitcoin_signature),
-                                         vendor_bitcoin_pubkey)
+                                              bitcointools.decode_sig(vendor_bitcoin_signature),
+                                              vendor_bitcoin_pubkey)
         if not valid:
             validation_failures.append("Bitcoin signature in vendor_offer is not valid;")
 
@@ -1139,7 +1138,8 @@ class Contract(object):
         except Exception:
             validation_failures.append("Guid signature in buyer_order not valid;")
 
-        valid = bitcointools.ecdsa_raw_verify(order, bitcointools.decode_sig(buyer_bitcoin_signature), buyer_bitcoin_pubkey)
+        valid = bitcointools.ecdsa_raw_verify(order, bitcointools.decode_sig(buyer_bitcoin_signature),
+                                              buyer_bitcoin_pubkey)
         if not valid:
             validation_failures.append("Bitcoin signature in buyer_order not valid;")
 

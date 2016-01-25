@@ -6,8 +6,7 @@ bitcointools==1.1.44
 gnupg==2.0.2
 pynacl==0.3.0
 txrestapi==0.2
-autobahn==0.10.9
-txaio==1.1.0
+txws==0.9.1
 python-libbitcoinclient==0.3.2
 requests==2.7.0
 pyopenssl==0.15.1

@@ -112,7 +112,8 @@ class Server(object):
 
                     bitcoin_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
                     bitcoin_sig = contract["vendor_offer"]["signatures"]["bitcoin"]
-                    valid = bitcointools.ecdsa_raw_verify(verify_obj, bitcointools.decode_sig(bitcoin_sig), bitcoin_key)
+                    valid = bitcointools.ecdsa_raw_verify(verify_obj, bitcointools.decode_sig(bitcoin_sig),
+                                                          bitcoin_key)
                     if not valid:
                         raise Exception("Invalid Bitcoin signature")
 
@@ -901,7 +902,7 @@ class Server(object):
                 if s["input_index"] == index:
                     if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], mod_key):
                         tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
-                                                           sig, str(s["signature"]))
+                                                                sig, str(s["signature"]))
                         valid_inputs += 1
 
         if valid_inputs == len(outpoints):
