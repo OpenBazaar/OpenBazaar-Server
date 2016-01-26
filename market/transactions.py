@@ -14,7 +14,7 @@ from log import Logger
 
 class BitcoinTransaction(object):
     """
-    A Bitcoin transaction objected which is used for building, signing, and broadcasting
+    A Bitcoin transaction object which is used for building, signing, and broadcasting
     Bitcoin transactions. It is designed primarily to take in a list of outpoints
     (all paid to the same address) and payout to a single address. At present this is the
     only way we make transactions in OpenBazaar so more advanced functionality is not needed.
@@ -30,7 +30,7 @@ class BitcoinTransaction(object):
         self.log = Logger(system=self)
 
     @classmethod
-    def make(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False):
+    def make_unsigned(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False):
         """
         Build an unsigned transaction.
 
@@ -64,12 +64,12 @@ class BitcoinTransaction(object):
         tx = CMutableTransaction.stream_deserialize(BytesIO(serialized_tx))
         return BitcoinTransaction(tx)
 
-    def sign(self, priv_key):
+    def sign(self, privkey):
         """
         Sign each of the inputs with the private key. Inputs should all be sent to
         the same scriptPubkey so we should only need one key.
         """
-        seckey = CBitcoinSecret.from_secret_bytes(unhexlify(priv_key))
+        seckey = CBitcoinSecret.from_secret_bytes(unhexlify(privkey))
 
         for i in range(len(self.tx.vin)):
             txin_scriptPubKey = self.tx.vin[i].scriptSig
@@ -77,7 +77,38 @@ class BitcoinTransaction(object):
             sig = seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)
             self.tx.vin[i].scriptSig = CScript([sig, seckey.pub])
 
-            VerifyScript(self.tx.vin[0].scriptSig, txin_scriptPubKey, self.tx, 0, (SCRIPT_VERIFY_P2SH,))
+            VerifyScript(self.tx.vin[i].scriptSig, txin_scriptPubKey, self.tx, i, (SCRIPT_VERIFY_P2SH,))
+
+    def create_signature(self, privkey):
+        """
+        Exports a raw signature suitable for use in a multisig transaction
+        """
+        seckey = CBitcoinSecret.from_secret_bytes(unhexlify(privkey))
+        signatures = []
+        for i in range(len(self.tx.vin)):
+            txin_scriptPubKey = self.tx.vin[i].scriptSig
+            sighash = SignatureHash(txin_scriptPubKey, self.tx, i, SIGHASH_ALL)
+            signatures.append({
+                "index": i,
+                "signature": (seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)).encode("hex")
+            })
+        return signatures
+
+    def multisign(self, sigs, redeem_script):
+        """
+        Signs a multisig transaction.
+
+        Args:
+            sigs: a `list` of `dict` with format: {"index": 0, "signatures": [sig1, sig2]}
+            redeem_script: the redeem script in hex
+
+        """
+        for sig in sigs:
+            i = sig["index"]
+            s = sig["signatures"]
+            self.tx.vin[i].scriptSig = CScript([unhexlify(s[0]), unhexlify(s[1]), CScript(x(redeem_script))])
+            VerifyScript(self.tx.vin[i].scriptSig,
+                         CScript(x(redeem_script)).to_p2sh_scriptPubKey(), self.tx, i, (SCRIPT_VERIFY_P2SH,))
 
     def get_raw_tx(self):
         """
