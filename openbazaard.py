@@ -1,7 +1,6 @@
 __author__ = 'chris'
 
 import argparse
-import pickle
 import platform
 import requests
 import socket
@@ -69,6 +68,7 @@ def run(*args):
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]
+    time.sleep(1)
 
     if response[0] == "Full Cone":
         nat_type = FULL_CONE
@@ -216,18 +216,6 @@ commands:
             print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
             print
             print "OpenBazaar Server v0.1 starting..."
-
-            # If the user recently shut down we need to pause to make sure the socket is
-            # fully closed before starting back up.
-            try:
-                with open(DATA_FOLDER + "cache.pickle", 'r') as f:
-                    data = pickle.load(f)
-                if "shutdown_time" in data:
-                    current_time = time.time()
-                    if current_time - data["shutdown_time"] < 5:
-                        time.sleep(5 - (current_time - data["shutdown_time"]))
-            except IOError:
-                pass
 
             unix = ("linux", "linux2", "darwin")
 

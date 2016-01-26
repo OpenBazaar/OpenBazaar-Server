@@ -1,8 +1,6 @@
 __author__ = 'chris'
 import json
-import time
 import os
-import pickle
 import obelisk
 from binascii import unhexlify
 from collections import OrderedDict
@@ -520,14 +518,6 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
-        try:
-            with open(DATA_FOLDER + "cache.pickle", 'r') as f:
-                data = pickle.load(f)
-            data["shutdown_time"] = time.time()
-            with open(DATA_FOLDER + "cache.pickle", 'w') as f:
-                pickle.dump(data, f)
-        except IOError:
-            pass
         PortMapper().clean_my_mappings(self.kserver.node.port)
         self.protocol.shutdown()
         reactor.stop()
