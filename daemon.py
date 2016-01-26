@@ -2,6 +2,7 @@ __author__ = 'chris'
 import sys, os, time, atexit
 from signal import SIGTERM
 
+
 class Daemon(object):
     """
     A generic daemon class.

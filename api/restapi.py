@@ -1004,9 +1004,18 @@ class OpenBazaarAPI(APIResource):
             file_path = DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"
         elif os.path.exists(DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"
+        else:
+            request.write(json.dumps({}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
+
+        def return_order():
+            request.setHeader('content-type', "application/json")
+            request.write(json.dumps(order, indent=4))
+            request.finish()
 
         def height_fetched(ec, chain_height):
             payment_address = order["buyer_order"]["order"]["payment"]["address"]
@@ -1035,10 +1044,9 @@ class OpenBazaarAPI(APIResource):
 
         if self.protocol.blockchain.connected:
             self.protocol.blockchain.fetch_last_height(height_fetched)
+            reactor.callLater(4, return_order)
         else:
-            request.setHeader('content-type', "application/json")
-            request.write(json.dumps(order, indent=4))
-            request.finish()
+            return_order()
         return server.NOT_DONE_YET
 
     @POST('^/api/v1/dispute_contract')
