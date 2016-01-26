@@ -17,7 +17,7 @@ from db.datastore import Database
 from dht.network import Server
 from dht.node import Node
 from dht.storage import PersistentStorage, ForgetfulStorage
-from keyutils.keys import KeyChain
+from keys.keychain import KeyChain
 from log import Logger, FileLogObserver
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl

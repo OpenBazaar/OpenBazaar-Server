@@ -707,15 +707,15 @@ buyer, vendor, validation, claim, status FROM cases ''')
 
         def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
                    shipping_addresses, blocked, libbitcoinServer, ssl, seed, terms_conditions,
-                   refund_policy, moderator_list):
+                   refund_policy, resolver, moderator_list):
             cursor = self.db.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, libbitcoinServer, ssl, seed,
-termsConditions, refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+termsConditions, refundPolicy, resolver, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked,
                             libbitcoinServer, ssl, seed, terms_conditions,
-                            refund_policy, moderator_list))
+                            refund_policy, resolver, moderator_list))
             self.db.commit()
 
         def get(self):
@@ -833,6 +833,7 @@ btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, 
 
     cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB)''')
+libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB,
+resolver TEXT)''')
 
     db.commit()

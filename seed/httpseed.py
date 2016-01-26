@@ -18,7 +18,7 @@ from dht.crawling import NodeSpiderCrawl
 from dht.network import Server
 from dht.node import Node
 from dht.utils import digest, deferredDict
-from keyutils.keys import KeyChain
+from keys.keychain import KeyChain
 from log import Logger, FileLogObserver
 from net.wireprotocol import OpenBazaarProtocol
 from protos import objects

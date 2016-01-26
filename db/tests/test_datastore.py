@@ -333,12 +333,12 @@ class DatastoreTest(unittest.TestCase):
         self.assertEqual(v, [])
 
     def test_Settings(self):
-        NUM_SETTINGS = 15
+        NUM_SETTINGS = 16
         settings = self.settings.get()
         self.assertIsNone(settings)
 
         self.settings.update('NEW_ADDRESS', 'BTC', 'AUSTRALIA', 'EN',
-                             '', '', '', '', '', '', '', '', '', '')
+                             '', '', '', '', '', '', '', '', '', '', "")
         settings = self.settings.get()
         self.assertEqual(NUM_SETTINGS, len(settings))
 

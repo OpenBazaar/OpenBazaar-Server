@@ -7,7 +7,7 @@ import nacl.encoding
 import nacl.hash
 from collections import OrderedDict
 from interfaces import MessageProcessor, BroadcastListener, MessageListener, NotificationListener
-from keyutils.bip32utils import derive_childkey
+from keys.bip32utils import derive_childkey
 from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute

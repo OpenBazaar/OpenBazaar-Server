@@ -6,7 +6,7 @@ from binascii import unhexlify
 from collections import OrderedDict
 from constants import DATA_FOLDER
 from dht.utils import digest
-from keyutils.keys import KeyChain
+from keys.keychain import KeyChain
 from market.contracts import Contract
 from protos.objects import PlaintextMessage
 

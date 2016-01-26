@@ -4,7 +4,7 @@ import time
 import bitcointools
 import nacl.signing
 import nacl.encoding
-from keyutils.guid import GUID
+from keys.guid import GUID
 from nacl.public import PrivateKey
 from txrestapi.resource import APIResource
 from txrestapi.methods import GET

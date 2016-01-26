@@ -15,8 +15,8 @@ from constants import DATA_FOLDER, TRANSACTION_FEE
 from datetime import datetime
 from dht.utils import digest
 from hashlib import sha256
-from keyutils.bip32utils import derive_childkey
-from keyutils.keys import KeyChain
+from keys.bip32utils import derive_childkey
+from keys.keychain import KeyChain
 from log import Logger
 from urllib2 import Request, urlopen, URLError
 from market.profile import Profile

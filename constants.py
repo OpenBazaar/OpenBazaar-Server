@@ -4,7 +4,8 @@ This file has intrinsic naming difficulties because it is trying to be platform
 agnostic but naming variables is inherently platform specific (i.e directory vs
 folder)
 '''
-__author__ = 'foxcarlos-TeamCreed'
+__author__ = 'foxcarlos-TeamCreed', 'Tobin Harding'
+
 import os
 from platform import platform
 from os.path import expanduser, join, isfile
@@ -12,20 +13,28 @@ from ConfigParser import ConfigParser
 from urlparse import urlparse
 
 PROTOCOL_VERSION = 10
-CONFIG_FILE = 'ob.cfg'      # FIXME server must be run from within source directory
+CONFIG_FILE = join(os.getcwd(), 'ob.cfg')
+
+# FIXME probably a better way to do this. This curretly checks two levels deep
+for i in range(2):
+    if not isfile(CONFIG_FILE):
+        paths = CONFIG_FILE.rsplit('/', 2)
+        CONFIG_FILE = join(paths[0], paths[2])
 
 DEFAULTS = {
     # Default project config file may now remove these items
-    'data_folder' : 'OpenBazaar', # FIXME change to 'None' when issue #163 is resolved
-    'ksize' : '20',
-    'alpha' : '3',
-    'transaction_fee' : '10000',
-    'libbitcoin_server' : 'tcp://libbitcoin1.openbazaar.org:9091',
-    'libbitcoin_server_testnet' : 'tcp://libbitcoin2.openbazaar.org:9091',
-    'ssl_cert' : None,
-    'ssl_key' : None,
-    'seed' : 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
-    }
+    'data_folder': 'OpenBazaar',  # FIXME change to 'None' when issue #163 is resolved
+    'ksize': '20',
+    'alpha': '3',
+    'transaction_fee': '10000',
+    'libbitcoin_server': 'tcp://libbitcoin1.openbazaar.org:9091',
+    'libbitcoin_server_testnet': 'tcp://libbitcoin2.openbazaar.org:9091',
+    'resolver': 'http://resolver.onename.com/',
+    'ssl_cert': None,
+    'ssl_key': None,
+    'seed': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
+}
+
 
 def _platform_agnostic_data_path(data_folder):
     '''
@@ -83,9 +92,11 @@ def _is_linux():
     which_os = platform(aliased=True, terse=True).lower()
     return 'linux' in which_os
 
+
 def _is_osx():
     which_os = platform(aliased=True, terse=True).lower()
     return 'darwin' in which_os
+
 
 def _is_well_formed_seed_string(string):
     '''
@@ -139,6 +150,7 @@ ALPHA = int(cfg.get('CONSTANTS', 'ALPHA'))
 TRANSACTION_FEE = int(cfg.get('CONSTANTS', 'TRANSACTION_FEE'))
 LIBBITCOIN_SERVER = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER')
 LIBBITCOIN_SERVER_TESTNET = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER_TESTNET')
+RESOLVER = cfg.get('CONSTANTS', 'RESOLVER')
 SSL_CERT = cfg.get('CONSTANTS', 'SSL_CERT')
 SSL_KEY = cfg.get('CONSTANTS', 'SSL_KEY')
 SEEDS = []

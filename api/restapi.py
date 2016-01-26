@@ -16,10 +16,11 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor
 from twisted.protocols.basic import FileSender
 
-from constants import DATA_FOLDER
+from constants import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER
 from protos.countries import CountryCode
 from protos import objects
-from keyutils.keys import KeyChain
+from keys import blockchainid
+from keys.keychain import KeyChain
 from dht.utils import digest
 from market.profile import Profile
 from market.contracts import Contract
@@ -131,6 +132,9 @@ class OpenBazaarAPI(APIResource):
                             "username": account.username,
                             "proof_url": account.proof_url
                         }
+                if (profile.handle is not "" and
+                        not blockchainid.validate(profile.handle, profile_json["profile"]["guid"])):
+                    profile_json["profile"]["handle"] = ""
                 request.setHeader('content-type', "application/json")
                 request.write(json.dumps(profile_json, indent=4))
                 request.finish()
@@ -324,7 +328,10 @@ class OpenBazaarAPI(APIResource):
                 # This needs to be formatted. Either here or from the UI.
                 u.location = CountryCode.Value(request.args["location"][0].upper())
             if "handle" in request.args:
-                u.handle = request.args["handle"][0]
+                if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
+                    u.handle = request.args["handle"][0]
+                else:
+                    u.handle = ""
             if "about" in request.args:
                 u.about = request.args["about"][0]
             if "short_description" in request.args:
@@ -692,6 +699,15 @@ class OpenBazaarAPI(APIResource):
     @POST('^/api/v1/settings')
     def set_settings(self, request):
         try:
+            resolver = RESOLVER if "resolver" not in request.args or request.args["resolver"][0] == "" \
+                else request.args["resolver"][0]
+            if self.protocol.testnet:
+                libbitcoin_server = LIBBITCOIN_SERVER_TESTNET if "libbitcoin_server" not in request.args \
+                    or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
+            else:
+                libbitcoin_server = LIBBITCOIN_SERVER if "libbitcoin_server" not in request.args \
+                    or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
+
             settings = self.db.Settings()
             settings.update(
                 request.args["refund_address"][0],
@@ -702,11 +718,12 @@ class OpenBazaarAPI(APIResource):
                 1 if str_to_bool(request.args["notifications"][0]) else 0,
                 json.dumps(request.args["shipping_addresses"] if request.args["shipping_addresses"] != "" else []),
                 json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
-                request.args["libbitcoin_server"][0],
+                libbitcoin_server,
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
                 KeyChain(self.db).guid_privkey.encode("hex"),
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0],
+                resolver,
                 json.dumps(request.args["moderators"] if request.args["moderators"] != "" else [])
             )
             request.write(json.dumps({"success": True}, indent=4))
@@ -737,7 +754,8 @@ class OpenBazaarAPI(APIResource):
                 "ssl": True if settings[10] == 1 else False,
                 "seed": settings[11],
                 "terms_conditions": settings[12],
-                "refund_policy": settings[13]
+                "refund_policy": settings[13],
+                "resolver": settings[15]
             }
             mods = []
             mods_db = self.db.ModeratorStore()

@@ -18,8 +18,8 @@ from collections import OrderedDict
 from constants import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
 from dht.utils import digest
-from keyutils.bip32utils import derive_childkey
-from keyutils.keys import KeyChain
+from keys.bip32utils import derive_childkey
+from keys.keychain import KeyChain
 from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute

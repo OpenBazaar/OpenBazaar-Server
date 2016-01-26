@@ -6,7 +6,7 @@ import os
 import time
 from constants import DATA_FOLDER
 from market.profile import Profile
-from keyutils.keys import KeyChain
+from keys.keychain import KeyChain
 from random import shuffle
 from protos.countries import CountryCode
 from protos.objects import PlaintextMessage, Value, Listings
