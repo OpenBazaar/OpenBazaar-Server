@@ -765,7 +765,7 @@ def _initialize_datafolder_tree():
     tree = [
         ['cache'],
         ['store', 'contracts', 'listings'],
-        ['store', 'contracts' 'in progress'],
+        ['store', 'contracts', 'in progress'],
         ['store', 'contracts', 'unfunded'],
         ['store', 'contracts', 'trade receipts'],
         ['store', 'media'],
