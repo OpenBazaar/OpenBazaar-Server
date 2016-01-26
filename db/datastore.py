@@ -771,7 +771,9 @@ def _initialize_datafolder_tree():
         ['store', 'media'],
         ['purchases', 'in progress'],
         ['purchases', 'unfunded'],
-        ['purchases', 'trade receipts',]]
+        ['purchases', 'trade receipts'],
+        ['cases']
+    ]
 
     path = ''
     for sub_tree in tree:
@@ -788,7 +790,6 @@ def _create_database(database):
     cursor = db.cursor()
 
     cursor.execute('''PRAGMA user_version = 0''')
-
     cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
     cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
@@ -802,35 +803,36 @@ def _create_database(database):
     cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
     cursor.execute('''CREATE TABLE messages(msgID TEXT PRIMARY KEY, guid TEXT, handle TEXT, signedPubkey BLOB,
-    encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
-    avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
-
+encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
+avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
     cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
-
     cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
 
     cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
-    orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
+orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
 
     cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
-    timestamp INTEGER, avatarHash BLOB)''')
+timestamp INTEGER, avatarHash BLOB)''')
 
     cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, serializedNode BLOB)''')
 
     cursor.execute('''CREATE TABLE moderators(guid TEXT PRIMARY KEY, signedPubkey BLOB, encryptionKey BLOB,
-    encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
-    avatar BLOB, fee FLOAT)''')
+encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
+avatar BLOB, fee FLOAT)''')
 
     cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
-    timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-    proofSig BLOB, contractType TEXT)''')
+timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
+proofSig BLOB, contractType TEXT)''')
 
     cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
-    timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
-    paymentTX TEXT, contractType TEXT)''')
+timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
+paymentTX TEXT, contractType TEXT)''')
+
+    cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
+btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
 
     cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
-    country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-    libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB)''')
+country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
+libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB)''')
 
     db.commit()
