@@ -20,8 +20,8 @@ class Database(object):
         global DATABASE
 
         DATABASE = _database_path(testnet, filepath)
-        _initialize_database(DATABASE)
         _initialize_datafolder_tree()
+        _initialize_database(DATABASE)
 
     class HashMap(object):
         """
@@ -780,9 +780,8 @@ def _initialize_datafolder_tree():
         path = DATA_FOLDER
         for directory in sub_tree:
             path = join(path, directory)
-
-    if not os.path.exists(path):
-        os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
 
 def _create_database(database):
