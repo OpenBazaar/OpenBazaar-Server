@@ -1,6 +1,7 @@
 __author__ = 'chris'
 
 import struct
+import bitcointools
 from bitcoin import SelectParams
 from bitcoin.core import x, lx, b2x, b2lx, COutPoint, CMutableTxOut, CMutableTxIn, CMutableTransaction
 from bitcoin.core.script import CScript, SIGHASH_ALL, SignatureHash, OP_0
@@ -71,7 +72,7 @@ class BitcoinTransaction(object):
         Sign each of the inputs with the private key. Inputs should all be sent to
         the same scriptPubkey so we should only need one key.
         """
-        seckey = CBitcoinSecret.from_secret_bytes(x(privkey))
+        seckey = CBitcoinSecret.from_secret_bytes(x(bitcointools.encode_privkey(privkey, "hex")))
 
         for i in range(len(self.tx.vin)):
             txin_scriptPubKey = self.tx.vin[i].scriptSig
@@ -85,7 +86,7 @@ class BitcoinTransaction(object):
         """
         Exports a raw signature suitable for use in a multisig transaction
         """
-        seckey = CBitcoinSecret.from_secret_bytes(x(privkey))
+        seckey = CBitcoinSecret.from_secret_bytes(x(bitcointools.encode_privkey(privkey, "hex")))
         signatures = []
         for i in range(len(self.tx.vin)):
             sighash = SignatureHash(CScript(x(reedem_script)), self.tx, i, SIGHASH_ALL)
