@@ -113,6 +113,8 @@ class BitcoinTransaction(object):
                              self.tx, i, (SCRIPT_VERIFY_P2SH,))
                 return True
             except Exception:
+                import traceback
+                traceback.print_exc()
                 return False
 
     def to_raw_tx(self):
