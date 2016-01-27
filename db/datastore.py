@@ -23,6 +23,10 @@ class Database(object):
         _initialize_datafolder_tree()
         _initialize_database(DATABASE)
 
+    @staticmethod
+    def get_database_path():
+        return DATABASE
+
     class HashMap(object):
         """
         Creates a table in the database for mapping file hashes (which are sent

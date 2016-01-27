@@ -86,7 +86,7 @@ def run(*args):
                                   relaying=True if nat_type == FULL_CONE else False)
 
     # kademlia
-    storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.DATABASE)
+    storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.get_database_path())
     relay_node = None
     if nat_type != FULL_CONE:
         for seed in SEEDS:
