@@ -41,6 +41,7 @@ class BitcoinTransaction(object):
             testnet: Should this transaction be built for testnet?
         """
         # build the inputs from the outpoints object
+        SelectParams("testnet" if testnet else "mainnet")
         txins = []
         in_value = 0
         for outpoint in outpoints:
@@ -146,6 +147,15 @@ class BitcoinTransaction(object):
                 }
                 outpoints.append(o)
         return outpoints if len(outpoints) > 0 else None
+
+    def get_out_value(self):
+        value = 0
+        for out in self.tx.vout:
+            value += out.nValue
+        return value
+
+    def get_hash(self):
+        return b2lx(self.tx.GetHash())
 
     def __repr__(self):
         return repr(self.tx)

@@ -11,7 +11,7 @@ import re
 import time
 from binascii import unhexlify, hexlify
 from collections import OrderedDict
-from constants import DATA_FOLDER, TRANSACTION_FEE
+from constants import DATA_FOLDER
 from datetime import datetime
 from dht.utils import digest
 from hashlib import sha256
@@ -468,40 +468,24 @@ class Contract(object):
         outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
         if "moderator" in self.contract["buyer_order"]["order"]:
             redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
-            value = 0
-            for output in outpoints:
-                value += output["value"]
-                del output["value"]
-            value -= TRANSACTION_FEE
-            outs = [{'value': value, 'address': payout_address}]
-            tx = bitcointools.mktx(outpoints, outs)
-            signatures = []
+            tx = BitcoinTransaction.make_unsigned(outpoints, payout_address, testnet=self.testnet)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
-            for index in range(0, len(outpoints)):
-                sig = bitcointools.multisign(tx, index, redeem_script, vendor_priv)
-                signatures.append({"input_index": index, "signature": sig})
+            sigs = tx.create_signature(vendor_priv, redeem_script)
             conf_json["vendor_order_confirmation"]["invoice"]["payout"] = {}
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["address"] = payout_address
-            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = value
-            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = signatures
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = tx.get_out_value()
+            conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = sigs
         else:
-            value = 0
-            for output in outpoints:
-                value += output["value"]
-                del output["value"]
-            value -= TRANSACTION_FEE
-            outs = [{'value': value, 'address': payout_address}]
-            tx = bitcointools.mktx(outpoints, outs)
+            tx = BitcoinTransaction.make_unsigned(outpoints, payout_address, testnet=self.testnet)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
-            for index in range(0, len(outpoints)):
-                tx = bitcointools.sign(tx, index, vendor_priv)
-            self.blockchain.broadcast(tx)
-            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
-            self.db.Sales().update_payment_tx(order_id, bitcointools.txhash(tx))
+            tx.sign(vendor_priv)
+            self.blockchain.broadcast(tx.to_raw_tx())
+            self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+            self.db.Sales().update_payment_tx(order_id, tx.get_hash())
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
@@ -739,6 +723,7 @@ class Contract(object):
         self.notification_listener = notification_listener
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
+        self.blockchain.refresh_connection()
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         payment_address = self.contract["buyer_order"]["order"]["payment"]["address"]
         vendor_item = self.contract["vendor_offer"]["listing"]["item"]
