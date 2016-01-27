@@ -478,12 +478,13 @@ class Contract(object):
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = tx.get_out_value()
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = sigs
         else:
+            self.blockchain.refresh_connection()
             tx = BitcoinTransaction.make_unsigned(outpoints, payout_address, testnet=self.testnet)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
             tx.sign(vendor_priv)
-            self.blockchain.broadcast(tx.to_raw_tx())
+            tx.broadcast(self.blockchain)
             self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
             self.db.Sales().update_payment_tx(order_id, tx.get_hash())
 
@@ -589,37 +590,38 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
+            self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.Purchases().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
-            for output in outpoints:
-                del output["value"]
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
-            outs = [{'value': value, 'address': payout_address}]
-            tx = bitcointools.mktx(outpoints, outs)
-            signatures = []
+            tx = BitcoinTransaction.make_unsigned(outpoints, payout_address,
+                                                  testnet=self.testnet, out_value=value)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_b = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
             buyer_priv = derive_childkey(masterkey_b, chaincode, bitcointools.MAINNET_PRIVATE)
-            masterkey_v = self.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
-            vendor_key = derive_childkey(masterkey_v, chaincode)
-            valid_inputs = 0
-            for index in range(0, len(outpoints)):
-                sig = bitcointools.multisign(tx, index, redeem_script, buyer_priv)
-                signatures.append({"input_index": index, "signature": sig})
-                for s in self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]:
-                    if s["input_index"] == index:
-                        if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], vendor_key):
-                            tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
-                                                                    sig, str(s["signature"]))
-                            valid_inputs += 1
+
+            buyer_signatures = tx.create_signature(buyer_priv, redeem_script)
+            signatures = []
+            for outpoint in outpoints:
+                index = outpoint["vout"]
+                for vendor_sig in self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]:
+                    if vendor_sig["index"] == index:
+                        v_signature = vendor_sig["signature"]
+                for buyer_sig in buyer_signatures:
+                    if buyer_sig["index"] == index:
+                        b_signature = buyer_sig["signature"]
+                signature_obj = {"index": index, "signatures": [v_signature, b_signature]}
+                signatures.append(signature_obj)
+
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
-            if valid_inputs == len(outpoints):
-                self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
-                self.blockchain.broadcast(tx)
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = bitcointools.txhash(tx)
-            receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = signatures
-            receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = value
+            if tx.multisign(signatures, redeem_script):
+                tx.broadcast(self.blockchain)
+                self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
+
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = buyer_signatures
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = tx.get_out_value()
         if claim:
             receipt_json["buyer_receipt"]["receipt"]["dispute"]["claim"] = claim
         receipt = json.dumps(receipt_json["buyer_receipt"]["receipt"], indent=4)
@@ -663,36 +665,35 @@ class Contract(object):
             raise Exception("Receipt already processed for this order")
 
         if "moderator" in self.contract["buyer_order"]["order"]:
+            self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
-            for output in outpoints:
-                del output["value"]
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
-            outs = [{'value': value, 'address': payout_address}]
-            tx = bitcointools.mktx(outpoints, outs)
 
-            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
-            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
-            buyer_key = derive_childkey(masterkey_b, chaincode)
+            tx = BitcoinTransaction.make_unsigned(outpoints, payout_address,
+                                                  testnet=self.testnet, out_value=value)
 
             vendor_sigs = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"]
             buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
-            for index in range(0, len(outpoints)):
-                for s in vendor_sigs:
-                    if s["input_index"] == index:
-                        sig2 = str(s["signature"])
-                for s in buyer_sigs:
-                    if s["input_index"] == index:
-                        sig1 = str(s["signature"])
 
-                if bitcointools.verify_tx_input(tx, index, redeem_script, sig1, buyer_key):
-                    tx_signed = bitcointools.apply_multisignatures(tx, index, str(redeem_script), sig1, sig2)
-                else:
-                    raise Exception("Buyer sent invalid signature")
-            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx_signed))
-            self.blockchain.broadcast(tx_signed)
-            self.db.Sales().update_payment_tx(order_id, bitcointools.txhash(tx_signed))
+            signatures = []
+            for outpoint in outpoints:
+                index = outpoint["vout"]
+                for vendor_sig in vendor_sigs:
+                    if vendor_sig["index"] == index:
+                        v_signature = vendor_sig["signature"]
+                for buyer_sig in buyer_sigs:
+                    if buyer_sig["index"] == index:
+                        b_signature = buyer_sig["signature"]
+                signature_obj = {"index": index, "signatures": [v_signature, b_signature]}
+                signatures.append(signature_obj)
+
+            tx.multisign(signatures, redeem_script)
+            tx.broadcast(self.blockchain)
+            self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+
+            self.db.Sales().update_payment_tx(order_id, tx.get_hash())
             title = self.contract["vendor_offer"]["listing"]["item"]["title"]
             if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
                 image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])

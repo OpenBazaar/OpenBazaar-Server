@@ -30,7 +30,7 @@ class BitcoinTransaction(object):
         self.log = Logger(system=self)
 
     @classmethod
-    def make_unsigned(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False):
+    def make_unsigned(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False, out_value=None):
         """
         Build an unsigned transaction.
 
@@ -39,6 +39,8 @@ class BitcoinTransaction(object):
             output_address: The address to send the full value (minus the tx fee) of the inputs to.
             tx_fee: The Bitcoin network fee to be paid on this transaction.
             testnet: Should this transaction be built for testnet?
+            out_value: used if you want to specify a specific output value otherwise the full value
+                of the inputs (minus the tx fee) will be used.
         """
         # build the inputs from the outpoints object
         SelectParams("testnet" if testnet else "mainnet")
@@ -51,7 +53,8 @@ class BitcoinTransaction(object):
             txins.append(txin)
 
         # build the output
-        txout = CMutableTxOut(in_value - tx_fee, CBitcoinAddress(output_address).to_scriptPubKey())
+        value = out_value if out_value is not None else (in_value - tx_fee)
+        txout = CMutableTxOut(value, CBitcoinAddress(output_address).to_scriptPubKey())
 
         # make the transaction
         tx = CMutableTransaction(txins, [txout])
@@ -105,8 +108,12 @@ class BitcoinTransaction(object):
             i = sig["index"]
             s = sig["signatures"]
             self.tx.vin[i].scriptSig = CScript([OP_0, x(s[0]), x(s[1]), CScript(x(redeem_script))])
-            VerifyScript(self.tx.vin[i].scriptSig, CScript(x(redeem_script)).to_p2sh_scriptPubKey(),
-                         self.tx, i, (SCRIPT_VERIFY_P2SH,))
+            try:
+                VerifyScript(self.tx.vin[i].scriptSig, CScript(x(redeem_script)).to_p2sh_scriptPubKey(),
+                             self.tx, i, (SCRIPT_VERIFY_P2SH,))
+                return True
+            except Exception:
+                return False
 
     def to_raw_tx(self):
         """
