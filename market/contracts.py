@@ -20,7 +20,7 @@ from keys.keychain import KeyChain
 from log import Logger
 from urllib2 import Request, urlopen, URLError
 from market.profile import Profile
-from market.utils import deserialize
+from market.transactions import BitcoinTransaction
 from protos.countries import CountryCode
 from protos.objects import Listings
 
@@ -796,28 +796,18 @@ class Contract(object):
         try:
             # decode the transaction
             self.log.info("Bitcoin transaction detected")
-            transaction = deserialize(tx.encode("hex"))
+            transaction = BitcoinTransaction.from_serialized(tx, self.testnet)
 
             # get the amount (in satoshi) the user is expected to pay
             amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
             if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
-                if "moderator" in self.contract["buyer_order"]["order"]:
-                    output_script = 'a914' + digest(unhexlify(
-                        self.contract["buyer_order"]["order"]["payment"]["redeem_script"])).encode("hex") + '87'
-                else:
-                    output_script = '76a914' + bitcointools.b58check_to_hex(
-                        self.contract["buyer_order"]["order"]["payment"]["address"]) +'88ac'
-                for output in transaction["outs"]:
-                    if output["script"] == output_script:
-                        self.amount_funded += output["value"]
-                        if tx not in self.received_txs:
-                            self.received_txs.append(tx)
-                        self.outpoints.append({
-                            "txid": bitcointools.txhash(tx.encode("hex")),
-                            "vout": str(output["index"]),
-                            "value": output["value"],
-                            "scriptPubKey": output["script"]
-                        })
+                outpoints = transaction.check_for_funding(
+                    self.contract["buyer_order"]["order"]["payment"]["address"])
+                if outpoints is not None:
+                    for outpoint in outpoints:
+                        self.amount_funded += outpoint["value"]
+                        self.received_txs.append(tx)
+                        self.outpoints.append(outpoint)
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(
                         self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
@@ -1224,41 +1214,45 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
     Run through the unfunded contracts in our database and query the
     libbitcoin server to see if they received a payment.
     """
-    def check(order_ids, is_purchase=True):
-        for order_id in order_ids:
-            try:
-                if is_purchase:
-                    file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
-                else:
-                    file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"
-                with open(file_path, 'r') as filename:
-                    order = json.load(filename, object_pairs_hook=OrderedDict)
-                c = Contract(db, contract=order, testnet=testnet)
-                c.blockchain = libbitcoin_client
-                c.notification_listener = notification_listener
-                c.is_purchase = is_purchase
-                addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+    def check(order_id):
+        try:
+            if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"):
+                file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
+                is_purchase = True
+            elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"):
+                file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"
+                is_purchase = False
+            with open(file_path, 'r') as filename:
+                order = json.load(filename, object_pairs_hook=OrderedDict)
+            c = Contract(db, contract=order, testnet=testnet)
+            c.blockchain = libbitcoin_client
+            c.notification_listener = notification_listener
+            c.is_purchase = is_purchase
+            addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+            def history_fetched(ec, history):
+                if not ec:
+                    # pylint: disable=W0612
+                    # pylint: disable=W0640
+                    for objid, txhash, index, height, value in history:
+                        def cb_txpool(ec, result):
+                            if ec:
+                                libbitcoin_client.fetch_transaction(txhash, cb_chain)
+                            else:
+                                c.on_tx_received(None, None, None, None, result)
 
-                def history_fetched(ec, history):
-                    if not ec:
-                        # pylint: disable=W0612
-                        # pylint: disable=W0640
-                        for objid, txhash, index, height, value in history:
-                            def cb_txpool(ec, result):
-                                if ec:
-                                    libbitcoin_client.fetch_transaction(txhash, cb_chain)
-                                else:
-                                    c.on_tx_received(None, None, None, None, result)
+                        def cb_chain(ec, result):
+                            if not ec:
+                                c.on_tx_received(None, None, None, None, result)
 
-                            def cb_chain(ec, result):
-                                if not ec:
-                                    c.on_tx_received(None, None, None, None, result)
+                        libbitcoin_client.fetch_txpool_transaction(txhash, cb_txpool)
 
-                            libbitcoin_client.fetch_txpool_transaction(txhash, cb_txpool)
-
-                libbitcoin_client.fetch_history2(addr, history_fetched)
-            except Exception:
-                pass
+            libbitcoin_client.fetch_history2(addr, history_fetched)
+        except Exception:
+            pass
     libbitcoin_client.refresh_connection()
-    check(db.Purchases().get_unfunded(), True)
-    check(db.Sales().get_unfunded(), False)
+    purchases = db.Purchases().get_unfunded()
+    for purchase in purchases:
+        check(purchase)
+    sales = db.Sales().get_unfunded()
+    for sale in sales:
+        check(sale)

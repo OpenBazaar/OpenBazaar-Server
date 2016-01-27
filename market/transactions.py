@@ -18,13 +18,14 @@ class BitcoinTransaction(object):
     (all paid to the same address) and payout to a single address. At present this is the
     only way we make transactions in OpenBazaar so more advanced functionality is not needed.
     """
-    def __init__(self, tx):
+    def __init__(self, tx, testnet=False):
         """
         Create a new transaction
 
         Args:
             tx: a `CMutableTransaction` object
         """
+        SelectParams("testnet" if testnet else "mainnet")
         self.tx = tx
         self.log = Logger(system=self)
 
@@ -39,8 +40,6 @@ class BitcoinTransaction(object):
             tx_fee: The Bitcoin network fee to be paid on this transaction.
             testnet: Should this transaction be built for testnet?
         """
-        SelectParams("testnet" if testnet else "mainnet")
-
         # build the inputs from the outpoints object
         txins = []
         in_value = 0
@@ -59,9 +58,9 @@ class BitcoinTransaction(object):
         return BitcoinTransaction(tx)
 
     @classmethod
-    def from_serialized(cls, serialized_tx):
+    def from_serialized(cls, serialized_tx, testnet=False):
         tx = CMutableTransaction.stream_deserialize(BytesIO(serialized_tx))
-        return BitcoinTransaction(tx)
+        return BitcoinTransaction(tx, testnet)
 
     def sign(self, privkey):
         """
@@ -124,18 +123,29 @@ class BitcoinTransaction(object):
         libbitcoin_client.broadcast(self.to_raw_tx())
         self.log.info("Broadcasting payout tx %s to network" % b2lx(self.tx.GetHash()))
 
-    def get_outpoints(self):
-        """Get a list of deserialized outpoints"""
+    def check_for_funding(self, address):
+        """
+        Check to see if any of the outputs pay the given address
+
+        Args:
+            address: base58check encoded bitcoin address
+
+        Returns: a `list` of `dict` outpoints if any of the outputs match
+            the address else None.
+        """
+
         outpoints = []
         for i in range(len(self.tx.vout)):
-            o = {
-                "txid": b2lx(self.tx.GetHash()),
-                "vout": i,
-                "value": self.tx.vout[i].nValue,
-                "scriptPubKey": self.tx.vout[i].scriptPubKey.encode("hex")
-            }
-            outpoints.append(o)
-        return outpoints
+            addr = CBitcoinAddress.from_scriptPubKey(self.tx.vout[i].scriptPubKey)
+            if str(addr) == address:
+                o = {
+                    "txid": b2lx(self.tx.GetHash()),
+                    "vout": i,
+                    "value": self.tx.vout[i].nValue,
+                    "scriptPubKey": self.tx.vout[i].scriptPubKey.encode("hex")
+                }
+                outpoints.append(o)
+        return outpoints if len(outpoints) > 0 else None
 
     def __repr__(self):
         return repr(self.tx)

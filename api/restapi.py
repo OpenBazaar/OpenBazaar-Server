@@ -1027,6 +1027,7 @@ class OpenBazaarAPI(APIResource):
                             tx["type"] = "outgoing"
                         txs.append(tx)
                     order["bitcoin_txs"] = txs
+                    timeout.cancel()
                     request.setHeader('content-type', "application/json")
                     request.write(json.dumps(order, indent=4))
                     request.finish()
@@ -1034,7 +1035,7 @@ class OpenBazaarAPI(APIResource):
 
         if self.protocol.blockchain.connected:
             self.protocol.blockchain.fetch_last_height(height_fetched)
-            reactor.callLater(4, return_order)
+            timeout = reactor.callLater(4, return_order)
         else:
             return_order()
         return server.NOT_DONE_YET
