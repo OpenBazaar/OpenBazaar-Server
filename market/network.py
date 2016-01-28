@@ -553,11 +553,13 @@ class Server(object):
                             if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40]:
                                 raise Exception('Invalid guid')
                             if p.type == objects.PlaintextMessage.Type.Value("ORDER_CONFIRMATION"):
-                                c = Contract(self.db, hash_value=unhexlify(p.subject))
+                                c = Contract(self.db, hash_value=unhexlify(p.subject),
+                                             testnet=self.protocol.multiplexer.testnet)
                                 c.accept_order_confirmation(self.protocol.get_notification_listener(),
                                                             confirmation_json=p.message)
                             elif p.type == objects.PlaintextMessage.Type.Value("RECEIPT"):
-                                c = Contract(self.db, hash_value=unhexlify(p.subject))
+                                c = Contract(self.db, hash_value=unhexlify(p.subject),
+                                             testnet=self.protocol.multiplexer.testnet)
                                 c.accept_receipt(self.protocol.get_notification_listener(),
                                                  self.protocol.multiplexer.blockchain,
                                                  receipt_json=p.message)

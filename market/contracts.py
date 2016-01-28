@@ -664,7 +664,7 @@ class Contract(object):
         if "moderator" in self.contract["buyer_order"]["order"]:
             self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
-            payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            payout_address = str(self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"])
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
 
