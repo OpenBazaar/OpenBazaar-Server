@@ -675,15 +675,14 @@ class Contract(object):
             buyer_sigs = self.contract["buyer_receipt"]["receipt"]["payout"]["signature(s)"]
 
             signatures = []
-            for outpoint in outpoints:
-                index = outpoint["vout"]
+            for i in range(len(outpoints)):
                 for vendor_sig in vendor_sigs:
-                    if vendor_sig["index"] == index:
+                    if vendor_sig["index"] == i:
                         v_signature = vendor_sig["signature"]
                 for buyer_sig in buyer_sigs:
-                    if buyer_sig["index"] == index:
+                    if buyer_sig["index"] == i:
                         b_signature = buyer_sig["signature"]
-                signature_obj = {"index": index, "signatures": [b_signature, v_signature]}
+                signature_obj = {"index": i, "signatures": [b_signature, v_signature]}
                 signatures.append(signature_obj)
 
             tx.multisign(signatures, redeem_script)
