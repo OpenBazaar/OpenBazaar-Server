@@ -78,6 +78,7 @@ class WSProtocol(Protocol):
 
                 def parse_profile(profile, node):
                     if profile is not None:
+                        # TODO: should check signatures here before entering in database
                         m.save_moderator(node.id.encode("hex"), node.signed_pubkey,
                                          profile.encryption_key.public_key,
                                          profile.encryption_key.signature, profile.bitcoin_key.public_key,

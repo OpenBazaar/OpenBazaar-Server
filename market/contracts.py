@@ -608,7 +608,7 @@ class Contract(object):
                 for buyer_sig in buyer_signatures:
                     if buyer_sig["index"] == i:
                         b_signature = buyer_sig["signature"]
-                signature_obj = {"index": i, "signatures": [v_signature, b_signature]}
+                signature_obj = {"index": i, "signatures": [b_signature, v_signature]}
                 signatures.append(signature_obj)
 
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
@@ -683,7 +683,7 @@ class Contract(object):
                 for buyer_sig in buyer_sigs:
                     if buyer_sig["index"] == index:
                         b_signature = buyer_sig["signature"]
-                signature_obj = {"index": index, "signatures": [v_signature, b_signature]}
+                signature_obj = {"index": index, "signatures": [b_signature, v_signature]}
                 signatures.append(signature_obj)
 
             tx.multisign(signatures, redeem_script)

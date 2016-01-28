@@ -295,7 +295,7 @@ class Server(object):
 
         u = objects.Profile()
         k = u.PublicKey()
-        k.public_key = bitcointools.bip32_deserialize(KeyChain(self.db).bitcoin_master_pubkey)[5]
+        k.public_key = unhexlify(bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_pubkey))
         k.signature = self.signing_key.sign(k.public_key)[:64]
         u.bitcoin_key.MergeFrom(k)
         u.moderator = True
