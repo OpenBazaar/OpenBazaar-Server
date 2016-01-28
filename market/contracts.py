@@ -44,7 +44,7 @@ class Contract(object):
 
         Args:
             contract: an `OrderedDict` containing a filled out json contract
-            hash_value: a hash160 (in hex) of a contract
+            hash_value: a hash160 of a contract
             testnet: is this contract on the testnet
         """
         self.db = database
@@ -53,7 +53,7 @@ class Contract(object):
             self.contract = contract
         elif hash_value is not None:
             try:
-                file_path = self.db.HashMap().get_file(hash_value)
+                file_path = self.db.HashMap().get_file(hash_value.encode("hex"))
                 if file_path is None:
                     file_path = DATA_FOLDER + "cache/" + hexlify(hash_value)
                 with open(file_path, 'r') as filename:
