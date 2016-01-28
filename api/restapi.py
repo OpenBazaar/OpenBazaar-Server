@@ -341,7 +341,7 @@ class OpenBazaarAPI(APIResource):
             if "moderator" in request.args:
                 u.moderator = str_to_bool(request.args["moderator"][0])
             if "moderation_fee" in request.args:
-                u.moderation_fee = float(request.args["moderation_fee"][0])
+                u.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
                 u.website = request.args["website"][0]
             if "email" in request.args:
@@ -731,6 +731,12 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({}, indent=4))
             request.finish()
         else:
+            if self.protocol.nat_type == objects.FULL_CONE:
+                nat_type = "Open"
+            elif self.protocol.nat_type == objects.RESTRICTED:
+                nat_type = "Restricted"
+            else:
+                nat_type = "Severely Restricted"
             settings_json = {
                 "refund_address": settings[1],
                 "currency_code": settings[2],
@@ -745,7 +751,8 @@ class OpenBazaarAPI(APIResource):
                 "seed": settings[11],
                 "terms_conditions": settings[12],
                 "refund_policy": settings[13],
-                "resolver": settings[15]
+                "resolver": settings[15],
+                "network_connection": nat_type
             }
             mods = []
             mods_db = self.db.ModeratorStore()

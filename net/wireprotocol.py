@@ -38,6 +38,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.blockchain = None
         self.processors = []
         self.relay_node = None
+        self.nat_type = nat_type
         self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
         self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
