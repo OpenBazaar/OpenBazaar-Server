@@ -653,7 +653,7 @@ class Contract(object):
         # The buyer may have sent over this whole contract, make sure the data we added wasn't manipulated.
         verify_key = self.keychain.signing_key.verify_key
         verify_key.verify(json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4),
-                          unhexlify(self.contract["vendor_order_confirmation"]["signature"]))
+                          base64.b64decode(self.contract["vendor_order_confirmation"]["signature"]))
 
         # TODO: verify buyer signature
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
