@@ -138,7 +138,9 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.relay_node = potential_relay_nodes[0]
             for processor in self.processors:
                 if PING in processor:
-                    processor.callPing(Node(None, self.relay_node[0], self.relay_node[1],
+                    if (self.relay_node[0], self.relay_node[1]) in processor.multiplexer:
+                        processor.multiplexer[(self.relay_node[0], self.relay_node[1])].shutdown()
+                    processor.callPing(Node(digest("null"), self.relay_node[0], self.relay_node[1],
                                             relay_node=None, nat_type=FULL_CONE))
 
     class ConnHandlerFactory(HandlerFactory):
