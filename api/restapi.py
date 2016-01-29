@@ -94,7 +94,7 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/profile')
     def get_profile(self, request):
-        def parse_profile(profile):
+        def parse_profile(profile, temp_handle=None):
             if profile is not None:
                 profile_json = {
                     "profile": {
@@ -120,6 +120,8 @@ class OpenBazaarAPI(APIResource):
                         "social_accounts": {}
                     }
                 }
+                if temp_handle:
+                    profile_json["profile"]["temp_handle"] = temp_handle
                 if "guid" in request.args:
                     profile_json["profile"]["guid"] = request.args["guid"][0]
                 else:
@@ -148,10 +150,8 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            p = Profile(self.db).get()
-            if p.handle == "":
-                p.handle = self.db.ProfileStore().get_temp_handle() + " (unconfirmed)"
-            parse_profile(p)
+            temp_handle = self.db.ProfileStore().get_temp_handle()
+            parse_profile(Profile(self.db).get(), None if temp_handle == "" else temp_handle)
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_listings')
@@ -331,6 +331,7 @@ class OpenBazaarAPI(APIResource):
             if "handle" in request.args:
                 if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
                     u.handle = request.args["handle"][0]
+                    p.db.set_temp_handle("")
                 else:
                     u.handle = ""
                     p.db.set_temp_handle(request.args["handle"][0])
