@@ -85,8 +85,9 @@ class Database(object):
 
         def set_proto(self, proto):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT OR REPLACE INTO profile(id, serializedUserInfo)
-                          VALUES (?,?)''', (1, proto))
+            handle = self.get_temp_handle()
+            cursor.execute('''INSERT OR REPLACE INTO profile(id, serializedUserInfo, tempHandle)
+                          VALUES (?,?,?)''', (1, proto, handle))
             self.db.commit()
 
         def get_proto(self):
@@ -96,6 +97,20 @@ class Database(object):
             if ret is None:
                 return None
             return ret[0]
+
+        def set_temp_handle(self, handle):
+            cursor = self.db.cursor()
+            cursor.execute('''UPDATE profile SET tempHandle=? WHERE id=?;''', (handle, 1))
+            self.db.commit()
+
+        def get_temp_handle(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT tempHandle FROM profile WHERE id = 1''')
+            ret = cursor.fetchone()
+            if ret is None:
+                return ""
+            else:
+                return ret[0]
 
     class ListingsStore(object):
         """
@@ -795,7 +810,7 @@ def _create_database(database):
     cursor.execute('''PRAGMA user_version = 0''')
     cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
-    cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB)''')
+    cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
 
     cursor.execute('''CREATE TABLE listings(id INTEGER PRIMARY KEY, serializedListings BLOB)''')
 

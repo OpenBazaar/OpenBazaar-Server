@@ -82,13 +82,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  (m.sender.relayAddress.ip, m.sender.relayAddress.port),
                                  m.sender.natType,
                                  m.sender.vendor)
-                for processor in self.processors:
-                    if m.command in processor or m.command == NOT_FOUND:
-                        processor.receive_message(m, self.connection, self.ban_score)
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received unknown message from %s, ignoring" % self.addr)
                 return False
+            for processor in self.processors:
+                if m.command in processor or m.command == NOT_FOUND:
+                    processor.receive_message(m, self.connection, self.ban_score)
 
         def handle_shutdown(self):
             try:

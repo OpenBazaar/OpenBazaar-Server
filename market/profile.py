@@ -76,3 +76,6 @@ class Profile(object):
         if field is not "name":
             self.profile.ClearField(field)
             self.db.set_proto(self.profile.SerializeToString())
+
+    def get_temp_handle(self):
+        return self.db.get_temp_handle()

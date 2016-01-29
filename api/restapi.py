@@ -130,7 +130,7 @@ class OpenBazaarAPI(APIResource):
                             "username": account.username,
                             "proof_url": account.proof_url
                         }
-                if (profile.handle is not "" and
+                if (profile.handle is not "" and "(unconfirmed)" not in profile.handle and
                         not blockchainid.validate(profile.handle, profile_json["profile"]["guid"])):
                     profile_json["profile"]["handle"] = ""
                 request.setHeader('content-type', "application/json")
@@ -148,7 +148,10 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            parse_profile(Profile(self.db).get())
+            p = Profile(self.db).get()
+            if p.handle == "":
+                p.handle = self.db.ProfileStore().get_temp_handle() + " (unconfirmed)"
+            parse_profile(p)
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_listings')
@@ -330,6 +333,7 @@ class OpenBazaarAPI(APIResource):
                     u.handle = request.args["handle"][0]
                 else:
                     u.handle = ""
+                    p.db.set_temp_handle(request.args["handle"][0])
             if "about" in request.args:
                 u.about = request.args["about"][0]
             if "short_description" in request.args:
