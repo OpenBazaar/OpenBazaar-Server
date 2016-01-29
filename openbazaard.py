@@ -24,6 +24,7 @@ from market.contracts import check_unfunded_for_payment
 from market.profile import Profile
 from net.sslcontext import ChainedOpenSSLContextFactory
 from net.upnp import PortMapper
+from net.utils import looping_retry
 from net.wireprotocol import OpenBazaarProtocol
 from obelisk.client import LibbitcoinClient
 from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
@@ -57,18 +58,12 @@ def run(*args):
     p = PortMapper()
     p.add_port_mapping(PORT, PORT, "UDP")
     logger.info("Finding NAT Type...")
-    while True:
-        # sometimes the stun server returns a code the client
-        # doesn't understand so we have to try again
-        try:
-            response = stun.get_ip_info(source_port=PORT)
-            break
-        except Exception:
-            pass
+
+    response = looping_retry(stun.get_ip_info, "0.0.0.0", PORT)
+
     logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
     ip_address = response[1]
     port = response[2]
-    time.sleep(1)
 
     if response[0] == "Full Cone":
         nat_type = FULL_CONE
@@ -115,7 +110,7 @@ def run(*args):
     mserver.protocol.connect_multiplexer(protocol)
     protocol.register_processor(mserver.protocol)
 
-    reactor.listenUDP(port, protocol)
+    looping_retry(reactor.listenUDP, port, protocol)
 
     interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
 
