@@ -100,7 +100,11 @@ class Database(object):
 
         def set_temp_handle(self, handle):
             cursor = self.db.cursor()
-            cursor.execute('''UPDATE profile SET tempHandle=? WHERE id=?;''', (handle, 1))
+            if self.get_proto() is None:
+                cursor.execute('''INSERT OR REPLACE INTO profile(id, tempHandle)
+                          VALUES (?,?)''', (1, handle))
+            else:
+                cursor.execute('''UPDATE profile SET tempHandle=? WHERE id=?;''', (handle, 1))
             self.db.commit()
 
         def get_temp_handle(self):

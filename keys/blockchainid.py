@@ -19,7 +19,7 @@ def resolve(blockchain_id):
         for account in data[blockchain_id]["profile"]["account"]:
             if account["service"] == "openbazaar":
                 return account["identifier"]
-    except (urllib2.HTTPError, KeyError, TypeError):
+    except Exception:
         return None
 
 
