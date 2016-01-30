@@ -17,7 +17,7 @@ def resolve(blockchain_id):
     try:
         data = json.load(urllib2.urlopen(RESOLVER + 'v2/users/' + blockchain_id))
         for account in data[blockchain_id]["profile"]["account"]:
-            if account["service"] == "openbazaar":
+            if str(account["service"]).lower() == "openbazaar":
                 return account["identifier"]
     except Exception:
         return None
