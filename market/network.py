@@ -705,7 +705,7 @@ class Server(object):
                 proof_sig = self.db.Purchases().get_proof_sig(order_id)
         except Exception:
             try:
-                file_path = DATA_FOLDER + "sales/in progress/" + order_id + ".json"
+                file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                     guid = contract["buyer_order"]["order"]["id"]["guid"]
@@ -727,6 +727,12 @@ class Server(object):
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
                 mod_enc_key = mod["pubkeys"]["encryption"]["key"]
+
+        if self.db.Purchases().get_purchase(order_id) is not None:
+            self.db.Purchases().update_status(order_id, 4)
+
+        elif self.db.Sales().get_sale(order_id) is not None:
+            self.db.Sales().update_status(order_id, 4)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):

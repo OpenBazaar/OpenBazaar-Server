@@ -80,7 +80,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         db.Purchases().update_status(order_id, 4)
 
     elif db.Sales().get_sale(order_id) is not None:
-        db.Purchases().update_status(order_id, 4)
+        db.Sales().update_status(order_id, 4)
 
     elif "moderators" in contract["vendor_offer"]["listing"]:
         # TODO: make sure a case isn't already open in the db
