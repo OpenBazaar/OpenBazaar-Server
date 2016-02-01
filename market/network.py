@@ -697,7 +697,7 @@ class Server(object):
         it in the DHT for them.
         """
         try:
-            file_path = DATA_FOLDER + "purchases/in progress" + order_id + ".json"
+            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
             with open(file_path, 'r') as filename:
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
