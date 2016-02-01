@@ -1119,9 +1119,21 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/get_dispute_messages')
     def get_dispute_messages(self, request):
+        message_list = []
         messages = self.db.MessageStore().get_dispute_messages(request.args["order_id"][0])
+        for m in messages:
+            if m[0] is not None:
+                message_json = {
+                    "guid": m[0],
+                    "handle": m[1],
+                    "message": m[6],
+                    "timestamp": m[7],
+                    "avatar_hash": m[8].encode("hex"),
+                    "outgoing": False if m[10] == 0 else True
+                }
+                message_list.append(message_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(messages, indent=4))
+        request.write(json.dumps(message_list, indent=4))
         request.finish()
         return server.NOT_DONE_YET
 

@@ -323,6 +323,16 @@ class Database(object):
                            (guid, message_type))
             return cursor.fetchall()
 
+        def get_dispute_messages(self, order_id):
+            """
+            Return all messages matching guid and message_type.
+            """
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
+    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE subject=? AND messageType=?''',
+                           (order_id, "DISPUTE"))
+            return cursor.fetchall()
+
         def get_conversations(self):
             """
             Get all 'conversations' composed of messages of type 'CHAT'.
@@ -346,19 +356,6 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                                 "timestamp": val[2],
                                 "encryption_key": val[3].encode("hex"),
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
-            return ret
-
-        def get_dispute_messages(self, order_id):
-            ret = []
-            cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, avatarHash, message, max(timestamp), encryptionPubkey FROM messages
-WHERE subject=? and messageType=?''', (order_id, "DISPUTE"))
-            val = cursor.fetchone()
-            if val[0] is not None:
-                ret.append({"guid": val[0],
-                            "avatar_hash": val[1].encode("hex"),
-                            "last_message": val[2],
-                            "timestamp": val[3]})
             return ret
 
         def get_unread(self):
