@@ -337,15 +337,28 @@ class Database(object):
             unread = self.get_unread()
             for g in guids:
                 cursor.execute('''SELECT avatarHash, message, max(timestamp), encryptionPubkey FROM messages
-WHERE guid=? and messageType="CHAT"''', (g[0],))
+WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                 val = cursor.fetchone()
-                if val is not None:
+                if val[0] is not None:
                     ret.append({"guid": g[0],
                                 "avatar_hash": val[0].encode("hex"),
                                 "last_message": val[1],
                                 "timestamp": val[2],
                                 "encryption_key": val[3].encode("hex"),
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
+            return ret
+
+        def get_dispute_messages(self, order_id):
+            ret = []
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT guid, avatarHash, message, max(timestamp), encryptionPubkey FROM messages
+WHERE subject=? and messageType=?''', (order_id, "DISPUTE"))
+            val = cursor.fetchone()
+            if val[0] is not None:
+                ret.append({"guid": val[0],
+                            "avatar_hash": val[1].encode("hex"),
+                            "last_message": val[2],
+                            "timestamp": val[3]})
             return ret
 
         def get_unread(self):
@@ -828,6 +841,7 @@ def _create_database(database):
 encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
 avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
     cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
+    cursor.execute('''CREATE INDEX index_subject ON messages(subject);''')
     cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
 
     cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,

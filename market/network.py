@@ -701,6 +701,9 @@ class Server(object):
             with open(file_path, 'r') as filename:
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
+                handle = ""
+                if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
+                    handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
                 enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
                 proof_sig = self.db.Purchases().get_proof_sig(order_id)
         except Exception:
@@ -709,6 +712,9 @@ class Server(object):
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                     guid = contract["buyer_order"]["order"]["id"]["guid"]
+                    handle = ""
+                    if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
+                        handle = contract["buyer_order"]["order"]["id"]["blockchain_id"]
                     enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
                     proof_sig = None
             except Exception:
@@ -733,6 +739,11 @@ class Server(object):
 
         elif self.db.Sales().get_sale(order_id) is not None:
             self.db.Sales().update_status(order_id, 4)
+
+        avatar_hash = Profile(self.db).get().avatar_hash
+
+        self.db.MessageStore().save_message(guid, handle, "", "", order_id, "DISPUTE",
+                                            claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):

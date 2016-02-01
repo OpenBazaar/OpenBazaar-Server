@@ -1117,6 +1117,14 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_dispute_messages')
+    def get_dispute_messages(self, request):
+        messages = self.db.MessageStore().get_dispute_messages(request.args["order_id"][0])
+        request.setHeader('content-type', "application/json")
+        request.write(json.dumps(messages, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
 
 class RestAPI(Site):
 
