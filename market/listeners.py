@@ -1,4 +1,6 @@
 __author__ = 'chris'
+
+import bleach
 import json
 import time
 import random
@@ -37,7 +39,7 @@ class MessageListenerImpl(object):
             }
             if plaintext.handle:
                 message_json["message"]["handle"] = plaintext.handle
-            self.ws.push(json.dumps(message_json, indent=4))
+            self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4))))
         except Exception:
             pass
 
@@ -73,7 +75,7 @@ class BroadcastListenerImpl(object):
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        self.ws.push(json.dumps(broadcast_json, indent=4))
+        self.ws.push(str(bleach.clean(json.dumps(broadcast_json, indent=4))))
 
 
 class NotificationListenerImpl(object):
@@ -100,4 +102,4 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(json.dumps(notification_json, indent=4))
+        self.ws.push(str(bleach.clean(json.dumps(notification_json, indent=4))))
