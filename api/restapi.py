@@ -29,6 +29,8 @@ from net.upnp import PortMapper
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
 
+ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
+                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
 
 def str_to_bool(s):
     if s.lower() == 'true':
@@ -148,7 +150,7 @@ class OpenBazaarAPI(APIResource):
                         not blockchainid.validate(profile.handle, profile_json["profile"]["guid"])):
                     profile_json["profile"]["handle"] = ""
                 request.setHeader('content-type', "application/json")
-                request.write(str(bleach.clean(json.dumps(profile_json, indent=4))))
+                request.write(str(bleach.clean(json.dumps(profile_json, indent=4), tags=ALLOWED_TAGS)))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -188,7 +190,7 @@ class OpenBazaarAPI(APIResource):
                         listing_json["ships_to"].append(str(CountryCode.Name(country)))
                     response["listings"].append(listing_json)
                 request.setHeader('content-type', "application/json")
-                request.write(str(bleach.clean(json.dumps(response, indent=4))))
+                request.write(str(bleach.clean(json.dumps(response, indent=4), tags=ALLOWED_TAGS)))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -228,7 +230,7 @@ class OpenBazaarAPI(APIResource):
                     }
                     response["followers"].append(follower_json)
                 request.setHeader('content-type', "application/json")
-                request.write(str(bleach.clean(json.dumps(response, indent=4))))
+                request.write(str(bleach.clean(json.dumps(response, indent=4), tags=ALLOWED_TAGS)))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -267,7 +269,7 @@ class OpenBazaarAPI(APIResource):
                     }
                     response["following"].append(user_json)
                 request.setHeader('content-type', "application/json")
-                request.write(str(bleach.clean(json.dumps(response, indent=4))))
+                request.write(str(bleach.clean(json.dumps(response, indent=4), tags=ALLOWED_TAGS)))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -429,7 +431,7 @@ class OpenBazaarAPI(APIResource):
         def parse_contract(contract):
             if contract is not None:
                 request.setHeader('content-type', "application/json")
-                request.write(str(bleach.clean(json.dumps(contract, indent=4), tags="p")))
+                request.write(str(bleach.clean(json.dumps(contract, indent=4), tags=ALLOWED_TAGS)))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -791,14 +793,14 @@ class OpenBazaarAPI(APIResource):
                 pass
             settings_json["moderators"] = mods
             request.setHeader('content-type', "application/json")
-            request.write(str(bleach.clean(json.dumps(settings_json, indent=4))))
+            request.write(str(bleach.clean(json.dumps(settings_json, indent=4), tags=ALLOWED_TAGS)))
             request.finish()
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/connected_peers')
     def get_connected_peers(self, request):
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(self.protocol.keys(), indent=4))))
+        request.write(str(bleach.clean(json.dumps(self.protocol.keys(), indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -816,7 +818,7 @@ class OpenBazaarAPI(APIResource):
                 }
                 nodes.append(n)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(nodes, indent=4))))
+        request.write(str(bleach.clean(json.dumps(nodes, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -839,7 +841,7 @@ class OpenBazaarAPI(APIResource):
             }
             notification_list.append(notification_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(notification_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(notification_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -887,7 +889,7 @@ class OpenBazaarAPI(APIResource):
             }
             message_list.append(message_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(message_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(message_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -895,7 +897,7 @@ class OpenBazaarAPI(APIResource):
     def get_chat_conversations(self, request):
         messages = self.db.MessageStore().get_conversations()
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(messages, indent=4))))
+        request.write(str(bleach.clean(json.dumps(messages, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -929,7 +931,7 @@ class OpenBazaarAPI(APIResource):
             }
             sales_list.append(sale_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(sales_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(sales_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -951,7 +953,7 @@ class OpenBazaarAPI(APIResource):
             }
             purchases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(purchases_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(purchases_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1029,7 +1031,7 @@ class OpenBazaarAPI(APIResource):
 
         def return_order():
             request.setHeader('content-type', "application/json")
-            request.write(str(bleach.clean(json.dumps(order, indent=4))))
+            request.write(str(bleach.clean(json.dumps(order, indent=4), tags=ALLOWED_TAGS)))
             request.finish()
 
         def height_fetched(ec, chain_height):
@@ -1125,7 +1127,7 @@ class OpenBazaarAPI(APIResource):
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(cases_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(cases_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1145,7 +1147,7 @@ class OpenBazaarAPI(APIResource):
                 }
                 message_list.append(message_json)
         request.setHeader('content-type', "application/json")
-        request.write(str(bleach.clean(json.dumps(message_list, indent=4))))
+        request.write(str(bleach.clean(json.dumps(message_list, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
         return server.NOT_DONE_YET
 

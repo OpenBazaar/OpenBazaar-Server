@@ -9,6 +9,8 @@ from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
 from dht.utils import digest
 
+ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
+                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
 
 class MessageListenerImpl(object):
     implements(MessageListener)
@@ -39,7 +41,7 @@ class MessageListenerImpl(object):
             }
             if plaintext.handle:
                 message_json["message"]["handle"] = plaintext.handle
-            self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4))))
+            self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4), tags=ALLOWED_TAGS)))
         except Exception:
             pass
 
@@ -75,7 +77,7 @@ class BroadcastListenerImpl(object):
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(broadcast_json, indent=4))))
+        self.ws.push(str(bleach.clean(json.dumps(broadcast_json, indent=4), tags=ALLOWED_TAGS)))
 
 
 class NotificationListenerImpl(object):
@@ -102,4 +104,4 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(notification_json, indent=4))))
+        self.ws.push(str(bleach.clean(json.dumps(notification_json, indent=4), tags=ALLOWED_TAGS)))
