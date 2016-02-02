@@ -4,7 +4,7 @@ import os
 import time
 from binascii import unhexlify
 from collections import OrderedDict
-from constants import DATA_FOLDER
+from config import DATA_FOLDER
 from dht.utils import digest
 from keys.keychain import KeyChain
 from market.contracts import Contract

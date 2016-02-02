@@ -11,7 +11,7 @@ import nacl.encoding
 import nacl.hash
 import nacl.signing
 from binascii import hexlify
-from constants import DATA_FOLDER
+from config import DATA_FOLDER
 from daemon import Daemon
 from db.datastore import Database
 from dht.crawling import NodeSpiderCrawl

@@ -14,7 +14,7 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor
 from twisted.protocols.basic import FileSender
 
-from constants import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER
+from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -42,6 +42,16 @@ class OpenBazaarAPI(APIResource):
     This RESTful API allows clients to pull relevant data from the
     OpenBazaar daemon for use in a GUI or other application.
     """
+
+    def _authenticate(self, request):
+        if request.getUser() != self.username or request.getPassword() != self.password:
+            request.setResponseCode(401)
+            request.write('<html><body><div><span style="color:red">Authorization Error</span></div>'
+                          '<h2>Permission Denied</h2></body></html>')
+            request.finish()
+            return False
+        else:
+            return True
 
     def __init__(self, mserver, kserver, protocol):
         self.mserver = mserver

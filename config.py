@@ -32,6 +32,8 @@ DEFAULTS = {
     'resolver': 'http://resolver.onename.com/',
     'ssl_cert': None,
     'ssl_key': None,
+    'username': None,
+    'password': None,
     'seed': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
 }
 
@@ -151,8 +153,10 @@ TRANSACTION_FEE = int(cfg.get('CONSTANTS', 'TRANSACTION_FEE'))
 LIBBITCOIN_SERVER = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER')
 LIBBITCOIN_SERVER_TESTNET = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER_TESTNET')
 RESOLVER = cfg.get('CONSTANTS', 'RESOLVER')
-SSL_CERT = cfg.get('CONSTANTS', 'SSL_CERT')
-SSL_KEY = cfg.get('CONSTANTS', 'SSL_KEY')
+SSL_CERT = cfg.get('AUTHENTICATION', 'SSL_CERT')
+SSL_KEY = cfg.get('AUTHENTICATION', 'SSL_KEY')
+USERNAME = cfg.get('AUTHENTICATION', 'USERNAME')
+PASSWORD = cfg.get('AUTHENTICATION', 'PASSWORD')
 SEEDS = []
 
 items = cfg.items('SEEDS')  # this also includes items in DEFAULTS

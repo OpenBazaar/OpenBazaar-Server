@@ -9,7 +9,7 @@ import sys
 import time
 from api.ws import WSFactory
 from api.restapi import RestAPI
-from constants import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
+from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
     LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS
 from daemon import Daemon
 from db.datastore import Database

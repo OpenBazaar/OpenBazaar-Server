@@ -4,7 +4,7 @@ import ast
 import json
 import os
 import time
-from constants import DATA_FOLDER
+from config import DATA_FOLDER
 from market.profile import Profile
 from keys.keychain import KeyChain
 from random import shuffle

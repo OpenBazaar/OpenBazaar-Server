@@ -14,7 +14,7 @@ from bitcoin import SelectParams
 from bitcoin.core.script import CScript, OP_2, OP_3, OP_CHECKMULTISIG
 from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress
 from collections import OrderedDict
-from constants import DATA_FOLDER
+from config import DATA_FOLDER
 from datetime import datetime
 from dht.utils import digest
 from hashlib import sha256

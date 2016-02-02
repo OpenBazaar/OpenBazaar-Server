@@ -2,7 +2,7 @@ __author__ = 'chris'
 
 import json
 import urllib2
-from constants import RESOLVER
+from config import RESOLVER
 
 
 def resolve(blockchain_id):

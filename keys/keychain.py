@@ -46,8 +46,6 @@ class KeyChain(object):
         start = time.time()
         g = GUID()
         d.callback((round(time.time() - start, 2), connector))
-        if not api.listening:
-            connector.stopListening()
         self.guid = g.guid
         self.guid_privkey = g.privkey
         self.signing_key = nacl.signing.SigningKey(self.guid_privkey)
@@ -60,14 +58,16 @@ class KeyChain(object):
 
         self.encryption_key = PrivateKey(self.guid_privkey)
         self.encryption_pubkey = self.encryption_key.public_key.encode()
-
+        try:
+            reactor.callLater(4, connector.stopListening)
+        except Exception:
+            pass
 
 
 class GUIDGenerationListener(APIResource):
 
     def __init__(self, deferred):
         self.deferred = deferred
-        self.listening = False
         APIResource.__init__(self)
 
     @GET('^/api/v1/guid_generation')
@@ -79,6 +79,5 @@ class GUIDGenerationListener(APIResource):
             request.write(json.dumps({"success": True, "GUID generation time": resp[0]}, indent=4))
             request.finish()
             resp[1].stopListening()
-        self.listening = True
         self.deferred.addCallback(notify)
         return server.NOT_DONE_YET

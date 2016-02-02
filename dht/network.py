@@ -26,7 +26,7 @@ from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
 
-from constants import SEEDS
+from config import SEEDS
 from random import shuffle
 
 

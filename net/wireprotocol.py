@@ -1,6 +1,6 @@
 __author__ = 'chris'
 import socket
-from constants import SEEDS
+from config import SEEDS
 from dht.node import Node
 from dht.utils import digest
 from interfaces import MessageProcessor

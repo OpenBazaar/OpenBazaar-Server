@@ -20,7 +20,7 @@ from dht.node import Node
 from protos import message, objects
 from net.wireprotocol import OpenBazaarProtocol
 from db import datastore
-from constants import PROTOCOL_VERSION
+from config import PROTOCOL_VERSION
 
 
 class KademliaProtocolTest(unittest.TestCase):

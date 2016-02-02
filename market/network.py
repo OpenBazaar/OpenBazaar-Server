@@ -15,7 +15,7 @@ import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
-from constants import DATA_FOLDER, TRANSACTION_FEE
+from config import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
 from dht.utils import digest
 from keys.bip32utils import derive_childkey

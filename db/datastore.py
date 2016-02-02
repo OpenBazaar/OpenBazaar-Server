@@ -3,7 +3,7 @@ __author__ = 'chris'
 import os
 import sqlite3 as lite
 from collections import Counter
-from constants import DATA_FOLDER
+from config import DATA_FOLDER
 from dht.node import Node
 from dht.utils import digest
 from protos import objects

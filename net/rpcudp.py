@@ -10,7 +10,7 @@ import nacl.encoding
 import nacl.hash
 from base64 import b64encode
 from binascii import hexlify
-from constants import PROTOCOL_VERSION
+from config import PROTOCOL_VERSION
 from dht.node import Node
 from dht.utils import digest
 from hashlib import sha1

@@ -7,7 +7,7 @@ from bitcoin.core import x, lx, b2x, b2lx, COutPoint, CMutableTxOut, CMutableTxI
 from bitcoin.core.script import CScript, SIGHASH_ALL, SignatureHash, OP_0
 from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from bitcoin.wallet import CBitcoinAddress, CBitcoinSecret
-from constants import TRANSACTION_FEE
+from config import TRANSACTION_FEE
 from io import BytesIO
 from log import Logger
 
