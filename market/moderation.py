@@ -1,3 +1,4 @@
+import base64
 import json
 import nacl.signing
 import os
@@ -5,6 +6,7 @@ import time
 from binascii import unhexlify
 from collections import OrderedDict
 from config import DATA_FOLDER
+from copy import deepcopy
 from dht.utils import digest
 from keys.keychain import KeyChain
 from market.contracts import Contract
@@ -31,11 +33,12 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         notification_listener: a `NotificationListenerImpl` object.
         testnet: `bool` of whether we're on testnet or not.
     """
-    tmp_contract = contract
+    tmp_contract = deepcopy(contract)
     if "vendor_order_confirmation" in tmp_contract:
         del tmp_contract["vendor_order_confirmation"]
     if "buyer_receipt" in tmp_contract:
         del tmp_contract["buyer_receipt"]
+    del tmp_contract["dispute"]
 
     order_id = digest(json.dumps(tmp_contract, indent=4)).encode("hex")
     own_guid = KeyChain(db).guid.encode("hex")
@@ -60,21 +63,22 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         proof_sig = None
     else:
         raise Exception("Dispute guid not in contract")
+    print contract["dispute"]
 
     verify_key = nacl.signing.VerifyKey(signing_key)
     verify_key.verify(json.dumps(contract["dispute"]["info"], indent=4),
-                      contract["dispute"]["signature"])
+                      base64.b64decode(contract["dispute"]["signature"]))
 
     p = PlaintextMessage()
     p.sender_guid = guid
     p.handle = handle
     p.signed_pubkey = signing_key
     p.encryption_pubkey = encryption_key
-    p.subject = order_id
+    p.subject = str(order_id)
     p.type = PlaintextMessage.Type.Value("DISPUTE")
-    p.message = contract["dispute"]["info"]["claim"]
-    p.timestamp = time.time()
-    p.avatar_hash = contract["dispute"]["info"]["avatar_hash"]
+    p.message = str(contract["dispute"]["info"]["claim"])
+    p.timestamp = int(time.time())
+    p.avatar_hash = unhexlify(str(contract["dispute"]["info"]["avatar_hash"]))
 
     if db.Purchases().get_purchase(order_id) is not None:
         db.Purchases().update_status(order_id, 4)
@@ -171,11 +175,11 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     p.handle = moderator_handle
     p.signed_pubkey = moderator_pubkey
     p.encryption_pubkey = moderator_enc_key
-    p.subject = order_id
+    p.subject = str(order_id)
     p.type = PlaintextMessage.Type.Value("DISPUTE")
-    p.message = resolution_json["dispute_resolution"]["resolution"]["decision"]
-    p.timestamp = time.time()
-    p.avatar_hash = moderator_avatar
+    p.message = str(resolution_json["dispute_resolution"]["resolution"]["decision"])
+    p.timestamp = int(time.time())
+    p.avatar_hash = unhexlify(str(moderator_avatar))
 
     message_listener.notify(p, "")
     notification_listener.notify(moderator_guid, moderator_handle, "dispute_close", order_id,

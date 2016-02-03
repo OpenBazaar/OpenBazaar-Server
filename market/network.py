@@ -498,7 +498,7 @@ class Server(object):
         p.signed_pubkey = self.kserver.node.signed_pubkey
         p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
         p.type = message_type
-        p.message = message
+        p.message = str(message)
         if subject is not None:
             p.subject = subject
         if pro.handle:
