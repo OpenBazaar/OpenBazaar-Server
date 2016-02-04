@@ -76,7 +76,7 @@ def _platform_agnostic_data_folder(data_folder):
 
     name = ''
     if _is_osx():
-        name = join('Library', 'Application Support', 'OpenBazzar')
+        name = join('Library', 'Application Support', 'OpenBazaar')
     elif _is_linux():
         name = '.openbazaar'
     else:                       # TODO add clauses for Windows, and BSD

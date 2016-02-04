@@ -324,7 +324,6 @@ class Server(object):
         """
 
         node_to_find = Node(guid)
-
         for connection in self.protocol.multiplexer.values():
             if connection.handler.node is not None and connection.handler.node.id == node_to_find.id:
                 return defer.succeed(connection.handler.node)
@@ -345,7 +344,8 @@ class Server(object):
         if len(nearest) == 0:
             self.log.warning("there are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
             return defer.succeed(None)
-        spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, 50, self.alpha)
+
+        spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(check_for_node)
 
     def saveState(self, fname):
