@@ -176,7 +176,7 @@ class RoutingTable(object):
         k = k or self.ksize
         nodes = []
         for neighbor in TableTraverser(self, node):
-            if neighbor.id != node.id and (exclude is None or not neighbor.sameHomeAs(exclude)):
+            if exclude is None or not neighbor.sameHomeAs(exclude):
                 heapq.heappush(nodes, (node.distanceTo(neighbor), neighbor))
             if len(nodes) == k:
                 break

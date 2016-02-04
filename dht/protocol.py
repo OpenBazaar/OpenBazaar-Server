@@ -98,6 +98,8 @@ class KademliaProtocol(RPCProtocol):
         node = Node(key)
         nodeList = self.router.findNeighbors(node, exclude=sender)
         ret = []
+        if self.sourceNode.id == key:
+            ret.append(self.sourceNode.getProto().SerializeToString())
         for n in nodeList:
             ret.append(n.getProto().SerializeToString())
         return ret

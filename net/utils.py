@@ -7,4 +7,3 @@ def looping_retry(func, *args):
             return func(*args)
         except Exception:
             time.sleep(0.5)
-            pass
