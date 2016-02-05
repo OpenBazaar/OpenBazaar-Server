@@ -56,7 +56,7 @@ message Profile {
         optional bool nsfw                = 5 [default = false];
         optional bool vendor              = 6 [default = false];
         optional bool moderator           = 7 [default = false];
-        optional float moderation_fee     = 8 [default = 10.0];
+        optional float moderation_fee     = 8 [default = 1.0];
         optional string handle            = 9;
         optional string about             = 10;
         optional string short_description = 11;
