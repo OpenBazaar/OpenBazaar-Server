@@ -686,6 +686,17 @@ class Contract(object):
         if self.db.Sales().get_status(order_id) == 3:
             raise Exception("Receipt already processed for this order")
 
+        title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+        if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+            image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+        else:
+            image_hash = ""
+        buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+            handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+        else:
+            handle = ""
+
         if "moderator" in self.contract["buyer_order"]["order"]:
             self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
@@ -715,17 +726,10 @@ class Contract(object):
             self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
 
             self.db.Sales().update_payment_tx(order_id, tx.get_hash())
-            title = self.contract["vendor_offer"]["listing"]["item"]["title"]
-            if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
-                image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
-            else:
-                image_hash = ""
-            buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
-            if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
-                handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
-            else:
-                handle = ""
+
             self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
+        else:
+            self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
 
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
             self.db.Ratings().add_rating(self.contract["buyer_receipt"]["receipt"]
