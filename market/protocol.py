@@ -328,13 +328,21 @@ class MarketProtocol(RPCProtocol):
             self.log.error("unable to parse disputed close message from %s" % sender)
             return ["False"]
 
-    def rpc_get_ratings(self, sender, listing_hash):
+    def rpc_get_ratings(self, sender, listing_hash=None):
         self.log.info("serving ratings for contract %s to %s" % (listing_hash.encode("hex"), sender))
         self.router.addContact(sender)
         try:
             ratings = []
-            for rating in self.db.Ratings().get_ratings(listing_hash.encode("hex")):
-                ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
+            if listing_hash:
+                for rating in self.db.Ratings().get_ratings(listing_hash.encode("hex")):
+                    ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
+            else:
+                proto = self.db.ListingsStore().get_proto()
+                l = Listings()
+                l.ParseFromString(proto)
+                for listing in l.listing:
+                    for rating in self.db.Ratings().get_ratings(listing.contract_hash.encode("hex")):
+                        ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             ret = json.dumps(ratings).encode("zlib")
             return [str(ret), self.signing_key.sign(ret)[:64]]
         except Exception:
@@ -409,8 +417,11 @@ class MarketProtocol(RPCProtocol):
         d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callGetRatings(self, nodeToAsk, listing_hash):
-        d = self.get_ratings(nodeToAsk, listing_hash)
+    def callGetRatings(self, nodeToAsk, listing_hash=None):
+        if listing_hash is None:
+            d = self.get_ratings(nodeToAsk)
+        else:
+            d = self.get_ratings(nodeToAsk, listing_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

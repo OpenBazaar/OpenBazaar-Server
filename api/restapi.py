@@ -1164,16 +1164,27 @@ class OpenBazaarAPI(APIResource):
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    self.mserver.get_ratings(node, unhexlify(request.args["contract_id"][0]))\
-                        .addCallback(parse_response)
+                    if "contract_id" in request.args and request.args["contract_id"][0] != "":
+                        self.mserver.get_ratings(node, unhexlify(request.args["contract_id"][0]))\
+                            .addCallback(parse_response)
+                    else:
+                        self.mserver.get_ratings(node).addCallback(parse_response)
                 else:
                     request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
             ratings = []
-            for rating in self.db.Ratings().get_ratings(request.args["contract_id"][0]):
-                ratings.append(json.loads(rating[0]))
+            if "contract_id" in request.args and request.args["contract_id"][0] != "":
+                for rating in self.db.Ratings().get_ratings(request.args["contract_id"][0]):
+                    ratings.append(json.loads(rating[0]))
+            else:
+                proto = self.db.ListingsStore().get_proto()
+                l = objects.Listings()
+                l.ParseFromString(proto)
+                for listing in l.listing:
+                    for rating in self.db.Ratings().get_ratings(listing.contract_hash.encode("hex")):
+                        ratings.append(json.loads(rating[0]))
             request.setHeader('content-type', "application/json")
             request.write(str(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS)))
             request.finish()

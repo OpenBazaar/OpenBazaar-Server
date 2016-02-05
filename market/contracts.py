@@ -590,8 +590,8 @@ class Contract(object):
             amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
             listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
 
-            receipt_json["buyer_receipt"]["receipt"]["rating"] = {}
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"] = {}
+            receipt_json["buyer_receipt"]["receipt"]["rating"] = OrderedDict()
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"] = OrderedDict()
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["feedback"] = feedback
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["quality"] = quality
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["description"] = description

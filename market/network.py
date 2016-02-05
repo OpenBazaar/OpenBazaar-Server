@@ -930,7 +930,7 @@ class Server(object):
         else:
             raise Exception("Failed to reconstruct transaction with moderator signature.")
 
-    def get_ratings(self, node_to_ask, listing_hash):
+    def get_ratings(self, node_to_ask, listing_hash=None):
         """
         Query the given node for a listing of ratings/reviews for the given listing.
         """
