@@ -579,14 +579,35 @@ class Contract(object):
                 }
             }
         }
+        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if None not in (feedback, quality, description, delivery_time, customer_service):
+            address = self.contract["buyer_order"]["order"]["payment"]["address"]
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
+            buyer_pub = derive_childkey(masterkey_b, chaincode)
+            buyer_priv = derive_childkey(bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey),
+                                         chaincode, bitcointools.MAINNET_PRIVATE)
+            amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
+            listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+
             receipt_json["buyer_receipt"]["receipt"]["rating"] = {}
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["feedback"] = feedback
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["quality"] = quality
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["description"] = description
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["delivery_time"] = delivery_time
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["customer_service"] = customer_service
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["review"] = review
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"] = {}
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["feedback"] = feedback
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["quality"] = quality
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["description"] = description
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["delivery_time"] = delivery_time
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["customer_service"] = customer_service
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["review"] = review
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["address"] = address
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["buyer_key"] = buyer_pub
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["amount"] = amount
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["listing"] = listing_hash
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["proof_of_tx"] = \
+                self.db.Purchases().get_proof_sig(order_id)
+            receipt_json["buyer_receipt"]["receipt"]["rating"]["signature"] = \
+                bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(json.dumps(
+                    receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4), buyer_priv))
+
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
             self.blockchain.refresh_connection()
