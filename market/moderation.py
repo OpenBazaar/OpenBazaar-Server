@@ -51,7 +51,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         else:
             handle = ""
         encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
-        proof_sig = contract["dispute"]["info"]["proof_sig"]
+        proof_sig = None
     elif contract["dispute"]["info"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
         guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
         signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
@@ -60,10 +60,9 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         else:
             handle = ""
         encryption_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"])
-        proof_sig = None
+        proof_sig = contract["dispute"]["info"]["proof_sig"]
     else:
         raise Exception("Dispute guid not in contract")
-    print contract["dispute"]
 
     verify_key = nacl.signing.VerifyKey(signing_key)
     verify_key.verify(json.dumps(contract["dispute"]["info"], indent=4),
@@ -95,11 +94,13 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         if not is_selected:
             raise Exception("Not a moderator for this contract")
         else:
-            if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
+            if "blockchain_id" in contract["vendor_offer"]["listing"]["id"] and \
+                            contract["vendor_offer"]["listing"]["id"]["blockchain_id"] != "":
                 vendor = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
             else:
                 vendor = contract["vendor_offer"]["listing"]["id"]["guid"]
-            if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
+            if "blockchain_id" in contract["buyer_order"]["order"]["id"] and \
+                            contract["buyer_order"]["order"]["id"]["blockchain_id"] != "":
                 buyer = contract["buyer_order"]["order"]["id"]["blockchain_id"]
             else:
                 buyer = contract["buyer_order"]["order"]["id"]["guid"]
@@ -112,7 +113,6 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
                                 contract["vendor_offer"]["listing"]["item"]["title"],
                                 time.time(),
                                 contract["buyer_order"]["order"]["date"],
-                                contract["buyer_order"]["order"],
                                 float(contract["buyer_order"]["order"]["payment"]["amount"]),
                                 contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
                                 buyer, vendor, json.dumps(validation_failures),
@@ -126,7 +126,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     message_listener.notify(p, "")
     notification_listener.notify(guid, handle, "dispute_open", order_id,
                                  contract["vendor_offer"]["listing"]["item"]["title"],
-                                 contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+                                 unhexlify(contract["vendor_offer"]["listing"]["item"]["image_hashes"][0]))
 
 
 def close_dispute(resolution_json, db, message_listener, notification_listener, testnet):

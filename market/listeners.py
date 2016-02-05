@@ -12,6 +12,7 @@ from dht.utils import digest
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
                 'em', 'strike', 'hr', 'br', 'img', 'blockquote')
 
+
 class MessageListenerImpl(object):
     implements(MessageListener)
 

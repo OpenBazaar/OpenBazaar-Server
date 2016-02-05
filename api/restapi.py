@@ -1122,8 +1122,8 @@ class OpenBazaarAPI(APIResource):
                 "thumbnail_hash": case[5],
                 "buyer": case[6],
                 "vendor": case[7],
-                "validation": case[8],
-                "status": "closed" if cases[10] == 1 else "open"
+                "validation": json.loads(case[8]),
+                "status": "closed" if case[10] == 1 else "open"
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")

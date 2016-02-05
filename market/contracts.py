@@ -15,6 +15,7 @@ from bitcoin.core.script import CScript, OP_2, OP_3, OP_CHECKMULTISIG
 from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress
 from collections import OrderedDict
 from config import DATA_FOLDER
+from copy import deepcopy
 from datetime import datetime
 from dht.utils import digest
 from hashlib import sha256
@@ -1075,10 +1076,19 @@ class Contract(object):
     def validate_for_moderation(self, proof_sig):
         validation_failures = []
 
-        listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
+        tmp_contract = deepcopy(self.contract)
+        if "buyer_order" in tmp_contract:
+            del tmp_contract["buyer_order"]
+        if "vendor_order_confirmation" in tmp_contract:
+            del tmp_contract["vendor_order_confirmation"]
+        if "buyer_receipt" in tmp_contract:
+            del tmp_contract["buyer_receipt"]
+        del tmp_contract["dispute"]
 
-        contract_hash = digest(listing)
+        contract_hash = digest(json.dumps(tmp_contract, indent=4))
         ref_hash = unhexlify(self.contract["buyer_order"]["order"]["ref_hash"])
+
+        listing = json.dumps(self.contract["vendor_offer"]["listing"], indent=4)
 
         # verify that the reference hash matches the contract
         if contract_hash != ref_hash:
