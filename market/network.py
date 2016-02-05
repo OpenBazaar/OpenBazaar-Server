@@ -930,6 +930,46 @@ class Server(object):
         else:
             raise Exception("Failed to reconstruct transaction with moderator signature.")
 
+    def get_ratings(self, node_to_ask, listing_hash):
+        """
+        Query the given node for a listing of ratings/reviews for the given listing.
+        """
+        def get_result(result):
+            try:
+                pubkey = node_to_ask.signed_pubkey[64:]
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                verify_key.verify(result[1][1] + result[1][0])
+                ratings = json.loads(result[1][1].decode("zlib"), object_pairs_hook=OrderedDict)
+                ret = []
+                for rating in ratings:
+                    address = rating["tx_summary"]["address"]
+                    buyer_key = rating["tx_summary"]["buyer_key"]
+                    amount = rating["tx_summary"]["amount"]
+                    listing_hash = rating["tx_summary"]["listing"]
+                    proof_sig = rating["tx_summary"]["proof_of_tx"]
+                    try:
+                        verify_key.verify(str(address) + str(amount) + str(listing_hash) + str(buyer_key),
+                                          base64.b64decode(proof_sig))
+
+                        valid = bitcointools.ecdsa_raw_verify(json.dumps(rating, indent=4),
+                                                              bitcointools.decode_sig(rating["signature"]),
+                                                              buyer_key)
+                        if not valid:
+                            raise Exception("Bitcoin signature not valid")
+
+                        ret.append(rating)
+                    except Exception:
+                        pass
+                return ret
+            except Exception:
+                return None
+
+        if node_to_ask.ip is None:
+            return defer.succeed(None)
+        self.log.info("fetching ratings for contract %s from %s" % (listing_hash.encode("hex"), node_to_ask))
+        d = self.protocol.callGetRatings(node_to_ask, listing_hash)
+        return d.addCallback(get_result)
+
     @staticmethod
     def cache(filename):
         """

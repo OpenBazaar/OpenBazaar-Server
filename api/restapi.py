@@ -1151,6 +1151,33 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_ratings')
+    def get_ratings(self, request):
+        def parse_response(ratings):
+            if ratings is not None:
+                request.setHeader('content-type', "application/json")
+                request.write(str(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS)))
+                request.finish()
+            else:
+                request.write(json.dumps({}))
+                request.finish()
+        if "guid" in request.args:
+            def get_node(node):
+                if node is not None:
+                    self.mserver.get_ratings(node, request.args["contract_id"][0]).addCallback(parse_response)
+                else:
+                    request.write(json.dumps({}))
+                    request.finish()
+            self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+        else:
+            ratings = []
+            for rating in self.db.Ratings().get_ratings(request.args["contract_id"][0]):
+                ratings.append(json.loads(rating[0]))
+            request.setHeader('content-type', "application/json")
+            request.write(str(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS)))
+            request.finish()
+        return server.NOT_DONE_YET
+
 
 class RestAPI(Site):
 

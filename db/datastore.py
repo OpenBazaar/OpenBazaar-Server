@@ -740,7 +740,7 @@ buyer, vendor, validation, claim, status FROM cases ''')
 
         def add_rating(self, listing_hash, rating):
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO ratings(id, rating) VALUES (?,?)''',
+            cursor.execute('''INSERT INTO ratings(listing, rating) VALUES (?,?)''',
                            (listing_hash, rating))
             self.db.commit()
 

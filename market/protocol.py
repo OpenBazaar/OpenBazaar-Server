@@ -295,6 +295,8 @@ class MarketProtocol(RPCProtocol):
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]
         except Exception:
+            import traceback
+            traceback.print_exc()
             self.log.error("unable to parse receipt from %s" % sender)
             return ["False"]
 
@@ -325,6 +327,19 @@ class MarketProtocol(RPCProtocol):
         except Exception:
             self.log.error("unable to parse disputed close message from %s" % sender)
             return ["False"]
+
+    def rpc_get_ratings(self, sender, listing_hash):
+        self.log.info("serving ratings for contract %s to %s" % (listing_hash.encode("hex"), sender))
+        self.router.addContact(sender)
+        try:
+            ratings = []
+            for rating in self.db.Ratings().get_ratings(listing_hash.encode("hex")):
+                ratings.append(rating[0])
+            ret = json.dumps(ratings).encode("zlib")
+            return [ret, self.signing_key.sign(ret)[:64]]
+        except Exception:
+            self.log.warning("could not load ratings for contract %s" % listing_hash.encode("hex"))
+            return None
 
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
@@ -392,6 +407,10 @@ class MarketProtocol(RPCProtocol):
 
     def callDisputeClose(self, nodeToAsk, ephem_pubkey, encrypted_contract):
         d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callGetRatings(self, nodeToAsk, listing_hash):
+        d = self.get_ratings(nodeToAsk, listing_hash)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):

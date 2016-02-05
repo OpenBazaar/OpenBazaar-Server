@@ -45,8 +45,9 @@ enum Command {
     GET_CONTRACT_METADATA   = 22;
     GET_FOLLOWING           = 23;
     GET_FOLLOWERS           = 24;
-    DISPUTE_OPEN            = 25;
-    DISPUTE_CLOSE           = 26;
+    GET_RATINGS             = 25;
+    DISPUTE_OPEN            = 26;
+    DISPUTE_CLOSE           = 27;
 
     // Error responses
     BAD_REQUEST             = 400;
