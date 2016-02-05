@@ -1164,7 +1164,8 @@ class OpenBazaarAPI(APIResource):
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    self.mserver.get_ratings(node, request.args["contract_id"][0]).addCallback(parse_response)
+                    self.mserver.get_ratings(node, unhexlify(request.args["contract_id"][0]))\
+                        .addCallback(parse_response)
                 else:
                     request.write(json.dumps({}))
                     request.finish()

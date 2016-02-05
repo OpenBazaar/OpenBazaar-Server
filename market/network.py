@@ -939,7 +939,7 @@ class Server(object):
                 pubkey = node_to_ask.signed_pubkey[64:]
                 verify_key = nacl.signing.VerifyKey(pubkey)
                 verify_key.verify(result[1][1] + result[1][0])
-                ratings = json.loads(result[1][1].decode("zlib"), object_pairs_hook=OrderedDict)
+                ratings = json.loads(result[1][0].decode("zlib"), object_pairs_hook=OrderedDict)
                 ret = []
                 for rating in ratings:
                     address = rating["tx_summary"]["address"]
@@ -951,7 +951,7 @@ class Server(object):
                         verify_key.verify(str(address) + str(amount) + str(listing_hash) + str(buyer_key),
                                           base64.b64decode(proof_sig))
 
-                        valid = bitcointools.ecdsa_raw_verify(json.dumps(rating, indent=4),
+                        valid = bitcointools.ecdsa_raw_verify(json.dumps(rating["tx_summary"], indent=4),
                                                               bitcointools.decode_sig(rating["signature"]),
                                                               buyer_key)
                         if not valid:
@@ -962,6 +962,8 @@ class Server(object):
                         pass
                 return ret
             except Exception:
+                import traceback
+                traceback.print_exc()
                 return None
 
         if node_to_ask.ip is None:

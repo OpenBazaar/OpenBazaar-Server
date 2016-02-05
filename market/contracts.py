@@ -730,7 +730,7 @@ class Contract(object):
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
             self.db.Ratings().add_rating(self.contract["buyer_receipt"]["receipt"]
                                          ["rating"]["tx_summary"]["listing"],
-                                         json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"]))
+                                         json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"], indent=4))
 
         self.db.Sales().update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"

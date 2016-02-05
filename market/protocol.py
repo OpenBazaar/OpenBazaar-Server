@@ -17,7 +17,7 @@ from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
     GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN, \
-    DISPUTE_CLOSE
+    DISPUTE_CLOSE, GET_RATINGS
 from protos.objects import Metadata, Listings, Followers, PlaintextMessage
 from zope.interface import implements
 from zope.interface.exceptions import DoesNotImplement
@@ -39,7 +39,7 @@ class MarketProtocol(RPCProtocol):
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
                                  BROADCAST, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN,
-                                 DISPUTE_CLOSE]
+                                 DISPUTE_CLOSE, GET_RATINGS]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -334,9 +334,9 @@ class MarketProtocol(RPCProtocol):
         try:
             ratings = []
             for rating in self.db.Ratings().get_ratings(listing_hash.encode("hex")):
-                ratings.append(rating[0])
+                ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             ret = json.dumps(ratings).encode("zlib")
-            return [ret, self.signing_key.sign(ret)[:64]]
+            return [str(ret), self.signing_key.sign(ret)[:64]]
         except Exception:
             self.log.warning("could not load ratings for contract %s" % listing_hash.encode("hex"))
             return None
