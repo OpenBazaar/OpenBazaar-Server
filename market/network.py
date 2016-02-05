@@ -968,7 +968,8 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
-        self.log.info("fetching ratings for contract %s from %s" % (listing_hash.encode("hex"), node_to_ask))
+        a = "ALL" if listing_hash is None else listing_hash.encode("hex")
+        self.log.info("fetching ratings for contract %s from %s" % (a, node_to_ask))
         d = self.protocol.callGetRatings(node_to_ask, listing_hash)
         return d.addCallback(get_result)
 

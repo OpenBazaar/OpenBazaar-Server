@@ -329,7 +329,8 @@ class MarketProtocol(RPCProtocol):
             return ["False"]
 
     def rpc_get_ratings(self, sender, listing_hash=None):
-        self.log.info("serving ratings for contract %s to %s" % (listing_hash.encode("hex"), sender))
+        a = "ALL" if listing_hash is None else listing_hash.encode("hex")
+        self.log.info("serving ratings for contract %s to %s" % (a, sender))
         self.router.addContact(sender)
         try:
             ratings = []
@@ -346,7 +347,7 @@ class MarketProtocol(RPCProtocol):
             ret = json.dumps(ratings).encode("zlib")
             return [str(ret), self.signing_key.sign(ret)[:64]]
         except Exception:
-            self.log.warning("could not load ratings for contract %s" % listing_hash.encode("hex"))
+            self.log.warning("could not load ratings for contract %s" % a)
             return None
 
     def callGetContract(self, nodeToAsk, contract_hash):
