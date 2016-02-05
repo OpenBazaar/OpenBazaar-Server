@@ -751,7 +751,7 @@ class Server(object):
                     self.send_message(Node(unhexlify(recipient_guid)),
                                       public_key,
                                       objects.PlaintextMessage.Type.Value("DISPUTE_OPEN"),
-                                      contract,
+                                      json.dumps(contract),
                                       order_id,
                                       store_only=True)
 
