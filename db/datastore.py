@@ -730,6 +730,25 @@ buyer, vendor, validation, claim, status FROM cases ''')
             cursor.execute('''UPDATE cases SET status=? WHERE id=?;''', (status, order_id))
             self.db.commit()
 
+    class Ratings(object):
+        """
+        Store ratings for each contract in the db.
+        """
+        def __init__(self):
+            self.db = lite.connect(DATABASE)
+            self.db.text_factory = str
+
+        def add_rating(self, listing_hash, rating):
+            cursor = self.db.cursor()
+            cursor.execute('''INSERT INTO ratings(id, rating) VALUES (?,?)''',
+                           (listing_hash, rating))
+            self.db.commit()
+
+        def get_ratings(self, listing_hash):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT rating FROM ratings WHERE listing=?''', (listing_hash,))
+            return cursor.fetchall()
+
     class Settings(object):
         """
         Stores the UI settings.
@@ -863,6 +882,9 @@ paymentTX TEXT, contractType TEXT)''')
 
     cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
 btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
+
+    cursor.execute('''CREATE TABLE ratings(listing TEXT, rating TEXT)''')
+    cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
 
     cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,

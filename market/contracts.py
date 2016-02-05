@@ -603,10 +603,7 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["amount"] = amount
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["listing"] = listing_hash
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["proof_of_tx"] = \
-                self.db.Purchases().get_proof_sig(order_id)
-            receipt_json["buyer_receipt"]["receipt"]["rating"]["signature"] = \
-                bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(json.dumps(
-                    receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4), buyer_priv))
+                base64.b64encode(self.db.Purchases().get_proof_sig(order_id))
 
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
@@ -647,6 +644,12 @@ class Contract(object):
         receipt_json["buyer_receipt"]["signature"] = \
             base64.b64encode(self.keychain.signing_key.sign(receipt)[:64])
         self.contract["buyer_receipt"] = receipt_json["buyer_receipt"]
+
+        if "rating" in self.contract["buyer_receipt"]["receipt"]:
+            self.contract["buyer_receipt"]["receipt"]["rating"]["signature"] = \
+                bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(json.dumps(
+                    self.contract["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4), buyer_priv))
+
         self.db.Purchases().update_status(order_id, 3)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
@@ -723,6 +726,11 @@ class Contract(object):
             else:
                 handle = ""
             self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
+
+        if "rating" in self.contract["buyer_receipt"]["receipt"]:
+            self.db.Ratings().add_rating(self.contract["buyer_receipt"]["receipt"]
+                                         ["rating"]["tx_summary"]["listing"],
+                                         json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"]))
 
         self.db.Sales().update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
