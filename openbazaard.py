@@ -117,7 +117,7 @@ def run(*args):
     # websockets api
     ws_api = WSFactory(mserver, kserver, only_ip=ALLOWIP)
     if SSL:
-        reactor.listenSSL(RESTPORT, WebSocketFactory(ws_api),
+        reactor.listenSSL(WSPORT, WebSocketFactory(ws_api),
                           ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=interface)
     else:
         reactor.listenTCP(WSPORT, WebSocketFactory(ws_api), interface=interface)
