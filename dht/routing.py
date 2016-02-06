@@ -148,7 +148,14 @@ class RoutingTable(object):
         index = self.getBucketFor(node)
         return self.buckets[index].isNewNode(node)
 
+    def checkAndRemoveDuplicate(self, node):
+        for bucket in self.buckets:
+            for n in bucket.getNodes():
+                if (n.ip, n.port) == (node.ip, node.port) and n.id != node.id:
+                    self.removeContact(n)
+
     def addContact(self, node):
+        self.checkAndRemoveDuplicate(node)
         index = self.getBucketFor(node)
         bucket = self.buckets[index]
 
