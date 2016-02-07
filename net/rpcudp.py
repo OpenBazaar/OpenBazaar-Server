@@ -56,9 +56,7 @@ class RPCProtocol:
             connection.shutdown()
             return False
 
-        if message.sender.vendor:
-            self.db.VendorStore().save_vendor(message.sender.guid.encode("hex"),
-                                              message.sender.SerializeToString())
+        self.multiplexer.vendors[sender.id] = sender
 
         msgID = message.messageID
         if message.command == NOT_FOUND:

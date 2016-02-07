@@ -41,7 +41,7 @@ class WSProtocol(Protocol):
             self.factory.outstanding_vendors = {}
             self.factory.outstanding_vendors[message_id] = queried
 
-        vendors = self.factory.db.VendorStore().get_vendors()
+        vendors = self.factory.mserver.protocol.multiplexer.vendors.values()
 
         shuffle(vendors)
         to_query = []
@@ -68,7 +68,8 @@ class WSProtocol(Protocol):
                 queried.append(node.id)
                 return True
             else:
-                self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
+                if node.id in self.factory.mserver.protocol.multiplexer.vendors:
+                    del self.factory.mserver.protocol.multiplexer.vendors[node.id]
                 return False
 
         for node in to_query[:30]:
@@ -127,7 +128,7 @@ class WSProtocol(Protocol):
             self.factory.outstanding_listings = {}
             self.factory.outstanding_listings[message_id] = []
 
-        vendors = self.factory.db.VendorStore().get_vendors()
+        vendors = self.factory.mserver.protocol.multiplexer.vendors.values()
         shuffle(vendors)
 
         def handle_response(listings, node):
@@ -170,8 +171,9 @@ class WSProtocol(Protocol):
                         pass
                 vendors.remove(node)
             else:
-                self.factory.db.VendorStore().delete_vendor(node.id.encode("hex"))
                 vendors.remove(node)
+                if node.id in self.factory.mserver.protocol.multiplexer.vendors:
+                    del self.factory.mserver.protocol.multiplexer.vendors[node.id]
 
         for vendor in vendors[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)

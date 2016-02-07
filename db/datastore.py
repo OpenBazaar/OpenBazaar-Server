@@ -463,7 +463,7 @@ imageHash, read FROM notifications''')
             cursor = self.db.cursor()
             cursor.execute('''SELECT serializedNode FROM vendors''')
             ret = cursor.fetchall()
-            nodes = []
+            nodes = {}
             for n in ret:
                 try:
                     proto = objects.Node()
@@ -476,7 +476,7 @@ imageHash, read FROM notifications''')
                                 (proto.relayAddress.ip, proto.relayAddress.port),
                                 proto.natType,
                                 proto.vendor)
-                    nodes.append(node)
+                    nodes[node.id] = node
                 except Exception, e:
                     print e.message
             return nodes

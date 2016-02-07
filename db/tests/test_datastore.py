@@ -317,7 +317,7 @@ class DatastoreTest(unittest.TestCase):
 
     def test_VendorStore(self):
         v = self.vs.get_vendors()
-        self.assertEqual(v, [])
+        self.assertEqual(v, {})
         addr = Node.IPAddress()
         addr.ip = "127.0.0.1"
         addr.port = 1234
@@ -328,10 +328,10 @@ class DatastoreTest(unittest.TestCase):
         n.natType = FULL_CONE
         self.vs.save_vendor(self.u.guid, n.SerializeToString())
         v = self.vs.get_vendors()
-        self.assertIsNot(v, [])
+        self.assertIsNot(v, {})
         self.vs.delete_vendor(self.u.guid)
         v = self.vs.get_vendors()
-        self.assertEqual(v, [])
+        self.assertEqual(v, {})
 
     def test_Settings(self):
         NUM_SETTINGS = 16

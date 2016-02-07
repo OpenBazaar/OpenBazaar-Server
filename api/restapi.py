@@ -541,6 +541,9 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/shutdown')
     def shutdown(self, request):
+        vendor_store = self.db.VendorStore()
+        for vendor in self.protocol.vendors.values():
+            vendor_store.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
         PortMapper().clean_my_mappings(self.kserver.node.port)
         self.protocol.shutdown()
         reactor.stop()

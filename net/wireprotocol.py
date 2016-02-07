@@ -3,6 +3,7 @@ import socket
 import nacl.signing
 import nacl.hash
 from config import SEEDS
+from db.datastore import Database
 from dht.node import Node
 from dht.utils import digest
 from interfaces import MessageProcessor
@@ -41,6 +42,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.processors = []
         self.relay_node = None
         self.nat_type = nat_type
+        self.vendors = Database(testnet).VendorStore().get_vendors()
         self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
         self.log = Logger(system=self)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
