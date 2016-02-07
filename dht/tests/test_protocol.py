@@ -543,8 +543,6 @@ class KademliaProtocolTest(unittest.TestCase):
         self._connecting_to_connected()
         self.wire_protocol[self.addr1] = self.con
 
-        self.protocol.router.addContact(mknode())
-
         self.protocol.storage[digest("keyword")] = (
             digest("key"), self.protocol.sourceNode.getProto().SerializeToString(), 10)
         self.protocol.storage[digest("keyword")] = (
@@ -573,7 +571,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.arguments.append(i.SerializeToString())
         m.arguments.append(i2.SerializeToString())
-        self.assertEqual(x.sender, m.sender)
+        self.assertEqual(x.sender.guid, m.sender.guid)
         self.assertEqual(x.command, m.command)
         self.assertTrue(x.arguments[0] in m.arguments)
         self.assertTrue(x.arguments[1] in m.arguments)
