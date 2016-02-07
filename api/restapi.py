@@ -1143,10 +1143,10 @@ class OpenBazaarAPI(APIResource):
                 message_json = {
                     "guid": m[0],
                     "handle": m[1],
-                    "message": m[6],
-                    "timestamp": m[7],
-                    "avatar_hash": m[8].encode("hex"),
-                    "outgoing": False if m[10] == 0 else True
+                    "message": m[5],
+                    "timestamp": m[6],
+                    "avatar_hash": m[7].encode("hex"),
+                    "outgoing": False if m[9] == 0 else True
                 }
                 message_list.append(message_json)
         request.setHeader('content-type', "application/json")

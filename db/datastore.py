@@ -386,7 +386,6 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
             self.db.commit()
 
-
     class NotificationStore(object):
         """
         All notifications are stored here.
