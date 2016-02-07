@@ -8,6 +8,7 @@ from protos.countries import CountryCode
 
 ZERO_TIMESTAMP = '0000-00-00 00:00:00'
 
+
 class DatastoreTest(unittest.TestCase):
     def setUp(self):
 
