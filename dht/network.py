@@ -171,14 +171,11 @@ class Server(object):
                     n = objects.Node()
                     try:
                         n.ParseFromString(result[1][0])
-                        pubkey = n.signedPublicKey[len(n.signedPublicKey) - 32:]
-                        verify_key = nacl.signing.VerifyKey(pubkey)
-                        verify_key.verify(n.signedPublicKey)
-                        h = nacl.hash.sha512(n.signedPublicKey)
-                        hash_pow = h[64:128]
+                        h = nacl.hash.sha512(n.publicKey)
+                        hash_pow = h[40:]
                         if int(hash_pow[:6], 16) >= 50 or hexlify(n.guid) != h[:40]:
                             raise Exception('Invalid GUID')
-                        node = Node(n.guid, addr[0], addr[1], n.signedPublicKey,
+                        node = Node(n.guid, addr[0], addr[1], n.publicKey,
                                     None if not n.HasField("relayAddress") else
                                     (n.relayAddress.ip, n.relayAddress.port),
                                     n.natType,
