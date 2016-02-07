@@ -5,11 +5,7 @@ Copyright (c) 2015 OpenBazaar
 
 import abc
 import random
-import nacl.signing
-import nacl.encoding
-import nacl.hash
 from base64 import b64encode
-from binascii import hexlify
 from config import PROTOCOL_VERSION
 from dht.node import Node
 from dht.utils import digest
@@ -47,16 +43,7 @@ class RPCProtocol:
         self._outstanding = {}
         self.log = Logger(system=self)
 
-    def receive_message(self, message, connection, ban_score):
-        sender = Node(message.sender.guid,
-                      message.sender.nodeAddress.ip,
-                      message.sender.nodeAddress.port,
-                      message.sender.signedPublicKey,
-                      None if not message.sender.HasField("relayAddress") else
-                      (message.sender.relayAddress.ip, message.sender.relayAddress.port),
-                      message.sender.natType,
-                      message.sender.vendor)
-
+    def receive_message(self, message, sender, connection, ban_score):
         if message.testnet != self.multiplexer.testnet:
             self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
@@ -68,22 +55,6 @@ class RPCProtocol:
                              str(connection.dest_addr))
             connection.shutdown()
             return False
-
-        # Check that the GUID is valid. If not, ignore
-        if self.router.isNewNode(sender):
-            try:
-                pubkey = message.sender.signedPublicKey[len(message.sender.signedPublicKey) - 32:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(message.sender.signedPublicKey)
-                h = nacl.hash.sha512(message.sender.signedPublicKey)
-                pow_hash = h[64:128]
-                if int(pow_hash[:6], 16) >= 50 or hexlify(message.sender.guid) != h[:40]:
-                    raise Exception('Invalid GUID')
-
-            except Exception:
-                self.log.warning("received message from sender with invalid GUID, ignoring")
-                connection.shutdown()
-                return False
 
         if message.sender.vendor:
             self.db.VendorStore().save_vendor(message.sender.guid.encode("hex"),
@@ -141,6 +112,7 @@ class RPCProtocol:
                 response = [response]
             for arg in response:
                 m.arguments.append(str(arg))
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         connection.send_message(m.SerializeToString())
 
     def timeout(self, node):
@@ -198,6 +170,7 @@ class RPCProtocol:
             for arg in args:
                 m.arguments.append(str(arg))
             m.testnet = self.multiplexer.testnet
+            m.signature = self.signing_key.sign(m.SerializeToString())[:64]
             data = m.SerializeToString()
 
             address = (node.ip, node.port)

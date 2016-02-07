@@ -4,7 +4,7 @@ txrudp==0.5.1
 pystun==0.1.0
 bitcointools==1.1.44
 gnupg==2.0.2
-pynacl==0.3.0
+pynacl==1.0.1
 txrestapi==0.2
 txws==0.9.1
 python-libbitcoinclient==0.3.2

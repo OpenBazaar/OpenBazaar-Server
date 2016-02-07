@@ -146,9 +146,8 @@ class Contract(object):
                         "id": {
                             "guid": self.keychain.guid.encode("hex"),
                             "pubkeys": {
-                                "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
-                                "bitcoin": bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
-                                "encryption": self.keychain.encryption_pubkey.encode("hex")
+                                "guid": self.keychain.verify_key.encode(encoder=nacl.encoding.HexEncoder),
+                                "bitcoin": bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey)
                             }
                         },
                         "item": {
@@ -240,23 +239,16 @@ class Contract(object):
                 if mod_info is not None:
                     moderator = {
                         "guid": mod,
-                        "name": mod_info[7],
-                        "avatar": mod_info[9].encode("hex"),
-                        "short_description": mod_info[8],
-                        "fee": str(mod_info[10]) + "%",
-                        "blockchain_id": mod_info[6],
+                        "name": mod_info[5],
+                        "avatar": mod_info[7].encode("hex"),
+                        "short_description": mod_info[6],
+                        "fee": str(mod_info[8]) + "%",
+                        "blockchain_id": mod_info[4],
                         "pubkeys": {
-                            "signing": {
-                                "key": mod_info[1][64:].encode("hex"),
-                                "signature": base64.b64encode(mod_info[1][:64])
-                            },
-                            "encryption": {
+                            "guid": mod_info[1].encode("hex"),
+                            "bitcoin": {
                                 "key": mod_info[2].encode("hex"),
                                 "signature": base64.b64encode(mod_info[3])
-                            },
-                            "bitcoin": {
-                                "key": mod_info[4].encode("hex"),
-                                "signature": base64.b64encode(mod_info[5])
                             }
                         }
                     }
@@ -306,9 +298,8 @@ class Contract(object):
                     "id": {
                         "guid": self.keychain.guid.encode("hex"),
                         "pubkeys": {
-                            "guid": self.keychain.guid_signed_pubkey[64:].encode("hex"),
+                            "guid": self.keychain.verify_key.encode(encoder=nacl.encoding.HexEncoder),
                             "bitcoin": bitcointools.bip32_extract_key(self.keychain.bitcoin_master_pubkey),
-                            "encryption": self.keychain.encryption_pubkey.encode("hex")
                         }
                     },
                     "payment": {},
@@ -1096,7 +1087,7 @@ class Contract(object):
 
             # verify buyer ID
             pubkeys = self.contract["buyer_order"]["order"]["id"]["pubkeys"]
-            keys = ["guid", "bitcoin", "encryption"]
+            keys = ["guid", "bitcoin"]
             for value in map(pubkeys.get, keys):
                 if value is None:
                     raise Exception("Missing pubkey field")

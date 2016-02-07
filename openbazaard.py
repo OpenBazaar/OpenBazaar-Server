@@ -96,10 +96,10 @@ def run(*args):
         kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
                                    nat_type, relay_node, on_bootstrap_complete, storage)
     except Exception:
-        node = Node(keys.guid, ip_address, port, keys.guid_signed_pubkey,
+        node = Node(keys.guid, ip_address, port, keys.verify_key.encode(),
                     relay_node, nat_type, Profile(db).get().vendor)
         protocol.relay_node = node.relay_node
-        kserver = Server(node, db, KSIZE, ALPHA, storage=storage)
+        kserver = Server(node, db, keys.signing_key, KSIZE, ALPHA, storage=storage)
         kserver.protocol.connect_multiplexer(protocol)
         kserver.bootstrap(kserver.querySeed(SEEDS)).addCallback(on_bootstrap_complete)
     kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)

@@ -13,13 +13,15 @@ class MessageProcessor(Interface):
     multiplexer = Attribute("""The main `ConnectionMultiplexer` protocol.
         We pass it in here so we can send datagrams from this class.""")
 
-    def receive_message(datagram, connection, ban_score):
+    def receive_message(datagram, sender, connection, ban_score):
         """
         Called by OpenBazaarProtocol when it receives a new message intended for this processor.
 
         Args:
             datagram: The protobuf that came off the wire in unserialized format. Basic validity checks, such as
                       minimum size and valid protobuf format have already been done.
+
+            sender: a `node.Node` object sent by the sender.
 
             connection: the txrudp connection to the peer who sent the message. To respond directly to the peer call
                       connection.send_message()

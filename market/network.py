@@ -104,10 +104,9 @@ class Server(object):
 
                     # TODO: verify the guid in the contract matches this node's guid
                     signature = contract["vendor_offer"]["signatures"]["guid"]
-                    pubkey = node_to_ask.signed_pubkey[64:]
                     verify_obj = json.dumps(contract["vendor_offer"]["listing"], indent=4)
 
-                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
                     verify_key.verify(verify_obj, base64.b64decode(signature))
 
                     bitcoin_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["bitcoin"]
@@ -120,19 +119,14 @@ class Server(object):
                     if "moderators" in contract["vendor_offer"]["listing"]:
                         for moderator in contract["vendor_offer"]["listing"]["moderators"]:
                             guid = moderator["guid"]
-                            guid_key = moderator["pubkeys"]["signing"]["key"]
-                            guid_sig = base64.b64decode(moderator["pubkeys"]["signing"]["signature"])
-                            enc_key = moderator["pubkeys"]["encryption"]["key"]
-                            enc_sig = base64.b64decode(moderator["pubkeys"]["encryption"]["signature"])
+                            guid_key = moderator["pubkeys"]["guid"]
                             bitcoin_key = moderator["pubkeys"]["bitcoin"]["key"]
                             bitcoin_sig = base64.b64decode(moderator["pubkeys"]["bitcoin"]["signature"])
-                            h = nacl.hash.sha512(guid_sig + unhexlify(guid_key))
-                            pow_hash = h[64:128]
+                            h = nacl.hash.sha512(unhexlify(guid_key))
+                            pow_hash = h[40:]
                             if int(pow_hash[:6], 16) >= 50 or guid != h[:40]:
                                 raise Exception('Invalid GUID')
                             verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
-                            verify_key.verify(unhexlify(guid_key), guid_sig)
-                            verify_key.verify(unhexlify(enc_key), enc_sig)
                             verify_key.verify(unhexlify(bitcoin_key), bitcoin_sig)
                             #TODO: should probably also validate the handle here.
                     self.cache(result[1][0])
@@ -185,9 +179,8 @@ class Server(object):
 
         def get_result(result):
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(result[1][1] + result[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(result[1][0], result[1][1])
                 p = objects.Profile()
                 p.ParseFromString(result[1][0])
                 if p.pgp_key.public_key:
@@ -220,9 +213,8 @@ class Server(object):
 
         def get_result(result):
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(result[1][1] + result[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(result[1][0], result[1][1])
                 m = objects.Metadata()
                 m.ParseFromString(result[1][0])
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + m.avatar_hash.encode("hex")):
@@ -246,9 +238,8 @@ class Server(object):
 
         def get_result(result):
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(result[1][1] + result[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(result[1][0], result[1][1])
                 l = objects.Listings()
                 l.ParseFromString(result[1][0])
                 return l
@@ -270,9 +261,8 @@ class Server(object):
 
         def get_result(result):
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(result[1][1] + result[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(result[1][0], result[1][1])
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
                 if l.HasField("thumbnail_hash"):
@@ -329,13 +319,12 @@ class Server(object):
                 try:
                     u = objects.Following.User()
                     u.guid = node_to_follow.id
-                    u.signed_pubkey = node_to_follow.signed_pubkey
+                    u.pubkey = node_to_follow.pubkey
                     m = objects.Metadata()
                     m.ParseFromString(result[1][1])
                     u.metadata.MergeFrom(m)
                     u.signature = result[1][2]
-                    pubkey = node_to_follow.signed_pubkey[64:]
-                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    verify_key = nacl.signing.VerifyKey(node_to_follow.pubkey)
                     verify_key.verify(result[1][1], result[1][2])
                     self.db.FollowData().follow(u)
                     return True
@@ -354,7 +343,7 @@ class Server(object):
         f = objects.Followers.Follower()
         f.guid = self.kserver.node.id
         f.following = node_to_follow.id
-        f.signed_pubkey = self.kserver.node.signed_pubkey
+        f.pubkey = self.kserver.node.pubkey
         f.metadata.MergeFrom(m)
         signature = self.signing_key.sign(f.SerializeToString())[:64]
         d = self.protocol.callFollow(node_to_follow, f.SerializeToString(), signature)
@@ -392,21 +381,20 @@ class Server(object):
             # Verify the signature on the response
             f = objects.Followers()
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(response[1][1] + response[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(response[1][0], response[1][1])
                 f.ParseFromString(response[1][0])
             except Exception:
                 return None
             # Verify the signature and guid of each follower.
             for follower in f.followers:
                 try:
-                    v_key = nacl.signing.VerifyKey(follower.signed_pubkey[64:])
+                    v_key = nacl.signing.VerifyKey(follower.pubkey)
                     signature = follower.signature
                     follower.ClearField("signature")
                     v_key.verify(follower.SerializeToString(), signature)
-                    h = nacl.hash.sha512(follower.signed_pubkey)
-                    pow_hash = h[64:128]
+                    h = nacl.hash.sha512(follower.pubkey)
+                    pow_hash = h[40:]
                     if int(pow_hash[:6], 16) >= 50 or follower.guid.encode("hex") != h[:40]:
                         raise Exception('Invalid GUID')
                     if follower.following != node_to_ask.id:
@@ -432,19 +420,18 @@ class Server(object):
             # Verify the signature on the response
             f = objects.Following()
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(response[1][1] + response[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(response[1][0], response[1][1])
                 f.ParseFromString(response[1][0])
             except Exception:
                 return None
             for user in f.users:
                 try:
-                    v_key = nacl.signing.VerifyKey(user.signed_pubkey[64:])
+                    v_key = nacl.signing.VerifyKey(user.pubkey)
                     signature = user.signature
                     v_key.verify(user.metadata.SerializeToString(), signature)
-                    h = nacl.hash.sha512(user.signed_pubkey)
-                    pow_hash = h[64:128]
+                    h = nacl.hash.sha512(user.pubkey)
+                    pow_hash = h[40:]
                     if int(pow_hash[:6], 16) >= 50 or user.guid.encode("hex") != h[:40]:
                         raise Exception('Invalid GUID')
                 except Exception:
@@ -495,8 +482,7 @@ class Server(object):
         pro = Profile(self.db).get()
         p = objects.PlaintextMessage()
         p.sender_guid = self.kserver.node.id
-        p.signed_pubkey = self.kserver.node.signed_pubkey
-        p.encryption_pubkey = PrivateKey(self.signing_key.encode()).public_key.encode()
+        p.pubkey = self.kserver.node.pubkey
         p.type = message_type
         p.message = str(message)
         if subject is not None:
@@ -511,7 +497,7 @@ class Server(object):
 
         skephem = PrivateKey.generate()
         pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-        box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+        box = Box(skephem, PublicKey(public_key))
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(p.SerializeToString(), nonce)
 
@@ -539,17 +525,17 @@ class Server(object):
                         value = objects.Value()
                         value.ParseFromString(message)
                         try:
-                            box = Box(PrivateKey(self.signing_key.encode()), PublicKey(value.valueKey))
+                            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(value.valueKey))
                             ciphertext = value.serializedData
                             plaintext = box.decrypt(ciphertext).decode("zlib")
                             p = objects.PlaintextMessage()
                             p.ParseFromString(plaintext)
                             signature = p.signature
                             p.ClearField("signature")
-                            verify_key = nacl.signing.VerifyKey(p.signed_pubkey[64:])
+                            verify_key = nacl.signing.VerifyKey(p.pubkey)
                             verify_key.verify(p.SerializeToString(), signature)
-                            h = nacl.hash.sha512(p.signed_pubkey)
-                            pow_hash = h[64:128]
+                            h = nacl.hash.sha512(p.pubkey)
+                            pow_hash = h[40:]
                             if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40]:
                                 raise Exception('Invalid guid')
                             if p.type == objects.PlaintextMessage.Type.Value("ORDER_CONFIRMATION"):
@@ -594,17 +580,18 @@ class Server(object):
                 buyer_key = derive_childkey(masterkey_b, chaincode)
                 amount = contract.contract["buyer_order"]["order"]["payment"]["amount"]
                 listing_hash = contract.contract["buyer_order"]["order"]["ref_hash"]
-                verify_key = nacl.signing.VerifyKey(node_to_ask.signed_pubkey[64:])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
                 verify_key.verify(
                     str(address) + str(amount) + str(listing_hash) + str(buyer_key), response[1][0])
                 return response[1][0]
             except Exception:
                 return False
 
-        public_key = contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+        public_key = nacl.signing.VerifyKey(contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"],
+                                            encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
         skephem = PrivateKey.generate()
         pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-        box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+        box = Box(skephem, public_key)
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
         d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
@@ -627,7 +614,9 @@ class Server(object):
                     del contract_dict["vendor_order_confirmation"]
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
                     self.send_message(Node(unhexlify(guid)),
-                                      contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"],
+                                      nacl.signing.VerifyKey(
+                                          contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
+                                          encoder=nacl.encoding.HexEncoder).to_curve25519_public_key().encode(),
                                       objects.PlaintextMessage.Type.Value("ORDER_CONFIRMATION"),
                                       json.dumps(contract.contract["vendor_order_confirmation"]),
                                       order_id,
@@ -637,10 +626,12 @@ class Server(object):
                     return False
 
             if node_to_ask:
-                public_key = contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+                public_key = nacl.signing.VerifyKey(
+                    contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
+                    encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
                 skephem = PrivateKey.generate()
                 pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                box = Box(skephem, public_key)
                 nonce = nacl.utils.random(Box.NONCE_SIZE)
                 ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
                 d = self.protocol.callOrderConfirmation(node_to_ask, pkephem, ciphertext)
@@ -667,7 +658,9 @@ class Server(object):
                     del contract_dict["buyer_receipt"]
                     order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
                     self.send_message(Node(unhexlify(guid)),
-                                      contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"],
+                                      nacl.signing.VerifyKey(
+                                          contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"],
+                                          encoder=nacl.encoding.HexEncoder).to_curve25519_public_key().encode(),
                                       objects.PlaintextMessage.Type.Value("RECEIPT"),
                                       json.dumps(contract.contract["buyer_receipt"]),
                                       order_id,
@@ -677,10 +670,12 @@ class Server(object):
                     return False
 
             if node_to_ask:
-                public_key = contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+                public_key = nacl.signing.VerifyKey(
+                    contract.contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"],
+                    encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
                 skephem = PrivateKey.generate()
                 pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                box = Box(skephem, public_key)
                 nonce = nacl.utils.random(Box.NONCE_SIZE)
                 ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
                 d = self.protocol.callCompleteOrder(node_to_ask, pkephem, ciphertext)
@@ -704,7 +699,7 @@ class Server(object):
                 handle = ""
                 if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
                     handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
-                enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+                guid_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"]
                 proof_sig = self.db.Purchases().get_proof_sig(order_id)
         except Exception:
             try:
@@ -715,7 +710,7 @@ class Server(object):
                     handle = ""
                     if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
                         handle = contract["buyer_order"]["order"]["id"]["blockchain_id"]
-                    enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+                    guid_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"]
                     proof_sig = None
             except Exception:
                 return False
@@ -732,7 +727,7 @@ class Server(object):
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
-                mod_enc_key = mod["pubkeys"]["encryption"]["key"]
+                mod_key = mod["pubkeys"]["guid"]
 
         if self.db.Purchases().get_purchase(order_id) is not None:
             self.db.Purchases().update_status(order_id, 4)
@@ -742,23 +737,27 @@ class Server(object):
 
         avatar_hash = Profile(self.db).get().avatar_hash
 
-        self.db.MessageStore().save_message(guid, handle, "", "", order_id, "DISPUTE",
+        self.db.MessageStore().save_message(guid, handle, "", order_id, "DISPUTE",
                                             claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):
                 if not response[0]:
                     self.send_message(Node(unhexlify(recipient_guid)),
-                                      public_key,
+                                      nacl.signing.VerifyKey(
+                                          public_key,
+                                          encoder=nacl.encoding.HexEncoder).to_curve25519_public_key().encode(),
                                       objects.PlaintextMessage.Type.Value("DISPUTE_OPEN"),
                                       json.dumps(contract),
                                       order_id,
                                       store_only=True)
 
             if node_to_ask:
+                enc_key = nacl.signing.VerifyKey(
+                    public_key, encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
                 skephem = PrivateKey.generate()
                 pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                box = Box(skephem, enc_key)
                 nonce = nacl.utils.random(Box.NONCE_SIZE)
                 ciphertext = box.encrypt(json.dumps(contract, indent=4), nonce)
                 d = self.protocol.callDisputeOpen(node_to_ask, pkephem, ciphertext)
@@ -766,8 +765,8 @@ class Server(object):
             else:
                 return parse_response([False])
 
-        self.kserver.resolve(unhexlify(guid)).addCallback(get_node, guid, enc_key)
-        self.kserver.resolve(unhexlify(mod_guid)).addCallback(get_node, mod_guid, mod_enc_key)
+        self.kserver.resolve(unhexlify(guid)).addCallback(get_node, guid, guid_key)
+        self.kserver.resolve(unhexlify(mod_guid)).addCallback(get_node, mod_guid, mod_key)
 
     def close_dispute(self, order_id, resolution, buyer_percentage,
                       vendor_percentage, moderator_percentage, moderator_address):
@@ -784,9 +783,13 @@ class Server(object):
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
             buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
-            buyer_enc_key = contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"]
+            buyer_enc_key = nacl.signing.VerifyKey(
+                contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
+                encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
             vendor_guid = contract["vendor_offer"]["listing"]["id"]["guid"]
-            vendor_enc_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"]
+            vendor_enc_key = nacl.signing.VerifyKey(
+                contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"],
+                encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
 
             payment_address = contract["buyer_order"]["order"]["payment"]["address"]
 
@@ -844,7 +847,7 @@ class Server(object):
                         def parse_response(response):
                             if not response[0]:
                                 self.send_message(Node(unhexlify(recipient_guid)),
-                                                  public_key,
+                                                  public_key.encode(),
                                                   objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
                                                   dispute_json,
                                                   order_id,
@@ -853,7 +856,7 @@ class Server(object):
                         if node_to_ask:
                             skephem = PrivateKey.generate()
                             pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                            box = Box(skephem, PublicKey(public_key, nacl.encoding.HexEncoder))
+                            box = Box(skephem, public_key)
                             nonce = nacl.utils.random(Box.NONCE_SIZE)
                             ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
                             d = self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext)
@@ -936,9 +939,8 @@ class Server(object):
         """
         def get_result(result):
             try:
-                pubkey = node_to_ask.signed_pubkey[64:]
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                verify_key.verify(result[1][1] + result[1][0])
+                verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
+                verify_key.verify(result[1][0], result[1][1])
                 ratings = json.loads(result[1][0].decode("zlib"), object_pairs_hook=OrderedDict)
                 ret = []
                 for rating in ratings:

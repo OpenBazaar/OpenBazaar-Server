@@ -45,34 +45,31 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
 
     if contract["dispute"]["info"]["guid"] == contract["vendor_offer"]["listing"]["id"]["guid"]:
         guid = unhexlify(contract["vendor_offer"]["listing"]["id"]["guid"])
-        signing_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
+        public_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"])
         if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
             handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
         else:
             handle = ""
-        encryption_key = unhexlify(contract["vendor_offer"]["listing"]["id"]["pubkeys"]["encryption"])
         proof_sig = None
     elif contract["dispute"]["info"]["guid"] == contract["buyer_order"]["order"]["id"]["guid"]:
         guid = unhexlify(contract["buyer_order"]["order"]["id"]["guid"])
-        signing_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
+        public_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"])
         if "blockchain_id" in contract["buyer_order"]["order"]["id"]:
             handle = contract["buyer_order"]["order"]["id"]["blockchain_id"]
         else:
             handle = ""
-        encryption_key = unhexlify(contract["buyer_order"]["order"]["id"]["pubkeys"]["encryption"])
         proof_sig = contract["dispute"]["info"]["proof_sig"]
     else:
         raise Exception("Dispute guid not in contract")
 
-    verify_key = nacl.signing.VerifyKey(signing_key)
+    verify_key = nacl.signing.VerifyKey(public_key)
     verify_key.verify(json.dumps(contract["dispute"]["info"], indent=4),
                       base64.b64decode(contract["dispute"]["signature"]))
 
     p = PlaintextMessage()
     p.sender_guid = guid
     p.handle = handle
-    p.signed_pubkey = signing_key
-    p.encryption_pubkey = encryption_key
+    p.pubkey = public_key
     p.subject = str(order_id)
     p.type = PlaintextMessage.Type.Value("DISPUTE")
     p.message = str(contract["dispute"]["info"]["claim"])
@@ -157,8 +154,7 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
         if moderator["guid"] == contract["buyer_order"]["order"]["moderator"]:
             moderator_guid = unhexlify(moderator["guid"])
             moderator_handle = moderator["blockchain_id"]
-            moderator_pubkey = unhexlify(moderator["pubkeys"]["signing"]["key"])
-            moderator_enc_key = unhexlify(moderator["pubkeys"]["encryption"]["key"])
+            moderator_pubkey = unhexlify(moderator["pubkeys"]["guid"])
             moderator_avatar = unhexlify(moderator["avatar"])
 
     verify_key = nacl.signing.VerifyKey(moderator_pubkey)
@@ -173,8 +169,7 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     p = PlaintextMessage()
     p.sender_guid = moderator_guid
     p.handle = moderator_handle
-    p.signed_pubkey = moderator_pubkey
-    p.encryption_pubkey = moderator_enc_key
+    p.pubkey = moderator_pubkey
     p.subject = str(order_id)
     p.type = PlaintextMessage.Type.Value("DISPUTE")
     p.message = str(resolution_json["dispute_resolution"]["resolution"]["decision"])

@@ -44,15 +44,15 @@ class KademliaProtocolTest(unittest.TestCase):
             self.addr1
         )
 
-        valid_key = "1a5c8e67edb8d279d1ae32fa2da97e236b95e95c837dc8c3c7c2ff7a7cc29855"
+        valid_key = "63d901c4d57cde34fc1f1e28b9af5d56ed342cae5c2fb470046d0130a4226b0c"
         self.signing_key = nacl.signing.SigningKey(valid_key, encoder=nacl.encoding.HexEncoder)
         verify_key = self.signing_key.verify_key
-        signed_pubkey = self.signing_key.sign(str(verify_key))
-        h = nacl.hash.sha512(signed_pubkey)
+        h = nacl.hash.sha512(verify_key.encode())
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, None, objects.FULL_CONE, True)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port,
+                         verify_key.encode(), None, objects.FULL_CONE, True)
         self.db = datastore.Database(filepath="test.db")
-        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr, objects.FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
@@ -85,8 +85,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("PING")
         m.protoVer = self.version
         m.testnet = False
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         m.arguments.append(self.protocol.sourceNode.getProto().SerializeToString())
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -96,6 +98,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
+        m2 = message.Message()
+        m2.ParseFromString(received_message)
+        m2.ClearField("signature")
+        received_message = m2.SerializeToString()
 
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
@@ -112,9 +118,11 @@ class KademliaProtocolTest(unittest.TestCase):
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key",
                             self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         del m.arguments[-4:]
         m.arguments.append("True")
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -124,6 +132,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
+        m2 = message.Message()
+        m2.ParseFromString(received_message)
+        m2.ClearField("signature")
+        received_message = m2.SerializeToString()
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
         self.assertTrue(
@@ -147,9 +159,11 @@ class KademliaProtocolTest(unittest.TestCase):
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key",
                             self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         del m.arguments[-4:]
         m.arguments.append("True")
+        m.ClearField("signature")
         expected_message1 = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -165,9 +179,11 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", "Bad Signature"])
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("False")
+        m.ClearField("signature")
         expected_message2 = m.SerializeToString()
         self.handler.receive_message(data)
         self.assertTrue(
@@ -180,8 +196,16 @@ class KademliaProtocolTest(unittest.TestCase):
             packet.Packet.from_bytes(call[0][0])
             for call in self.proto_mock.send_datagram.call_args_list
         )
-        self.assertEqual(sent_packets[0].payload, expected_message1)
-        self.assertEqual(sent_packets[1].payload, expected_message2)
+        m2 = message.Message()
+        m2.ParseFromString(sent_packets[0].payload)
+        m2.ClearField("signature")
+        received_message1 = m2.SerializeToString()
+        m3 = message.Message()
+        m3.ParseFromString(sent_packets[1].payload)
+        m3.ClearField("signature")
+        received_message2 = m3.SerializeToString()
+        self.assertEqual(received_message1, expected_message1)
+        self.assertEqual(received_message2, expected_message2)
         self.proto_mock.send_datagram.call_args_list = []
 
         # Test good signature
@@ -192,14 +216,20 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.testnet = False
         m.arguments.extend([digest("Keyword"), "Key", self.signing_key.sign("Key")[:64]])
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         del m.arguments[-3:]
         m.arguments.append("True")
+        m.ClearField("signature")
         expected_message3 = m.SerializeToString()
         self.handler.receive_message(data)
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
-        self.assertEqual(sent_packet.payload, expected_message3)
+        m4 = message.Message()
+        m4.ParseFromString(sent_packet.payload)
+        m4.ClearField("signature")
+        received_message = m4.SerializeToString()
+        self.assertEqual(received_message, expected_message3)
         self.assertTrue(self.storage.getSpecific(digest("Keyword"), "Key") is None)
 
     def test_rpc_stun(self):
@@ -211,8 +241,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m.command = message.Command.Value("STUN")
         m.protoVer = self.version
         m.testnet = False
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         m.arguments.extend([self.public_ip, str(self.port)])
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -224,6 +256,8 @@ class KademliaProtocolTest(unittest.TestCase):
         received_message = sent_packet.payload
         a = message.Message()
         a.ParseFromString(received_message)
+        a.ClearField("signature")
+        received_message = a.SerializeToString()
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
 
@@ -243,10 +277,12 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("nodetofind"))
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         del m.arguments[-1]
         m.arguments.extend([node2.getProto().SerializeToString(), node1.getProto().SerializeToString(),
                             node3.getProto().SerializeToString()])
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -258,6 +294,8 @@ class KademliaProtocolTest(unittest.TestCase):
         received_message = sent_packet.payload
         a = message.Message()
         a.ParseFromString(received_message)
+        a.ClearField("signature")
+        received_message = a.SerializeToString()
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
 
@@ -273,6 +311,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.arguments.extend([digest("Keyword"), "Key",
                             self.protocol.sourceNode.getProto().SerializeToString(), str(10)])
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -288,6 +327,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("Keyword"))
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         self.handler.receive_message(data)
 
@@ -298,6 +338,7 @@ class KademliaProtocolTest(unittest.TestCase):
         value.ttl = 10
         m.arguments.append("value")
         m.arguments.append(value.SerializeToString())
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -308,6 +349,10 @@ class KademliaProtocolTest(unittest.TestCase):
             for call in self.proto_mock.send_datagram.call_args_list
         )
         received_message = sent_packets[1].payload
+        a = message.Message()
+        a.ParseFromString(received_message)
+        a.ClearField("signature")
+        received_message = a.SerializeToString()
 
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 3)
@@ -328,6 +373,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.protoVer = self.version
         m.testnet = False
         m.arguments.append(digest("Keyword"))
+        m.signature = self.signing_key.sign(m.SerializeToString())[:64]
         data = m.SerializeToString()
         self.handler.on_connection_made()
         self.handler.receive_message(data)
@@ -335,6 +381,7 @@ class KademliaProtocolTest(unittest.TestCase):
         del m.arguments[-1]
         m.arguments.extend([node3.getProto().SerializeToString(), node1.getProto().SerializeToString(),
                             node2.getProto().SerializeToString()])
+        m.ClearField("signature")
         expected_message = m.SerializeToString()
 
         self.clock.advance(100 * constants.PACKET_TIMEOUT)
@@ -342,8 +389,10 @@ class KademliaProtocolTest(unittest.TestCase):
         m_calls = self.proto_mock.send_datagram.call_args_list
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         received_message = sent_packet.payload
-        m = message.Message()
-        m.ParseFromString(received_message)
+        a = message.Message()
+        a.ParseFromString(received_message)
+        a.ClearField("signature")
+        received_message = a.SerializeToString()
 
         self.assertEqual(received_message, expected_message)
         self.assertEqual(len(m_calls), 2)
@@ -364,7 +413,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().publicKey, m.sender.publicKey)
         self.assertTrue(m.command == message.PING)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
 
@@ -385,7 +434,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().publicKey, m.sender.publicKey)
         self.assertTrue(m.command == message.STORE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], digest("Keyword"))
@@ -409,7 +458,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().publicKey, m.sender.publicKey)
         self.assertTrue(m.command == message.FIND_VALUE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
@@ -431,7 +480,7 @@ class KademliaProtocolTest(unittest.TestCase):
         m.ParseFromString(sent_message)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().publicKey, m.sender.publicKey)
         self.assertTrue(m.command == message.FIND_NODE)
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertEqual(m.arguments[0], keyword.id)
@@ -453,7 +502,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertEqual(self.proto_mock.send_datagram.call_args_list[0][0][1], self.addr1)
         self.assertTrue(len(m.messageID) == 20)
         self.assertEqual(self.protocol.sourceNode.getProto().guid, m.sender.guid)
-        self.assertEqual(self.protocol.sourceNode.getProto().signedPublicKey, m.sender.signedPublicKey)
+        self.assertEqual(self.protocol.sourceNode.getProto().publicKey, m.sender.publicKey)
         self.assertTrue(m.command == message.DELETE)
         self.assertEqual(m.arguments[0], digest("Keyword"))
         self.assertEqual(m.arguments[1], digest("Key"))
@@ -530,9 +579,9 @@ class KademliaProtocolTest(unittest.TestCase):
         self.assertTrue(x.arguments[1] in m.arguments)
 
     def test_refreshIDs(self):
-        node1 = Node(digest("id1"), "127.0.0.1", 12345, signed_pubkey=digest("key1"))
-        node2 = Node(digest("id2"), "127.0.0.1", 22222, signed_pubkey=digest("key2"))
-        node3 = Node(digest("id3"), "127.0.0.1", 77777, signed_pubkey=digest("key3"))
+        node1 = Node(digest("id1"), "127.0.0.1", 12345, pubkey=digest("key1"))
+        node2 = Node(digest("id2"), "127.0.0.1", 22222, pubkey=digest("key2"))
+        node3 = Node(digest("id3"), "127.0.0.1", 77777, pubkey=digest("key3"))
         self.protocol.router.addContact(node1)
         self.protocol.router.addContact(node2)
         self.protocol.router.addContact(node3)

@@ -13,7 +13,7 @@ import "countries.proto";
 //Some fields are optional as they aren't needed in all situations.
 message Node {
     required bytes guid             = 1;
-    required bytes signedPublicKey  = 2; // <64 byte signature><32 byte public key>
+    required bytes publicKey        = 2;
     required NATType natType        = 3;
     required IPAddress nodeAddress  = 4;
     optional IPAddress relayAddress = 5;
@@ -51,7 +51,7 @@ message Inv {
 message Profile {
         required string name              = 1;
         required CountryCode location     = 2;
-        required PublicKey encryption_key = 3; // guid signature covers encryption key
+        optional PublicKey guid_key       = 3;
         optional PublicKey bitcoin_key    = 4; // guid signature covers bitcoin key
         optional bool nsfw                = 5 [default = false];
         optional bool vendor              = 6 [default = false];
@@ -127,7 +127,7 @@ message Followers {
     message Follower {
         required bytes guid          = 1;
         required bytes following     = 2;
-        required bytes signed_pubkey = 3;
+        required bytes pubkey        = 3;
         required Metadata metadata   = 4;
         optional bytes signature     = 5;
     }
@@ -138,7 +138,7 @@ message Following {
 
     message User {
         required bytes guid          = 1;
-        required bytes signed_pubkey = 2;
+        required bytes pubkey        = 2;
         required Metadata metadata   = 3;
         optional bytes signature     = 4;
     }
@@ -147,14 +147,13 @@ message Following {
 message PlaintextMessage {
     required bytes sender_guid       = 1;
     optional string handle           = 2;
-    required bytes signed_pubkey     = 3;
-    required bytes encryption_pubkey = 4;
-    optional string subject          = 5;
-    required Type type               = 6;
-    required string message          = 7;
-    required uint64 timestamp        = 8;
-    optional bytes avatar_hash       = 9;
-    optional bytes signature         = 10;
+    required bytes pubkey            = 3;
+    optional string subject          = 4;
+    required Type type               = 5;
+    required string message          = 6;
+    required uint64 timestamp        = 7;
+    optional bytes avatar_hash       = 8;
+    optional bytes signature         = 9;
 
     enum Type {
         CHAT                 = 1;

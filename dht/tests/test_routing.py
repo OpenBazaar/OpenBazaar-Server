@@ -1,7 +1,9 @@
 from twisted.trial import unittest
 
-from dht.routing import KBucket
-from dht.tests.utils import mknode, FakeProtocol
+from dht.routing import KBucket, RoutingTable
+from dht.utils import digest
+from dht.node import Node
+from dht.tests.utils import mknode
 
 
 class KBucketTest(unittest.TestCase):
@@ -51,11 +53,23 @@ class KBucketTest(unittest.TestCase):
 
 class RoutingTableTest(unittest.TestCase):
     def setUp(self):
-        self.id = mknode().id
-        self.protocol = FakeProtocol(self.id)
-        self.router = self.protocol.router
+        self.node = Node(digest("test"), "127.0.0.1", 1234)
+        self.router = RoutingTable(self, 20, self.node.id)
 
     def test_addContact(self):
         self.router.addContact(mknode())
         self.assertTrue(len(self.router.buckets), 1)
         self.assertTrue(len(self.router.buckets[0].nodes), 1)
+
+    def test_addDuplicate(self):
+        self.router.addContact(self.node)
+        self.router.addContact(self.node)
+        self.assertTrue(len(self.router.buckets), 1)
+        self.assertTrue(len(self.router.buckets[0].nodes), 1)
+
+    def test_addSameIP(self):
+        self.router.addContact(self.node)
+        self.router.addContact(Node(digest("asdf"), "127.0.0.1", 1234))
+        self.assertTrue(len(self.router.buckets), 1)
+        self.assertTrue(len(self.router.buckets[0].nodes), 1)
+        self.assertTrue(self.router.buckets[0].getNodes()[0].id == digest("asdf"))

@@ -9,12 +9,12 @@ from protos import objects
 
 
 class Node(object):
-    def __init__(self, node_id, ip=None, port=None, signed_pubkey=None,
+    def __init__(self, node_id, ip=None, port=None, pubkey=None,
                  relay_node=None, nat_type=None, vendor=False):
         self.id = node_id
         self.ip = ip
         self.port = port
-        self.signed_pubkey = signed_pubkey
+        self.pubkey = pubkey
         self.relay_node = relay_node
         self.nat_type = nat_type
         self.vendor = vendor
@@ -27,7 +27,7 @@ class Node(object):
 
         n = objects.Node()
         n.guid = self.id
-        n.signedPublicKey = self.signed_pubkey
+        n.publicKey = self.pubkey
         n.natType = self.nat_type
         n.nodeAddress.MergeFrom(node_address)
         n.vendor = self.vendor

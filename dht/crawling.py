@@ -218,7 +218,7 @@ class RPCFindResponse(object):
             try:
                 n = objects.Node()
                 n.ParseFromString(node)
-                newNode = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                newNode = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.publicKey,
                                None if not n.HasField("relayAddress") else (n.relayAddress.ip, n.relayAddress.port),
                                n.natType,
                                n.vendor)
