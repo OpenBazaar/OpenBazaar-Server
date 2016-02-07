@@ -4,6 +4,7 @@ import bleach
 import json
 import os
 import obelisk
+import nacl.encoding
 from binascii import unhexlify
 from collections import OrderedDict
 
@@ -732,7 +733,7 @@ class OpenBazaarAPI(APIResource):
                 json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
                 libbitcoin_server,
                 1 if str_to_bool(request.args["ssl"][0]) else 0,
-                KeyChain(self.db).guid_privkey.encode("hex"),
+                KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0],
                 resolver,
