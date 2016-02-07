@@ -245,7 +245,7 @@ class Contract(object):
                         "fee": str(mod_info[8]) + "%",
                         "blockchain_id": mod_info[4],
                         "pubkeys": {
-                            "guid": mod_info[1],
+                            "guid": mod_info[1].encode("hex"),
                             "bitcoin": {
                                 "key": mod_info[2].encode("hex"),
                                 "signature": base64.b64encode(mod_info[3])

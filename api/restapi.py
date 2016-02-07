@@ -785,11 +785,11 @@ class OpenBazaarAPI(APIResource):
                     if info is not None:
                         m = {
                             "guid": guid,
-                            "handle": info[6],
-                            "name": info[7],
-                            "avatar_hash": info[9].encode("hex"),
-                            "short_description": info[8],
-                            "fee": info[10]
+                            "handle": info[4],
+                            "name": info[5],
+                            "avatar_hash": info[7].encode("hex"),
+                            "short_description": info[6],
+                            "fee": info[8]
                         }
                         mods.append(m)
             except Exception:
