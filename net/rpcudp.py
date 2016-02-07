@@ -5,11 +5,7 @@ Copyright (c) 2015 OpenBazaar
 
 import abc
 import random
-import nacl.signing
-import nacl.encoding
-import nacl.hash
 from base64 import b64encode
-from binascii import hexlify
 from config import PROTOCOL_VERSION
 from dht.node import Node
 from dht.utils import digest
@@ -59,25 +55,6 @@ class RPCProtocol:
                              str(connection.dest_addr))
             connection.shutdown()
             return False
-
-        # Check that the GUID is valid. If not, ignore
-        if self.router.isNewNode(sender):
-            try:
-                pubkey = message.sender.publicKey
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                signature = message.signature
-                message.ClearField("signature")
-                verify_key.verify(message.SerializeToString(), signature)
-                h = nacl.hash.sha512(message.sender.publicKey)
-                pow_hash = h[40:]
-                if int(pow_hash[:6], 16) >= 50 or hexlify(message.sender.guid) != h[:40]:
-                    raise Exception('Invalid GUID')
-
-            except Exception:
-                self.log.warning("received message from %s with invalid signature, "
-                                 "terminating connection." % sender)
-                connection.shutdown()
-                return False
 
         if message.sender.vendor:
             self.db.VendorStore().save_vendor(message.sender.guid.encode("hex"),

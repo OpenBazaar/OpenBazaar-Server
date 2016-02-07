@@ -1,5 +1,7 @@
 __author__ = 'chris'
 import socket
+import nacl.signing
+import nacl.hash
 from config import SEEDS
 from dht.node import Node
 from dht.utils import digest
@@ -82,9 +84,18 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  (m.sender.relayAddress.ip, m.sender.relayAddress.port),
                                  m.sender.natType,
                                  m.sender.vendor)
+                pubkey = m.sender.publicKey
+                verify_key = nacl.signing.VerifyKey(pubkey)
+                signature = m.signature
+                m.ClearField("signature")
+                verify_key.verify(m.SerializeToString(), signature)
+                h = nacl.hash.sha512(m.sender.publicKey)
+                pow_hash = h[40:]
+                if int(pow_hash[:6], 16) >= 50 or m.sender.guid.encode("hex") != h[:40]:
+                    raise Exception('Invalid GUID')
             except Exception:
                 # If message isn't formatted property then ignore
-                self.log.warning("received unknown message from %s, ignoring" % self.addr)
+                self.log.warning("received an invalid message from %s, ignoring" % self.addr)
                 return False
             for processor in self.processors:
                 if m.command in processor or m.command == NOT_FOUND:

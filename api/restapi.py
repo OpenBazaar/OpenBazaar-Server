@@ -386,7 +386,7 @@ class OpenBazaarAPI(APIResource):
                 key = u.PublicKey()
                 key.public_key = self.keychain.verify_key.encode()
                 key.signature = self.keychain.signing_key.sign(key.public_key)[:64]
-                u.encryption_key.MergeFrom(key)
+                u.guid_key.MergeFrom(key)
             p.update(u)
             request.write(json.dumps({"success": True}))
             request.finish()
