@@ -39,7 +39,7 @@ class NodeTest(unittest.TestCase):
 
         n1 = objects.Node()
         n1.guid = rid
-        n1.signedPublicKey = pubkey
+        n1.publicKey = pubkey
         n1.vendor = False
         n1.nodeAddress.MergeFrom(addr)
         n1.natType = objects.FULL_CONE

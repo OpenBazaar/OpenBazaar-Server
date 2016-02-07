@@ -22,7 +22,7 @@ class DatastoreTest(unittest.TestCase):
         self.key.public_key = "Key"
         self.key.signature = "Sig"
         self.sp.name = "Test User"
-        self.sp.encryption_key.MergeFrom(self.key)
+        self.sp.guid_key.MergeFrom(self.key)
         self.sp.location = CountryCode.Value('UNITED_STATES')
 
         self.serialized_listings = Listings()
@@ -36,7 +36,7 @@ class DatastoreTest(unittest.TestCase):
 
         self.u = Following.User()
         self.u.guid = '0000000000000000000000000000000000'
-        self.u.signed_pubkey = 'signed_pubkey'
+        self.u.pubkey = 'signed_pubkey'
 
         self.m = Metadata()
         self.m.name = 'Test User'
@@ -48,7 +48,7 @@ class DatastoreTest(unittest.TestCase):
         self.f = Followers.Follower()
         self.f.guid = '0000000000000000000000000000000001'
         self.f.following = ''
-        self.f.signed_pubkey = ''
+        self.f.pubkey = ''
         self.f.metadata.MergeFrom(self.m)
 
         self.hm = self.db.HashMap()
@@ -177,8 +177,8 @@ class DatastoreTest(unittest.TestCase):
         conversations = self.ms.get_conversations()
         self.assertEqual(0, len(conversations))
 
-        self.ms.save_message(self.u.guid, self.m.handle, self.u.signed_pubkey,
-                             '', 'SUBJECT', 'CHAT', 'MESSAGE', ZERO_TIMESTAMP,
+        self.ms.save_message(self.u.guid, self.m.handle, self.u.pubkey,
+                             'SUBJECT', 'CHAT', 'MESSAGE', ZERO_TIMESTAMP,
                              '', '', '')
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')
         self.assertEqual(1, len(msgs))
@@ -214,7 +214,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertIsNone(moderators)
 
         self.moderators.save_moderator(self.u.guid,
-                                       self.u.signed_pubkey, '', '', '', 'JOHN', '', '0', '')
+                                       self.u.pubkey, '', '', '', 'JOHN', '', '0', '')
         moderators = self.moderators.get_moderator(self.u.guid)
         self.assertEqual(moderators[0], self.u.guid)
 
@@ -223,7 +223,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertIsNone(moderators)
 
         self.moderators.save_moderator(self.u.guid,
-                                       self.u.signed_pubkey, '', '', '', 'JOHN', '', '0', '')
+                                       self.u.pubkey, '', '', '', 'JOHN', '', '0', '')
         self.moderators.clear_all()
         moderators = self.moderators.get_moderator(self.u.guid)
         self.assertIsNone(moderators)
@@ -322,7 +322,7 @@ class DatastoreTest(unittest.TestCase):
         addr.port = 1234
         n = Node()
         n.guid = digest("abcdefg")
-        n.signedPublicKey = digest("signed pubkey")
+        n.publicKey = digest("signed pubkey")
         n.nodeAddress.MergeFrom(addr)
         n.natType = FULL_CONE
         self.vs.save_vendor(self.u.guid, n.SerializeToString())

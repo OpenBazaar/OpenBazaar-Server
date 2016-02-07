@@ -22,9 +22,8 @@ class MessageListenerImpl(object):
 
     def notify(self, plaintext, signature):
         try:
-            self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.signed_pubkey,
-                                 plaintext.encryption_pubkey, plaintext.subject,
-                                 PlaintextMessage.Type.Name(plaintext.type), plaintext.message,
+            self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.pubkey,
+                                 plaintext.subject, PlaintextMessage.Type.Name(plaintext.type), plaintext.message,
                                  plaintext.timestamp, plaintext.avatar_hash, signature, False)
 
             # TODO: should probably resolve the handle and make sure it matches the guid
@@ -37,7 +36,7 @@ class MessageListenerImpl(object):
                     "message": plaintext.message,
                     "timestamp": plaintext.timestamp,
                     "avatar_hash": plaintext.avatar_hash.encode("hex"),
-                    "encryption_key": plaintext.encryption_pubkey.encode("hex")
+                    "public_key": plaintext.pubkey.encode("hex")
                 }
             }
             if plaintext.handle:

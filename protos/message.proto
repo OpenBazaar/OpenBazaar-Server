@@ -17,6 +17,7 @@ message Message {
     required uint32 protoVer        = 4;
     repeated bytes arguments        = 5;
     optional bool testnet           = 6 [default = false];
+    optional bytes signature        = 7;
 }
 
 //A list of commands accepted by nodes

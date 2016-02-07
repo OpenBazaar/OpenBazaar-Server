@@ -77,7 +77,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.node = Node(m.sender.guid,
                                  m.sender.nodeAddress.ip,
                                  m.sender.nodeAddress.port,
-                                 m.sender.signedPublicKey,
+                                 m.sender.publicKey,
                                  None if not m.sender.HasField("relayAddress") else
                                  (m.sender.relayAddress.ip, m.sender.relayAddress.port),
                                  m.sender.natType,
@@ -88,7 +88,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 return False
             for processor in self.processors:
                 if m.command in processor or m.command == NOT_FOUND:
-                    processor.receive_message(m, self.connection, self.ban_score)
+                    processor.receive_message(m, self.node, self.connection, self.ban_score)
 
         def handle_shutdown(self):
             try:

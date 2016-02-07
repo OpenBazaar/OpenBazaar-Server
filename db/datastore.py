@@ -299,17 +299,17 @@ class Database(object):
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def save_message(self, guid, handle, signed_pubkey, encryption_pubkey, subject,
-                         message_type, message, timestamp, avatar_hash, signature, is_outgoing):
+        def save_message(self, guid, handle, pubkey, subject, message_type, message,
+                         timestamp, avatar_hash, signature, is_outgoing):
             """
             Store message in database.
             """
             outgoing = 1 if is_outgoing else 0
             msgID = digest(message + str(timestamp)).encode("hex")
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO messages(msgID, guid, handle, signedPubkey, encryptionPubkey, subject,
-    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                           (msgID, guid, handle, signed_pubkey, encryption_pubkey, subject, message_type,
+            cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
+    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                           (msgID, guid, handle, pubkey, subject, message_type,
                             message, timestamp, avatar_hash, signature, outgoing, 0))
             self.db.commit()
 
@@ -318,7 +318,7 @@ class Database(object):
             Return all messages matching guid and message_type.
             """
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
+            cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message,
     timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=?''',
                            (guid, message_type))
             return cursor.fetchall()
@@ -328,8 +328,8 @@ class Database(object):
             Return all messages matching guid and message_type.
             """
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, handle, signedPubkey, encryptionPubkey, subject, messageType, message,
-    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE subject=? AND messageType=?''',
+            cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message, timestamp,
+avatarHash, signature, outgoing, read FROM messages WHERE subject=? AND messageType=?''',
                            (order_id, "DISPUTE"))
             return cursor.fetchall()
 
@@ -346,7 +346,7 @@ class Database(object):
             ret = []
             unread = self.get_unread()
             for g in guids:
-                cursor.execute('''SELECT avatarHash, message, max(timestamp), encryptionPubkey FROM messages
+                cursor.execute('''SELECT avatarHash, message, max(timestamp), pubkey FROM messages
 WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                 val = cursor.fetchone()
                 if val[0] is not None:
@@ -354,7 +354,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                                 "avatar_hash": val[0].encode("hex"),
                                 "last_message": val[1],
                                 "timestamp": val[2],
-                                "encryption_key": val[3].encode("hex"),
+                                "public_key": val[3].encode("hex"),
                                 "unread": 0 if g[0] not in unread else unread[g[0]]})
             return ret
 
@@ -385,6 +385,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             cursor = self.db.cursor()
             cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
             self.db.commit()
+
 
     class NotificationStore(object):
         """
@@ -471,7 +472,7 @@ imageHash, read FROM notifications''')
                     node = Node(proto.guid,
                                 proto.nodeAddress.ip,
                                 proto.nodeAddress.port,
-                                proto.signedPublicKey,
+                                proto.publicKey,
                                 None if not proto.HasField("relayAddress") else
                                 (proto.relayAddress.ip, proto.relayAddress.port),
                                 proto.natType,
@@ -495,22 +496,21 @@ imageHash, read FROM notifications''')
             self.db = lite.connect(DATABASE)
             self.db.text_factory = str
 
-        def save_moderator(self, guid, signed_pubkey, encryption_key, encription_sig,
-                           bitcoin_key, bicoin_sig, name, avatar_hash, fee, handle="", short_desc=""):
+        def save_moderator(self, guid, pubkey, bitcoin_key, bicoin_sig, name,
+                           avatar_hash, fee, handle="", short_desc=""):
             cursor = self.db.cursor()
             try:
-                cursor.execute('''INSERT OR REPLACE INTO moderators(guid, signedPubkey, encryptionKey,
-    encryptionSignature, bitcoinKey, bitcoinSignature, handle, name, description, avatar, fee)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)''', (guid, signed_pubkey, encryption_key, encription_sig, bitcoin_key,
-                                        bicoin_sig, handle, name, short_desc, avatar_hash, fee))
+                cursor.execute('''INSERT OR REPLACE INTO moderators(guid, pubkey, bitcoinKey,
+bitcoinSignature, handle, name, description, avatar, fee)
+    VALUES (?,?,?,?,?,?,?,?,?)''', (guid, pubkey, bitcoin_key, bicoin_sig, handle,
+                                    name, short_desc, avatar_hash, fee))
             except Exception as e:
                 print e.message
             self.db.commit()
 
         def get_moderator(self, guid):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT guid, signedPubkey, encryptionKey, encryptionSignature, bitcoinKey,
-     bitcoinSignature, handle, name, description, avatar, fee FROM moderators WHERE guid=?''', (guid,))
+            cursor.execute('''SELECT * FROM moderators WHERE guid=?''', (guid,))
             return cursor.fetchone()
 
         def delete_moderator(self, guid):
@@ -853,9 +853,9 @@ def _create_database(database):
 
     cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
-    cursor.execute('''CREATE TABLE messages(msgID TEXT PRIMARY KEY, guid TEXT, handle TEXT, signedPubkey BLOB,
-encryptionPubkey BLOB, subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER,
-avatarHash BLOB, signature BLOB, outgoing INTEGER, read INTEGER)''')
+    cursor.execute('''CREATE TABLE messages(msgID TEXT PRIMARY KEY, guid TEXT, handle TEXT, pubkey BLOB,
+subject TEXT, messageType TEXT, message TEXT, timestamp INTEGER, avatarHash BLOB, signature BLOB,
+outgoing INTEGER, read INTEGER)''')
     cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
     cursor.execute('''CREATE INDEX index_subject ON messages(subject);''')
     cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
@@ -868,9 +868,8 @@ timestamp INTEGER, avatarHash BLOB)''')
 
     cursor.execute('''CREATE TABLE vendors(guid TEXT PRIMARY KEY, serializedNode BLOB)''')
 
-    cursor.execute('''CREATE TABLE moderators(guid TEXT PRIMARY KEY, signedPubkey BLOB, encryptionKey BLOB,
-encryptionSignature BLOB, bitcoinKey BLOB, bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT,
-avatar BLOB, fee FLOAT)''')
+    cursor.execute('''CREATE TABLE moderators(guid TEXT PRIMARY KEY, pubkey BLOB, bitcoinKey BLOB,
+bitcoinSignature BLOB, handle TEXT, name TEXT, description TEXT, avatar BLOB, fee FLOAT)''')
 
     cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
 timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,

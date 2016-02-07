@@ -114,7 +114,7 @@ class OpenBazaarAPI(APIResource):
                     "profile": {
                         "name": profile.name,
                         "location": str(CountryCode.Name(profile.location)),
-                        "encryption_key": profile.encryption_key.public_key.encode("hex"),
+                        "public_key": profile.guid_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
@@ -326,7 +326,7 @@ class OpenBazaarAPI(APIResource):
     def update_profile(self, request):
         try:
             p = Profile(self.db)
-            can_update_profile = (p.get().encryption_key or
+            can_update_profile = (p.get().HasField("guid_key") or
                                   ("name" in request.args and
                                    "location" in request.args))
             if not can_update_profile:
@@ -337,6 +337,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps(request_dict, indent=4))
                 request.finish()
                 return False
+
             u = objects.Profile()
             if "name" in request.args:
                 u.name = request.args["name"][0]
@@ -381,10 +382,11 @@ class OpenBazaarAPI(APIResource):
             if "pgp_key" in request.args and "signature" in request.args:
                 p.add_pgp_key(request.args["pgp_key"][0], request.args["signature"][0],
                               self.keychain.guid.encode("hex"))
-            enc = u.PublicKey()
-            enc.public_key = self.keychain.encryption_pubkey
-            enc.signature = self.keychain.signing_key.sign(enc.public_key)[:64]
-            u.encryption_key.MergeFrom(enc)
+            if not p.get().HasField("guid_key"):
+                key = u.PublicKey()
+                key.public_key = self.keychain.verify_key.encode()
+                key.signature = self.keychain.signing_key.sign(key.public_key)[:64]
+                u.encryption_key.MergeFrom(key)
             p.update(u)
             request.write(json.dumps({"success": True}))
             request.finish()
@@ -881,11 +883,11 @@ class OpenBazaarAPI(APIResource):
             message_json = {
                 "guid": m[0],
                 "handle": m[1],
-                "message": m[6],
-                "timestamp": m[7],
-                "avatar_hash": m[8].encode("hex"),
-                "outgoing": False if m[10] == 0 else True,
-                "read": False if m[11] == 0 else True
+                "message": m[5],
+                "timestamp": m[6],
+                "avatar_hash": m[7].encode("hex"),
+                "outgoing": False if m[9] == 0 else True,
+                "read": False if m[10] == 0 else True
             }
             message_list.append(message_json)
         request.setHeader('content-type', "application/json")

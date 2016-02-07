@@ -38,15 +38,14 @@ class ValueSpiderCrawlTest(unittest.TestCase):
             self.addr1
         )
 
-        valid_key = "1a5c8e67edb8d279d1ae32fa2da97e236b95e95c837dc8c3c7c2ff7a7cc29855"
+        valid_key = "63d901c4d57cde34fc1f1e28b9af5d56ed342cae5c2fb470046d0130a4226b0c"
         self.signing_key = nacl.signing.SigningKey(valid_key, encoder=nacl.encoding.HexEncoder)
         verify_key = self.signing_key.verify_key
-        signed_pubkey = self.signing_key.sign(str(verify_key))
-        h = nacl.hash.sha512(signed_pubkey)
+        h = nacl.hash.sha512(verify_key.encode())
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, None, FULL_CONE, True)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, verify_key.encode(), None, FULL_CONE, True)
         self.db = Database(filepath=":memory:")
-        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
@@ -218,15 +217,14 @@ class NodeSpiderCrawlTest(unittest.TestCase):
             self.addr1
         )
 
-        valid_key = "1a5c8e67edb8d279d1ae32fa2da97e236b95e95c837dc8c3c7c2ff7a7cc29855"
+        valid_key = "63d901c4d57cde34fc1f1e28b9af5d56ed342cae5c2fb470046d0130a4226b0c"
         self.signing_key = nacl.signing.SigningKey(valid_key, encoder=nacl.encoding.HexEncoder)
         verify_key = self.signing_key.verify_key
-        signed_pubkey = self.signing_key.sign(str(verify_key))
-        h = nacl.hash.sha512(signed_pubkey)
+        h = nacl.hash.sha512(verify_key.encode())
         self.storage = ForgetfulStorage()
-        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, signed_pubkey, None, FULL_CONE, True)
+        self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, verify_key.encode(), None, FULL_CONE, True)
         self.db = Database(filepath=":memory:")
-        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db)
+        self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
         self.wire_protocol = OpenBazaarProtocol(self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)

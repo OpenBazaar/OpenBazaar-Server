@@ -22,13 +22,14 @@ from protos.message import PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOL
 class KademliaProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, sourceNode, storage, ksize, database):
+    def __init__(self, sourceNode, storage, ksize, database, signing_key):
         self.ksize = ksize
         self.router = RoutingTable(self, ksize, sourceNode)
         self.storage = storage
         self.sourceNode = sourceNode
         self.multiplexer = None
         self.db = database
+        self.signing_key = signing_key
         self.log = Logger(system=self)
         self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES]
         RPCProtocol.__init__(self, sourceNode, self.router)
@@ -69,7 +70,7 @@ class KademliaProtocol(RPCProtocol):
             # Try to delete a message from the dht
             if keyword == digest(sender.id):
                 try:
-                    verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+                    verify_key = nacl.signing.VerifyKey(sender.pubkey)
                     verify_key.verify(key, signature)
                     self.storage.delete(keyword, key)
                     return ["True"]
@@ -80,10 +81,10 @@ class KademliaProtocol(RPCProtocol):
                 try:
                     node = objects.Node()
                     node.ParseFromString(value)
-                    pubkey = node.signedPublicKey[64:]
+                    pubkey = node.publicKey
                     try:
                         verify_key = nacl.signing.VerifyKey(pubkey)
-                        verify_key.verify(signature + key)
+                        verify_key.verify(key, signature)
                         self.storage.delete(keyword, key)
                         return ["True"]
                     except Exception:

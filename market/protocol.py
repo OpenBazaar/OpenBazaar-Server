@@ -12,7 +12,7 @@ from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
-from nacl.public import PrivateKey, PublicKey, Box
+from nacl.public import PublicKey, Box
 from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
     GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
@@ -133,7 +133,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("received follow request from %s" % sender)
         self.router.addContact(sender)
         try:
-            verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+            verify_key = nacl.signing.VerifyKey(sender.pubkey)
             verify_key.verify(proto, signature)
             f = Followers.Follower()
             f.ParseFromString(proto)
@@ -165,7 +165,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("received unfollow request from %s" % sender)
         self.router.addContact(sender)
         try:
-            verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+            verify_key = nacl.signing.VerifyKey(sender.pubkey)
             verify_key.verify("unfollow:" + self.node.id, signature)
             f = self.db.FollowData()
             f.delete_follower(sender.id)
@@ -195,7 +195,7 @@ class MarketProtocol(RPCProtocol):
     def rpc_broadcast(self, sender, message, signature):
         if len(message) <= 140 and self.db.FollowData().is_following(sender.id):
             try:
-                verify_key = nacl.signing.VerifyKey(sender.signed_pubkey[64:])
+                verify_key = nacl.signing.VerifyKey(sender.pubkey)
                 verify_key.verify(message, signature)
             except Exception:
                 self.log.warning("received invalid broadcast from %s" % sender)
@@ -214,16 +214,16 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_message(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             plaintext = box.decrypt(encrypted)
             p = PlaintextMessage()
             p.ParseFromString(plaintext)
             signature = p.signature
             p.ClearField("signature")
-            verify_key = nacl.signing.VerifyKey(p.signed_pubkey[64:])
+            verify_key = nacl.signing.VerifyKey(p.pubkey)
             verify_key.verify(p.SerializeToString(), signature)
-            h = nacl.hash.sha512(p.signed_pubkey)
-            pow_hash = h[64:128]
+            h = nacl.hash.sha512(p.pubkey)
+            pow_hash = h[40:]
             if int(pow_hash[:6], 16) >= 50 or p.sender_guid.encode("hex") != h[:40] or p.sender_guid != sender.id:
                 raise Exception('Invalid guid')
             self.log.info("received a message from %s" % sender)
@@ -241,7 +241,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_order(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
@@ -267,7 +267,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_order_confirmation(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
@@ -285,7 +285,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_complete_order(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
@@ -302,7 +302,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_dispute_open(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             contract = json.loads(order, object_pairs_hook=OrderedDict)
             process_dispute(contract, self.db, self.get_message_listener(),
@@ -316,7 +316,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_dispute_close(self, sender, pubkey, encrypted):
         try:
-            box = Box(PrivateKey(self.signing_key.encode(nacl.encoding.RawEncoder)), PublicKey(pubkey))
+            box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
             contract = json.loads(order, object_pairs_hook=OrderedDict)
             close_dispute(contract, self.db, self.get_message_listener(),

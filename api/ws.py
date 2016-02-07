@@ -5,6 +5,8 @@ import bleach
 import json
 import os
 import time
+import nacl.signing
+import nacl.encoding
 from config import DATA_FOLDER
 from market.profile import Profile
 from keys.keychain import KeyChain
@@ -82,9 +84,7 @@ class WSProtocol(Protocol):
                 def parse_profile(profile, node):
                     if profile is not None:
                         # TODO: should check signatures here before entering in database
-                        m.save_moderator(node.id.encode("hex"), node.signed_pubkey,
-                                         profile.encryption_key.public_key,
-                                         profile.encryption_key.signature, profile.bitcoin_key.public_key,
+                        m.save_moderator(node.id.encode("hex"), node.pubkey, profile.bitcoin_key.public_key,
                                          profile.bitcoin_key.signature, profile.name, profile.avatar_hash,
                                          profile.moderation_fee, profile.handle, profile.short_description)
                         moderator = {
@@ -109,7 +109,7 @@ class WSProtocol(Protocol):
                         val.ParseFromString(mod)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.publicKey,
                                            None if not n.HasField("relayAddress") else
                                            (n.relayAddress.ip, n.relayAddress.port),
                                            n.natType, n.vendor)
@@ -176,13 +176,16 @@ class WSProtocol(Protocol):
         for vendor in vendors[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
 
-    def send_message(self, guid, handle, message, subject, message_type, recipient_encryption_key):
-        self.factory.db.MessageStore().save_message(guid, handle, "", unhexlify(recipient_encryption_key), subject,
+    def send_message(self, guid, handle, message, subject, message_type, recipient_key):
+
+        enc_key = nacl.signing.VerifyKey(unhexlify(recipient_key)).to_curve25519_public_key().encode()
+
+        self.factory.db.MessageStore().save_message(guid, handle, unhexlify(recipient_key), subject,
                                                     message_type.upper(), message, time.time(), "", "", True)
 
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
-            self.factory.mserver.send_message(n, recipient_encryption_key,
+            self.factory.mserver.send_message(n, enc_key,
                                               PlaintextMessage.Type.Value(message_type.upper()),
                                               message, subject,
                                               store_only=True if node_to_send is None else False)
@@ -221,7 +224,7 @@ class WSProtocol(Protocol):
                         val.ParseFromString(v)
                         n = objects.Node()
                         n.ParseFromString(val.serializedData)
-                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                        node_to_ask = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.publicKey,
                                            None if not n.HasField("relayAddress") else
                                            (n.relayAddress.ip, n.relayAddress.port),
                                            n.natType, n.vendor)
@@ -266,7 +269,7 @@ class WSProtocol(Protocol):
                                   request_json["request"]["message"],
                                   request_json["request"]["subject"],
                                   request_json["request"]["message_type"],
-                                  request_json["request"]["recipient_key"])
+                                  request_json["request"]["public_key"])
 
         except Exception as e:
             print 'Exception occurred: %s' % e
