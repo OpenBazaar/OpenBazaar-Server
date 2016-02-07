@@ -389,7 +389,7 @@ class Server(object):
             # Verify the signature and guid of each follower.
             for follower in f.followers:
                 try:
-                    v_key = nacl.signing.VerifyKey(follower.signed_pubkey[64:])
+                    v_key = nacl.signing.VerifyKey(follower.pubkey)
                     signature = follower.signature
                     follower.ClearField("signature")
                     v_key.verify(follower.SerializeToString(), signature)

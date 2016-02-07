@@ -245,7 +245,7 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            if c.verify(sender.signed_pubkey[64:]):
+            if c.verify(sender.pubkey):
                 self.router.addContact(sender)
                 self.log.info("received an order from %s, waiting for payment..." % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
