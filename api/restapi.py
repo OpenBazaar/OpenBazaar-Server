@@ -475,7 +475,7 @@ class OpenBazaarAPI(APIResource):
                 for option in request.args["options"]:
                     options[option] = request.args[option]
             if "contract_id" in request.args:
-                c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"]),
+                c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"][0]),
                              testnet=self.protocol.testnet)
             else:
                 c = Contract(self.db, testnet=self.protocol.testnet)
