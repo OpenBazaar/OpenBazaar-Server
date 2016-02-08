@@ -1,81 +1,52 @@
 __author__ = 'chris'
-import json
-import time
 import bitcointools
 import nacl.signing
 import nacl.encoding
+import threading
 from keys.guid import GUID
-from txrestapi.resource import APIResource
-from txrestapi.methods import GET
-from twisted.web import server
-from twisted.internet.defer import Deferred
-from twisted.web.server import Site
-from twisted.internet import reactor
 
 
 class KeyChain(object):
 
-    def __init__(self, database):
-        self.db = database.KeyStore()
-        guid_keys = self.db.get_key("guid")
+    def __init__(self, database, callback=None, heartbeat_server=None):
+        self.db = database
+        self.keystore = database.KeyStore()
+        guid_keys = self.keystore.get_key("guid")
         if guid_keys is None:
-            self.create_keychain()
+            heartbeat_server.set_status("generating GUID")
+            threading.Thread(target=self.create_keychain, args=[callback, heartbeat_server]).start()
         else:
             g = GUID.from_privkey(guid_keys[0])
             self.guid = g.guid
             self.signing_key = g.signing_key
             self.verify_key = g.verify_key
             # pylint: disable=W0633
-            self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.db.get_key("bitcoin")
+            self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.keystore.get_key("bitcoin")
             self.encryption_key = self.signing_key.to_curve25519_private_key()
             self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
+            if callback is not None:
+                callback(self)
 
-    def create_keychain(self):
+    def create_keychain(self, callback, heartbeat_server):
         """
         The guid generation can take a while. While it's doing that we will
         open a port to allow a UI to connect and listen for generation to
         complete.
         """
         print "Generating GUID, this may take a few minutes..."
-        d = Deferred()
-        api = GUIDGenerationListener(d)
-        site = Site(api, timeout=None)
-        connector = reactor.listenTCP(18470, site, interface="127.0.0.1")
-        start = time.time()
+        keystore = self.db.KeyStore()
         g = GUID()
-        d.callback((round(time.time() - start, 2), connector))
         self.guid = g.guid
         self.signing_key = g.signing_key
         self.verify_key = g.verify_key
-        self.db.set_key("guid", self.signing_key.encode(encoder=nacl.encoding.HexEncoder),
-                        self.verify_key.encode(encoder=nacl.encoding.HexEncoder))
+        keystore.set_key("guid", self.signing_key.encode(encoder=nacl.encoding.HexEncoder),
+                         self.verify_key.encode(encoder=nacl.encoding.HexEncoder))
 
         self.bitcoin_master_privkey = bitcointools.bip32_master_key(bitcointools.sha256(self.signing_key.encode()))
         self.bitcoin_master_pubkey = bitcointools.bip32_privtopub(self.bitcoin_master_privkey)
-        self.db.set_key("bitcoin", self.bitcoin_master_privkey, self.bitcoin_master_pubkey)
+        keystore.set_key("bitcoin", self.bitcoin_master_privkey, self.bitcoin_master_pubkey)
 
         self.encryption_key = self.signing_key.to_curve25519_private_key()
         self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-        try:
-            reactor.callLater(4, connector.stopListening)
-        except Exception:
-            pass
+        callback(self, True)
 
-
-class GUIDGenerationListener(APIResource):
-
-    def __init__(self, deferred):
-        self.deferred = deferred
-        APIResource.__init__(self)
-
-    @GET('^/api/v1/guid_generation')
-    def guid_generation(self, request):
-        """
-        A long polling GET which returns when the guid creation is finished.
-        """
-        def notify(resp):
-            request.write(json.dumps({"success": True, "GUID generation time": resp[0]}, indent=4))
-            request.finish()
-            resp[1].stopListening()
-        self.deferred.addCallback(notify)
-        return server.NOT_DONE_YET
