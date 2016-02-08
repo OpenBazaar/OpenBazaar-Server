@@ -84,7 +84,7 @@ class Server(object):
             except Exception, e:
                 self.log.error("failed to query seed: %s" % str(e))
 
-    def get_contract(self, node_to_ask, contract_hash):
+    def get_contract(self, node_to_ask, contract_id):
         """
         Will query the given node to fetch a contract given its hash.
         If the returned contract doesn't have the same hash, it will return None.
@@ -94,13 +94,17 @@ class Server(object):
 
         Args:
             node_to_ask: a `dht.node.Node` object containing an ip and port
-            contract_hash: a 20 byte hash in raw byte format
+            contract_id: a 20 byte hash in raw byte format
         """
 
         def get_result(result):
             try:
-                if result[0] and digest(result[1][0]) == contract_hash:
+                if result[0]:
                     contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
+                    id_in_contract = contract["vendor_offer"]["listing"]["contract_id"]
+
+                    if id_in_contract != contract_id.encode("hex"):
+                        raise Exception("Contract ID doesn't match")
 
                     # TODO: verify the guid in the contract matches this node's guid
                     signature = contract["vendor_offer"]["signatures"]["guid"]
@@ -129,7 +133,7 @@ class Server(object):
                             verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
                             verify_key.verify(unhexlify(bitcoin_key), bitcoin_sig)
                             #TODO: should probably also validate the handle here.
-                    self.cache(result[1][0])
+                    self.cache(result[1][0], id_in_contract)
                     if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
                         for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
                             self.get_image(node_to_ask, unhexlify(image_hash))
@@ -141,8 +145,8 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
-        self.log.info("fetching contract %s from %s" % (contract_hash.encode("hex"), node_to_ask))
-        d = self.protocol.callGetContract(node_to_ask, contract_hash)
+        self.log.info("fetching contract %s from %s" % (contract_id.encode("hex"), node_to_ask))
+        d = self.protocol.callGetContract(node_to_ask, contract_id)
         return d.addCallback(get_result)
 
     def get_image(self, node_to_ask, image_hash):
@@ -158,7 +162,7 @@ class Server(object):
         def get_result(result):
             try:
                 if result[0] and digest(result[1][0]) == image_hash:
-                    self.cache(result[1][0])
+                    self.cache(result[1][0], digest(result[1][0]).encode("hex"))
                     return result[1][0]
                 else:
                     return None
@@ -579,7 +583,7 @@ class Server(object):
                 masterkey_b = contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
                 buyer_key = derive_childkey(masterkey_b, chaincode)
                 amount = contract.contract["buyer_order"]["order"]["payment"]["amount"]
-                listing_hash = contract.contract["buyer_order"]["order"]["ref_hash"]
+                listing_hash = contract.contract["vendor_offer"]["listing"]["contract_id"]
                 verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
                 verify_key.verify(
                     str(address) + str(amount) + str(listing_hash) + str(buyer_key), response[1][0])
@@ -595,7 +599,7 @@ class Server(object):
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
         d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
-        self.log.info("purchasing contract %s from %s" % (contract.get_contract_id().encode("hex"), node_to_ask))
+        self.log.info("purchasing contract %s from %s" % (contract.get_contract_id(), node_to_ask))
         return d.addCallback(parse_response)
 
     def confirm_order(self, guid, contract):
@@ -976,10 +980,10 @@ class Server(object):
         return d.addCallback(get_result)
 
     @staticmethod
-    def cache(filename):
+    def cache(file_to_save, filename):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(filename).encode("hex")):
-            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'wb') as outfile:
-                outfile.write(filename)
+        if not os.path.isfile(DATA_FOLDER + "cache/" + filename):
+            with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+                outfile.write(file_to_save)

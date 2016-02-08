@@ -9,7 +9,7 @@ import os
 import random
 import re
 import time
-from binascii import unhexlify, hexlify
+from binascii import unhexlify
 from bitcoin import SelectParams
 from bitcoin.core.script import CScript, OP_2, OP_3, OP_CHECKMULTISIG
 from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress
@@ -56,7 +56,7 @@ class Contract(object):
             try:
                 file_path = self.db.HashMap().get_file(hash_value.encode("hex"))
                 if file_path is None:
-                    file_path = DATA_FOLDER + "cache/" + hexlify(hash_value)
+                    file_path = DATA_FOLDER + "cache/" + hash_value.encode("hex")
                 with open(file_path, 'r') as filename:
                     self.contract = json.load(filename, object_pairs_hook=OrderedDict)
             except Exception:
@@ -118,7 +118,8 @@ class Contract(object):
                shipping_domestic=None,
                shipping_international=None,
                options=None,
-               moderators=None):
+               moderators=None,
+               contract_id=None):
         """
         All parameters are strings except:
 
@@ -134,10 +135,17 @@ class Contract(object):
         """
 
         profile = Profile(self.db).get()
+        if contract_id is not None and contract_id != "":
+            self.previous_title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+        else:
+            self.previous_title = None
+            contract_id = digest(random.getrandbits(255)).encode("hex")
+
         self.contract = OrderedDict(
             {
                 "vendor_offer": {
                     "listing": {
+                        "contract_id": contract_id,
                         "metadata": {
                             "version": "0.1",
                             "category": metadata_category.lower(),
@@ -579,7 +587,7 @@ class Contract(object):
             buyer_priv = derive_childkey(bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey),
                                          chaincode, bitcointools.MAINNET_PRIVATE)
             amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
-            listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+            listing_hash = self.contract["vendor_offer"]["listing"]["contract_id"]
 
             receipt_json["buyer_receipt"]["receipt"]["rating"] = OrderedDict()
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"] = OrderedDict()
@@ -857,8 +865,10 @@ class Contract(object):
             self.log.critical("Error processing bitcoin transaction")
 
     def get_contract_id(self):
-        contract = json.dumps(self.contract, indent=4)
-        return digest(contract)
+        return self.contract["vendor_offer"]["listing"]["contract_id"]
+
+    def get_order_id(self):
+        return digest(json.dumps(self.contract, indent=4)).encode("hex")
 
     def delete(self, delete_images=False):
         """
@@ -868,7 +878,7 @@ class Contract(object):
 
         # get the file path
         h = self.db.HashMap()
-        file_path = h.get_file(digest(json.dumps(self.contract, indent=4)).encode("hex"))
+        file_path = h.get_file(self.contract["vendor_offer"]["listing"]["contract_id"])
 
         # maybe delete the images from disk
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"] and delete_images:
@@ -885,7 +895,7 @@ class Contract(object):
             os.remove(file_path)
 
         # delete the listing metadata from the db
-        contract_hash = digest(json.dumps(self.contract, indent=4))
+        contract_hash = unhexlify(self.contract["vendor_offer"]["listing"]["contract_id"])
         self.db.ListingsStore().delete_listing(contract_hash)
 
         # remove the pointer to the contract from the HashMap
@@ -906,17 +916,26 @@ class Contract(object):
         file_name = str(self.contract["vendor_offer"]["listing"]["item"]["title"][:100])
         file_name = re.sub(r"[^\w\s]", '', file_name)
         file_name = re.sub(r"\s+", '_', file_name)
-        file_name += digest(json.dumps(self.contract, indent=4)).encode("hex")[:8]
+        file_name += str(self.contract["vendor_offer"]["listing"]["contract_id"])[:8]
 
         # save the json contract to the file system
         file_path = DATA_FOLDER + "store/contracts/listings/" + file_name + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
+        if self.previous_title and self.previous_title != self.contract["vendor_offer"]["listing"]["item"]["title"]:
+            old_name = str(self.previous_title[:100])
+            old_name = re.sub(r"[^\w\s]", '', file_name)
+            old_name = re.sub(r"\s+", '_', file_name)
+            old_name += str(self.contract["vendor_offer"]["listing"]["contract_id"])[:8]
+            old_path = DATA_FOLDER + "store/contracts/listings/" + old_name + ".json"
+            if os.path.exists(old_path):
+                os.remove(old_path)
+
         # Create a `ListingMetadata` protobuf object using data from the full contract
         listings = Listings()
         data = listings.ListingMetadata()
-        data.contract_hash = digest(json.dumps(self.contract, indent=4))
+        data.contract_hash = unhexlify(self.contract["vendor_offer"]["listing"]["contract_id"])
         vendor_item = self.contract["vendor_offer"]["listing"]["item"]
         data.title = vendor_item["title"]
         if "image_hashes" in vendor_item:
@@ -956,10 +975,16 @@ class Contract(object):
             contract_hash = digest(json.dumps(contract_dict, indent=4))
 
             ref_hash = unhexlify(self.contract["buyer_order"]["order"]["ref_hash"])
+            contract_id = self.contract["vendor_offer"]["listing"]["contract_id"]
 
             # verify that the reference hash matches the contract and that the contract actually exists
-            if contract_hash != ref_hash or not self.db.HashMap().get_file(ref_hash.encode("hex")):
+            if contract_hash != ref_hash or not self.db.HashMap().get_file(contract_id):
                 raise Exception("Order for contract that doesn't exist")
+
+            # verify the vendor's own signature
+            verify_key = self.keychain.signing_key.verify_key
+            verify_key.verify(json.dumps(self.contract["vendor_offer"]["listing"], indent=4),
+                              base64.b64decode(self.contract["vendor_offer"]["signatures"]["guid"]))
 
             # verify timestamp is within a reasonable time from now
             timestamp = self.contract["buyer_order"]["order"]["date"]

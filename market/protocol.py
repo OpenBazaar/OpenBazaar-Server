@@ -253,7 +253,7 @@ class MarketProtocol(RPCProtocol):
                 masterkey_b = c.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
                 buyer_key = derive_childkey(masterkey_b, chaincode)
                 amount = c.contract["buyer_order"]["order"]["payment"]["amount"]
-                listing_hash = c.contract["buyer_order"]["order"]["ref_hash"]
+                listing_hash = c.contract["vendor_offer"]["listing"]["contract_id"]
                 signature = self.signing_key.sign(
                     str(payment_address) + str(amount) + str(listing_hash) + str(buyer_key))[:64]
                 c.await_funding(self.get_notification_listener(), self.multiplexer.blockchain, signature, False)
