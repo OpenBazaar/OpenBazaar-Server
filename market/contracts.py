@@ -587,7 +587,7 @@ class Contract(object):
             buyer_priv = derive_childkey(bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey),
                                          chaincode, bitcointools.MAINNET_PRIVATE)
             amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
-            listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+            listing_hash = self.contract["vendor_offer"]["listing"]["contract_id"]
 
             receipt_json["buyer_receipt"]["receipt"]["rating"] = OrderedDict()
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"] = OrderedDict()
