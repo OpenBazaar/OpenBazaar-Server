@@ -178,12 +178,13 @@ class WSProtocol(Protocol):
         for vendor in vendors[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
 
-    def send_message(self, guid, handle, message, subject, message_type, recipient_key):
+    def send_message(self, message_id, guid, handle, message, subject, message_type, recipient_key):
 
         enc_key = nacl.signing.VerifyKey(unhexlify(recipient_key)).to_curve25519_public_key().encode()
 
         self.factory.db.MessageStore().save_message(guid, handle, unhexlify(recipient_key), subject,
-                                                    message_type.upper(), message, time.time(), "", "", True)
+                                                    message_type.upper(), message, time.time(), "", "", True,
+                                                    message_id)
 
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
@@ -266,7 +267,7 @@ class WSProtocol(Protocol):
                 self.search(message_id, request_json["request"]["keyword"].lower())
 
             elif request_json["request"]["command"] == "send_message":
-                self.send_message(request_json["request"]["guid"],
+                self.send_message(message_id, request_json["request"]["guid"],
                                   request_json["request"]["handle"],
                                   request_json["request"]["message"],
                                   request_json["request"]["subject"],

@@ -300,12 +300,12 @@ class Database(object):
             self.db.text_factory = str
 
         def save_message(self, guid, handle, pubkey, subject, message_type, message,
-                         timestamp, avatar_hash, signature, is_outgoing):
+                         timestamp, avatar_hash, signature, is_outgoing, msg_id=None):
             """
             Store message in database.
             """
             outgoing = 1 if is_outgoing else 0
-            msgID = digest(message + str(timestamp)).encode("hex")
+            msgID = digest(message + str(timestamp)).encode("hex") if msg_id is None else msg_id
             cursor = self.db.cursor()
             cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
     messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
