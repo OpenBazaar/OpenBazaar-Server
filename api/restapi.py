@@ -589,7 +589,7 @@ class OpenBazaarAPI(APIResource):
                                            self.protocol.blockchain, resp)
                     request.write(json.dumps({"success": True, "payment_address": payment[0],
                                               "amount": payment[1],
-                                              "order_id": c.get_contract_id()},
+                                              "order_id": c.get_order_id()},
                                              indent=4))
                     request.finish()
                 else:

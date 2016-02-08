@@ -867,6 +867,9 @@ class Contract(object):
     def get_contract_id(self):
         return self.contract["vendor_offer"]["listing"]["contract_id"]
 
+    def get_order_id(self):
+        return digest(json.dumps(self.contract, indent=4)).encode("hex")
+
     def delete(self, delete_images=False):
         """
         Deletes the contract json from the OpenBazaar directory as well as the listing
