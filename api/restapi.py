@@ -508,7 +508,7 @@ class OpenBazaarAPI(APIResource):
                 free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
                 moderators=request.args["moderators"] if "moderators" in request.args else None,
-                contract_id=request.args["contract_id"] if "contract_id" in request.args else None)
+                contract_id=request.args["contract_id"][0] if "contract_id" in request.args else None)
 
             for keyword in request.args["keywords"]:
                 self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
