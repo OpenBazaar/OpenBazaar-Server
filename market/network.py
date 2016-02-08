@@ -133,7 +133,7 @@ class Server(object):
                             verify_key = nacl.signing.VerifyKey(guid_key, encoder=nacl.encoding.HexEncoder)
                             verify_key.verify(unhexlify(bitcoin_key), bitcoin_sig)
                             #TODO: should probably also validate the handle here.
-                    self.cache(result[1][0])
+                    self.cache(result[1][0], id_in_contract)
                     if "image_hashes" in contract["vendor_offer"]["listing"]["item"]:
                         for image_hash in contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
                             self.get_image(node_to_ask, unhexlify(image_hash))
@@ -162,7 +162,7 @@ class Server(object):
         def get_result(result):
             try:
                 if result[0] and digest(result[1][0]) == image_hash:
-                    self.cache(result[1][0])
+                    self.cache(result[1][0], digest(result[1][0]).encode("hex"))
                     return result[1][0]
                 else:
                     return None
@@ -980,10 +980,10 @@ class Server(object):
         return d.addCallback(get_result)
 
     @staticmethod
-    def cache(filename):
+    def cache(file, filename):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + digest(filename).encode("hex")):
-            with open(DATA_FOLDER + "cache/" + digest(filename).encode("hex"), 'wb') as outfile:
-                outfile.write(filename)
+        if not os.path.isfile(DATA_FOLDER + "cache/" + filename):
+            with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+                outfile.write(file)
