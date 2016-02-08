@@ -84,7 +84,7 @@ class Server(object):
             except Exception, e:
                 self.log.error("failed to query seed: %s" % str(e))
 
-    def get_contract(self, node_to_ask, contract_hash):
+    def get_contract(self, node_to_ask, contract_id):
         """
         Will query the given node to fetch a contract given its hash.
         If the returned contract doesn't have the same hash, it will return None.
@@ -94,13 +94,17 @@ class Server(object):
 
         Args:
             node_to_ask: a `dht.node.Node` object containing an ip and port
-            contract_hash: a 20 byte hash in raw byte format
+            contract_id: a 20 byte hash in raw byte format
         """
 
         def get_result(result):
             try:
-                if result[0] and digest(result[1][0]) == contract_hash:
+                if result[0]:
                     contract = json.loads(result[1][0], object_pairs_hook=OrderedDict)
+                    id_in_contract = contract["vendor_offer"]["listing"]["contract_id"]
+
+                    if id_in_contract != contract_id.encode("hex"):
+                        raise Exception("Contract ID doesn't match")
 
                     # TODO: verify the guid in the contract matches this node's guid
                     signature = contract["vendor_offer"]["signatures"]["guid"]
@@ -141,8 +145,8 @@ class Server(object):
 
         if node_to_ask.ip is None:
             return defer.succeed(None)
-        self.log.info("fetching contract %s from %s" % (contract_hash.encode("hex"), node_to_ask))
-        d = self.protocol.callGetContract(node_to_ask, contract_hash)
+        self.log.info("fetching contract %s from %s" % (contract_id.encode("hex"), node_to_ask))
+        d = self.protocol.callGetContract(node_to_ask, contract_id)
         return d.addCallback(get_result)
 
     def get_image(self, node_to_ask, image_hash):

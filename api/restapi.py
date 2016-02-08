@@ -474,7 +474,10 @@ class OpenBazaarAPI(APIResource):
                 options = {}
                 for option in request.args["options"]:
                     options[option] = request.args[option]
-            c = Contract(self.db)
+            if "contract_id" in request.args:
+                c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"]), testnet=self.protocol.testnet)
+            else:
+                c = Contract(self.db, testnet=self.protocol.testnet)
             c.create(
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
@@ -503,7 +506,9 @@ class OpenBazaarAPI(APIResource):
                 images=request.args["images"],
                 free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
-                moderators=request.args["moderators"] if "moderators" in request.args else None)
+                moderators=request.args["moderators"] if "moderators" in request.args else None,
+                contract_id=request.args["contract_id"] if "contract_id" in request.args else None)
+
             for keyword in request.args["keywords"]:
                 self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
                                  self.kserver.node.getProto().SerializeToString())
@@ -511,6 +516,8 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
+            import traceback
+            traceback.print_exc()
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
