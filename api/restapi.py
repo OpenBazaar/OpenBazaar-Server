@@ -511,9 +511,9 @@ class OpenBazaarAPI(APIResource):
                 contract_id=request.args["contract_id"] if "contract_id" in request.args else None)
 
             for keyword in request.args["keywords"]:
-                self.kserver.set(digest(keyword.lower()), c.get_contract_id(),
+                self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
                                  self.kserver.node.getProto().SerializeToString())
-            request.write(json.dumps({"success": True, "id": c.get_contract_id().encode("hex")}))
+            request.write(json.dumps({"success": True, "id": c.get_contract_id()}))
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
@@ -531,8 +531,10 @@ class OpenBazaarAPI(APIResource):
                 c = Contract(self.db, contract=contract)
                 if "keywords" in c.contract["vendor_offer"]["listing"]["item"]:
                     for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
-                        self.kserver.delete(keyword.lower(), c.get_contract_id(),
-                                            self.keychain.signing_key.sign(c.get_contract_id())[:64])
+                        if keyword != "":
+                            self.kserver.delete(keyword.lower(), unhexlify(c.get_contract_id()),
+                                                self.keychain.signing_key.sign(
+                                                    unhexlify(c.get_contract_id()))[:64])
                 if "delete_images" in request.args:
                     c.delete(delete_images=True)
                 else:
@@ -587,7 +589,7 @@ class OpenBazaarAPI(APIResource):
                                            self.protocol.blockchain, resp)
                     request.write(json.dumps({"success": True, "payment_address": payment[0],
                                               "amount": payment[1],
-                                              "order_id": c.get_contract_id().encode("hex")},
+                                              "order_id": c.get_contract_id()},
                                              indent=4))
                     request.finish()
                 else:

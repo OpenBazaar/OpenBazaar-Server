@@ -599,7 +599,7 @@ class Server(object):
         nonce = nacl.utils.random(Box.NONCE_SIZE)
         ciphertext = box.encrypt(json.dumps(contract.contract, indent=4), nonce)
         d = self.protocol.callOrder(node_to_ask, pkephem, ciphertext)
-        self.log.info("purchasing contract %s from %s" % (contract.get_contract_id().encode("hex"), node_to_ask))
+        self.log.info("purchasing contract %s from %s" % (contract.get_contract_id(), node_to_ask))
         return d.addCallback(parse_response)
 
     def confirm_order(self, guid, contract):

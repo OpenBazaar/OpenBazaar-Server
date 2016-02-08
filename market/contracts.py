@@ -865,8 +865,7 @@ class Contract(object):
             self.log.critical("Error processing bitcoin transaction")
 
     def get_contract_id(self):
-        contract = json.dumps(self.contract, indent=4)
-        return digest(contract)
+        return self.contract["vendor_offer"]["listing"]["contract_id"]
 
     def delete(self, delete_images=False):
         """
