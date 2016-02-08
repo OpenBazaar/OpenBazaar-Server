@@ -981,8 +981,8 @@ class Contract(object):
 
             # verify the vendor's own signature
             verify_key = self.keychain.signing_key.verify_key
-            verify_key.verify(json.dumps(self.contract["vendor_offer"]["listing"]),
-                              unhexlify(self.contract["vendor_offer"]["signature"]))
+            verify_key.verify(json.dumps(self.contract["vendor_offer"]["listing"], indent=4),
+                              base64.b64decode(self.contract["vendor_offer"]["signatures"]["guid"]))
 
             # verify timestamp is within a reasonable time from now
             timestamp = self.contract["buyer_order"]["order"]["date"]

@@ -475,7 +475,8 @@ class OpenBazaarAPI(APIResource):
                 for option in request.args["options"]:
                     options[option] = request.args[option]
             if "contract_id" in request.args:
-                c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"]), testnet=self.protocol.testnet)
+                c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"]),
+                             testnet=self.protocol.testnet)
             else:
                 c = Contract(self.db, testnet=self.protocol.testnet)
             c.create(
@@ -516,8 +517,6 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            import traceback
-            traceback.print_exc()
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET

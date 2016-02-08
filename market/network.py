@@ -583,7 +583,7 @@ class Server(object):
                 masterkey_b = contract.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
                 buyer_key = derive_childkey(masterkey_b, chaincode)
                 amount = contract.contract["buyer_order"]["order"]["payment"]["amount"]
-                listing_hash = contract.contract["buyer_order"]["order"]["ref_hash"]
+                listing_hash = contract.contract["vendor_offer"]["listing"]["contract_id"]
                 verify_key = nacl.signing.VerifyKey(node_to_ask.pubkey)
                 verify_key.verify(
                     str(address) + str(amount) + str(listing_hash) + str(buyer_key), response[1][0])
@@ -980,10 +980,10 @@ class Server(object):
         return d.addCallback(get_result)
 
     @staticmethod
-    def cache(file, filename):
+    def cache(file_to_save, filename):
         """
         Saves the file to a cache folder if it doesn't already exist.
         """
         if not os.path.isfile(DATA_FOLDER + "cache/" + filename):
             with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
-                outfile.write(file)
+                outfile.write(file_to_save)
