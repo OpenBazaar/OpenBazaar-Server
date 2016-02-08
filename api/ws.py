@@ -17,9 +17,11 @@ from protos import objects
 from binascii import unhexlify
 from dht.node import Node
 from twisted.internet.protocol import Protocol, Factory, connectionDone
+from txws import WebSocketProtocol, WebSocketFactory
 
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
                 'em', 'strike', 'hr', 'br', 'img', 'blockquote')
+
 
 # pylint: disable=W0232
 class WSProtocol(Protocol):
@@ -267,6 +269,7 @@ class WSProtocol(Protocol):
                 self.search(message_id, request_json["request"]["keyword"].lower())
 
             elif request_json["request"]["command"] == "send_message":
+
                 self.send_message(message_id, request_json["request"]["guid"],
                                   request_json["request"]["handle"],
                                   request_json["request"]["message"],
@@ -308,3 +311,16 @@ class WSFactory(Factory):
             c.transport.write(msg)
 
 
+class AuthenticatedWebSocketProtocol(WebSocketProtocol):
+
+    def validateHeaders(self):
+        if "Cookie" in self.headers:
+            for session in self.factory.authenticated_sessions:
+                if "TWISTED_SESSION=" + session.uid in self.headers["Cookie"]:
+                    return WebSocketProtocol.validateHeaders(self)
+        return False
+
+
+class AuthenticatedWebSocketFactory(WebSocketFactory):
+
+    authenticated_sessions = None

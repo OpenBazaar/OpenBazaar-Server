@@ -334,7 +334,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertEqual(v, {})
 
     def test_Settings(self):
-        NUM_SETTINGS = 16
+        NUM_SETTINGS = 18
         settings = self.settings.get()
         self.assertIsNone(settings)
 

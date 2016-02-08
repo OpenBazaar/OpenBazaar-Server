@@ -1,13 +1,14 @@
 __author__ = 'chris'
 
 import argparse
+import json
 import platform
 import requests
 import socket
 import stun
 import sys
 import time
-from api.ws import WSFactory
+from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
     LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS
@@ -16,6 +17,7 @@ from db.datastore import Database
 from dht.network import Server
 from dht.node import Node
 from dht.storage import PersistentStorage, ForgetfulStorage
+from keys.credentials import get_credentials
 from keys.keychain import KeyChain
 from log import Logger, FileLogObserver
 from market import network
@@ -112,15 +114,20 @@ def run(*args):
         interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
 
         # websockets api
+        authenticated_sessions = []
         ws_api = WSFactory(mserver, kserver, only_ip=ALLOWIP)
+        ws_factory = AuthenticatedWebSocketFactory(ws_api)
+        ws_factory.authenticated_sessions = authenticated_sessions
+        ws_factory.protocol = AuthenticatedWebSocketProtocol
         if SSL:
-            reactor.listenSSL(WSPORT, WebSocketFactory(ws_api),
+            reactor.listenSSL(WSPORT, ws_factory,
                               ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=interface)
         else:
-            reactor.listenTCP(WSPORT, WebSocketFactory(ws_api), interface=interface)
+            reactor.listenTCP(WSPORT, ws_factory, interface=interface)
 
         # rest api
-        rest_api = RestAPI(mserver, kserver, protocol, only_ip=ALLOWIP)
+        rest_api = RestAPI(mserver, kserver, protocol, username, password,
+                           authenticated_sessions, only_ip=ALLOWIP)
         if SSL:
             reactor.listenSSL(RESTPORT, rest_api,
                               ChainedOpenSSLContextFactory(SSL_KEY, SSL_CERT), interface=interface)
@@ -143,12 +150,22 @@ def run(*args):
 
         protocol.set_servers(ws_api, libbitcoin_client)
 
+        if first_startup:
+            heartbeat_server.push(json.dumps({
+                "status": "GUID generation complete",
+                "username": username,
+                "password": password
+            }))
+
         heartbeat_server.set_status("online")
 
         logger.info("Startup took %s seconds" % str(round(time.time() - args[8], 2)))
 
     # database
     db = Database(TESTNET)
+
+    # client authentication
+    username, password = get_credentials(db)
 
     # heartbeat server
     interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP

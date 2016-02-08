@@ -774,6 +774,17 @@ termsConditions, refundPolicy, resolver, moderatorList) VALUES (?,?,?,?,?,?,?,?,
             cursor.execute('''SELECT * FROM settings WHERE id=1''')
             return cursor.fetchone()
 
+        def set_credentials(self, username, password):
+            cursor = self.db.cursor()
+            cursor.execute('''INSERT OR REPLACE INTO settings(id, username, password) VALUES (?,?,?)''',
+                           (2, username, password))
+            self.db.commit()
+
+        def get_credentials(self):
+            cursor = self.db.cursor()
+            cursor.execute('''SELECT username, password FROM settings WHERE id=2''')
+            return cursor.fetchone()
+
 
 def _database_path(testnet, filepath):
     '''
@@ -887,6 +898,6 @@ btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, 
     cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
 libbitcoinServer TEXT, SSL INTEGER, seed TEXT, termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB,
-resolver TEXT)''')
+resolver TEXT, username TEXT, password TEXT)''')
 
     db.commit()
