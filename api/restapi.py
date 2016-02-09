@@ -74,16 +74,32 @@ class OpenBazaarAPI(APIResource):
         self.username = username
         self.password = password
         self.authenticated_sessions = authenticated_sessions
+        self.failed_login_attempts = {}
         APIResource.__init__(self)
+
+    def _failed_login(self, host):
+        def remove_ban(host):
+            del self.failed_login_attempts[host]
+        if host in self.failed_login_attempts:
+            self.failed_login_attempts[host] += 1
+            reactor.callLater(3600, remove_ban, host)
+        else:
+            self.failed_login_attempts[host] = 1
 
     @POST('^/api/v1/login')
     def login(self, request):
+        if request.getHost().host in self.failed_login_attempts and \
+                        self.failed_login_attempts[request.getHost().host] >= 5:
+            return json.dumps({"success": False, "reason": "too many attempts"})
         request.setHeader('content-type', "application/json")
         if request.args["username"][0] == self.username and request.args["password"][0] == self.password:
             self.authenticated_sessions.append(request.getSession())
+            if request.getHost().host in self.failed_login_attempts:
+                del self.failed_login_attempts[request.getHost().host]
             return json.dumps({"success": True})
         else:
-            return json.dumps({"success": False})
+            self._failed_login(request.getHost().host)
+            return json.dumps({"success": False, "reason": "invalid username or password"})
 
     @GET('^/api/v1/get_image')
     @authenticated
