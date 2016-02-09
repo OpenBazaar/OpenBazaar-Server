@@ -32,6 +32,7 @@ DEFAULTS = {
     'resolver': 'http://resolver.onename.com/',
     'ssl_cert': None,
     'ssl_key': None,
+    'ssl': None,
     'username': None,
     'password': None,
     'seed': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
@@ -153,6 +154,7 @@ TRANSACTION_FEE = int(cfg.get('CONSTANTS', 'TRANSACTION_FEE'))
 LIBBITCOIN_SERVER = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER')
 LIBBITCOIN_SERVER_TESTNET = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER_TESTNET')
 RESOLVER = cfg.get('CONSTANTS', 'RESOLVER')
+SSL = cfg.get('AUTHENTICATION', 'SSL')
 SSL_CERT = cfg.get('AUTHENTICATION', 'SSL_CERT')
 SSL_KEY = cfg.get('AUTHENTICATION', 'SSL_KEY')
 USERNAME = cfg.get('AUTHENTICATION', 'USERNAME')
@@ -167,6 +169,15 @@ for item in items:
             SEEDS.append(_tuple_from_seed_string(seed))
         else:
             print 'Warning: please check your configuration file: %s' % seed
+
+
+def set_value(section, name, value):
+    config = ConfigParser()
+    if isfile(CONFIG_FILE):
+        config.read(CONFIG_FILE)
+    config.set(section, name, value)
+    with open(CONFIG_FILE, 'wb') as configfile:
+        config.write(configfile)
 
 
 if __name__ == '__main__':
