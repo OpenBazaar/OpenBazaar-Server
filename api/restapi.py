@@ -91,15 +91,19 @@ class OpenBazaarAPI(APIResource):
         if request.getHost().host in self.failed_login_attempts and \
                         self.failed_login_attempts[request.getHost().host] >= 5:
             return json.dumps({"success": False, "reason": "too many attempts"})
-        request.setHeader('content-type', "application/json")
-        if request.args["username"][0] == self.username and request.args["password"][0] == self.password:
-            self.authenticated_sessions.append(request.getSession())
-            if request.getHost().host in self.failed_login_attempts:
-                del self.failed_login_attempts[request.getHost().host]
-            return json.dumps({"success": True})
-        else:
+        try:
+            request.setHeader('content-type', "application/json")
+            if request.args["username"][0] == self.username and request.args["password"][0] == self.password:
+                self.authenticated_sessions.append(request.getSession())
+                if request.getHost().host in self.failed_login_attempts:
+                    del self.failed_login_attempts[request.getHost().host]
+                return json.dumps({"success": True})
+            else:
+                raise Exception("Invalid credentials")
+        except Exception:
             self._failed_login(request.getHost().host)
             return json.dumps({"success": False, "reason": "invalid username or password"})
+
 
     @GET('^/api/v1/get_image')
     @authenticated
@@ -203,8 +207,12 @@ class OpenBazaarAPI(APIResource):
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
             p = Profile(self.db).get()
-            temp_handle = self.db.ProfileStore().get_temp_handle()
-            parse_profile(p, None if temp_handle == "" else temp_handle)
+            if not p.HasField("guid_key"):
+                request.write(json.dumps({}))
+                request.finish()
+            else:
+                temp_handle = self.db.ProfileStore().get_temp_handle()
+                parse_profile(p, None if temp_handle == "" else temp_handle)
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_listings')
