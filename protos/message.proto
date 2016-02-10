@@ -49,6 +49,7 @@ enum Command {
     GET_RATINGS             = 25;
     DISPUTE_OPEN            = 26;
     DISPUTE_CLOSE           = 27;
+    REFUND                  = 28;
 
     // Error responses
     BAD_REQUEST             = 400;

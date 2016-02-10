@@ -1227,11 +1227,11 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
-    @GET('^/api/v1/get_dispute_messages')
+    @GET('^/api/v1/get_order_messages')
     @authenticated
     def get_dispute_messages(self, request):
         message_list = []
-        messages = self.db.MessageStore().get_dispute_messages(request.args["order_id"][0])
+        messages = self.db.MessageStore().get_order_messages(request.args["order_id"][0])
         for m in messages:
             if m[0] is not None:
                 message_json = {

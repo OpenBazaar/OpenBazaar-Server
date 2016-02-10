@@ -741,7 +741,7 @@ class Server(object):
 
         avatar_hash = Profile(self.db).get().avatar_hash
 
-        self.db.MessageStore().save_message(guid, handle, "", order_id, "DISPUTE",
+        self.db.MessageStore().save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
                                             claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):

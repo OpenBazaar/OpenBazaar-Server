@@ -157,7 +157,7 @@ message PlaintextMessage {
 
     enum Type {
         CHAT                 = 1;
-        DISPUTE              = 2;
+        ORDER                = 2;
         DISPUTE_OPEN         = 3;
         DISPUTE_CLOSE        = 4;
         ORDER_CONFIRMATION   = 5;

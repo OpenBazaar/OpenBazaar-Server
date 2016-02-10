@@ -71,7 +71,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     p.handle = handle
     p.pubkey = public_key
     p.subject = str(order_id)
-    p.type = PlaintextMessage.Type.Value("DISPUTE")
+    p.type = PlaintextMessage.Type.Value("DISPUTE_OPEN")
     p.message = str(contract["dispute"]["info"]["claim"])
     p.timestamp = int(time.time())
     p.avatar_hash = unhexlify(str(contract["dispute"]["info"]["avatar_hash"]))
@@ -171,7 +171,7 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     p.handle = moderator_handle
     p.pubkey = moderator_pubkey
     p.subject = str(order_id)
-    p.type = PlaintextMessage.Type.Value("DISPUTE")
+    p.type = PlaintextMessage.Type.Value("DISPUTE_CLOSE")
     p.message = str(resolution_json["dispute_resolution"]["resolution"]["decision"])
     p.timestamp = int(time.time())
     p.avatar_hash = unhexlify(str(moderator_avatar))

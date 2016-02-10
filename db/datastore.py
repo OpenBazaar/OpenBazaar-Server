@@ -319,18 +319,18 @@ class Database(object):
             """
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message,
-    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=?''',
+    timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=? ''',
                            (guid, message_type))
             return cursor.fetchall()
 
-        def get_dispute_messages(self, order_id):
+        def get_order_messages(self, order_id):
             """
             Return all messages matching guid and message_type.
             """
             cursor = self.db.cursor()
             cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message, timestamp,
-avatarHash, signature, outgoing, read FROM messages WHERE subject=? AND messageType=?''',
-                           (order_id, "DISPUTE"))
+avatarHash, signature, outgoing, read FROM messages WHERE subject=? ''',
+                           (order_id, ))
             return cursor.fetchall()
 
         def get_conversations(self):

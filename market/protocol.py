@@ -14,10 +14,9 @@ from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
 from nacl.public import PublicKey, Box
 from net.rpcudp import RPCProtocol
-from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, \
-    GET_USER_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, \
-    GET_CONTRACT_METADATA, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN, \
-    DISPUTE_CLOSE, GET_RATINGS
+from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,\
+    GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING, BROADCAST, MESSAGE, ORDER, \
+    ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN, DISPUTE_CLOSE, GET_RATINGS, REFUND
 from protos.objects import Metadata, Listings, Followers, PlaintextMessage
 from zope.interface import implements
 from zope.interface.exceptions import DoesNotImplement
@@ -39,7 +38,7 @@ class MarketProtocol(RPCProtocol):
         self.handled_commands = [GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,
                                  GET_CONTRACT_METADATA, FOLLOW, UNFOLLOW, GET_FOLLOWERS, GET_FOLLOWING,
                                  BROADCAST, MESSAGE, ORDER, ORDER_CONFIRMATION, COMPLETE_ORDER, DISPUTE_OPEN,
-                                 DISPUTE_CLOSE, GET_RATINGS]
+                                 DISPUTE_CLOSE, GET_RATINGS, REFUND]
 
     def connect_multiplexer(self, multiplexer):
         self.multiplexer = multiplexer
@@ -423,6 +422,10 @@ class MarketProtocol(RPCProtocol):
             d = self.get_ratings(nodeToAsk)
         else:
             d = self.get_ratings(nodeToAsk, listing_hash)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
+    def callRefund(self, nodeToAsk, order_id, refund):
+        d = self.refund(nodeToAsk, order_id, refund)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def handleCallResponse(self, result, node):
