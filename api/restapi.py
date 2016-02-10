@@ -1229,7 +1229,7 @@ class OpenBazaarAPI(APIResource):
 
     @GET('^/api/v1/get_order_messages')
     @authenticated
-    def get_dispute_messages(self, request):
+    def get_order_messages(self, request):
         message_list = []
         messages = self.db.MessageStore().get_order_messages(request.args["order_id"][0])
         for m in messages:
