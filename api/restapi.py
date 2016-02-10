@@ -14,7 +14,7 @@ from twisted.web import server
 from twisted.web.resource import NoResource
 from twisted.web import http
 from twisted.web.server import Site
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, task
 from twisted.protocols.basic import FileSender
 
 from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, \
@@ -67,7 +67,12 @@ class OpenBazaarAPI(APIResource):
         self.password = password
         self.authenticated_sessions = authenticated_sessions
         self.failed_login_attempts = {}
+        task.LoopingCall(self._keep_sessions_alive).start(890, False)
         APIResource.__init__(self)
+
+    def _keep_sessions_alive(self):
+        for session in self.authenticated_sessions:
+            session.touch()
 
     def _failed_login(self, host):
         def remove_ban(host):
