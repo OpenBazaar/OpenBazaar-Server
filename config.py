@@ -32,11 +32,22 @@ DEFAULTS = {
     'resolver': 'http://resolver.onename.com/',
     'ssl_cert': None,
     'ssl_key': None,
-    'ssl': None,
+    'ssl': False,
     'username': None,
     'password': None,
     'seed': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
 }
+
+
+def str_to_bool(s):
+    if isinstance(s, bool):
+        return s
+    if s.lower() == 'true':
+        return True
+    elif s.lower() == 'false':
+        return False
+    else:
+        raise ValueError
 
 
 def _platform_agnostic_data_path(data_folder):
@@ -154,7 +165,7 @@ TRANSACTION_FEE = int(cfg.get('CONSTANTS', 'TRANSACTION_FEE'))
 LIBBITCOIN_SERVER = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER')
 LIBBITCOIN_SERVER_TESTNET = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER_TESTNET')
 RESOLVER = cfg.get('CONSTANTS', 'RESOLVER')
-SSL = cfg.get('AUTHENTICATION', 'SSL')
+SSL = str_to_bool(cfg.get('AUTHENTICATION', 'SSL'))
 SSL_CERT = cfg.get('AUTHENTICATION', 'SSL_CERT')
 SSL_KEY = cfg.get('AUTHENTICATION', 'SSL_KEY')
 USERNAME = cfg.get('AUTHENTICATION', 'USERNAME')

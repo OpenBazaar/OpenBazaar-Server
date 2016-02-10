@@ -15,8 +15,8 @@ def get_credentials(database):
         settings.set_credentials(USERNAME, PASSWORD)
         return (USERNAME, PASSWORD)
     elif creds is None and (USERNAME is None or PASSWORD is None):
-        username = base64.b64encode(sha256(str(random.getrandbits(255))).digest())
-        password = base64.b64encode(sha256(str(random.getrandbits(255))).digest())
+        username = base64.b64encode(sha256(str(random.getrandbits(255))).digest())[:20]
+        password = base64.b64encode(sha256(str(random.getrandbits(255))).digest())[:20]
         settings.set_credentials(username, password)
         return (username, password)
     elif creds is None and (USERNAME is not None and PASSWORD is not None):

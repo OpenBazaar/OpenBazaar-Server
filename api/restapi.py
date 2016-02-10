@@ -17,7 +17,7 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor
 from twisted.protocols.basic import FileSender
 
-from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER
+from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, set_value
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -787,6 +787,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def set_settings(self, request):
         try:
+            settings = self.db.Settings()
             resolver = RESOLVER if "resolver" not in request.args or request.args["resolver"][0] == "" \
                 else request.args["resolver"][0]
             if self.protocol.testnet:
@@ -796,7 +797,19 @@ class OpenBazaarAPI(APIResource):
                 libbitcoin_server = LIBBITCOIN_SERVER if "libbitcoin_server" not in request.args \
                     or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
 
-            settings = self.db.Settings()
+            current_settings = settings.get()
+            if current_settings is not None:
+                if self.protocol.testnet and libbitcoin_server != current_settings[9]:
+                    set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
+                elif not self.protocol.testnet and libbitcoin_server != current_settings[9]:
+                    set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
+                if resolver != current_settings[15]:
+                    set_value("CONSTANTS", "RESOLVER", resolver)
+                ssl_setting = True if current_settings[10] == 1 else False,
+                use_ssl = str_to_bool(request.args["ssl"][0])
+                if use_ssl != ssl_setting:
+                    set_value("AUTHENTICATION", "SSL", use_ssl)
+
             settings.update(
                 request.args["refund_address"][0],
                 request.args["currency_code"][0],
@@ -807,7 +820,7 @@ class OpenBazaarAPI(APIResource):
                 json.dumps(request.args["shipping_addresses"] if request.args["shipping_addresses"] != "" else []),
                 json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
                 libbitcoin_server,
-                1 if str_to_bool(request.args["ssl"][0]) else 0,
+                1 if use_ssl else 0,
                 KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0],

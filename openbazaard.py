@@ -11,7 +11,7 @@ import time
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
-    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS
+    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SSL
 from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
@@ -41,10 +41,9 @@ def run(*args):
     LOGLEVEL = args[1]
     PORT = args[2]
     ALLOWIP = args[3]
-    SSL = args[4]
-    RESTPORT = args[5]
-    WSPORT = args[6]
-    HEARTBEATPORT = args[7]
+    RESTPORT = args[4]
+    WSPORT = args[5]
+    HEARTBEATPORT = args[6]
 
     def start_server(keys, first_startup=False):
         # logging
@@ -159,7 +158,7 @@ def run(*args):
 
         heartbeat_server.set_status("online")
 
-        logger.info("Startup took %s seconds" % str(round(time.time() - args[8], 2)))
+        logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
     # database
     db = Database(TESTNET)
@@ -217,9 +216,6 @@ commands:
             parser.add_argument('-d', '--daemon', action='store_true',
                                 help="run the server in the background as a daemon")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
-            parser.add_argument('-s', '--ssl', action='store_true',
-                                help="use ssl on api connections. you must set the path to your "
-                                     "certificate and private key in the config file.")
             parser.add_argument('-l', '--loglevel', default="info",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
@@ -253,11 +249,11 @@ commands:
                 port = 18467 if not args.testnet else 28467
             if args.daemon and platform.system().lower() in unix:
                 self.daemon.pidfile = "/tmp/" + args.pidfile
-                self.daemon.start(args.testnet, args.loglevel, port, args.allowip, args.ssl,
+                self.daemon.start(args.testnet, args.loglevel, port, args.allowip,
                                   int(args.restapiport), int(args.websocketport),
                                   int(args.heartbeatport), time.time())
             else:
-                run(args.testnet, args.loglevel, port, args.allowip, args.ssl,
+                run(args.testnet, args.loglevel, port, args.allowip,
                     int(args.restapiport), int(args.websocketport),
                     int(args.heartbeatport), time.time())
 
