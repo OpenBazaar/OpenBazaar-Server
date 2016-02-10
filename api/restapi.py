@@ -1245,6 +1245,7 @@ class OpenBazaarAPI(APIResource):
                     "message": m[5],
                     "timestamp": m[6],
                     "avatar_hash": m[7].encode("hex"),
+                    "message_type": m[4],
                     "outgoing": False if m[9] == 0 else True
                 }
                 message_list.append(message_json)
