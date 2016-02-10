@@ -177,7 +177,9 @@ for item in items:
     if _is_seed_tuple(item):
         seed = item[1]
         if _is_well_formed_seed_string(seed):
-            SEEDS.append(_tuple_from_seed_string(seed))
+            new_seed = _tuple_from_seed_string(seed)
+            if new_seed not in SEEDS:
+                SEEDS.append(new_seed)
         else:
             print 'Warning: please check your configuration file: %s' % seed
 
