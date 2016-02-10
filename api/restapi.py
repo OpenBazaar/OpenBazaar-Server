@@ -17,7 +17,8 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor
 from twisted.protocols.basic import FileSender
 
-from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, set_value
+from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, \
+    set_value, get_value, str_to_bool
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -32,15 +33,6 @@ DEFAULT_RECORDS_OFFSET = 0
 
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
                 'em', 'strike', 'hr', 'br', 'img', 'blockquote')
-
-
-def str_to_bool(s):
-    if s.lower() == 'true':
-        return True
-    elif s.lower() == 'false':
-        return False
-    else:
-        raise ValueError
 
 
 class OpenBazaarAPI(APIResource):
@@ -797,18 +789,16 @@ class OpenBazaarAPI(APIResource):
                 libbitcoin_server = LIBBITCOIN_SERVER if "libbitcoin_server" not in request.args \
                     or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
 
-            current_settings = settings.get()
-            if current_settings is not None:
-                if self.protocol.testnet and libbitcoin_server != current_settings[9]:
-                    set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
-                elif not self.protocol.testnet and libbitcoin_server != current_settings[9]:
-                    set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
-                if resolver != current_settings[15]:
-                    set_value("CONSTANTS", "RESOLVER", resolver)
-                ssl_setting = True if current_settings[10] == 1 else False,
-                use_ssl = str_to_bool(request.args["ssl"][0])
-                if use_ssl != ssl_setting:
-                    set_value("AUTHENTICATION", "SSL", use_ssl)
+            if self.protocol.testnet and libbitcoin_server != get_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET"):
+                set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
+            elif not self.protocol.testnet and libbitcoin_server != get_value("CONSTANTS", "LIBBITCOIN_SERVER"):
+                set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
+            if resolver != get_value("CONSTANTS", "RESOLVER"):
+                set_value("CONSTANTS", "RESOLVER", resolver)
+            ssl = get_value("AUTHENTICATION", "SSL")
+            use_ssl = str_to_bool(request.args["ssl"][0])
+            if use_ssl != ssl:
+                set_value("AUTHENTICATION", "SSL", use_ssl)
 
             settings.update(
                 request.args["refund_address"][0],
@@ -819,12 +809,8 @@ class OpenBazaarAPI(APIResource):
                 1 if str_to_bool(request.args["notifications"][0]) else 0,
                 json.dumps(request.args["shipping_addresses"] if request.args["shipping_addresses"] != "" else []),
                 json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
-                libbitcoin_server,
-                1 if use_ssl else 0,
-                KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0],
-                resolver,
                 json.dumps(request.args["moderators"] if request.args["moderators"] != "" else [])
             )
             request.write(json.dumps({"success": True}, indent=4))
@@ -858,12 +844,14 @@ class OpenBazaarAPI(APIResource):
                 "notifications": True if settings[6] == 1 else False,
                 "shipping_addresses": json.loads(settings[7]),
                 "blocked_guids": json.loads(settings[8]),
-                "libbitcoin_server": settings[9],
-                "ssl": True if settings[10] == 1 else False,
-                "seed": settings[11],
-                "terms_conditions": settings[12],
-                "refund_policy": settings[13],
-                "resolver": settings[15],
+                "libbitcoin_server": get_value(
+                    "CONSTANTS", "LIBBITCOIN_SERVER_TESTNET")if self.protocol.testnet else get_value(
+                        "CONSTANTS", "LIBBITCOIN_SERVER"),
+                "ssl": str_to_bool(get_value("AUTHENTICATION", "SSL")),
+                "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
+                "terms_conditions": "" if settings[12] is None else settings[12],
+                "refund_policy": "" if settings[13] is None else settings[13],
+                "resolver": get_value("CONSTANTS", "RESOLVER"),
                 "network_connection": nat_type
             }
             mods = []

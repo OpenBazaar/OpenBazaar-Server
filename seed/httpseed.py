@@ -67,7 +67,7 @@ def run(*args):
     # Start the kademlia server
     this_node = Node(keychain.guid, ip_address, port,
                      keychain.verify_key.encode(), None, objects.FULL_CONE, False)
-    protocol = OpenBazaarProtocol((ip_address, port), objects.FULL_CONE, testnet=TESTNET, relaying=True)
+    protocol = OpenBazaarProtocol(db, (ip_address, port), objects.FULL_CONE, testnet=TESTNET, relaying=True)
 
     try:
         kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db, objects.FULL_CONE, None)

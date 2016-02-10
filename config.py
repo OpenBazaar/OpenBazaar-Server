@@ -191,6 +191,13 @@ def set_value(section, name, value):
         config.write(configfile)
 
 
+def get_value(section, name):
+    config = ConfigParser()
+    if isfile(CONFIG_FILE):
+        config.read(CONFIG_FILE)
+        return config.get(section, name)
+
+
 if __name__ == '__main__':
 
     def test_is_well_formed_seed_string():

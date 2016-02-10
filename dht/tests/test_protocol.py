@@ -2,12 +2,12 @@ __author__ = 'chris'
 import time
 import random
 from binascii import unhexlify
-import os
 
 import mock
 import nacl.signing
 import nacl.encoding
 import nacl.hash
+import os
 from txrudp import connection, rudp, packet, constants
 from twisted.trial import unittest
 from twisted.internet import task, address, udp, defer, reactor
@@ -54,7 +54,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.db = datastore.Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr, objects.FULL_CONE)
+        self.wire_protocol = OpenBazaarProtocol(self.db, self.own_addr, objects.FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)

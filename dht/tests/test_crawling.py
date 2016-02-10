@@ -3,6 +3,7 @@ __author__ = 'chris'
 import mock
 import nacl.signing
 import nacl.hash
+import os
 from binascii import unhexlify
 from db.datastore import Database
 from dht.crawling import RPCFindResponse, NodeSpiderCrawl, ValueSpiderCrawl
@@ -44,10 +45,10 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         h = nacl.hash.sha512(verify_key.encode())
         self.storage = ForgetfulStorage()
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, verify_key.encode(), None, FULL_CONE, True)
-        self.db = Database(filepath=":memory:")
+        self.db = Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr, FULL_CONE)
+        self.wire_protocol = OpenBazaarProtocol(self.db, self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
@@ -65,6 +66,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
     def tearDown(self):
         self.con.shutdown()
         self.wire_protocol.shutdown()
+        os.remove("test.db")
 
     def test_find(self):
         self._connecting_to_connected()
@@ -223,10 +225,10 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         h = nacl.hash.sha512(verify_key.encode())
         self.storage = ForgetfulStorage()
         self.node = Node(unhexlify(h[:40]), self.public_ip, self.port, verify_key.encode(), None, FULL_CONE, True)
-        self.db = Database(filepath=":memory:")
+        self.db = Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
-        self.wire_protocol = OpenBazaarProtocol(self.own_addr, FULL_CONE)
+        self.wire_protocol = OpenBazaarProtocol(self.db, self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
@@ -240,6 +242,11 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.node1 = Node(digest("id1"), self.addr1[0], self.addr1[1], digest("key1"), None, FULL_CONE, True)
         self.node2 = Node(digest("id2"), self.addr2[0], self.addr2[1], digest("key2"), None, FULL_CONE, True)
         self.node3 = Node(digest("id3"), self.addr3[0], self.addr3[1], digest("key3"), None, FULL_CONE, True)
+
+    def tearDown(self):
+        self.con.shutdown()
+        self.wire_protocol.shutdown()
+        os.remove("test.db")
 
     def test_find(self):
         self._connecting_to_connected()
