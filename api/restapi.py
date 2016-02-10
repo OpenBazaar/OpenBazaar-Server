@@ -1227,9 +1227,9 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
-    @GET('^/api/v1/get_order_messages')
+    @GET('^/api/v1/order_messages')
     @authenticated
-    def get_order_messages(self, request):
+    def order_messages(self, request):
         message_list = []
         messages = self.db.MessageStore().get_order_messages(request.args["order_id"][0])
         for m in messages:
