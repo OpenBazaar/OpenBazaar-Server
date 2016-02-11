@@ -334,15 +334,11 @@ class MarketProtocol(RPCProtocol):
         try:
             ratings = []
             if listing_hash:
-                for rating in self.db.Ratings().get_ratings(listing_hash.encode("hex")):
+                for rating in self.db.Ratings().get_listing_ratings(listing_hash.encode("hex")):
                     ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             else:
-                proto = self.db.ListingsStore().get_proto()
-                l = Listings()
-                l.ParseFromString(proto)
-                for listing in l.listing:
-                    for rating in self.db.Ratings().get_ratings(listing.contract_hash.encode("hex")):
-                        ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
+                for rating in self.db.Ratings().get_all_ratings():
+                    ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             ret = json.dumps(ratings).encode("zlib")
             return [str(ret), self.signing_key.sign(ret)[:64]]
         except Exception:

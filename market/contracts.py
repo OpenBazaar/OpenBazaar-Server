@@ -1185,7 +1185,7 @@ class Contract(object):
             masterkey_b = self.contract["buyer_order"]["order"]["id"]["pubkeys"]["bitcoin"]
             buyer_key = derive_childkey(masterkey_b, chaincode)
             amount = self.contract["buyer_order"]["order"]["payment"]["amount"]
-            listing_hash = self.contract["buyer_order"]["order"]["ref_hash"]
+            listing_hash = self.contract["vendor_offer"]["listing"]["contract_id"]
             verify_key = nacl.signing.VerifyKey(vendor_guid_pubkey)
             try:
                 verify_key.verify(str(address) + str(amount) + str(listing_hash) + str(buyer_key),

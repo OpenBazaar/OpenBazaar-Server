@@ -304,14 +304,17 @@ class Database(object):
             """
             Store message in database.
             """
-            outgoing = 1 if is_outgoing else 0
-            msgID = digest(message + str(timestamp)).encode("hex") if msg_id is None else msg_id
-            cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
-    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
-                           (msgID, guid, handle, pubkey, subject, message_type,
-                            message, timestamp, avatar_hash, signature, outgoing, 0))
-            self.db.commit()
+            try:
+                outgoing = 1 if is_outgoing else 0
+                msgID = digest(message + str(timestamp)).encode("hex") if msg_id is None else msg_id
+                cursor = self.db.cursor()
+                cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
+        messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                               (msgID, guid, handle, pubkey, subject, message_type,
+                                message, timestamp, avatar_hash, signature, outgoing, 0))
+                self.db.commit()
+            except Exception:
+                pass
 
         def get_messages(self, guid, message_type):
             """
@@ -738,15 +741,40 @@ buyer, vendor, validation, claim, status FROM cases ''')
             self.db.text_factory = str
 
         def add_rating(self, listing_hash, rating):
+            rating_id = digest(rating).encode("hex")
             cursor = self.db.cursor()
-            cursor.execute('''INSERT INTO ratings(listing, rating) VALUES (?,?)''',
-                           (listing_hash, rating))
+            cursor.execute('''INSERT INTO ratings(listing, ratingID, rating) VALUES (?,?,?)''',
+                           (listing_hash, rating_id, rating))
             self.db.commit()
 
-        def get_ratings(self, listing_hash):
+        def get_listing_ratings(self, listing_hash, starting_id=None):
             cursor = self.db.cursor()
-            cursor.execute('''SELECT rating FROM ratings WHERE listing=?''', (listing_hash,))
-            return cursor.fetchall()
+            if starting_id is None:
+                cursor.execute('''SELECT rating FROM ratings WHERE listing=?''', (listing_hash,))
+                return cursor.fetchall()
+            else:
+                cursor.execute('''SELECT rowid FROM ratings WHERE ratingID=?''', (starting_id, ))
+                row_id = cursor.fetchone()
+                if row_id is None:
+                    return None
+                else:
+                    cursor.execute('''SELECT rating FROM ratings WHERE rowid>? AND listing=?''',
+                                   (row_id, listing_hash))
+                    return cursor.fetchall()
+
+        def get_all_ratings(self, starting_id=None):
+            cursor = self.db.cursor()
+            if starting_id is None:
+                cursor.execute('''SELECT rating FROM ratings''')
+                return cursor.fetchall()
+            else:
+                cursor.execute('''SELECT rowid FROM ratings WHERE ratingID=?''', (starting_id, ))
+                row_id = cursor.fetchone()
+                if row_id is None:
+                    return None
+                else:
+                    cursor.execute('''SELECT rating FROM ratings WHERE rowid>?''', (row_id, ))
+                    return cursor.fetchall()
 
     class Settings(object):
         """
@@ -890,8 +918,9 @@ paymentTX TEXT, contractType TEXT)''')
     cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
 btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
 
-    cursor.execute('''CREATE TABLE ratings(listing TEXT, rating TEXT)''')
+    cursor.execute('''CREATE TABLE ratings(listing TEXT, ratingID TEXT,  rating TEXT)''')
     cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
+    cursor.execute('''CREATE INDEX index_rating_id ON ratings(ratingID);''')
 
     cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
 country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
