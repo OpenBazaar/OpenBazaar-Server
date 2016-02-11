@@ -800,10 +800,6 @@ class OpenBazaarAPI(APIResource):
                 set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
-            ssl = get_value("AUTHENTICATION", "SSL")
-            use_ssl = str_to_bool(request.args["ssl"][0])
-            if use_ssl != ssl:
-                set_value("AUTHENTICATION", "SSL", use_ssl)
 
             settings.update(
                 request.args["refund_address"][0],
@@ -852,7 +848,6 @@ class OpenBazaarAPI(APIResource):
                 "libbitcoin_server": get_value(
                     "CONSTANTS", "LIBBITCOIN_SERVER_TESTNET")if self.protocol.testnet else get_value(
                         "CONSTANTS", "LIBBITCOIN_SERVER"),
-                "ssl": str_to_bool(get_value("AUTHENTICATION", "SSL")),
                 "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 "terms_conditions": "" if settings[9] is None else settings[9],
                 "refund_policy": "" if settings[10] is None else settings[10],
