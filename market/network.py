@@ -979,6 +979,7 @@ class Server(object):
         d = self.protocol.callGetRatings(node_to_ask, listing_hash)
         return d.addCallback(get_result)
 
+
     @staticmethod
     def cache(file_to_save, filename):
         """

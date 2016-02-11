@@ -854,15 +854,15 @@ class OpenBazaarAPI(APIResource):
                         "CONSTANTS", "LIBBITCOIN_SERVER"),
                 "ssl": str_to_bool(get_value("AUTHENTICATION", "SSL")),
                 "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
-                "terms_conditions": "" if settings[12] is None else settings[12],
-                "refund_policy": "" if settings[13] is None else settings[13],
+                "terms_conditions": "" if settings[9] is None else settings[9],
+                "refund_policy": "" if settings[10] is None else settings[10],
                 "resolver": get_value("CONSTANTS", "RESOLVER"),
                 "network_connection": nat_type
             }
             mods = []
             mods_db = self.db.ModeratorStore()
             try:
-                for guid in json.loads(settings[14]):
+                for guid in json.loads(settings[11]):
                     info = mods_db.get_moderator(guid)
                     if info is not None:
                         m = {
@@ -1294,6 +1294,18 @@ class OpenBazaarAPI(APIResource):
             request.finish()
         return server.NOT_DONE_YET
 
+    @POST('^/api/v1/refund')
+    @authenticated
+    def refund(self, request):
+        try:
+            self.mserver.refund(request.args["order_id"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
 
 class RestAPI(Site):
 
