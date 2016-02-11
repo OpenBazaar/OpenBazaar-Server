@@ -1275,15 +1275,11 @@ class OpenBazaarAPI(APIResource):
         else:
             ratings = []
             if "contract_id" in request.args and request.args["contract_id"][0] != "":
-                for rating in self.db.Ratings().get_ratings(request.args["contract_id"][0]):
+                for rating in self.db.Ratings().get_listing_ratings(request.args["contract_id"][0]):
                     ratings.append(json.loads(rating[0]))
             else:
-                proto = self.db.ListingsStore().get_proto()
-                l = objects.Listings()
-                l.ParseFromString(proto)
-                for listing in l.listing:
-                    for rating in self.db.Ratings().get_ratings(listing.contract_hash.encode("hex")):
-                        ratings.append(json.loads(rating[0]))
+                for rating in self.db.Ratings().get_all_ratings():
+                    ratings.append(json.loads(rating[0]))
             request.setHeader('content-type', "application/json")
             request.write(str(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS)))
             request.finish()
