@@ -269,7 +269,6 @@ class WSProtocol(Protocol):
                 self.search(message_id, request_json["request"]["keyword"].lower())
 
             elif request_json["request"]["command"] == "send_message":
-
                 self.send_message(message_id, request_json["request"]["guid"],
                                   request_json["request"]["handle"],
                                   request_json["request"]["message"],
