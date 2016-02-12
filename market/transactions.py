@@ -14,10 +14,7 @@ from log import Logger
 
 class BitcoinTransaction(object):
     """
-    A Bitcoin transaction object which is used for building, signing, and broadcasting
-    Bitcoin transactions. It is designed primarily to take in a list of outpoints
-    (all paid to the same address) and payout to a single address. At present this is the
-    only way we make transactions in OpenBazaar so more advanced functionality is not needed.
+    A Bitcoin transaction object which is used for building, signing, and broadcasting Bitcoin transactions.
     """
     def __init__(self, tx, testnet=False):
         """
@@ -31,13 +28,14 @@ class BitcoinTransaction(object):
         self.log = Logger(system=self)
 
     @classmethod
-    def make_unsigned(cls, outpoints, output_address, tx_fee=TRANSACTION_FEE, testnet=False, out_value=None):
+    def make_unsigned(cls, outpoints, outputs, tx_fee=TRANSACTION_FEE, testnet=False, out_value=None):
         """
         Build an unsigned transaction.
 
         Args:
             outpoints: A `list` of `dict` objects which contain a txid, vout, value, and scriptPubkey.
-            output_address: The address to send the full value (minus the tx fee) of the inputs to.
+            outputs: If a single address the full value of the inputs (minus the tx fee) will be sent there.
+                Otherwise it should be a `list` of `dict` objects containing address and value.
             tx_fee: The Bitcoin network fee to be paid on this transaction.
             testnet: Should this transaction be built for testnet?
             out_value: used if you want to specify a specific output value otherwise the full value
@@ -53,12 +51,19 @@ class BitcoinTransaction(object):
             txin.scriptSig = CScript(x(outpoint["scriptPubKey"]))
             txins.append(txin)
 
-        # build the output
-        value = out_value if out_value is not None else (in_value - tx_fee)
-        txout = CMutableTxOut(value, CBitcoinAddress(output_address).to_scriptPubKey())
+        # build the outputs
+        txouts = []
+        if isinstance(outputs, list):
+            for output in outputs:
+                value = output["value"]
+                address = output["address"]
+                txouts.append(CMutableTxOut(value, CBitcoinAddress(address).to_scriptPubKey()))
+        else:
+            value = out_value if out_value is not None else (in_value - tx_fee)
+            txouts.append(CMutableTxOut(value, CBitcoinAddress(outputs).to_scriptPubKey()))
 
         # make the transaction
-        tx = CMutableTransaction(txins, [txout])
+        tx = CMutableTransaction(txins, txouts)
 
         return BitcoinTransaction(tx)
 

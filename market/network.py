@@ -822,7 +822,7 @@ class Server(object):
                                 outpoints.append(o)
 
                     satoshis -= TRANSACTION_FEE
-                    moderator_fee = round(float(moderator_percentage * satoshis))
+                    moderator_fee = int(float(moderator_percentage) * satoshis)
                     satoshis -= moderator_fee
 
                     outputs.append({'value': moderator_fee, 'address': moderator_address})
@@ -830,25 +830,24 @@ class Server(object):
                     dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = moderator_fee
                     dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = TRANSACTION_FEE
                     if float(buyer_percentage) > 0:
-                        amt = round(float(buyer_percentage * satoshis))
+                        amt = int(float(buyer_percentage) * satoshis)
                         dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': buyer_address})
                     if float(vendor_percentage) > 0:
-                        amt = round(float(vendor_percentage * satoshis))
+                        amt = int(float(vendor_percentage) * satoshis)
                         dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': vendor_address})
-                    # FIXME: transactions need to take in multipe outputs now
-                    tx = BitcoinTransaction.make_unsigned(outpoints, payment_address)
+
+                    tx = BitcoinTransaction.make_unsigned(outpoints, outputs,
+                                                          testnet=self.protocol.multiplexer.testnet)
                     chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
                     redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
                     masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
                     moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
-                    signatures = []
-                    for index in range(0, len(outpoints)):
-                        sig = bitcointools.multisign(tx, index, redeem_script, moderator_priv)
-                        signatures.append({"input_index": index, "signature": sig})
+
+                    signatures = tx.create_signature(moderator_priv, redeem_script)
                     dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
                     dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
                     dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.Cases().get_claim(order_id)
