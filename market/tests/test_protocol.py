@@ -25,4 +25,4 @@ class MarketProtocolTest(unittest.TestCase):
 
     def test_rpc_get_image_invalid_image_hash(self):
         mp = MarketProtocol(self.node, self.router, 0, 0)
-        self.assertRaises(Exception, mp.rpc_get_image(mknode(), "invalid_hash"));
+        self.assertRaises(Exception, mp.rpc_get_image(mknode(), "invalid_hash"))
