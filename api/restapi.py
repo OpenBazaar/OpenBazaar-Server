@@ -87,7 +87,7 @@ class OpenBazaarAPI(APIResource):
     def login(self, request):
         request.setHeader('content-type', "application/json")
         if request.getHost().host in self.failed_login_attempts and \
-                        self.failed_login_attempts[request.getHost().host] >= 5:
+                        self.failed_login_attempts[request.getHost().host] >= 7:
             return json.dumps({"success": False, "reason": "too many attempts"})
         try:
             if request.args["username"][0] == self.username and request.args["password"][0] == self.password:
@@ -500,12 +500,7 @@ class OpenBazaarAPI(APIResource):
                     else:
                         request.write(json.dumps({}))
                         request.finish()
-                try:
-                    with open(DATA_FOLDER + "cache/" + request.args["id"][0], "r") as filename:
-                        contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
-                    parse_contract(contract)
-                except Exception:
-                    self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+                self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
             else:
                 try:
                     with open(self.db.HashMap().get_file(request.args["id"][0]), "r") as filename:

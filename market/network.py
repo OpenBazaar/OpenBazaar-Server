@@ -25,6 +25,7 @@ from market.contracts import Contract
 from market.moderation import process_dispute
 from market.profile import Profile
 from market.protocol import MarketProtocol
+from market.transactions import BitcoinTransaction
 from nacl.public import PrivateKey, PublicKey, Box
 from protos import objects
 from seed import peers
@@ -783,7 +784,10 @@ class Server(object):
                 raise Exception("Libbitcoin server not online")
             with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
-            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+
+            if "vendor_order_confirmation" in contract and float(vendor_percentage) > 0:
+                vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
             buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
@@ -808,9 +812,14 @@ class Server(object):
                     for tx_type, txid, i, height, value in history:  # pylint: disable=W0612
                         if tx_type == obelisk.PointIdent.Output:
                             satoshis += value
-                            outpoint = txid.encode("hex") + ":" + str(i)
-                            if outpoint not in outpoints:
-                                outpoints.append(outpoint)
+                            o = {
+                                "txid": txid.encode("hex"),
+                                "vout": i,
+                                "value": value,
+                                "scriptPubKey": "00"
+                            }
+                            if o not in outpoints:
+                                outpoints.append(o)
 
                     satoshis -= TRANSACTION_FEE
                     moderator_fee = round(float(moderator_percentage * satoshis))
@@ -830,7 +839,8 @@ class Server(object):
                         dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
                         outputs.append({'value': amt,
                                         'address': vendor_address})
-                    tx = bitcointools.mktx(outpoints, outputs)
+                    # FIXME: transactions need to take in multipe outputs now
+                    tx = BitcoinTransaction.make_unsigned(outpoints, payment_address)
                     chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
                     redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
                     masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
@@ -872,6 +882,7 @@ class Server(object):
                     self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
                     self.db.Cases().update_status(order_id, 1)
 
+            # TODO: add a timeout on this call
             self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
         except Exception:
             pass

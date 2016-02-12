@@ -822,7 +822,7 @@ class Contract(object):
                     for outpoint in outpoints:
                         self.amount_funded += outpoint["value"]
                         self.received_txs.append(tx)
-                        self.outpoints.append(outpoint)
+                        self.outpoints.extend(outpoint)
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(
                         self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
