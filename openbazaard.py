@@ -3,11 +3,11 @@ __author__ = 'chris'
 import argparse
 import json
 import platform
-import requests
 import socket
 import stun
 import sys
 import time
+import urllib2
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
@@ -263,10 +263,13 @@ commands:
                 description="Shutdown the server and disconnect",
                 usage='''usage:
         python openbazaard.py stop''')
-            parser.parse_args(sys.argv[2:])
+            parser.add_argument('-r', '--restapiport', help="set the rest api port to shutdown cleanly",
+                                default=18469)
+            args = parser.parse_args(sys.argv[2:])
             print "OpenBazaar server stopping..."
             try:
-                requests.get("http://localhost:18469/api/v1/shutdown")
+                request = urllib2.build_opener()
+                request.open('http://localhost:' + args.restapiport + '/api/v1/shutdown')
             except Exception:
                 self.daemon.stop()
 
