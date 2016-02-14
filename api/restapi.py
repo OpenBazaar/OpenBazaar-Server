@@ -596,14 +596,23 @@ class OpenBazaarAPI(APIResource):
             return server.NOT_DONE_YET
 
     @GET('^/api/v1/shutdown')
-    @authenticated
     def shutdown(self, request):
-        vendor_store = self.db.VendorStore()
-        for vendor in self.protocol.vendors.values():
-            vendor_store.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
-        PortMapper().clean_my_mappings(self.kserver.node.port)
-        self.protocol.shutdown()
-        reactor.stop()
+        session = request.getSession()
+        if session not in self.authenticated_sessions and request.getHost().host != "127.0.0.1":
+            session.expire()
+            request.setResponseCode(401)
+            request.write('<html><body><div><span style="color:red">Authorization Error</span></div>'
+                          '<h2>Permission Denied</h2></body></html>')
+            request.finish()
+            return server.NOT_DONE_YET
+        else:
+            vendor_store = self.db.VendorStore()
+            for vendor in self.protocol.vendors.values():
+                vendor_store.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
+            PortMapper().clean_my_mappings(self.kserver.node.port)
+            self.protocol.shutdown()
+            reactor.stop()
+            return
 
     @POST('^/api/v1/make_moderator')
     @authenticated
