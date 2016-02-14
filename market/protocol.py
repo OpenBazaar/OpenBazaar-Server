@@ -61,6 +61,7 @@ class MarketProtocol(RPCProtocol):
         self.router.addContact(sender)
         try:
             if len(image_hash) != 20:
+                self.log.warning("Image hash is not 20 characters %s" % image_hash)
                 raise Exception("Invalid image hash")
             self.log.info("serving image %s to %s" % (image_hash.encode('hex'), sender))
             with open(self.db.HashMap().get_file(image_hash.encode("hex")), "rb") as filename:

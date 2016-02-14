@@ -1,4 +1,5 @@
 from twisted.trial import unittest
+from twisted.python import log
 
 from dht.node import Node
 from dht.utils import digest
@@ -8,6 +9,10 @@ from dht.tests.utils import mknode
 
 class MarketProtocolTest(unittest.TestCase):
     def setUp(self):
+        self.catcher = []
+        observer = self.catcher.append
+        log.addObserver(observer)
+        self.addCleanup(log.removeObserver, observer)
         self.node = Node(digest("test"), "127.0.0.1", 1234)
         self.router = RoutingTable(self, 20, self.node.id)
 
@@ -24,5 +29,10 @@ class MarketProtocolTest(unittest.TestCase):
         self.assertEqual(len(mp.listeners), 1)
 
     def test_rpc_get_image_invalid_image_hash(self):
+        catcher = self.catcher
         mp = MarketProtocol(self.node, self.router, 0, 0)
-        self.assertRaises(Exception, mp.rpc_get_image(mknode(), "invalid_hash"))
+        self.assertEqual(None, mp.rpc_get_image(mknode(), "invalid_hash"))
+        catch_exception = catcher.pop()
+        exception_message = catcher.pop()
+        self.assertEquals(catch_exception["message"][0], "[WARNING] could not find image 696e76616c69645f68617368")
+        self.assertEquals(exception_message["message"][0], "[WARNING] Image hash is not 20 characters invalid_hash")
