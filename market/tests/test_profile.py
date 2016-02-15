@@ -30,3 +30,10 @@ class MarketProfileTest(unittest.TestCase):
         self.assertEqual('test_name', p.name)
         self.assertEqual(2, p.location)
         self.assertEqual('hello world', p.about)
+
+    def test_MarketProfile_remove_field_success(self):
+        p = Profile(self.db)
+        p.remove_field("about")
+        user = p.get()
+        self.assertEqual('test_name', user.name)
+        self.assertEqual('', user.about)
