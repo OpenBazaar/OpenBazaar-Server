@@ -44,20 +44,10 @@ static char * createGUID()
     unsigned char sk[crypto_sign_SECRETKEYBYTES];
     crypto_sign_keypair(pk, sk);
 
-    //Sign the public key
-    const unsigned char * message = pk;
-    int message_len = crypto_sign_PUBLICKEYBYTES;
-
-    unsigned char signed_message[crypto_sign_BYTES + message_len];
-    unsigned long long signed_message_len;
-
-    crypto_sign(signed_message, &signed_message_len,
-            message, message_len, sk);
-
-    //Hash the signed key with sha512
-    crypto_hash_sha512(out, signed_message, signed_message_len);
-    char proof_of_work[32];
-    memcpy(proof_of_work, &out[32], 32);
+    //Hash the pubkey with sha512
+    crypto_hash_sha512(out, pk, crypto_sign_PUBLICKEYBYTES);
+    char proof_of_work[44];
+    memcpy(proof_of_work, &out[20], 44);
     char * pow = to_hex(proof_of_work, 3);
     valid_pow = test_pow(pow);
   }
