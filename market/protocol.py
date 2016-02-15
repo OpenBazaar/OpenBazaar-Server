@@ -410,7 +410,7 @@ class MarketProtocol(RPCProtocol):
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callDisputeClose(self, nodeToAsk, ephem_pubkey, encrypted_contract):
-        d = self.dispute_open(nodeToAsk, ephem_pubkey, encrypted_contract)
+        d = self.dispute_close(nodeToAsk, ephem_pubkey, encrypted_contract)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetRatings(self, nodeToAsk, listing_hash=None):
