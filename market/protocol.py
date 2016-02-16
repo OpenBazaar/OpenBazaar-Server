@@ -316,9 +316,9 @@ class MarketProtocol(RPCProtocol):
     def rpc_dispute_close(self, sender, pubkey, encrypted):
         try:
             box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
-            order = box.decrypt(encrypted)
-            contract = json.loads(order, object_pairs_hook=OrderedDict)
-            close_dispute(contract, self.db, self.get_message_listener(),
+            res = box.decrypt(encrypted)
+            resolution_json = json.loads(res, object_pairs_hook=OrderedDict)
+            close_dispute(resolution_json, self.db, self.get_message_listener(),
                           self.get_notification_listener(), self.multiplexer.testnet)
             self.router.addContact(sender)
             self.log.info("Contract dispute closed by %s" % sender)

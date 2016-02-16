@@ -854,7 +854,7 @@ class Server(object):
                     dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
                     dispute_json["dispute_resolution"]["signature"] = \
                         base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
-                            dispute_json["dispute_resolution"]["resolution"]))[:64])
+                            dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
 
                     def get_node(node_to_ask, recipient_guid, public_key):
                         def parse_response(response):
