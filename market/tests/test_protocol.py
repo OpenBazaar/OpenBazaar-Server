@@ -16,19 +16,19 @@ class MarketProtocolTest(unittest.TestCase):
         self.node = Node(digest("test"), "127.0.0.1", 1234)
         self.router = RoutingTable(self, 20, self.node.id)
 
-    def test_connect_multiplexer_correctly(self):
+    def test_MarketProtocol_connect_multiplexer_correctly(self):
         mp = MarketProtocol(0, 0, 0, 0)
         self.assertEqual(mp.multiplexer, None)
         mp.connect_multiplexer("3")
         self.assertEqual(mp.multiplexer, "3")
 
-    def test_add_listener_correctly(self):
+    def test_MarketProtocol_add_listener_correctly(self):
         mp = MarketProtocol(0, 0, 0, 0)
         self.assertEqual(len(mp.listeners), 0)
         mp.add_listener(3)
         self.assertEqual(len(mp.listeners), 1)
 
-    def test_rpc_get_image_invalid_image_hash(self):
+    def test_MarketProtocol_rpc_get_image_invalid_image_hash(self):
         catcher = self.catcher
         mp = MarketProtocol(self.node, self.router, 0, 0)
         self.assertEqual(None, mp.rpc_get_image(mknode(), "invalid_hash"))

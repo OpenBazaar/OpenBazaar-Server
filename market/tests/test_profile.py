@@ -83,8 +83,7 @@ class MarketProfileTest(unittest.TestCase):
 
     def test_MarketProfile_add_social_with_proof(self):
         p = Profile(self.db)
-        p.add_social_account("TWITTER", "test_twitter_username",
-                                "http://test_url")
+        p.add_social_account("TWITTER", "test_twitter_username", "http://test_url")
         u = p.get()
         self.assertEqual(2, len(u.social))
         self.assertEqual(1, u.social[0].type)
