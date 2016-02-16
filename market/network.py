@@ -22,7 +22,7 @@ from keys.bip32utils import derive_childkey
 from keys.keychain import KeyChain
 from log import Logger
 from market.contracts import Contract
-from market.moderation import process_dispute
+from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
 from market.protocol import MarketProtocol
 from market.transactions import BitcoinTransaction
@@ -559,6 +559,11 @@ class Server(object):
                                                 self.db, self.protocol.get_message_listener(),
                                                 self.protocol.get_notification_listener(),
                                                 self.protocol.multiplexer.testnet)
+                            elif p.type == objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"):
+                                close_dispute(json.loads(p.message, object_pairs_hook=OrderedDict),
+                                              self.db, self.protocol.get_message_listener(),
+                                              self.protocol.get_notification_listener(),
+                                              self.protocol.multiplexer.testnet)
                             else:
                                 listener.notify(p, signature)
                         except Exception:
@@ -904,48 +909,41 @@ class Server(object):
         vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
         buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
-        for moderator in contract["vendor_offer"]["listing"]["moderators"]:
-            if moderator["guid"] == contract["buyer_order"]["order"]["moderator"]:
-                masterkey_m = moderator["pubkeys"]["bitcoin"]["key"]
-
         outputs = []
 
-        outputs.append({'value': contract["dispute_resolution"]["resolution"]["moderator_fee"],
+        outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["moderator_fee"]),
                         'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': contract["dispute_resolution"]["resolution"]["buyer_payout"],
+            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["buyer_payout"]),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': contract["dispute_resolution"]["resolution"]["vendor_payout"],
+            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["vendor_payout"]),
                             'address': vendor_address})
 
-        tx = bitcointools.mktx(outpoints, outputs)
-        signatures = []
+        tx = BitcoinTransaction.make_unsigned(outpoints, outputs)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
         masterkey = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
         childkey = derive_childkey(masterkey, chaincode, bitcointools.MAINNET_PRIVATE)
 
-        mod_key = derive_childkey(masterkey_m, chaincode)
+        own_sig = tx.create_signature(childkey, redeem_script)
 
-        valid_inputs = 0
+        signatures = []
         for index in range(0, len(outpoints)):
-            sig = bitcointools.multisign(tx, index, redeem_script, childkey)
-            signatures.append({"input_index": index, "signature": sig})
+            sig_ob = {"index": index, "signatures": []}
+            for s in own_sig:
+                if int(s["index"]) == index:
+                    sig_ob["signatures"].append(s["signature"])
             for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
-                if s["input_index"] == index:
-                    if bitcointools.verify_tx_input(tx, index, redeem_script, s["signature"], mod_key):
-                        tx = bitcointools.apply_multisignatures(tx, index, str(redeem_script),
-                                                                sig, str(s["signature"]))
-                        valid_inputs += 1
+                if int(s["index"]) == index:
+                    sig_ob["signatures"].append(s["signature"])
+            signatures.append(sig_ob)
 
-        if valid_inputs == len(outpoints):
-            self.log.info("Broadcasting payout tx %s to network" % bitcointools.txhash(tx))
-            self.protocol.multiplexer.blockchain.broadcast(tx)
-        else:
-            raise Exception("Failed to reconstruct transaction with moderator signature.")
+        tx.multisign(signatures, redeem_script)
+        tx.broadcast(self.protocol.multiplexer.blockchain)
+        self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
 
     def get_ratings(self, node_to_ask, listing_hash=None):
         """
