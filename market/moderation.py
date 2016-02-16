@@ -143,7 +143,7 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     order_id = resolution_json["dispute_resolution"]["resolution"]["order_id"]
 
     if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
     elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
         file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
 
@@ -157,9 +157,11 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
             moderator_pubkey = unhexlify(moderator["pubkeys"]["guid"])
             moderator_avatar = unhexlify(moderator["avatar"])
 
+    print json.dumps(resolution_json, indent=4)
+
     verify_key = nacl.signing.VerifyKey(moderator_pubkey)
     verify_key.verify(json.dumps(resolution_json["dispute_resolution"]["resolution"], indent=4),
-                      resolution_json["dispute_resolution"]["signature"])
+                      base64.b64decode(resolution_json["dispute_resolution"]["signature"]))
 
     contract["dispute_resolution"] = resolution_json["dispute_resolution"]
 
