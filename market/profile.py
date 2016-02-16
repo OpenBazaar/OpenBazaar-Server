@@ -37,22 +37,30 @@ class Profile(object):
 
     def add_social_account(self, account_type, username, proof=None):
         s = self.profile.SocialAccount()
-        for social_account in self.profile.social:
-            if social_account.type == s.SocialType.Value(account_type.upper()):
-                self.profile.social.remove(social_account)
-        s.type = s.SocialType.Value(account_type.upper())
-        s.username = username
-        if proof:
-            s.proof_url = proof
-        self.profile.social.extend([s])
+        try:
+            self._remove_social_if_found(account_type)
+            s.type = s.SocialType.Value(account_type.upper())
+            s.username = username
+            if proof:
+                s.proof_url = proof
+            self.profile.social.extend([s])
+        except ValueError:
+            return
         self.db.set_proto(self.profile.SerializeToString())
 
     def remove_social_account(self, account_type):
-        s = self.profile.SocialAccount()
-        for social_account in self.profile.social:
-            if social_account.type == s.SocialType.Value(account_type.upper()):
-                self.profile.social.remove(social_account)
+        try:
+            self._remove_social_if_found(account_type)
+        except ValueError:
+            return
         self.db.set_proto(self.profile.SerializeToString())
+
+    def _remove_social_if_found(self, account_type):
+        s = self.profile.SocialAccount()
+        st = s.SocialType.Value(account_type.upper())
+        for social_account in self.profile.social:
+            if social_account.type == st:
+                self.profile.social.remove(social_account)
 
     def add_pgp_key(self, public_key, signature, guid):
         """
