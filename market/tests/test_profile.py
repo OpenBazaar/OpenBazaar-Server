@@ -38,6 +38,10 @@ class MarketProfileTest(unittest.TestCase):
         self.assertEqual(1, p.social[0].type)
         self.assertEqual('test_fb_username', p.social[0].username)
 
+    def test_MarketProtocol_get_serialized_success(self):
+        p = Profile(self.db).get(serialized=True)
+        self.assertEqual("\n\ttest_name\x10\x02R\x0bhello worldr\x14\x08\x01\x12\x10test_fb_username", p)
+
     def test_MarketProfile_remove_field_success(self):
         p = Profile(self.db)
         p.remove_field("about")
@@ -109,3 +113,11 @@ class MarketProfileTest(unittest.TestCase):
         self.assertEqual(1, len(u.social))
         self.assertEqual(1, u.social[0].type)
         self.assertEqual('test_fb_username', u.social[0].username)
+
+    def test_MarketProfile_update_success(self):
+        u = objects.Profile()
+        u.about = "updated world"
+        p = Profile(self.db)
+        p.update(u)
+        updated_user = p.get()
+        self.assertEqual("updated world", updated_user.about)
