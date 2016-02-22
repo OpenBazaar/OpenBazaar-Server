@@ -125,8 +125,8 @@ class OpenBazaarAPI(APIResource):
             request.finish()
 
         if "hash" in request.args and len(request.args["hash"][0]) == 40:
-            if self.db.HashMap().get_file(request.args["hash"][0]) is not None:
-                image_path = self.db.HashMap().get_file(request.args["hash"][0])
+            if self.db.filemap.get_file(request.args["hash"][0]) is not None:
+                image_path = self.db.filemap.get_file(request.args["hash"][0])
             else:
                 image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
             if not os.path.exists(image_path) and "guid" in request.args:
@@ -208,7 +208,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps({}))
                 request.finish()
             else:
-                temp_handle = self.db.ProfileStore().get_temp_handle()
+                temp_handle = self.db.profile.get_temp_handle()
                 parse_profile(p, None if temp_handle == "" else temp_handle)
         return server.NOT_DONE_YET
 
@@ -249,7 +249,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = self.db.ListingsStore().get_proto()
+            ser = self.db.listings.get_proto()
             if ser is not None:
                 l = objects.Listings()
                 l.ParseFromString(ser)
@@ -289,7 +289,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = self.db.FollowData().get_followers()
+            ser = self.db.follow.get_followers()
             if ser is not None:
                 f = objects.Followers()
                 f.ParseFromString(ser)
@@ -330,7 +330,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = self.db.FollowData().get_following()
+            ser = self.db.follow.get_following()
             if ser is not None:
                 f = objects.Following()
                 f.ParseFromString(ser)
@@ -503,7 +503,7 @@ class OpenBazaarAPI(APIResource):
                 self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
             else:
                 try:
-                    with open(self.db.HashMap().get_file(request.args["id"][0]), "r") as filename:
+                    with open(self.db.filemap.get_file(request.args["id"][0]), "r") as filename:
                         contract = json.loads(filename.read(), object_pairs_hook=OrderedDict)
                     parse_contract(contract)
                 except Exception:
@@ -573,7 +573,7 @@ class OpenBazaarAPI(APIResource):
     def delete_contract(self, request):
         try:
             if "id" in request.args:
-                file_path = self.db.HashMap().get_file(request.args["id"][0])
+                file_path = self.db.filemap.get_file(request.args["id"][0])
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                 c = Contract(self.db, contract=contract)
@@ -606,9 +606,8 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         else:
-            vendor_store = self.db.VendorStore()
             for vendor in self.protocol.vendors.values():
-                vendor_store.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
+                self.db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
             PortMapper().clean_my_mappings(self.kserver.node.port)
             self.protocol.shutdown()
             reactor.stop()
@@ -732,21 +731,21 @@ class OpenBazaarAPI(APIResource):
                     hash_value = digest(img).encode("hex")
                     with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
                         outfile.write(img)
-                    self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/media/" + hash_value)
+                    self.db.filemap.insert(hash_value, DATA_FOLDER + "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(avi)
-                self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/avatar")
+                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
                 with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                     outfile.write(hdr)
-                self.db.HashMap().insert(hash_value, DATA_FOLDER + "store/header")
+                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
@@ -788,7 +787,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def set_settings(self, request):
         try:
-            settings = self.db.Settings()
+            settings = self.db.settings
             resolver = RESOLVER if "resolver" not in request.args or request.args["resolver"][0] == "" \
                 else request.args["resolver"][0]
             if self.protocol.testnet:
@@ -829,7 +828,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/settings')
     @authenticated
     def get_settings(self, request):
-        settings = self.db.Settings().get()
+        settings = self.db.settings.get()
         if settings is None:
             request.write(json.dumps({}, indent=4))
             request.finish()
@@ -859,10 +858,9 @@ class OpenBazaarAPI(APIResource):
                 "network_connection": nat_type
             }
             mods = []
-            mods_db = self.db.ModeratorStore()
             try:
                 for guid in json.loads(settings[11]):
-                    info = mods_db.get_moderator(guid)
+                    info = self.db.moderators.get_moderator(guid)
                     if info is not None:
                         m = {
                             "guid": guid,
@@ -911,7 +909,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_notifications')
     @authenticated
     def get_notifications(self, request):
-        notifications = self.db.NotificationStore().get_notifications()
+        notifications = self.db.notifications.get_notifications()
         limit = int(request.args["limit"][0]) if "limit" in request.args else len(notifications)
         notification_list = []
         for n in notifications[len(notifications) - limit:]:
@@ -937,7 +935,7 @@ class OpenBazaarAPI(APIResource):
     def mark_notification_as_read(self, request):
         try:
             for notif_id in request.args["id"]:
-                self.db.NotificationStore().mark_as_read(notif_id)
+                self.db.notifications.mark_as_read(notif_id)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -963,7 +961,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_chat_messages')
     @authenticated
     def get_chat_messages(self, request):
-        messages = self.db.MessageStore().get_messages(request.args["guid"][0], "CHAT")
+        messages = self.db.messages.get_messages(request.args["guid"][0], "CHAT")
         limit = int(request.args["limit"][0]) if "limit" in request.args else len(messages)
         start = int(request.args["start"][0]) if "start" in request.args else 0
         message_list = []
@@ -986,7 +984,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_chat_conversations')
     @authenticated
     def get_chat_conversations(self, request):
-        messages = self.db.MessageStore().get_conversations()
+        messages = self.db.messages.get_conversations()
         request.setHeader('content-type', "application/json")
         request.write(str(bleach.clean(json.dumps(messages, indent=4), tags=ALLOWED_TAGS)))
         request.finish()
@@ -996,7 +994,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def mark_chat_message_as_read(self, request):
         try:
-            self.db.MessageStore().mark_as_read(request.args["guid"][0])
+            self.db.messages.mark_as_read(request.args["guid"][0])
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1008,7 +1006,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_sales')
     @authenticated
     def get_sales(self, request):
-        sales = self.db.Sales().get_all()
+        sales = self.db.sales.get_all()
         sales_list = []
         for sale in sales:
             sale_json = {
@@ -1031,7 +1029,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_purchases')
     @authenticated
     def get_purchases(self, request):
-        purchases = self.db.Purchases().get_all()
+        purchases = self.db.purchases.get_all()
         purchases_list = []
         for purchase in purchases:
             purchase_json = {
@@ -1210,7 +1208,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_cases')
     @authenticated
     def get_cases(self, request):
-        cases = self.db.Cases().get_all()
+        cases = self.db.cases.get_all()
         cases_list = []
         for case in cases:
             purchase_json = {
@@ -1235,7 +1233,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def order_messages(self, request):
         message_list = []
-        messages = self.db.MessageStore().get_order_messages(request.args["order_id"][0])
+        messages = self.db.messages.get_order_messages(request.args["order_id"][0])
         for m in messages:
             if m[0] is not None:
                 message_json = {
@@ -1279,10 +1277,10 @@ class OpenBazaarAPI(APIResource):
         else:
             ratings = []
             if "contract_id" in request.args and request.args["contract_id"][0] != "":
-                for rating in self.db.Ratings().get_listing_ratings(request.args["contract_id"][0]):
+                for rating in self.db.ratings.get_listing_ratings(request.args["contract_id"][0]):
                     ratings.append(json.loads(rating[0]))
             else:
-                for rating in self.db.Ratings().get_all_ratings():
+                for rating in self.db.ratings.get_all_ratings():
                     ratings.append(json.loads(rating[0]))
             request.setHeader('content-type', "application/json")
             request.write(str(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS)))

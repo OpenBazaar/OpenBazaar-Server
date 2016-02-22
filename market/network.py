@@ -74,12 +74,11 @@ class Server(object):
                 proto.ParseFromString(reread_data)
                 verify_key = nacl.signing.VerifyKey(pubkey, encoder=nacl.encoding.HexEncoder)
                 verify_key.verify("".join(proto.serializedNode), proto.signature)
-                v = self.db.VendorStore()
                 for peer in proto.serializedNode:
                     try:
                         n = objects.Node()
                         n.ParseFromString(peer)
-                        v.save_vendor(n.guid.encode("hex"), peer)
+                        self.db.vendors.save_vendor(n.guid.encode("hex"), peer)
                     except Exception:
                         pass
             except Exception, e:
@@ -331,7 +330,7 @@ class Server(object):
                     u.signature = result[1][2]
                     verify_key = nacl.signing.VerifyKey(node_to_follow.pubkey)
                     verify_key.verify(result[1][1], result[1][2])
-                    self.db.FollowData().follow(u)
+                    self.db.follow.follow(u)
                     return True
                 except Exception:
                     return False
@@ -363,7 +362,7 @@ class Server(object):
         def save_to_db(result):
             try:
                 if result[0] and result[1][0] == "True":
-                    self.db.FollowData().unfollow(node_to_unfollow.id)
+                    self.db.follow.unfollow(node_to_unfollow.id)
                     return True
                 else:
                     return False
@@ -473,7 +472,7 @@ class Server(object):
             return defer.DeferredList(ds).addCallback(how_many_reached)
         dl = []
         f = objects.Followers()
-        f.ParseFromString(self.db.FollowData().get_followers())
+        f.ParseFromString(self.db.follow.get_followers())
         for follower in f.followers:
             dl.append(self.kserver.resolve(follower.guid))
         self.log.info("broadcasting %s to followers" % message)
@@ -710,7 +709,7 @@ class Server(object):
                 if "blockchain_id" in contract["vendor_offer"]["listing"]["id"]:
                     handle = contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
                 guid_key = contract["vendor_offer"]["listing"]["id"]["pubkeys"]["guid"]
-                proof_sig = self.db.Purchases().get_proof_sig(order_id)
+                proof_sig = self.db.purchases.get_proof_sig(order_id)
         except Exception:
             try:
                 file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
@@ -739,16 +738,16 @@ class Server(object):
             if mod["guid"] == mod_guid:
                 mod_key = mod["pubkeys"]["guid"]
 
-        if self.db.Purchases().get_purchase(order_id) is not None:
-            self.db.Purchases().update_status(order_id, 4)
+        if self.db.purchases.get_purchase(order_id) is not None:
+            self.db.purchases.update_status(order_id, 4)
 
-        elif self.db.Sales().get_sale(order_id) is not None:
-            self.db.Sales().update_status(order_id, 4)
+        elif self.db.sales.get_sale(order_id) is not None:
+            self.db.sales.update_status(order_id, 4)
 
         avatar_hash = Profile(self.db).get().avatar_hash
 
-        self.db.MessageStore().save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
-                                            claim, time.time(), avatar_hash, "", True)
+        self.db.messages.save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
+                                      claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):
@@ -855,7 +854,7 @@ class Server(object):
                     signatures = tx.create_signature(moderator_priv, redeem_script)
                     dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
                     dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
-                    dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.Cases().get_claim(order_id)
+                    dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.cases.get_claim(order_id)
                     dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
                     dispute_json["dispute_resolution"]["signature"] = \
                         base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
@@ -884,7 +883,7 @@ class Server(object):
 
                     self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
                     self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
-                    self.db.Cases().update_status(order_id, 1)
+                    self.db.cases.update_status(order_id, 1)
 
             # TODO: add a timeout on this call
             self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
@@ -898,10 +897,10 @@ class Server(object):
         """
         if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
             file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.Purchases().get_outpoint(order_id))
+            outpoints = pickle.loads(self.db.purchases.get_outpoint(order_id))
         elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
             file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.Sales().get_outpoint(order_id))
+            outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
