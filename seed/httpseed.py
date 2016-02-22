@@ -31,6 +31,7 @@ from twisted.web import resource, server
 
 def run(*args):
     TESTNET = args[0]
+    HTTPPORT = args[1]
 
     # Create the database
     db = Database(testnet=TESTNET)
@@ -187,7 +188,7 @@ def run(*args):
             return server.NOT_DONE_YET
 
     server_protocol = server.Site(WebResource(kserver))
-    reactor.listenTCP(8080, server_protocol)
+    reactor.listenTCP(HTTPPORT, server_protocol)
 
     reactor.run()
 
@@ -225,13 +226,14 @@ commands:
         python openbazaard.py start [-d DAEMON]''')
             parser.add_argument('-d', '--daemon', action='store_true', help="run the server in the background")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
+            parser.add_argument('-p', '--port', help="set the http port", default=8080)
             args = parser.parse_args(sys.argv[2:])
             print "OpenBazaar Seed Server v0.1 starting..."
             unix = ("linux", "linux2", "darwin")
             if args.daemon and platform.system().lower() in unix:
-                self.daemon.start(args.testnet)
+                self.daemon.start(args.testnet, int(args.port))
             else:
-                run(args.testnet)
+                run(args.testnet, int(args.port))
 
         def stop(self):
             # pylint: disable=W0612

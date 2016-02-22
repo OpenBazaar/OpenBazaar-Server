@@ -54,7 +54,7 @@ class Contract(object):
             self.contract = contract
         elif hash_value is not None:
             try:
-                file_path = self.db.HashMap().get_file(hash_value.encode("hex"))
+                file_path = self.db.filemap.get_file(hash_value.encode("hex"))
                 if file_path is None:
                     file_path = DATA_FOLDER + "cache/" + hash_value.encode("hex")
                 with open(file_path, 'r') as filename:
@@ -226,7 +226,7 @@ class Contract(object):
             listing["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
             listing["shipping"]["est_delivery"][
                 "international"] = est_delivery_international
-        if profile.HasField("handle"):
+        if profile.handle != "":
             self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"] = profile.handle
         if images is not None:
             self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
@@ -243,7 +243,7 @@ class Contract(object):
         if moderators is not None:
             self.contract["vendor_offer"]["listing"]["moderators"] = []
             for mod in moderators:
-                mod_info = self.db.ModeratorStore().get_moderator(mod)
+                mod_info = self.db.moderators.get_moderator(mod)
                 if mod_info is not None:
                     moderator = {
                         "guid": mod,
@@ -316,7 +316,7 @@ class Contract(object):
             }
         }
         SelectParams("testnet" if self.testnet else "mainnet")
-        if profile.HasField("handle"):
+        if profile.handle != "":
             order_json["buyer_order"]["order"]["id"]["blockchain_id"] = profile.handle
         if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
             order_json["buyer_order"]["order"]["shipping"] = {}
@@ -463,7 +463,7 @@ class Contract(object):
             conf_json["vendor_order_confirmation"]["invoice"]["comments"] = comments
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         # apply signatures
-        outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
+        outpoints = json.loads(self.db.sales.get_outpoint(order_id))
         if "moderator" in self.contract["buyer_order"]["order"]:
             redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
             tx = BitcoinTransaction.make_unsigned(outpoints, payout_address, testnet=self.testnet)
@@ -484,14 +484,14 @@ class Contract(object):
             tx.sign(vendor_priv)
             tx.broadcast(self.blockchain)
             self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
-            self.db.Sales().update_payment_tx(order_id, tx.get_hash())
+            self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
             base64.b64encode(self.keychain.signing_key.sign(confirmation)[:64])
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
-        self.db.Sales().update_status(order_id, 2)
+        self.db.sales.update_status(order_id, 2)
         file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -519,13 +519,12 @@ class Contract(object):
 
             # TODO: verify signature
             # TODO: verify payout object
-            purchase_db = self.db.Purchases()
-            status = purchase_db.get_status(contract_hash)
+            status = self.db.purchases.get_status(contract_hash)
             if status == 2 or status == 3:
                 raise Exception("Order confirmation already processed for this contract")
 
             # update the order status in the db
-            purchase_db.update_status(contract_hash, 2)
+            self.db.purchases.update_status(contract_hash, 2)
             file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
 
             # update the contract in the file system
@@ -602,12 +601,12 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["amount"] = amount
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["listing"] = listing_hash
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["proof_of_tx"] = \
-                base64.b64encode(self.db.Purchases().get_proof_sig(order_id))
+                base64.b64encode(self.db.purchases.get_proof_sig(order_id))
 
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
             self.blockchain.refresh_connection()
-            outpoints = json.loads(self.db.Purchases().get_outpoint(order_id))
+            outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
@@ -649,7 +648,7 @@ class Contract(object):
                 bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(json.dumps(
                     self.contract["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4), buyer_priv))
 
-        self.db.Purchases().update_status(order_id, 3)
+        self.db.purchases.update_status(order_id, 3)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -682,7 +681,7 @@ class Contract(object):
         # TODO: verify buyer signature
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
 
-        if self.db.Sales().get_status(order_id) == 3:
+        if self.db.sales.get_status(order_id) == 3:
             raise Exception("Receipt already processed for this order")
 
         title = self.contract["vendor_offer"]["listing"]["item"]["title"]
@@ -698,7 +697,7 @@ class Contract(object):
 
         if "moderator" in self.contract["buyer_order"]["order"]:
             self.blockchain.refresh_connection()
-            outpoints = json.loads(self.db.Sales().get_outpoint(order_id))
+            outpoints = json.loads(self.db.sales.get_outpoint(order_id))
             payout_address = str(self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"])
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
             value = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["value"]
@@ -724,18 +723,18 @@ class Contract(object):
             tx.broadcast(self.blockchain)
             self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
 
-            self.db.Sales().update_payment_tx(order_id, tx.get_hash())
+            self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
             self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
         else:
             self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
 
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
-            self.db.Ratings().add_rating(self.contract["buyer_receipt"]["receipt"]
-                                         ["rating"]["tx_summary"]["listing"],
-                                         json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"], indent=4))
+            self.db.ratings.add_rating(self.contract["buyer_receipt"]["receipt"]
+                                       ["rating"]["tx_summary"]["listing"],
+                                       json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"], indent=4))
 
-        self.db.Sales().update_status(order_id, 3)
+        self.db.sales.update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -773,29 +772,29 @@ class Contract(object):
             buyer = self.contract["buyer_order"]["order"]["id"]["guid"]
         if is_purchase:
             file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
-            self.db.Purchases().new_purchase(order_id,
-                                             self.contract["vendor_offer"]["listing"]["item"]["title"],
-                                             self.contract["vendor_offer"]["listing"]["item"]["description"],
-                                             time.time(),
-                                             self.contract["buyer_order"]["order"]["payment"]["amount"],
-                                             payment_address,
-                                             0,
-                                             thumbnail_hash,
-                                             vendor,
-                                             proofSig,
-                                             self.contract["vendor_offer"]["listing"]["metadata"]["category"])
+            self.db.purchases.new_purchase(order_id,
+                                           self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                           self.contract["vendor_offer"]["listing"]["item"]["description"],
+                                           time.time(),
+                                           self.contract["buyer_order"]["order"]["payment"]["amount"],
+                                           payment_address,
+                                           0,
+                                           thumbnail_hash,
+                                           vendor,
+                                           proofSig,
+                                           self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
             file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
-            self.db.Sales().new_sale(order_id,
-                                     self.contract["vendor_offer"]["listing"]["item"]["title"],
-                                     self.contract["vendor_offer"]["listing"]["item"]["description"],
-                                     time.time(),
-                                     self.contract["buyer_order"]["order"]["payment"]["amount"],
-                                     payment_address,
-                                     0,
-                                     thumbnail_hash,
-                                     buyer,
-                                     self.contract["vendor_offer"]["listing"]["metadata"]["category"])
+            self.db.sales.new_sale(order_id,
+                                   self.contract["vendor_offer"]["listing"]["item"]["title"],
+                                   self.contract["vendor_offer"]["listing"]["item"]["description"],
+                                   time.time(),
+                                   self.contract["buyer_order"]["order"]["payment"]["amount"],
+                                   payment_address,
+                                   0,
+                                   thumbnail_hash,
+                                   buyer,
+                                   self.contract["vendor_offer"]["listing"]["metadata"]["category"])
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -843,8 +842,8 @@ class Contract(object):
                         self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
                                                           order_id, title, image_hash)
                         # update the db
-                        self.db.Purchases().update_status(order_id, 1)
-                        self.db.Purchases().update_outpoint(order_id, json.dumps(self.outpoints))
+                        self.db.purchases.update_status(order_id, 1)
+                        self.db.purchases.update_outpoint(order_id, json.dumps(self.outpoints))
                         self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
                     else:
                         unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
@@ -856,8 +855,8 @@ class Contract(object):
                             handle = ""
                         self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
                                                           title, image_hash)
-                        self.db.Sales().update_status(order_id, 1)
-                        self.db.Sales().update_outpoint(order_id, json.dumps(self.outpoints))
+                        self.db.sales.update_status(order_id, 1)
+                        self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
                         self.log.info("Received new order %s" % order_id)
 
                     os.rename(unfunded_path, in_progress_path)
@@ -877,18 +876,17 @@ class Contract(object):
         """
 
         # get the file path
-        h = self.db.HashMap()
-        file_path = h.get_file(self.contract["vendor_offer"]["listing"]["contract_id"])
+        file_path = self.db.filemap.get_file(self.contract["vendor_offer"]["listing"]["contract_id"])
 
         # maybe delete the images from disk
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"] and delete_images:
             for image_hash in self.contract["vendor_offer"]["listing"]["item"]["image_hashes"]:
                 # delete from disk
-                image_path = h.get_file(image_hash)
+                image_path = self.db.filemap.get_file(image_hash)
                 if os.path.exists(image_path):
                     os.remove(image_path)
-                # remove pointer to the image from the HashMap
-                h.delete(image_hash)
+                # remove pointer to the image from the filemap
+                self.db.filemap.delete(image_hash)
 
         # delete the contract from disk
         if os.path.exists(file_path):
@@ -896,10 +894,10 @@ class Contract(object):
 
         # delete the listing metadata from the db
         contract_hash = unhexlify(self.contract["vendor_offer"]["listing"]["contract_id"])
-        self.db.ListingsStore().delete_listing(contract_hash)
+        self.db.listings.delete_listing(contract_hash)
 
-        # remove the pointer to the contract from the HashMap
-        h.delete(contract_hash.encode("hex"))
+        # remove the pointer to the contract from the filemap
+        self.db.filemap.delete(contract_hash.encode("hex"))
 
     def save(self):
         """
@@ -923,6 +921,8 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
+        if isinstance(self.previous_title, unicode):
+            self.previous_title = self.previous_title.encode('utf8')
         if self.previous_title and self.previous_title != self.contract["vendor_offer"]["listing"]["item"]["title"]:
             old_name = str(self.previous_title[:100])
             old_name = re.sub(r"[^\w\s]", '', file_name)
@@ -959,10 +959,10 @@ class Contract(object):
                 data.ships_to.append(CountryCode.Value(region.upper()))
 
         # save the mapping of the contract file path and contract hash in the database
-        self.db.HashMap().insert(data.contract_hash.encode("hex"), file_path)
+        self.db.filemap.insert(data.contract_hash.encode("hex"), file_path)
 
         # save the `ListingMetadata` protobuf to the database as well
-        self.db.ListingsStore().add_listing(data)
+        self.db.listings.add_listing(data)
 
     def verify(self, sender_key):
         """
@@ -978,7 +978,7 @@ class Contract(object):
             contract_id = self.contract["vendor_offer"]["listing"]["contract_id"]
 
             # verify that the reference hash matches the contract and that the contract actually exists
-            if contract_hash != ref_hash or not self.db.HashMap().get_file(contract_id):
+            if contract_hash != ref_hash or not self.db.filemap.get_file(contract_id):
                 raise Exception("Order for contract that doesn't exist")
 
             # verify the vendor's own signature
@@ -1293,9 +1293,9 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
         except Exception:
             pass
     libbitcoin_client.refresh_connection()
-    purchases = db.Purchases().get_unfunded()
+    purchases = db.purchases.get_unfunded()
     for purchase in purchases:
         check(purchase)
-    sales = db.Sales().get_unfunded()
+    sales = db.sales.get_unfunded()
     for sale in sales:
         check(sale)

@@ -1,11 +1,14 @@
 /*
 Get the protobuf compiler:
-sudo apt-get install protobuf-compiler
+You will need to manually compile protobuf v3.0.0-beta-2
+https://github.com/google/protobuf/releases/tag/v3.0.0-beta-2
 
 Compile with:
 cd path/to/protos/
 protoc --python_out=./ countries.proto
 */
+
+syntax = "proto3";
 
 enum CountryCode {
     NA                             = 0; // Use this for digital goods or services

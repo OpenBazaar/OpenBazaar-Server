@@ -50,7 +50,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("serving contract %s to %s" % (contract_hash.encode('hex'), sender))
         self.router.addContact(sender)
         try:
-            with open(self.db.HashMap().get_file(contract_hash.encode("hex")), "r") as filename:
+            with open(self.db.filemap.get_file(contract_hash.encode("hex")), "r") as filename:
                 contract = filename.read()
             return [contract]
         except Exception:
@@ -64,7 +64,7 @@ class MarketProtocol(RPCProtocol):
                 self.log.warning("Image hash is not 20 characters %s" % image_hash)
                 raise Exception("Invalid image hash")
             self.log.info("serving image %s to %s" % (image_hash.encode('hex'), sender))
-            with open(self.db.HashMap().get_file(image_hash.encode("hex")), "rb") as filename:
+            with open(self.db.filemap.get_file(image_hash.encode("hex")), "rb") as filename:
                 image = filename.read()
             return [image]
         except Exception:
@@ -103,7 +103,7 @@ class MarketProtocol(RPCProtocol):
         try:
             p = Profile(self.db).get()
             l = Listings()
-            l.ParseFromString(self.db.ListingsStore().get_proto())
+            l.ParseFromString(self.db.listings.get_proto())
             l.handle = p.handle
             l.avatar_hash = p.avatar_hash
             return [l.SerializeToString(), self.signing_key.sign(l.SerializeToString())[:64]]
@@ -115,7 +115,7 @@ class MarketProtocol(RPCProtocol):
         self.log.info("serving metadata for contract %s to %s" % (contract_hash.encode("hex"), sender))
         self.router.addContact(sender)
         try:
-            proto = self.db.ListingsStore().get_proto()
+            proto = self.db.listings.get_proto()
             p = Profile(self.db).get()
             l = Listings()
             l.ParseFromString(proto)
@@ -142,7 +142,7 @@ class MarketProtocol(RPCProtocol):
             if f.following != self.node.id:
                 raise Exception('Following wrong node')
             f.signature = signature
-            self.db.FollowData().set_follower(f)
+            self.db.follow.set_follower(f)
             proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
@@ -167,7 +167,7 @@ class MarketProtocol(RPCProtocol):
         try:
             verify_key = nacl.signing.VerifyKey(sender.pubkey)
             verify_key.verify("unfollow:" + self.node.id, signature)
-            f = self.db.FollowData()
+            f = self.db.follow
             f.delete_follower(sender.id)
             return ["True"]
         except Exception:
@@ -177,7 +177,7 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_followers(self, sender):
         self.log.info("serving followers list to %s" % sender)
         self.router.addContact(sender)
-        ser = self.db.FollowData().get_followers()
+        ser = self.db.follow.get_followers()
         if ser is None:
             return None
         else:
@@ -186,14 +186,14 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
         self.router.addContact(sender)
-        ser = self.db.FollowData().get_following()
+        ser = self.db.follow.get_following()
         if ser is None:
             return None
         else:
             return [ser, self.signing_key.sign(ser)[:64]]
 
     def rpc_broadcast(self, sender, message, signature):
-        if len(message) <= 140 and self.db.FollowData().is_following(sender.id):
+        if len(message) <= 140 and self.db.follow.is_following(sender.id):
             try:
                 verify_key = nacl.signing.VerifyKey(sender.pubkey)
                 verify_key.verify(message, signature)
@@ -335,10 +335,10 @@ class MarketProtocol(RPCProtocol):
         try:
             ratings = []
             if listing_hash:
-                for rating in self.db.Ratings().get_listing_ratings(listing_hash.encode("hex")):
+                for rating in self.db.ratings.get_listing_ratings(listing_hash.encode("hex")):
                     ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             else:
-                for rating in self.db.Ratings().get_all_ratings():
+                for rating in self.db.ratings.get_all_ratings():
                     ratings.append(json.loads(rating[0], object_pairs_hook=OrderedDict))
             ret = json.dumps(ratings).encode("zlib")
             return [str(ret), self.signing_key.sign(ret)[:64]]

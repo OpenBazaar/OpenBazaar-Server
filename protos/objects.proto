@@ -1,123 +1,125 @@
 /*
 Get the protobuf compiler:
-sudo apt-get install protobuf-compiler
+You will need to manually compile protobuf v3.0.0-beta-2
+https://github.com/google/protobuf/releases/tag/v3.0.0-beta-2
 
 Compile with:
 cd path/to/protos/
 protoc --python_out=./ objects.proto
 */
 
+syntax = "proto3";
 import "countries.proto";
 
 //An object containing information about the node.
 //Some fields are optional as they aren't needed in all situations.
 message Node {
-    required bytes guid             = 1;
-    required bytes publicKey        = 2;
-    required NATType natType        = 3;
-    required IPAddress nodeAddress  = 4;
-    optional IPAddress relayAddress = 5;
-    optional bool vendor            = 6 [default = false];
+    bytes guid             = 1;
+    bytes publicKey        = 2;
+    NATType natType        = 3;
+    IPAddress nodeAddress  = 4;
+    IPAddress relayAddress = 5;
+    bool vendor            = 6;
 
     message IPAddress {
-        required string ip    = 1;
-        required uint32 port  = 2;
+        string ip    = 1;
+        uint32 port  = 2;
     }
 }
 
 enum NATType {
-    FULL_CONE  = 1;
-    RESTRICTED = 2;
-    SYMMETRIC  = 3;
+    FULL_CONE  = 0;
+    RESTRICTED = 1;
+    SYMMETRIC  = 2;
 }
 
 
 //The value returned by a FIND_VALUE rpc call
 //Typically a list of these will be returned for any given keyword.
 message Value {
-    optional bytes keyword        = 1;
-        required bytes valueKey       = 2;
-        required bytes serializedData = 3;
-        required uint32 ttl           = 4;
+    bytes keyword        = 1;
+    bytes valueKey       = 2;
+    bytes serializedData = 3;
+    uint32 ttl           = 4;
 }
 
 //A list of these is sent in an INV packet
 message Inv {
-    required bytes keyword  = 1;
-    required bytes valueKey = 2;
+    bytes keyword  = 1;
+    bytes valueKey = 2;
 }
 
 //The object returned by the GET_PROFILE rpc call
 message Profile {
-        required string name              = 1;
-        required CountryCode location     = 2;
-        optional PublicKey guid_key       = 3;
-        optional PublicKey bitcoin_key    = 4; // guid signature covers bitcoin key
-        optional bool nsfw                = 5 [default = false];
-        optional bool vendor              = 6 [default = false];
-        optional bool moderator           = 7 [default = false];
-        optional float moderation_fee     = 8 [default = 1.0];
-        optional string handle            = 9;
-        optional string about             = 10;
-        optional string short_description = 11;
-        optional string website           = 12;
-        optional string email             = 13;
-        repeated SocialAccount social     = 14;
-        optional uint32 primary_color     = 15 [default = 551582];
-        optional uint32 secondary_color   = 16 [default = 3243448];
-        optional uint32 background_color  = 17 [default = 407379];
-        optional uint32 text_color        = 18 [default = 16777215];
-        optional uint32 follower_count    = 19 [default = 0];
-        optional uint32 following_count   = 20 [default = 0];
-        optional PublicKey pgp_key        = 21; // pgp signature covers guid
-        optional bytes avatar_hash        = 22;
-        optional bytes header_hash        = 23;
+    string name                   = 1;
+    CountryCode location          = 2;
+    PublicKey guid_key            = 3;
+    PublicKey bitcoin_key         = 4; // guid signature covers bitcoin key
+    bool nsfw                     = 5;
+    bool vendor                   = 6;
+    bool moderator                = 7;
+    float moderation_fee          = 8;
+    string handle                 = 9;
+    string about                  = 10;
+    string short_description      = 11;
+    string website                = 12;
+    string email                  = 13;
+    repeated SocialAccount social = 14;
+    uint32 primary_color          = 15;
+    uint32 secondary_color        = 16;
+    uint32 background_color       = 17;
+    uint32 text_color             = 18;
+    uint32 follower_count         = 19;
+    uint32 following_count        = 20;
+    PublicKey pgp_key             = 21; // pgp signature covers guid
+    bytes avatar_hash             = 22;
+    bytes header_hash             = 23;
 
-        // Social media account for the profile
+    // Social media account for the profile
     message SocialAccount {
-        required SocialType type  = 1;
-        required string username  = 2;
-        optional string proof_url = 3;
+        SocialType type  = 1;
+        string username  = 2;
+        string proof_url = 3;
 
         enum SocialType {
-                    FACEBOOK  = 1;
-                    TWITTER   = 2;
-                    INSTAGRAM = 3;
-                    SNAPCHAT  = 4;
+            FACEBOOK  = 0;
+            TWITTER   = 1;
+            INSTAGRAM = 2;
+            SNAPCHAT  = 3;
         }
     }
 
     message PublicKey {
-        required bytes public_key = 1;
-        required bytes signature  = 2;
+        bytes public_key = 1;
+        bytes signature  = 2;
     }
 }
 
 message Metadata {
-    required string name              = 1;
-    optional string handle            = 2;
-    optional string short_description = 3;
-    required bytes avatar_hash        = 4;
-    required bool nsfw                = 5;
+    string name              = 1;
+    string handle            = 2;
+    string short_description = 3;
+    bytes avatar_hash        = 4;
+    bool nsfw                = 5;
 }
 
 message Listings {
     repeated ListingMetadata listing = 1;
-    optional string handle           = 2;
-    optional bytes avatar_hash       = 3;
+    string handle                    = 2;
+    bytes avatar_hash                = 3;
 
     message ListingMetadata {
-        required bytes contract_hash  = 1;
-        required string title         = 2;
-        optional bytes thumbnail_hash = 3;
-        optional string category      = 4;
-        required float price          = 5;
-        required string currency_code = 6;
-        required bool nsfw            = 7;
-        required CountryCode origin   = 8;
+        bytes contract_hash           = 1;
+        string title                  = 2;
+        bytes thumbnail_hash          = 3;
+        string category               = 4;
+        float price                   = 5;
+        string currency_code          = 6;
+        bool nsfw                     = 7;
+        CountryCode origin            = 8;
         repeated CountryCode ships_to = 9;
-        optional bytes avatar_hash    = 10;
-        optional string handle        = 11;
+        bytes avatar_hash             = 10;
+        string handle                 = 11;
     }
 }
 
@@ -125,11 +127,11 @@ message Followers {
     repeated Follower followers = 1;
 
     message Follower {
-        required bytes guid          = 1;
-        required bytes following     = 2;
-        required bytes pubkey        = 3;
-        required Metadata metadata   = 4;
-        optional bytes signature     = 5;
+        bytes guid          = 1;
+        bytes following     = 2;
+        bytes pubkey        = 3;
+        Metadata metadata   = 4;
+        bytes signature     = 5;
     }
 }
 
@@ -137,30 +139,30 @@ message Following {
     repeated User users = 1;
 
     message User {
-        required bytes guid          = 1;
-        required bytes pubkey        = 2;
-        required Metadata metadata   = 3;
-        optional bytes signature     = 4;
+        bytes guid          = 1;
+        bytes pubkey        = 2;
+        Metadata metadata   = 3;
+        bytes signature     = 4;
     }
 }
 
 message PlaintextMessage {
-    required bytes sender_guid       = 1;
-    optional string handle           = 2;
-    required bytes pubkey            = 3;
-    optional string subject          = 4;
-    required Type type               = 5;
-    required string message          = 6;
-    required uint64 timestamp        = 7;
-    optional bytes avatar_hash       = 8;
-    optional bytes signature         = 9;
+    bytes sender_guid                = 1;
+    string handle                    = 2;
+    bytes pubkey                     = 3;
+    string subject                   = 4;
+    Type type                        = 5;
+    string message                   = 6;
+    uint64 timestamp                 = 7;
+    bytes avatar_hash                = 8;
+    bytes signature                  = 9;
 
     enum Type {
-        CHAT                 = 1;
-        ORDER                = 2;
-        DISPUTE_OPEN         = 3;
-        DISPUTE_CLOSE        = 4;
-        ORDER_CONFIRMATION   = 5;
-        RECEIPT              = 6;
+        CHAT                 = 0;
+        ORDER                = 1;
+        DISPUTE_OPEN         = 2;
+        DISPUTE_CLOSE        = 3;
+        ORDER_CONFIRMATION   = 4;
+        RECEIPT              = 5;
     }
 }
