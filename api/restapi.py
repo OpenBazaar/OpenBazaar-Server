@@ -396,10 +396,10 @@ class OpenBazaarAPI(APIResource):
             if "handle" in request.args:
                 if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
                     u.handle = request.args["handle"][0]
-                    p.db.set_temp_handle("")
+                    self.db.profile.set_temp_handle("")
                 else:
                     u.handle = ""
-                    p.db.set_temp_handle(request.args["handle"][0])
+                    self.db.profile.set_temp_handle(request.args["handle"][0])
             if "about" in request.args:
                 u.about = request.args["about"][0]
             if "short_description" in request.args:

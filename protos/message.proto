@@ -1,55 +1,57 @@
 /*
 Get the protobuf compiler:
-sudo apt-get install protobuf-compiler
+You will need to manually compile protobuf v3.0.0-beta-2
+https://github.com/google/protobuf/releases/tag/v3.0.0-beta-2
 
 Compile with:
 cd path/to/protos/
 protoc --python_out=./ message.proto
 */
 
+syntax = "proto3";
 import "objects.proto";
 
 //This is the message structure for OpenBazaar messages going over the wire
 message Message {
-    required bytes messageID        = 1;
-    required Node sender            = 2;
-    required Command command        = 3;
-    required uint32 protoVer        = 4;
-    repeated bytes arguments        = 5;
-    optional bool testnet           = 6 [default = false];
-    optional bytes signature        = 7;
+    bytes messageID          = 1;
+    Node sender              = 2;
+    Command command          = 3;
+    uint32 protoVer          = 4;
+    repeated bytes arguments = 5;
+    bool testnet             = 6;
+    bytes signature          = 7;
 }
 
 //A list of commands accepted by nodes
 enum Command {
-    PING                    = 1;
-    STUN                    = 2;
-    HOLE_PUNCH              = 3;
-    STORE                   = 4;
-    DELETE                  = 5;
-    INV                     = 6;
-    VALUES                  = 7;
-    BROADCAST               = 8;
-    MESSAGE                 = 9;
-    FOLLOW                  = 10;
-    UNFOLLOW                = 11;
-    ORDER                   = 12;
-    ORDER_CONFIRMATION      = 13;
-    COMPLETE_ORDER          = 14;
-    FIND_NODE               = 15;
-    FIND_VALUE              = 16;
-    GET_CONTRACT            = 17;
-    GET_IMAGE               = 18;
-    GET_PROFILE             = 19;
-    GET_LISTINGS            = 20;
-    GET_USER_METADATA       = 21;
-    GET_CONTRACT_METADATA   = 22;
-    GET_FOLLOWING           = 23;
-    GET_FOLLOWERS           = 24;
-    GET_RATINGS             = 25;
-    DISPUTE_OPEN            = 26;
-    DISPUTE_CLOSE           = 27;
-    REFUND                  = 28;
+    PING                    = 0;
+    STUN                    = 1;
+    HOLE_PUNCH              = 2;
+    STORE                   = 3;
+    DELETE                  = 4;
+    INV                     = 5;
+    VALUES                  = 6;
+    BROADCAST               = 7;
+    MESSAGE                 = 8;
+    FOLLOW                  = 9;
+    UNFOLLOW                = 10;
+    ORDER                   = 11;
+    ORDER_CONFIRMATION      = 12;
+    COMPLETE_ORDER          = 13;
+    FIND_NODE               = 14;
+    FIND_VALUE              = 15;
+    GET_CONTRACT            = 16;
+    GET_IMAGE               = 17;
+    GET_PROFILE             = 18;
+    GET_LISTINGS            = 19;
+    GET_USER_METADATA       = 20;
+    GET_CONTRACT_METADATA   = 21;
+    GET_FOLLOWING           = 22;
+    GET_FOLLOWERS           = 23;
+    GET_RATINGS             = 24;
+    DISPUTE_OPEN            = 25;
+    DISPUTE_CLOSE           = 26;
+    REFUND                  = 27;
 
     // Error responses
     BAD_REQUEST             = 400;

@@ -226,7 +226,7 @@ class Contract(object):
             listing["shipping"]["est_delivery"]["domestic"] = est_delivery_domestic
             listing["shipping"]["est_delivery"][
                 "international"] = est_delivery_international
-        if profile.HasField("handle"):
+        if profile.handle != "":
             self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"] = profile.handle
         if images is not None:
             self.contract["vendor_offer"]["listing"]["item"]["image_hashes"] = []
@@ -316,7 +316,7 @@ class Contract(object):
             }
         }
         SelectParams("testnet" if self.testnet else "mainnet")
-        if profile.HasField("handle"):
+        if profile.handle != "":
             order_json["buyer_order"]["order"]["id"]["blockchain_id"] = profile.handle
         if self.contract["vendor_offer"]["listing"]["metadata"]["category"] == "physical good":
             order_json["buyer_order"]["order"]["shipping"] = {}

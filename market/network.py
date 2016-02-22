@@ -269,7 +269,7 @@ class Server(object):
                 verify_key.verify(result[1][0], result[1][1])
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
-                if l.HasField("thumbnail_hash"):
+                if l.thumbnail_hash != "":
                     if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
                         self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
