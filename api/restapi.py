@@ -580,6 +580,8 @@ class OpenBazaarAPI(APIResource):
                 if "keywords" in c.contract["vendor_offer"]["listing"]["item"]:
                     for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
                         if keyword != "":
+                            if isinstance(keyword, unicode):
+                                keyword = keyword.encode('utf8')
                             self.kserver.delete(keyword.lower(), unhexlify(c.get_contract_id()),
                                                 self.keychain.signing_key.sign(
                                                     unhexlify(c.get_contract_id()))[:64])

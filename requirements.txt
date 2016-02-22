@@ -1,4 +1,4 @@
-protobuf==2.6.1
+protobuf==3.0.0b2
 Twisted==14.0.2
 txrudp==0.5.1
 pystun==0.1.0
