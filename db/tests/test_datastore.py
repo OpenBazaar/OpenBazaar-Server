@@ -52,21 +52,21 @@ class DatastoreTest(unittest.TestCase):
         self.f.pubkey = ''
         self.f.metadata.MergeFrom(self.m)
 
-        self.hm = self.db.HashMap()
+        self.hm = self.db.filemap
         self.hm.delete_all()
 
-        self.ps = self.db.ProfileStore()
-        self.ls = self.db.ListingsStore()
-        self.ks = self.db.KeyStore()
-        self.fd = self.db.FollowData()
-        self.ms = self.db.MessageStore()
-        self.ns = self.db.NotificationStore()
-        self.vs = self.db.VendorStore()
-        self.bs = self.db.BroadcastStore()
-        self.moderators = self.db.ModeratorStore()
-        self.purchases = self.db.Purchases()
-        self.sales = self.db.Sales()
-        self.settings = self.db.Settings()
+        self.ps = self.db.profile
+        self.ls = self.db.listings
+        self.ks = self.db.keys
+        self.fd = self.db.follow
+        self.ms = self.db.messages
+        self.ns = self.db.notifications
+        self.vs = self.db.vendors
+        self.bs = self.db.broadcasts
+        self.moderators = self.db.moderators
+        self.purchases = self.db.purchases
+        self.sales = self.db.sales
+        self.settings = self.db.settings
 
     def tearDown(self):
         os.remove("test.db")

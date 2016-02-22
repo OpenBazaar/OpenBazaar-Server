@@ -78,18 +78,19 @@ class WSProtocol(Protocol):
             self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node)
 
     def get_moderators(self, message_id):
-        m = self.factory.db.ModeratorStore()
 
         def parse_response(moderators):
             if moderators is not None:
-                m.clear_all()
+                self.factory.db.moderators.clear_all()
 
                 def parse_profile(profile, node):
                     if profile is not None:
                         # TODO: should check signatures here before entering in database
-                        m.save_moderator(node.id.encode("hex"), node.pubkey, profile.bitcoin_key.public_key,
-                                         profile.bitcoin_key.signature, profile.name, profile.avatar_hash,
-                                         profile.moderation_fee, profile.handle, profile.short_description)
+                        self.factory.db.moderators.save_moderator(node.id.encode("hex"), node.pubkey,
+                                                                  profile.bitcoin_key.public_key,
+                                                                  profile.bitcoin_key.signature, profile.name,
+                                                                  profile.avatar_hash, profile.moderation_fee,
+                                                                  profile.handle, profile.short_description)
                         moderator = {
                             "id": message_id,
                             "moderator":
@@ -105,7 +106,7 @@ class WSProtocol(Protocol):
                         }
                         self.transport.write(str(bleach.clean(json.dumps(moderator, indent=4), tags=ALLOWED_TAGS)))
                     else:
-                        m.delete_moderator(node.id)
+                        self.factory.db.moderators.delete_moderator(node.id)
                 for mod in moderators:
                     try:
                         val = objects.Value()
@@ -184,9 +185,9 @@ class WSProtocol(Protocol):
 
         enc_key = nacl.signing.VerifyKey(unhexlify(recipient_key)).to_curve25519_public_key().encode()
 
-        self.factory.db.MessageStore().save_message(guid, handle, unhexlify(recipient_key), subject,
-                                                    message_type.upper(), message, time.time(), "", "", True,
-                                                    message_id)
+        self.factory.db.messages.save_message(guid, handle, unhexlify(recipient_key), subject,
+                                              message_type.upper(), message, time.time(), "", "", True,
+                                              message_id)
 
         def send(node_to_send):
             n = node_to_send if node_to_send is not None else Node(unhexlify(guid))
@@ -234,7 +235,7 @@ class WSProtocol(Protocol):
                                            (n.relayAddress.ip, n.relayAddress.port),
                                            n.natType, n.vendor)
                         if n.guid == KeyChain(self.factory.db).guid:
-                            proto = self.factory.db.ListingsStore().get_proto()
+                            proto = self.factory.db.listings.get_proto()
                             l = Listings()
                             l.ParseFromString(proto)
                             for listing in l.listing:

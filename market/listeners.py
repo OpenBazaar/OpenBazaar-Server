@@ -18,13 +18,14 @@ class MessageListenerImpl(object):
 
     def __init__(self, web_socket_factory, database):
         self.ws = web_socket_factory
-        self.db = database.MessageStore()
+        self.db = database
 
     def notify(self, plaintext, signature):
         try:
-            self.db.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.pubkey,
-                                 plaintext.subject, PlaintextMessage.Type.Name(plaintext.type), plaintext.message,
-                                 plaintext.timestamp, plaintext.avatar_hash, signature, False)
+            self.db.messages.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.pubkey,
+                                          plaintext.subject, PlaintextMessage.Type.Name(plaintext.type),
+                                          plaintext.message, plaintext.timestamp, plaintext.avatar_hash,
+                                          signature, False)
 
             # TODO: should probably resolve the handle and make sure it matches the guid
 
@@ -56,7 +57,7 @@ class BroadcastListenerImpl(object):
     def notify(self, guid, message):
         # pull the metadata for this node from the db
         f = Following()
-        ser = self.db.FollowData().get_following()
+        ser = self.db.follow.get_following()
         if ser is not None:
             f.ParseFromString(ser)
             for user in f.users:
@@ -65,8 +66,8 @@ class BroadcastListenerImpl(object):
                     handle = user.metadata.handle
         timestamp = int(time.time())
         broadcast_id = digest(random.getrandbits(255)).encode("hex")
-        self.db.BroadcastStore().save_broadcast(broadcast_id, guid.encode("hex"), handle, message,
-                                                timestamp, avatar_hash)
+        self.db.broadcasts.save_broadcast(broadcast_id, guid.encode("hex"), handle, message,
+                                          timestamp, avatar_hash)
         broadcast_json = {
             "broadcast": {
                 "id": broadcast_id,
@@ -90,8 +91,8 @@ class NotificationListenerImpl(object):
     def notify(self, guid, handle, notif_type, order_id, title, image_hash):
         timestamp = int(time.time())
         notif_id = digest(random.getrandbits(255)).encode("hex")
-        self.db.NotificationStore().save_notification(notif_id, guid.encode("hex"), handle, notif_type, order_id,
-                                                      title, timestamp, image_hash)
+        self.db.notifications.save_notification(notif_id, guid.encode("hex"), handle, notif_type, order_id,
+                                                title, timestamp, image_hash)
         notification_json = {
             "notification": {
                 "id": notif_id,

@@ -5,7 +5,7 @@ from hashlib import sha256
 
 
 def get_credentials(database):
-    settings = database.Settings()
+    settings = database.settings
     creds = settings.get_credentials()
     if creds == (USERNAME, PASSWORD):
         return creds

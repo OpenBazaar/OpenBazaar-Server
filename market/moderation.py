@@ -76,11 +76,11 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     p.timestamp = int(time.time())
     p.avatar_hash = unhexlify(str(contract["dispute"]["info"]["avatar_hash"]))
 
-    if db.Purchases().get_purchase(order_id) is not None:
-        db.Purchases().update_status(order_id, 4)
+    if db.purchases.get_purchase(order_id) is not None:
+        db.purchases.update_status(order_id, 4)
 
-    elif db.Sales().get_sale(order_id) is not None:
-        db.Sales().update_status(order_id, 4)
+    elif db.sales.get_sale(order_id) is not None:
+        db.sales.update_status(order_id, 4)
 
     elif "moderators" in contract["vendor_offer"]["listing"]:
         # TODO: make sure a case isn't already open in the db
@@ -106,14 +106,14 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
 
             validation_failures = c.validate_for_moderation(proof_sig)
 
-            db.Cases().new_case(order_id,
-                                contract["vendor_offer"]["listing"]["item"]["title"],
-                                time.time(),
-                                contract["buyer_order"]["order"]["date"],
-                                float(contract["buyer_order"]["order"]["payment"]["amount"]),
-                                contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
-                                buyer, vendor, json.dumps(validation_failures),
-                                contract["dispute"]["info"]["claim"])
+            db.cases.new_case(order_id,
+                              contract["vendor_offer"]["listing"]["item"]["title"],
+                              time.time(),
+                              contract["buyer_order"]["order"]["date"],
+                              float(contract["buyer_order"]["order"]["payment"]["amount"]),
+                              contract["vendor_offer"]["listing"]["item"]["image_hashes"][0],
+                              buyer, vendor, json.dumps(validation_failures),
+                              contract["dispute"]["info"]["claim"])
 
             with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
                 outfile.write(json.dumps(contract, indent=4))
