@@ -71,8 +71,8 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         s.username = "test_fb_username"
         s.type = s.SocialType.Value("FACEBOOK")
         u.social.extend([s])
-        self.db.ProfileStore().set_proto(u.SerializeToString())
-        self.db.ProfileStore().set_temp_handle("test_handle")
+        self.db.profile.set_proto(u.SerializeToString())
+        self.db.profile.set_temp_handle("test_handle")
 
     def tearDown(self):
         os.remove("test.db")
@@ -83,12 +83,12 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         self.assertEqual(2, p.location)
         self.assertEqual('hello world', p.about)
         self.assertEqual(1, len(p.social))
-        self.assertEqual(1, p.social[0].type)
+        self.assertEqual(0, p.social[0].type)
         self.assertEqual('test_fb_username', p.social[0].username)
 
     def test_MarketProtocol_get_serialized_success(self):
         p = Profile(self.db).get(serialized=True)
-        self.assertEqual("\n\ttest_name\x10\x02R\x0bhello worldr\x14\x08\x01\x12\x10test_fb_username", p)
+        self.assertEqual("\n\ttest_name\x10\x02R\x0bhello worldr\x12\x12\x10test_fb_username", p)
 
     def test_MarketProfile_remove_field_success(self):
         p = Profile(self.db)
@@ -120,9 +120,9 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         p.add_social_account("TWITTER", "test_twitter_username")
         u = p.get()
         self.assertEqual(2, len(u.social))
-        self.assertEqual(1, u.social[0].type)
+        self.assertEqual(0, u.social[0].type)
         self.assertEqual('test_fb_username', u.social[0].username)
-        self.assertEqual(2, u.social[1].type)
+        self.assertEqual(1, u.social[1].type)
         self.assertEqual('test_twitter_username', u.social[1].username)
 
     def test_MarketProfile_replace_social_no_proof(self):
@@ -130,7 +130,7 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         p.add_social_account("FACEBOOK", "test_updated_username")
         u = p.get()
         self.assertEqual(1, len(u.social))
-        self.assertEqual(1, u.social[0].type)
+        self.assertEqual(0, u.social[0].type)
         self.assertEqual('test_updated_username', u.social[0].username)
 
     def test_MarketProfile_add_social_with_proof(self):
@@ -138,10 +138,10 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         p.add_social_account("TWITTER", "test_twitter_username", "http://test_url")
         u = p.get()
         self.assertEqual(2, len(u.social))
-        self.assertEqual(1, u.social[0].type)
+        self.assertEqual(0, u.social[0].type)
         self.assertEqual('test_fb_username', u.social[0].username)
         self.assertEqual('', u.social[0].proof_url)
-        self.assertEqual(2, u.social[1].type)
+        self.assertEqual(1, u.social[1].type)
         self.assertEqual('test_twitter_username', u.social[1].username)
         self.assertEqual('http://test_url', u.social[1].proof_url)
 
@@ -150,7 +150,7 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         p.add_social_account("FACEBOOK", "test_updated_username", "http://fb_url")
         u = p.get()
         self.assertEqual(1, len(u.social))
-        self.assertEqual(1, u.social[0].type)
+        self.assertEqual(0, u.social[0].type)
         self.assertEqual('test_updated_username', u.social[0].username)
         self.assertEqual('http://fb_url', u.social[0].proof_url)
 
@@ -159,7 +159,7 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
         p.add_social_account("TEST", "test_twitter_username")
         u = p.get()
         self.assertEqual(1, len(u.social))
-        self.assertEqual(1, u.social[0].type)
+        self.assertEqual(0, u.social[0].type)
         self.assertEqual('test_fb_username', u.social[0].username)
 
     def test_MarketProfile_update_success(self):
