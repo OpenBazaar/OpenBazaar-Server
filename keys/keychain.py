@@ -26,7 +26,7 @@ class KeyChain(object):
             if callback is not None:
                 callback(self)
 
-    def create_keychain(self, callback, heartbeat_server):
+    def create_keychain(self, callback):
         """
         The guid generation can take a while. While it's doing that we will
         open a port to allow a UI to connect and listen for generation to
