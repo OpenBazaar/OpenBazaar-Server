@@ -165,6 +165,12 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
 
     contract["dispute_resolution"] = resolution_json["dispute_resolution"]
 
+    if db.purchases.get_purchase(order_id) is not None:
+        db.purchases.update_status(order_id, 5)
+
+    elif db.sales.get_sale(order_id) is not None:
+        db.sales.update_status(order_id, 5)
+
     with open(file_path, 'wb') as outfile:
         outfile.write(json.dumps(contract, indent=4))
 

@@ -944,6 +944,11 @@ class Server(object):
         tx.broadcast(self.protocol.multiplexer.blockchain)
         self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
 
+        if self.db.purchases.get_purchase(order_id) is not None:
+            self.db.purchases.update_status(order_id, 6)
+        elif self.db.sales.get_sale(order_id) is not None:
+            self.db.sales.update_status(order_id, 6)
+
     def get_ratings(self, node_to_ask, listing_hash=None):
         """
         Query the given node for a listing of ratings/reviews for the given listing.

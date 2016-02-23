@@ -17,7 +17,6 @@ of a larger refactor of the contracts module, hence this is not used yet.
 
 syntax = "proto3";
 
-//This is the message structure for OpenBazaar messages going over the wire
 message Contract {
     VendorOffer vendor_offer                           = 1;
     BuyerOrder buyer_order                             = 2;
