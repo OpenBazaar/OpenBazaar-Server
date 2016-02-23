@@ -12,8 +12,9 @@ class KeyChain(object):
         self.db = database
         guid_keys = self.db.keys.get_key("guid")
         if guid_keys is None:
-            heartbeat_server.set_status("generating GUID")
-            threading.Thread(target=self.create_keychain, args=[callback, heartbeat_server]).start()
+            if heartbeat_server:
+                heartbeat_server.set_status("generating GUID")
+            threading.Thread(target=self.create_keychain, args=[callback]).start()
         else:
             g = GUID.from_privkey(guid_keys[0])
             self.guid = g.guid
