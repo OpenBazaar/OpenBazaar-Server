@@ -558,8 +558,9 @@ class OpenBazaarAPI(APIResource):
                 contract_id=request.args["contract_id"][0] if "contract_id" in request.args else None)
 
             for keyword in request.args["keywords"]:
-                self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
-                                 self.kserver.node.getProto().SerializeToString())
+                if keyword != "":
+                    self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
+                                     self.kserver.node.getProto().SerializeToString())
             request.write(json.dumps({"success": True, "id": c.get_contract_id()}))
             request.finish()
             return server.NOT_DONE_YET

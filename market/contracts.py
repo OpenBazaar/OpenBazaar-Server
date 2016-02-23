@@ -147,7 +147,7 @@ class Contract(object):
                     "listing": {
                         "contract_id": contract_id,
                         "metadata": {
-                            "version": "0.1",
+                            "version": "1",
                             "category": metadata_category.lower(),
                             "category_sub": "fixed price"
                         },

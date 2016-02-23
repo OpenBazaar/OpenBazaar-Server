@@ -502,17 +502,20 @@ class MessageStore(object):
         """
         Store message in database.
         """
-        conn = Database.connect_database(self.PATH)
-        with conn:
-            outgoing = 1 if is_outgoing else 0
-            msgID = digest(message + str(timestamp)).encode("hex") if msg_id is None else msg_id
-            cursor = conn.cursor()
-            cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
-    messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
-                           (msgID, guid, handle, pubkey, subject, message_type,
-                            message, timestamp, avatar_hash, signature, outgoing, 0))
-            conn.commit()
-        conn.close()
+        try:
+            conn = Database.connect_database(self.PATH)
+            with conn:
+                outgoing = 1 if is_outgoing else 0
+                msgID = digest(message + str(timestamp)).encode("hex") if msg_id is None else msg_id
+                cursor = conn.cursor()
+                cursor.execute('''INSERT INTO messages(msgID, guid, handle, pubkey, subject,
+        messageType, message, timestamp, avatarHash, signature, outgoing, read) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                               (msgID, guid, handle, pubkey, subject, message_type,
+                                message, timestamp, avatar_hash, signature, outgoing, 0))
+                conn.commit()
+            conn.close()
+        except Exception:
+            pass
 
     def get_messages(self, guid, message_type):
         """

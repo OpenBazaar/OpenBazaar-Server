@@ -1,0 +1,103 @@
+/*
+Get the protobuf compiler:
+You will need to manually compile protobuf v3.0.0-beta-2
+https://github.com/google/protobuf/releases/tag/v3.0.0-beta-2
+
+Compile with:
+cd path/to/protos/
+protoc --python_out=./ message.proto
+*/
+
+/*
+The goal here is to move the contract serialization to protobuf from json
+and use the proto3 json serialization when saving to disk. This will be part
+of a larger refactor of the contracts module, hence this is not used yet.
+*/
+
+
+syntax = "proto3";
+
+//This is the message structure for OpenBazaar messages going over the wire
+message Contract {
+    VendorOffer vendor_offer                           = 1;
+    BuyerOrder buyer_order                             = 2;
+    VendorOrderConfirmation vendor_order_confirmation  = 3;
+    BuyerReceipt buyer_receipt                         = 4;
+    DisputeResolution dispute_resolution               = 5;
+}
+
+message VendorOffer {
+    Listing listing       = 1;
+    Signatures signatures = 2;
+
+    message Listing {
+        string contract_id            = 1;
+        ID id                         = 2;
+        Metadata metadata             = 3;
+        Item item                     = 4;
+        Shipping shipping             = 5;
+        repeated Moderator moderators = 6;
+
+        message ID {
+            string guid          = 1;
+            string blockchain_id = 2;
+            Pubkeys pubkeys      = 3;
+
+            message Pubkeys {
+                string guid    = 1;
+                string bitcoin = 2;
+            }
+        }
+
+        message Metadata {
+            string version           = 1;
+            Category category        = 2;
+            CategorySub category_sub = 3;
+            Timestamp expiry         = 4;
+
+            enum CategorySub {
+                FIXED_PRICE = 0;
+                AUCTION     = 1;
+            }
+
+            enum Category {
+                PHYSICAL_GOOD = 0;
+                DIGITAL_GOOD  = 1;
+                SERVICE       = 2;
+            }
+        }
+
+        message Item {
+            string title             = 1;
+            string description       = 2;
+            string process_time      = 3;
+            PPU price_per_unit       = 4;
+            bool nsfw                = 5;
+            repeated string keywords = 6;
+            repeated image_hashes    = 7;
+            string SKU               = 8;
+            string condition         = 9;
+            repeated Options options = 10;
+        }
+
+        message PPU {
+            float bitcoin = 1;
+            Fiat fiat     = 2;
+
+            message Fiat {
+                string currency_code = 1;
+                float price          = 2;
+            }
+        }
+
+        message Options {
+            string x          = 1;
+            repeated string y = 2;
+        }
+    }
+}
+
+message Signatures {
+    bytes guid    = 1;
+    bytes bitcoin = 2;
+}

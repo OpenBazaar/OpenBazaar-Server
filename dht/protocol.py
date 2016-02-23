@@ -225,6 +225,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if result[0]:
             if self.router.isNewNode(node):
+                self.log.debug("Call response from new node, transferring key/values")
                 reactor.callLater(1, self.transferKeyValues, node)
             self.router.addContact(node)
         else:
