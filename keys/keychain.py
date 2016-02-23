@@ -26,7 +26,7 @@ class KeyChain(object):
             if callback is not None:
                 callback(self)
 
-    def create_keychain(self, callback):
+    def create_keychain(self, callback=None):
         """
         The guid generation can take a while. While it's doing that we will
         open a port to allow a UI to connect and listen for generation to
@@ -46,5 +46,5 @@ class KeyChain(object):
 
         self.encryption_key = self.signing_key.to_curve25519_private_key()
         self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-        callback(self, True)
-
+        if callback is not None:
+            callback(self, True)
