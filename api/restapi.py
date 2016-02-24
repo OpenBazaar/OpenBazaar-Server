@@ -25,7 +25,7 @@ from keys import blockchainid
 from keys.keychain import KeyChain
 from dht.utils import digest
 from market.profile import Profile
-from market.contracts import Contract
+from market.contracts import Contract, check_order_for_payment
 from net.upnp import PortMapper
 
 DEFAULT_RECORDS_COUNT = 20
@@ -1105,19 +1105,26 @@ class OpenBazaarAPI(APIResource):
 
         if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
+            status = self.db.purchases.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"
+            status = self.db.purchases.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"
+            status = self.db.purchases.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/unfunded/" + request.args["order_id"][0] + ".json"
+            status = self.db.sales.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"
+            status = self.db.sales.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER +
                             "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"
+            status = self.db.sales.get_status(request.args["order_id"][0])
         elif os.path.exists(DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"):
             file_path = DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"
+            status = 4
         else:
             request.write(json.dumps({}, indent=4))
             request.finish()
@@ -1125,6 +1132,12 @@ class OpenBazaarAPI(APIResource):
 
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
+
+        self.protocol.blockchain.refresh_connection()
+        if status == 0:
+            check_order_for_payment(request.args["order_id"][0], self.db, self.protocol.blockchain,
+                                    self.mserver.protocol.get_notification_listener(),
+                                    self.protocol.testnet)
 
         def return_order():
             request.setHeader('content-type', "application/json")
