@@ -1261,11 +1261,11 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
     libbitcoin_client.refresh_connection()
     purchases = db.purchases.get_unfunded()
     for purchase in purchases:
-        if current_time - purchase[1] <= 600:
+        if current_time - purchase[1] <= 86400:
             check_order_for_payment(purchase[0], db, libbitcoin_client, notification_listener, testnet)
     sales = db.sales.get_unfunded()
     for sale in sales:
-        if current_time - sale[1] <= 600:
+        if current_time - sale[1] <= 86400:
             check_order_for_payment(sale[0], db, libbitcoin_client, notification_listener, testnet)
 
 

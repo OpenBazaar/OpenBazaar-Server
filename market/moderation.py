@@ -180,7 +180,7 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     p.type = PlaintextMessage.Type.Value("DISPUTE_CLOSE")
     p.message = str(resolution_json["dispute_resolution"]["resolution"]["decision"])
     p.timestamp = int(time.time())
-    p.avatar_hash = unhexlify(str(moderator_avatar))
+    p.avatar_hash = moderator_avatar
 
     message_listener.notify(p, "")
     notification_listener.notify(moderator_guid, moderator_handle, "dispute_close", order_id,
