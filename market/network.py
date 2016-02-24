@@ -997,7 +997,7 @@ class Server(object):
         d = self.protocol.callGetRatings(node_to_ask, listing_hash)
         return d.addCallback(get_result)
 
-    def refund(self, order_id, reason):
+    def refund(self, order_id):
         """
         Refund the given order_id. If this is a direct payment he transaction will be
         immediately broadcast to the Bitcoin network otherwise the refund message sent
@@ -1023,7 +1023,6 @@ class Server(object):
 
         refund_json = {"refund": {}}
         refund_json["refund"]["order_id"] = order_id
-        refund_json["refund"]["reason"] = reason
         if "moderator" in contract["buyer_order"]["order"]:
             sigs = tx.create_signature(vendor_priv, redeem_script)
             refund_json["refund"]["value"] = tx.get_out_value()
@@ -1056,6 +1055,7 @@ class Server(object):
 
         self.log.info("sending refund message to %s" % buyer_guid)
         return self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node)
+
 
     @staticmethod
     def cache(file_to_save, filename):

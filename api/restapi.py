@@ -1324,6 +1324,7 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
+
 class RestAPI(Site):
 
     def __init__(self, mserver, kserver, openbazaar_protocol, username, password,
