@@ -13,7 +13,7 @@ class KeyChain(object):
         guid_keys = self.db.keys.get_key("guid")
         if guid_keys is None:
             heartbeat_server.set_status("generating GUID")
-            threading.Thread(target=self.create_keychain, args=[callback, heartbeat_server]).start()
+            threading.Thread(target=self.create_keychain, args=[callback]).start()
         else:
             g = GUID.from_privkey(guid_keys[0])
             self.guid = g.guid
@@ -26,7 +26,7 @@ class KeyChain(object):
             if callback is not None:
                 callback(self)
 
-    def create_keychain(self, callback, heartbeat_server):
+    def create_keychain(self, callback):
         """
         The guid generation can take a while. While it's doing that we will
         open a port to allow a UI to connect and listen for generation to
