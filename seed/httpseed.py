@@ -188,10 +188,8 @@ def run(*args):
         server_protocol = server.Site(WebResource(kserver))
         reactor.listenTCP(HTTPPORT, server_protocol)
 
-
-
     # Generate keys and then start the server
-    keychain = KeyChain(db, start_server)
+    KeyChain(db, start_server)
 
     reactor.run()
 
