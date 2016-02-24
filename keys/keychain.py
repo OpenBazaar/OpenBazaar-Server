@@ -24,7 +24,7 @@ class KeyChain(object):
             self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.db.keys.get_key("bitcoin")
             self.encryption_key = self.signing_key.to_curve25519_private_key()
             self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-            if callback is not None:
+            if callable(callback):
                 callback(self)
 
     def create_keychain(self, callback=None):
@@ -47,5 +47,5 @@ class KeyChain(object):
 
         self.encryption_key = self.signing_key.to_curve25519_private_key()
         self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-        if callback is not None:
+        if callable(callback):
             callback(self, True)
