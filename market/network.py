@@ -1056,7 +1056,6 @@ class Server(object):
         self.log.info("sending refund message to %s" % buyer_guid)
         return self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node)
 
-
     @staticmethod
     def cache(file_to_save, filename):
         """

@@ -138,6 +138,7 @@ def run(*args):
             libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET, log=Logger(service="LibbitcoinClient"))
         else:
             libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER, log=Logger(service="LibbitcoinClient"))
+        heartbeat_server.libbitcoin = libbitcoin_client
 
         # listeners
         nlistener = NotificationListenerImpl(ws_api, db)

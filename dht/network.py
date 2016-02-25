@@ -7,6 +7,7 @@ Copyright (c) 2015 OpenBazaar
 
 import pickle
 import httplib
+import random
 from binascii import hexlify
 from twisted.internet.task import LoopingCall
 from twisted.internet import defer, reactor, task
@@ -83,7 +84,9 @@ class Server(object):
         (per section 2.3 of the paper).
         """
         ds = []
-        for rid in self.protocol.getRefreshIDs():
+        refresh_ids = self.protocol.getRefreshIDs()
+        refresh_ids.append(digest(random.getrandbits(255)))  # random node so we get more diversity
+        for rid in refresh_ids:
             node = Node(rid)
             nearest = self.protocol.router.findNeighbors(node, self.alpha)
             spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)

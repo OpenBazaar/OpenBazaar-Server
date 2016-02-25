@@ -43,7 +43,7 @@ class RPCProtocol:
         self._outstanding = {}
         self.log = Logger(system=self)
 
-    def receive_message(self, message, sender, connection, ban_score):
+    def receive_message(self, message, sender, connection):
         if message.testnet != self.multiplexer.testnet:
             self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
@@ -66,7 +66,6 @@ class RPCProtocol:
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         elif message.command != NOT_FOUND:
-            # ban_score.process_message(message)
             self._acceptRequest(msgID, str(Command.Name(message.command)).lower(), data, sender, connection)
 
     def _acceptResponse(self, msgID, data, sender):
