@@ -833,16 +833,20 @@ class Server(object):
 
                 outputs.append({'value': moderator_fee, 'address': moderator_address})
                 dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
-                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = moderator_fee
-                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = TRANSACTION_FEE
+                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
+                    round(moderator_fee / float(100000000), 8)
+                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
+                    round(TRANSACTION_FEE / float(100000000), 8)
                 if float(buyer_percentage) > 0:
                     amt = int(float(buyer_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = amt
+                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
+                        round(amt / float(100000000), 8)
                     outputs.append({'value': amt,
                                     'address': buyer_address})
                 if float(vendor_percentage) > 0:
                     amt = int(float(vendor_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
+                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
+                        round(amt / float(100000000), 8)
                     outputs.append({'value': amt,
                                     'address': vendor_address})
 
@@ -916,15 +920,18 @@ class Server(object):
 
         outputs = []
 
-        outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["moderator_fee"]),
+        outputs.append({'value': int(float(contract["dispute_resolution"]
+                                           ["resolution"]["moderator_fee"]) * 100000000),
                         'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["buyer_payout"]),
+            outputs.append({'value': int(float(contract["dispute_resolution"]
+                                               ["resolution"]["buyer_payout"]) * 100000000),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["vendor_payout"]),
+            outputs.append({'value': int(float(contract["dispute_resolution"]
+                                               ["resolution"]["vendor_payout"]) * 100000000),
                             'address': vendor_address})
 
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs)
@@ -1025,7 +1032,7 @@ class Server(object):
         refund_json["refund"]["order_id"] = order_id
         if "moderator" in contract["buyer_order"]["order"]:
             sigs = tx.create_signature(vendor_priv, redeem_script)
-            refund_json["refund"]["value"] = tx.get_out_value()
+            refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
             refund_json["refund"]["signature(s)"] = sigs
         else:
             tx.sign(vendor_priv)

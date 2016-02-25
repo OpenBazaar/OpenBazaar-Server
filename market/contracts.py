@@ -14,7 +14,7 @@ from bitcoin import SelectParams
 from bitcoin.core.script import CScript, OP_2, OP_3, OP_CHECKMULTISIG
 from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress
 from collections import OrderedDict
-from config import DATA_FOLDER
+from config import DATA_FOLDER, TRANSACTION_FEE
 from copy import deepcopy
 from datetime import datetime
 from dht.utils import digest
@@ -409,6 +409,9 @@ class Contract(object):
                             return False
                         shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
                 amount_to_pay += shipping_amount
+
+        if round(amount_to_pay, 8) < round(TRANSACTION_FEE / float(100000000), 8):
+            raise Exception("Contract price is below transaction fee.")
 
         order_json["buyer_order"]["order"]["payment"]["amount"] = round(amount_to_pay, 8)
         self.contract["buyer_order"] = order_json["buyer_order"]

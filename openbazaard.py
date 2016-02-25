@@ -72,7 +72,7 @@ def run(*args):
 
         def on_bootstrap_complete(resp):
             logger.info("bootstrap complete")
-            mserver.get_messages(mlistener)
+            task.LoopingCall(mserver.get_messages, mlistener).start(3600)
             task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
 
         protocol = OpenBazaarProtocol(db, (ip_address, port), nat_type, testnet=TESTNET,

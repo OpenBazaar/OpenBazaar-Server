@@ -369,9 +369,10 @@ class MarketProtocol(RPCProtocol):
                 outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
                 refund_address = order["buyer_order"]["order"]["refund_address"]
                 redeem_script = order["buyer_order"]["order"]["payment"]["redeem_script"]
+                value = int(float(refund_json["refund"]["value"]) * 100000000)
                 tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
                                                       testnet=self.multiplexer.testnet,
-                                                      out_value=long(refund_json["refund"]["value"]))
+                                                      out_value=value)
                 chaincode = order["buyer_order"]["order"]["payment"]["chaincode"]
                 masterkey_b = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
                 buyer_priv = derive_childkey(masterkey_b, chaincode, bitcointools.MAINNET_PRIVATE)
