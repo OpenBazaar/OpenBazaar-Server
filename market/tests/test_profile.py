@@ -1,5 +1,4 @@
 from twisted.trial import unittest
-from twisted.python import log
 from protos import objects
 import os
 
@@ -55,10 +54,6 @@ zaX5wLzZGfrFtWetE1kFBbzlmdb8jARlkRB68nvzSH3vCoyLkRXa9/l7FXouIuNG
     VALID_GUID = '4c103483-3757-4ac6-85af-51e1f3193236'
 
     def setUp(self):
-        self.catcher = []
-        observer = self.catcher.append
-        log.addObserver(observer)
-        self.addCleanup(log.removeObserver, observer)
         self.db = Database(filepath="test.db")
         self.createTestUser()
 
