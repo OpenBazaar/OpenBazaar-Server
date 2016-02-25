@@ -12,7 +12,8 @@ class KeyChain(object):
         self.db = database
         guid_keys = self.db.keys.get_key("guid")
         if guid_keys is None:
-            heartbeat_server.set_status("generating GUID")
+            if heartbeat_server:
+                heartbeat_server.set_status("generating GUID")
             threading.Thread(target=self.create_keychain, args=[callback]).start()
         else:
             g = GUID.from_privkey(guid_keys[0])
@@ -23,10 +24,10 @@ class KeyChain(object):
             self.bitcoin_master_privkey, self.bitcoin_master_pubkey = self.db.keys.get_key("bitcoin")
             self.encryption_key = self.signing_key.to_curve25519_private_key()
             self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-            if callback is not None:
+            if callable(callback):
                 callback(self)
 
-    def create_keychain(self, callback):
+    def create_keychain(self, callback=None):
         """
         The guid generation can take a while. While it's doing that we will
         open a port to allow a UI to connect and listen for generation to
@@ -46,5 +47,5 @@ class KeyChain(object):
 
         self.encryption_key = self.signing_key.to_curve25519_private_key()
         self.encryption_pubkey = self.verify_key.to_curve25519_public_key()
-        callback(self, True)
-
+        if callable(callback):
+            callback(self, True)
