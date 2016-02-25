@@ -224,7 +224,7 @@ class KademliaProtocol(RPCProtocol):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            if self.router.isNewNode(node):
+            if self.isNewConnection(node):
                 self.log.debug("Call response from new node, transferring key/values")
                 reactor.callLater(1, self.transferKeyValues, node)
             self.router.addContact(node)
@@ -239,10 +239,16 @@ class KademliaProtocol(RPCProtocol):
         We add the node to our router and transfer our stored values
         if they are new and within our neighborhood.
         """
-        if self.router.isNewNode(node):
+        if self.isNewConnection(node):
             self.log.debug("Found a new node, transferring key/values")
             reactor.callLater(1, self.transferKeyValues, node)
         self.router.addContact(node)
+
+    def isNewConnection(self, node):
+        if (node.ip, node.port) in self.multiplexer:
+            return self.multiplexer[(node.ip, node.port)].handler.check_new_connection()
+        else:
+            return False
 
     def __iter__(self):
         return iter(self.handled_commands)

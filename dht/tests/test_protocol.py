@@ -15,7 +15,6 @@ from twisted.internet import task, address, udp, defer, reactor
 from dht.protocol import KademliaProtocol
 from dht.utils import digest
 from dht.storage import ForgetfulStorage
-from dht.tests.utils import mknode
 from dht.node import Node
 from protos import message, objects
 from net.wireprotocol import OpenBazaarProtocol
@@ -613,7 +612,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.next_seqnum = seqnum + 1
 
     def test_badRPCDelete(self):
-        n = mknode()
+        n = Node(digest("S"), self.addr1[0], self.addr1[1])
         val = self.protocol.rpc_delete(n, 'testkeyword', 'key', 'testsig')
         self.assertEqual(val, ["False"])
         val = self.protocol.rpc_delete(n, '', '', '')
