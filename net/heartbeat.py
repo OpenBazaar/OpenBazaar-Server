@@ -27,6 +27,7 @@ class HeartbeatFactory(Factory):
         self.only_ip = only_ip
         self.status = "starting up"
         self.protocol = HeartbeatProtocol
+        self.libbitcoin = None
         self.clients = []
         LoopingCall(self._heartbeat).start(10, now=True)
 
@@ -54,6 +55,11 @@ class HeartbeatFactory(Factory):
             c.transport.write(msg)
 
     def _heartbeat(self):
+        if self.libbitcoin is not None:
+            libbitcoin_status = "online" if self.libbitcoin.connected else "offline"
+        else:
+            libbitcoin_status = "NA"
         self.push(json.dumps({
-            "status": self.status
+            "status": self.status,
+            "libbitcoin": libbitcoin_status
         }))

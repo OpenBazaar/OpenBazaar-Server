@@ -952,7 +952,7 @@ thumbnail, buyer, contractType FROM sales ''')
     def get_unfunded(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id FROM sales WHERE status=0''')
+        cursor.execute('''SELECT id, timestamp FROM sales WHERE status=0''')
         ret = cursor.fetchall()
         conn.close()
         return ret

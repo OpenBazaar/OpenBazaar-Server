@@ -15,7 +15,7 @@ from urlparse import urlparse
 PROTOCOL_VERSION = 14
 CONFIG_FILE = join(os.getcwd(), 'ob.cfg')
 
-# FIXME probably a better way to do this. This curretly checks two levels deep
+# FIXME probably a better way to do this. This curretly checks two levels deep.
 for i in range(2):
     if not isfile(CONFIG_FILE):
         paths = CONFIG_FILE.rsplit('/', 2)
@@ -23,7 +23,7 @@ for i in range(2):
 
 DEFAULTS = {
     # Default project config file may now remove these items
-    'data_folder': 'OpenBazaar',  # FIXME change to 'None' when issue #163 is resolved
+    'data_folder': None,
     'ksize': '20',
     'alpha': '3',
     'transaction_fee': '10000',
@@ -91,7 +91,7 @@ def _platform_agnostic_data_folder(data_folder):
         name = join('Library', 'Application Support', 'OpenBazaar')
     elif _is_linux():
         name = '.openbazaar'
-    else:                       # TODO add clauses for Windows, and BSD
+    else:
         name = 'OpenBazaar'
 
     return name

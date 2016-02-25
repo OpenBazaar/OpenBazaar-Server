@@ -1,4 +1,5 @@
 __author__ = 'chris'
+
 import socket
 import nacl.signing
 import nacl.hash
@@ -74,8 +75,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             if len(datagram) < 166:
                 self.log.warning("received datagram too small from %s, ignoring" % self.addr)
                 return False
-            m = Message()
             try:
+                m = Message()
                 m.ParseFromString(datagram)
                 self.node = Node(m.sender.guid,
                                  m.sender.nodeAddress.ip,
@@ -94,13 +95,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 pow_hash = h[40:]
                 if int(pow_hash[:6], 16) >= 50 or m.sender.guid.encode("hex") != h[:40]:
                     raise Exception('Invalid GUID')
+                for processor in self.processors:
+                    if m.command in processor or m.command == NOT_FOUND:
+                        processor.receive_message(m, self.node, self.connection)
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received an invalid message from %s, ignoring" % self.addr)
                 return False
-            for processor in self.processors:
-                if m.command in processor or m.command == NOT_FOUND:
-                    processor.receive_message(m, self.node, self.connection, self.ban_score)
 
         def handle_shutdown(self):
             try:
