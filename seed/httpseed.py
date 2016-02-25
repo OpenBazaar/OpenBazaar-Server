@@ -36,159 +36,160 @@ def run(*args):
     # Create the database
     db = Database(testnet=TESTNET)
 
-    # logging
-    logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
-    log.addObserver(FileLogObserver(logFile, level="debug").emit)
-    log.addObserver(FileLogObserver(level="debug").emit)
-    logger = Logger(system="Httpseed")
+    def start_server(keychain, first_startup=False):
+        # logging
+        logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
+        log.addObserver(FileLogObserver(logFile, level="debug").emit)
+        log.addObserver(FileLogObserver(level="debug").emit)
+        logger = Logger(system="Httpseed")
 
-    # Load the keys
-    keychain = KeyChain(db)
+        if os.path.isfile(DATA_FOLDER + 'keys.pickle'):
+            keys = pickle.load(open(DATA_FOLDER + "keys.pickle", "r"))
+            signing_key_hex = keys["signing_privkey"]
+            signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
+        else:
+            signing_key = nacl.signing.SigningKey.generate()
+            keys = {
+                'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
+                'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
+            }
+            pickle.dump(keys, open(DATA_FOLDER + "keys.pickle", "wb"))
 
-    if os.path.isfile(DATA_FOLDER + 'keys.pickle'):
-        keys = pickle.load(open(DATA_FOLDER + "keys.pickle", "r"))
-        signing_key_hex = keys["signing_privkey"]
-        signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
-    else:
-        signing_key = nacl.signing.SigningKey.generate()
-        keys = {
-            'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
-            'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
-        }
-        pickle.dump(keys, open(DATA_FOLDER + "keys.pickle", "wb"))
+        # Stun
+        port = 18467 if not TESTNET else 28467
+        logger.info("Finding NAT Type...")
+        response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=port, stun_port=19302)
+        logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
+        ip_address = response[1]
+        port = response[2]
 
-    # Stun
-    port = 18467 if not TESTNET else 28467
-    logger.info("Finding NAT Type...")
-    response = stun.get_ip_info(stun_host="stun.l.google.com", source_port=port, stun_port=19302)
-    logger.info("%s on %s:%s" % (response[0], response[1], response[2]))
-    ip_address = response[1]
-    port = response[2]
+        # Start the kademlia server
+        this_node = Node(keychain.guid, ip_address, port,
+                         keychain.verify_key.encode(), None, objects.FULL_CONE, False)
+        protocol = OpenBazaarProtocol(db, (ip_address, port), objects.FULL_CONE, testnet=TESTNET, relaying=True)
 
-    # Start the kademlia server
-    this_node = Node(keychain.guid, ip_address, port,
-                     keychain.verify_key.encode(), None, objects.FULL_CONE, False)
-    protocol = OpenBazaarProtocol(db, (ip_address, port), objects.FULL_CONE, testnet=TESTNET, relaying=True)
+        try:
+            kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db, objects.FULL_CONE, None)
+        except Exception:
+            kserver = Server(this_node, db, keychain.signing_key)
+            kserver.protocol.connect_multiplexer(protocol)
 
-    try:
-        kserver = Server.loadState('cache.pickle', ip_address, port, protocol, db, objects.FULL_CONE, None)
-    except Exception:
-        kserver = Server(this_node, db, keychain.signing_key)
-        kserver.protocol.connect_multiplexer(protocol)
+        protocol.register_processor(kserver.protocol)
+        kserver.saveStateRegularly('cache.pickle', 10)
 
-    protocol.register_processor(kserver.protocol)
-    kserver.saveStateRegularly('cache.pickle', 10)
+        reactor.listenUDP(port, protocol)
 
-    reactor.listenUDP(port, protocol)
-
-    class WebResource(resource.Resource):
-        def __init__(self, kserver_r):
-            resource.Resource.__init__(self)
-            self.kserver = kserver_r
-            self.nodes = {}
-            for bucket in self.kserver.protocol.router.buckets:
-                for node in bucket.getNodes():
-                    self.nodes[(node.ip, node.port)] = node
-            self.nodes[(this_node.ip, this_node.port)] = this_node
-            loopingCall = task.LoopingCall(self.crawl)
-            loopingCall.start(180, True)
-
-        def crawl(self):
-            def gather_results(result):
-                for proto in result:
-                    n = objects.Node()
-                    try:
-                        n.ParseFromString(proto)
-                        node = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
-                                    None if not n.HasField("relayAddress") else
-                                    (n.relayAddress.ip, n.relayAddress.port),
-                                    n.natType,
-                                    n.vendor)
+        class WebResource(resource.Resource):
+            def __init__(self, kserver_r):
+                resource.Resource.__init__(self)
+                self.kserver = kserver_r
+                self.nodes = {}
+                for bucket in self.kserver.protocol.router.buckets:
+                    for node in bucket.getNodes():
                         self.nodes[(node.ip, node.port)] = node
-                    except Exception:
-                        pass
+                self.nodes[(this_node.ip, this_node.port)] = this_node
+                loopingCall = task.LoopingCall(self.crawl)
+                loopingCall.start(180, True)
 
-            def start_crawl(results):
-                for node, result in results.items():
-                    if not result[0]:
-                        del self.nodes[(node.ip, node.port)]
-                node = Node(digest(random.getrandbits(255)))
-                nearest = self.kserver.protocol.router.findNeighbors(node)
-                spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
-                spider.find().addCallback(gather_results)
+            def crawl(self):
+                def gather_results(result):
+                    for proto in result:
+                        n = objects.Node()
+                        try:
+                            n.ParseFromString(proto)
+                            node = Node(n.guid, n.nodeAddress.ip, n.nodeAddress.port, n.signedPublicKey,
+                                        None if not n.HasField("relayAddress") else
+                                        (n.relayAddress.ip, n.relayAddress.port),
+                                        n.natType,
+                                        n.vendor)
+                            self.nodes[(node.ip, node.port)] = node
+                        except Exception:
+                            pass
 
-            ds = {}
-            for bucket in self.kserver.protocol.router.buckets:
-                for node in bucket.getNodes():
-                    self.nodes[(node.ip, node.port)] = node
-            for node in self.nodes.values():
-                if node.id != this_node.id:
-                    ds[node] = self.kserver.protocol.callPing(node)
-            deferredDict(ds).addCallback(start_crawl)
+                def start_crawl(results):
+                    for node, result in results.items():
+                        if not result[0]:
+                            del self.nodes[(node.ip, node.port)]
+                    node = Node(digest(random.getrandbits(255)))
+                    nearest = self.kserver.protocol.router.findNeighbors(node)
+                    spider = NodeSpiderCrawl(self.kserver.protocol, node, nearest, 100, 4)
+                    spider.find().addCallback(gather_results)
 
-        def getChild(self, child, request):
-            return self
+                ds = {}
+                for bucket in self.kserver.protocol.router.buckets:
+                    for node in bucket.getNodes():
+                        self.nodes[(node.ip, node.port)] = node
+                for node in self.nodes.values():
+                    if node.id != this_node.id:
+                        ds[node] = self.kserver.protocol.callPing(node)
+                deferredDict(ds).addCallback(start_crawl)
 
-        def render_GET(self, request):
-            nodes = self.nodes.values()
-            shuffle(nodes)
-            logger.info("Received a request for nodes, responding...")
-            if "format" in request.args:
-                if request.args["format"][0] == "json":
-                    json_list = []
-                    if "type" in request.args and request.args["type"][0] == "vendors":
-                        for node in nodes:
-                            if node.vendor is True:
+            def getChild(self, child, request):
+                return self
+
+            def render_GET(self, request):
+                nodes = self.nodes.values()
+                shuffle(nodes)
+                logger.info("Received a request for nodes, responding...")
+                if "format" in request.args:
+                    if request.args["format"][0] == "json":
+                        json_list = []
+                        if "type" in request.args and request.args["type"][0] == "vendors":
+                            for node in nodes:
+                                if node.vendor is True:
+                                    node_dic = {}
+                                    node_dic["ip"] = node.ip
+                                    node_dic["port"] = node.port
+                                    node_dic["guid"] = node.id.encode("hex")
+                                    json_list.append(node_dic)
+                            sig = signing_key.sign(str(json_list))
+                            resp = {"peers": json_list, "signature": hexlify(sig[:64])}
+                            request.write(json.dumps(resp, indent=4))
+                        else:
+                            for node in nodes[:50]:
                                 node_dic = {}
                                 node_dic["ip"] = node.ip
                                 node_dic["port"] = node.port
-                                node_dic["guid"] = node.id.encode("hex")
                                 json_list.append(node_dic)
-                        sig = signing_key.sign(str(json_list))
-                        resp = {"peers": json_list, "signature": hexlify(sig[:64])}
-                        request.write(json.dumps(resp, indent=4))
-                    else:
+                            sig = signing_key.sign(str(json_list))
+                            resp = {"peers": json_list, "signature": hexlify(sig[:64])}
+                            request.write(json.dumps(resp, indent=4))
+                    elif request.args["format"][0] == "protobuf":
+                        proto = peers.PeerSeeds()
                         for node in nodes[:50]:
-                            node_dic = {}
-                            node_dic["ip"] = node.ip
-                            node_dic["port"] = node.port
-                            json_list.append(node_dic)
-                        sig = signing_key.sign(str(json_list))
-                        resp = {"peers": json_list, "signature": hexlify(sig[:64])}
-                        request.write(json.dumps(resp, indent=4))
-                elif request.args["format"][0] == "protobuf":
-                    proto = peers.PeerSeeds()
-                    for node in nodes[:50]:
-                        proto.serializedNode.append(node.getProto().SerializeToString())
-
-                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
-                    proto.signature = sig
-                    uncompressed_data = proto.SerializeToString()
-                    request.write(uncompressed_data.encode("zlib"))
-            else:
-                proto = peers.PeerSeeds()
-                if "type" in request.args and request.args["type"][0] == "vendors":
-                    for node in nodes:
-                        if node.vendor is True:
                             proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
-                    proto.signature = sig
-                    uncompressed_data = proto.SerializeToString()
-                    request.write(uncompressed_data.encode("zlib"))
+                        sig = signing_key.sign("".join(proto.serializedNode))[:64]
+                        proto.signature = sig
+                        uncompressed_data = proto.SerializeToString()
+                        request.write(uncompressed_data.encode("zlib"))
                 else:
-                    for node in nodes[:50]:
-                        proto.serializedNode.append(node.getProto().SerializeToString())
+                    proto = peers.PeerSeeds()
+                    if "type" in request.args and request.args["type"][0] == "vendors":
+                        for node in nodes:
+                            if node.vendor is True:
+                                proto.serializedNode.append(node.getProto().SerializeToString())
 
-                    sig = signing_key.sign("".join(proto.serializedNode))[:64]
-                    proto.signature = sig
-                    uncompressed_data = proto.SerializeToString()
-                    request.write(uncompressed_data.encode("zlib"))
-            request.finish()
-            return server.NOT_DONE_YET
+                        sig = signing_key.sign("".join(proto.serializedNode))[:64]
+                        proto.signature = sig
+                        uncompressed_data = proto.SerializeToString()
+                        request.write(uncompressed_data.encode("zlib"))
+                    else:
+                        for node in nodes[:50]:
+                            proto.serializedNode.append(node.getProto().SerializeToString())
 
-    server_protocol = server.Site(WebResource(kserver))
-    reactor.listenTCP(HTTPPORT, server_protocol)
+                        sig = signing_key.sign("".join(proto.serializedNode))[:64]
+                        proto.signature = sig
+                        uncompressed_data = proto.SerializeToString()
+                        request.write(uncompressed_data.encode("zlib"))
+                request.finish()
+                return server.NOT_DONE_YET
+
+        server_protocol = server.Site(WebResource(kserver))
+        reactor.listenTCP(HTTPPORT, server_protocol)
+
+    # Generate keys and then start the server
+    KeyChain(db, start_server)
 
     reactor.run()
 
