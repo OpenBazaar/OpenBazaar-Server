@@ -11,7 +11,6 @@ import nacl.encoding
 import nacl.utils
 import obelisk
 import os.path
-import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
@@ -906,17 +905,14 @@ class Server(object):
         the moderator has resolved the dispute and provided his signature.
         """
         if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.purchases.get_outpoint(order_id))
+            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
         elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
             file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
+            outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
-
-        vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-        buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
         outputs = []
 
@@ -925,16 +921,18 @@ class Server(object):
                         'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
+            buyer_address = contract["buyer_order"]["order"]["refund_address"]
             outputs.append({'value': int(float(contract["dispute_resolution"]
                                                ["resolution"]["buyer_payout"]) * 100000000),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
+            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             outputs.append({'value': int(float(contract["dispute_resolution"]
                                                ["resolution"]["vendor_payout"]) * 100000000),
                             'address': vendor_address})
 
-        tx = BitcoinTransaction.make_unsigned(outpoints, outputs)
+        tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
         masterkey = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
@@ -993,8 +991,6 @@ class Server(object):
                         pass
                 return ret
             except Exception:
-                import traceback
-                traceback.print_exc()
                 return None
 
         if node_to_ask.ip is None:
@@ -1011,7 +1007,7 @@ class Server(object):
         to the buyer with contain the signature.
         """
         file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-        outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
+        outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
