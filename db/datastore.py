@@ -562,8 +562,17 @@ avatarHash, signature, outgoing, read FROM messages WHERE subject=? ''',
 WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             val = cursor.fetchone()
             if val[0] is not None:
+                avatar_hash = None
+                try:
+                    with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
+                        profile = filename.read()
+                    p = objects.Profile()
+                    p.ParseFromString(profile)
+                    avatar_hash = p.avatar_hash.encode("hex")
+                except Exception:
+                    pass
                 ret.append({"guid": g[0],
-                            "avatar_hash": val[0].encode("hex"),
+                            "avatar_hash": avatar_hash,
                             "last_message": val[1],
                             "timestamp": val[2],
                             "public_key": val[3].encode("hex"),
@@ -842,7 +851,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
     def get_unfunded(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id FROM purchases WHERE status=0''')
+        cursor.execute('''SELECT id, timestamp FROM purchases WHERE status=0''')
         ret = cursor.fetchall()
         conn.close()
         return ret

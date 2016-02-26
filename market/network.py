@@ -196,6 +196,7 @@ class Server(object):
                     self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
                     self.get_image(node_to_ask, p.header_hash)
+                self.cache(result[1][0], node_to_ask.id.encode("hex"))
                 return p
             except Exception:
                 return None
