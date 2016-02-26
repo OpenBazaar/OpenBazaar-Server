@@ -392,7 +392,7 @@ class MarketProtocol(RPCProtocol):
 
                 tx.multisign(signatures, redeem_script)
                 tx.broadcast(self.multiplexer.blockchain)
-                self.log.info("Broadcasting refund tx %s to network" % tx.get_hash())
+                self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
             self.db.sales.update_status(order_id, 7)
             file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"

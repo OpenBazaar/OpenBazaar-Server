@@ -486,7 +486,7 @@ class Contract(object):
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
             tx.sign(vendor_priv)
             tx.broadcast(self.blockchain)
-            self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+            self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
@@ -634,7 +634,7 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             if tx.multisign(signatures, redeem_script):
                 tx.broadcast(self.blockchain)
-                self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+                self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
                 receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
 
             receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = buyer_signatures
@@ -724,7 +724,7 @@ class Contract(object):
 
             tx.multisign(signatures, redeem_script)
             tx.broadcast(self.blockchain)
-            self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+            self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
 

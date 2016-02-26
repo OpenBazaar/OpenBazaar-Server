@@ -953,7 +953,7 @@ class Server(object):
 
         tx.multisign(signatures, redeem_script)
         tx.broadcast(self.protocol.multiplexer.blockchain)
-        self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+        self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
         if self.db.purchases.get_purchase(order_id) is not None:
             self.db.purchases.update_status(order_id, 6)
@@ -1017,7 +1017,6 @@ class Server(object):
             contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
             encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
         refund_address = contract["buyer_order"]["order"]["refund_address"]
-        redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
         tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
                                               testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
@@ -1027,13 +1026,24 @@ class Server(object):
         refund_json = {"refund": {}}
         refund_json["refund"]["order_id"] = order_id
         if "moderator" in contract["buyer_order"]["order"]:
+            redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
             sigs = tx.create_signature(vendor_priv, redeem_script)
             refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
             refund_json["refund"]["signature(s)"] = sigs
         else:
             tx.sign(vendor_priv)
             tx.broadcast(self.protocol.multiplexer.blockchain)
+            self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
             refund_json["refund"]["txid"] = tx.get_hash()
+
+        contract["refund"] = refund_json["refund"]
+        self.db.sales.update_status(order_id, 7)
+        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(contract, indent=4))
+        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
         def get_node(node_to_ask):
             def parse_response(response):
