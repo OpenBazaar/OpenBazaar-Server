@@ -967,6 +967,60 @@ class Contract(object):
         # save the `ListingMetadata` protobuf to the database as well
         self.db.listings.add_listing(data)
 
+    def process_refund(self, refund_json, blockchain, notification_listener):
+        self.contract["refund"] = refund_json["refund"]
+        order_id = refund_json["refund"]["order_id"]
+
+        if "txid" not in refund_json["refund"]:
+            outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
+            refund_address = self.contract["buyer_order"]["order"]["refund_address"]
+            redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
+            value = int(float(refund_json["refund"]["value"]) * 100000000)
+            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                  testnet=self.testnet,
+                                                  out_value=value)
+            chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_b = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+            buyer_priv = derive_childkey(masterkey_b, chaincode, bitcointools.MAINNET_PRIVATE)
+            buyer_sigs = tx.create_signature(buyer_priv, redeem_script)
+            vendor_sigs = refund_json["refund"]["signature(s)"]
+
+            signatures = []
+            for i in range(len(outpoints)):
+                for vendor_sig in vendor_sigs:
+                    if vendor_sig["index"] == i:
+                        v_signature = vendor_sig["signature"]
+                for buyer_sig in buyer_sigs:
+                    if buyer_sig["index"] == i:
+                        b_signature = buyer_sig["signature"]
+                signature_obj = {"index": i, "signatures": [b_signature, v_signature]}
+                signatures.append(signature_obj)
+
+            tx.multisign(signatures, redeem_script)
+            tx.broadcast(blockchain)
+            self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
+
+        self.db.sales.update_status(order_id, 7)
+        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(self.contract, indent=4))
+        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+        if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+            image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+        else:
+            image_hash = ""
+        buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+            handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+        else:
+            handle = ""
+        notification_listener.notify(buyer_guid, handle, "refund", order_id, title, image_hash)
+
+
     def verify(self, sender_key):
         """
         Validate that an order sent over by a buyer is filled out correctly.

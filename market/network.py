@@ -562,6 +562,12 @@ class Server(object):
                                               self.db, self.protocol.get_message_listener(),
                                               self.protocol.get_notification_listener(),
                                               self.protocol.multiplexer.testnet)
+                            elif p.type == objects.PlaintextMessage.Type.Value("REFUND"):
+                                refund_json = json.loads(p.message, object_pairs_hook=OrderedDict)
+                                c = Contract(self.db, hash_value=unhexlify(refund_json["refund"]["order_id"]),
+                                             testnet=self.protocol.multiplexer.testnet)
+                                c.process_refund(refund_json, self.protocol.multiplexer.blockchain,
+                                                 self.protocol.get_notification_listener())
                             else:
                                 listener.notify(p, signature)
                         except Exception:
