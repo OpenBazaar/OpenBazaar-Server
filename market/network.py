@@ -1078,8 +1078,7 @@ class Server(object):
     @staticmethod
     def cache(file_to_save, filename):
         """
-        Saves the file to a cache folder if it doesn't already exist.
+        Saves the file to a cache folder override previous versions if any.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + filename):
-            with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
-                outfile.write(file_to_save)
+        with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+            outfile.write(file_to_save)
