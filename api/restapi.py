@@ -405,11 +405,11 @@ class OpenBazaarAPI(APIResource):
             if "short_description" in request.args:
                 u.short_description = request.args["short_description"][0]
             if "nsfw" in request.args:
-                u.nsfw = str_to_bool(request.args["nsfw"][0])
+                p.profile.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
-                u.vendor = str_to_bool(request.args["vendor"][0])
+                p.profile.vendor = str_to_bool(request.args["vendor"][0])
             if "moderator" in request.args:
-                u.moderator = str_to_bool(request.args["moderator"][0])
+                p.profile.moderator = str_to_bool(request.args["moderator"][0])
             if "moderation_fee" in request.args:
                 u.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
