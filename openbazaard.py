@@ -72,7 +72,7 @@ def run(*args):
 
         def on_bootstrap_complete(resp):
             logger.info("bootstrap complete")
-            mserver.get_messages(mlistener)
+            task.LoopingCall(mserver.get_messages, mlistener).start(3600)
             task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
 
         protocol = OpenBazaarProtocol(db, (ip_address, port), nat_type, testnet=TESTNET,
@@ -228,19 +228,7 @@ commands:
             parser.add_argument('--pidfile', help="name of the pid file", default="openbazaard.pid")
             args = parser.parse_args(sys.argv[2:])
 
-            OKBLUE = '\033[94m'
-            ENDC = '\033[0m'
-            print "________             " + OKBLUE + "         __________" + ENDC
-            print "\_____  \ ______   ____   ____" + OKBLUE + \
-                  "\______   \_____  _____________  _____ _______" + ENDC
-            print " /   |   \\\____ \_/ __ \ /    \\" + OKBLUE +\
-                  "|    |  _/\__  \ \___   /\__  \ \__  \\\_  __ \ " + ENDC
-            print "/    |    \  |_> >  ___/|   |  \    " + OKBLUE \
-                  + "|   \ / __ \_/    /  / __ \_/ __ \|  | \/" + ENDC
-            print "\_______  /   __/ \___  >___|  /" + OKBLUE + "______  /(____  /_____ \(____  (____  /__|" + ENDC
-            print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
-            print
-            print "OpenBazaar Server v0.1 starting..."
+            self.print_splash_screen()
 
             unix = ("linux", "linux2", "darwin")
 
@@ -283,5 +271,21 @@ commands:
             parser.parse_args(sys.argv[2:])
             print "Restarting OpenBazaar server..."
             self.daemon.restart()
+
+        @staticmethod
+        def print_splash_screen():
+            OKBLUE = '\033[94m'
+            ENDC = '\033[0m'
+            print "________             " + OKBLUE + "         __________" + ENDC
+            print "\_____  \ ______   ____   ____" + OKBLUE + \
+                  "\______   \_____  _____________  _____ _______" + ENDC
+            print " /   |   \\\____ \_/ __ \ /    \\" + OKBLUE +\
+                  "|    |  _/\__  \ \___   /\__  \ \__  \\\_  __ \ " + ENDC
+            print "/    |    \  |_> >  ___/|   |  \    " + OKBLUE \
+                  + "|   \ / __ \_/    /  / __ \_/ __ \|  | \/" + ENDC
+            print "\_______  /   __/ \___  >___|  /" + OKBLUE + "______  /(____  /_____ \(____  (____  /__|" + ENDC
+            print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
+            print
+            print "OpenBazaar Server v0.1 starting..."
 
     Parser(OpenBazaard('/tmp/openbazaard.pid'))

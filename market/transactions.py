@@ -135,7 +135,6 @@ class BitcoinTransaction(object):
             libbitcoin_server: an `obelisk.Libbitcoin_client` object.
         """
         libbitcoin_client.broadcast(self.to_raw_tx())
-        self.log.info("Broadcasting payout tx %s to network" % b2lx(self.tx.GetHash()))
 
     def check_for_funding(self, address):
         """

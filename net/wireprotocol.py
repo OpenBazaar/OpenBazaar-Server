@@ -60,6 +60,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.keep_alive_loop.start(300 if nat_type == FULL_CONE else 30, now=False)
             self.addr = None
             self.ban_score = None
+            self.is_new_node = True
             self.on_connection_made()
 
         def on_connection_made(self):
@@ -155,6 +156,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                         processor.multiplexer[(self.relay_node[0], self.relay_node[1])].shutdown()
                     processor.callPing(Node(digest("null"), self.relay_node[0], self.relay_node[1],
                                             relay_node=None, nat_type=FULL_CONE))
+
+        def check_new_connection(self):
+            if self.is_new_node:
+                self.is_new_node = False
+                return True
+            else:
+                return False
 
     class ConnHandlerFactory(HandlerFactory):
 

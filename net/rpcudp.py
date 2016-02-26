@@ -158,7 +158,6 @@ class RPCProtocol:
 
         def func(node, *args):
             msgID = sha1(str(random.getrandbits(255))).digest()
-
             m = Message()
             m.messageID = msgID
             m.sender.MergeFrom(self.sourceNode.getProto())

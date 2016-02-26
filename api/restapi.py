@@ -18,7 +18,7 @@ from twisted.internet import defer, reactor, task
 from twisted.protocols.basic import FileSender
 
 from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, \
-    set_value, get_value, str_to_bool
+    set_value, get_value, str_to_bool, TRANSACTION_FEE
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -858,7 +858,8 @@ class OpenBazaarAPI(APIResource):
                 "terms_conditions": "" if settings[9] is None else settings[9],
                 "refund_policy": "" if settings[10] is None else settings[10],
                 "resolver": get_value("CONSTANTS", "RESOLVER"),
-                "network_connection": nat_type
+                "network_connection": nat_type,
+                "transaction_fee": TRANSACTION_FEE
             }
             mods = []
             try:

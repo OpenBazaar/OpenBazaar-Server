@@ -11,7 +11,6 @@ import nacl.encoding
 import nacl.utils
 import obelisk
 import os.path
-import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
@@ -197,6 +196,7 @@ class Server(object):
                     self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
                     self.get_image(node_to_ask, p.header_hash)
+                self.cache(result[1][0], node_to_ask.id.encode("hex"))
                 return p
             except Exception:
                 return None
@@ -563,6 +563,12 @@ class Server(object):
                                               self.db, self.protocol.get_message_listener(),
                                               self.protocol.get_notification_listener(),
                                               self.protocol.multiplexer.testnet)
+                            elif p.type == objects.PlaintextMessage.Type.Value("REFUND"):
+                                refund_json = json.loads(p.message, object_pairs_hook=OrderedDict)
+                                c = Contract(self.db, hash_value=unhexlify(refund_json["refund"]["order_id"]),
+                                             testnet=self.protocol.multiplexer.testnet)
+                                c.process_refund(refund_json, self.protocol.multiplexer.blockchain,
+                                                 self.protocol.get_notification_listener())
                             else:
                                 listener.notify(p, signature)
                         except Exception:
@@ -833,16 +839,20 @@ class Server(object):
 
                 outputs.append({'value': moderator_fee, 'address': moderator_address})
                 dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
-                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = moderator_fee
-                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = TRANSACTION_FEE
+                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
+                    round(moderator_fee / float(100000000), 8)
+                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
+                    round(TRANSACTION_FEE / float(100000000), 8)
                 if float(buyer_percentage) > 0:
                     amt = int(float(buyer_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = amt
+                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
+                        round(amt / float(100000000), 8)
                     outputs.append({'value': amt,
                                     'address': buyer_address})
                 if float(vendor_percentage) > 0:
                     amt = int(float(vendor_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = amt
+                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
+                        round(amt / float(100000000), 8)
                     outputs.append({'value': amt,
                                     'address': vendor_address})
 
@@ -902,32 +912,34 @@ class Server(object):
         the moderator has resolved the dispute and provided his signature.
         """
         if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.purchases.get_outpoint(order_id))
+            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
         elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
             file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-            outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
+            outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
 
-        vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-        buyer_address = contract["buyer_order"]["order"]["refund_address"]
-
         outputs = []
 
-        outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["moderator_fee"]),
+        outputs.append({'value': int(float(contract["dispute_resolution"]
+                                           ["resolution"]["moderator_fee"]) * 100000000),
                         'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["buyer_payout"]),
+            buyer_address = contract["buyer_order"]["order"]["refund_address"]
+            outputs.append({'value': int(float(contract["dispute_resolution"]
+                                               ["resolution"]["buyer_payout"]) * 100000000),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
-            outputs.append({'value': int(contract["dispute_resolution"]["resolution"]["vendor_payout"]),
+            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            outputs.append({'value': int(float(contract["dispute_resolution"]
+                                               ["resolution"]["vendor_payout"]) * 100000000),
                             'address': vendor_address})
 
-        tx = BitcoinTransaction.make_unsigned(outpoints, outputs)
+        tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
         masterkey = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
@@ -948,7 +960,7 @@ class Server(object):
 
         tx.multisign(signatures, redeem_script)
         tx.broadcast(self.protocol.multiplexer.blockchain)
-        self.log.info("Broadcasting payout tx %s to network" % tx.get_hash())
+        self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
         if self.db.purchases.get_purchase(order_id) is not None:
             self.db.purchases.update_status(order_id, 6)
@@ -986,8 +998,6 @@ class Server(object):
                         pass
                 return ret
             except Exception:
-                import traceback
-                traceback.print_exc()
                 return None
 
         if node_to_ask.ip is None:
@@ -1004,7 +1014,7 @@ class Server(object):
         to the buyer with contain the signature.
         """
         file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-        outpoints = pickle.loads(self.db.sales.get_outpoint(order_id))
+        outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
@@ -1014,7 +1024,6 @@ class Server(object):
             contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
             encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
         refund_address = contract["buyer_order"]["order"]["refund_address"]
-        redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
         tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
                                               testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
@@ -1024,13 +1033,24 @@ class Server(object):
         refund_json = {"refund": {}}
         refund_json["refund"]["order_id"] = order_id
         if "moderator" in contract["buyer_order"]["order"]:
+            redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
             sigs = tx.create_signature(vendor_priv, redeem_script)
-            refund_json["refund"]["value"] = tx.get_out_value()
+            refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
             refund_json["refund"]["signature(s)"] = sigs
         else:
             tx.sign(vendor_priv)
             tx.broadcast(self.protocol.multiplexer.blockchain)
+            self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
             refund_json["refund"]["txid"] = tx.get_hash()
+
+        contract["refund"] = refund_json["refund"]
+        self.db.sales.update_status(order_id, 7)
+        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+        with open(file_path, 'w') as outfile:
+            outfile.write(json.dumps(contract, indent=4))
+        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
         def get_node(node_to_ask):
             def parse_response(response):
@@ -1059,8 +1079,7 @@ class Server(object):
     @staticmethod
     def cache(file_to_save, filename):
         """
-        Saves the file to a cache folder if it doesn't already exist.
+        Saves the file to a cache folder override previous versions if any.
         """
-        if not os.path.isfile(DATA_FOLDER + "cache/" + filename):
-            with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
-                outfile.write(file_to_save)
+        with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+            outfile.write(file_to_save)
