@@ -34,7 +34,7 @@ class MarketListenersTest(unittest.TestCase):
         tab = '    '
         nlt = new_line + tab
         nldt = nlt + tab
-        if handle!='':
+        if handle != '':
             handle = '"handle": "'+handle+'", ' + nldt
         message = '{' + nlt + '"message": {' + nldt + \
             '"public_key": "746573745f7075626b6579", ' + nldt + handle + \
@@ -52,8 +52,12 @@ class MarketListenersTest(unittest.TestCase):
         l = MessageListenerImpl(self.ws, self.db)
         l.notify(p, signature)
         self.db.messages.save_message.assert_called_with('746573745f67756964',
-            u'', 'test_pubkey', u'test_subject', 'ORDER',
-            u'test_message', 10, 'test_avatar_hash', signature, False)
+                                                         u'', 'test_pubkey',
+                                                         u'test_subject',
+                                                         'ORDER',
+                                                         u'test_message', 10,
+                                                         'test_avatar_hash',
+                                                         signature, False)
         self.ws.push.assert_called_with(self._create_valid_message_json(''))
 
     def test_MarketListeners_notify_with_handle_success(self):
@@ -62,6 +66,11 @@ class MarketListenersTest(unittest.TestCase):
         l = MessageListenerImpl(self.ws, self.db)
         l.notify(p, signature)
         self.db.messages.save_message.assert_called_with('746573745f67756964',
-            u'test_handle', 'test_pubkey', u'test_subject', 'ORDER',
-            u'test_message', 10, 'test_avatar_hash', signature, False)
+                                                         u'test_handle',
+                                                         'test_pubkey',
+                                                         u'test_subject',
+                                                         'ORDER',
+                                                         u'test_message', 10,
+                                                         'test_avatar_hash',
+                                                         signature, False)
         self.ws.push.assert_called_with(self._create_valid_message_json('test_handle'))
