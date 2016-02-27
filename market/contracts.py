@@ -633,10 +633,10 @@ class Contract(object):
                 signatures.append(signature_obj)
 
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
-            if tx.multisign(signatures, redeem_script):
-                tx.broadcast(self.blockchain)
-                self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
+            tx.multisign(signatures, redeem_script)
+            tx.broadcast(self.blockchain)
+            self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
 
             receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = buyer_signatures
             receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = tx.get_out_value()
