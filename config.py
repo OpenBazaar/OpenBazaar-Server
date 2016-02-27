@@ -92,7 +92,7 @@ def _platform_agnostic_data_folder(data_folder):
     elif _is_linux():
         name = '.openbazaar'
     else:
-        name = 'OpenBazaar'
+        name = join(os.getenv('APPDATA'), 'OpenBazaar')
 
     return name
 
