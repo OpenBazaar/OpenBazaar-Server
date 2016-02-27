@@ -157,6 +157,8 @@ class Database(object):
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
         cursor.execute('''CREATE INDEX index_rating_id ON ratings(ratingID);''')
 
+        cursor.execute('''CREATE TABLE transactions(tx BLOB);''')
+
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
     termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
