@@ -389,21 +389,21 @@ class OpenBazaarAPI(APIResource):
 
             u = objects.Profile()
             if "name" in request.args:
-                u.name = request.args["name"][0]
+                u.name = request.args["name"][0].decode("utf8")
             if "location" in request.args:
                 # This needs to be formatted. Either here or from the UI.
                 u.location = CountryCode.Value(request.args["location"][0].upper())
             if "handle" in request.args:
                 if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
-                    u.handle = request.args["handle"][0]
+                    u.handle = request.args["handle"][0].decode("utf8")
                     self.db.profile.set_temp_handle("")
                 else:
                     u.handle = ""
-                    self.db.profile.set_temp_handle(request.args["handle"][0])
+                    self.db.profile.set_temp_handle(request.args["handle"][0].decode("utf8"))
             if "about" in request.args:
-                u.about = request.args["about"][0]
+                u.about = request.args["about"][0].decode("utf8")
             if "short_description" in request.args:
-                u.short_description = request.args["short_description"][0]
+                u.short_description = request.args["short_description"][0].decode("utf8")
             if "nsfw" in request.args:
                 p.profile.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
@@ -413,9 +413,9 @@ class OpenBazaarAPI(APIResource):
             if "moderation_fee" in request.args:
                 u.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
-                u.website = request.args["website"][0]
+                u.website = request.args["website"][0].decode("utf8")
             if "email" in request.args:
-                u.email = request.args["email"][0]
+                u.email = request.args["email"][0].decode("utf8")
             if "primary_color" in request.args:
                 u.primary_color = int(request.args["primary_color"][0])
             if "secondary_color" in request.args:
@@ -452,8 +452,10 @@ class OpenBazaarAPI(APIResource):
         try:
             p = Profile(self.db)
             if "account_type" in request.args and "username" in request.args:
-                p.add_social_account(request.args["account_type"][0], request.args["username"][0],
-                                     request.args["proof"][0] if "proof" in request.args else None)
+                p.add_social_account(request.args["account_type"][0].decode("utf8"),
+                                     request.args["username"][0].decode("utf8"),
+                                     request.args["proof"][0].decode("utf8") if
+                                     "proof" in request.args else None)
             else:
                 raise Exception("Missing required fields")
             request.write(json.dumps({"success": True}))
@@ -1158,7 +1160,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def dispute_contract(self, request):
         try:
-            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0])
+            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0].decode("utf8"))
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1180,7 +1182,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
 
             d = self.mserver.close_dispute(request.args["order_id"][0],
-                                           request.args["resolution"][0],
+                                           request.args["resolution"][0].decode("utf8"),
                                            request.args["buyer_percentage"][0],
                                            request.args["vendor_percentage"][0],
                                            request.args["moderator_percentage"][0],
