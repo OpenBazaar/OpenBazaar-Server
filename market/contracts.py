@@ -1331,11 +1331,11 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
 
 def check_order_for_payment(order_id, db, libbitcoin_client, notification_listener, testnet=False):
     try:
-        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"):
-            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
+        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
             is_purchase = True
-        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
             is_purchase = False
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
