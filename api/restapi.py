@@ -1061,35 +1061,11 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         try:
-            file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
-            with open(file_path, 'r') as filename:
-                order = json.load(filename, object_pairs_hook=OrderedDict)
-            c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
             self.protocol.blockchain.refresh_connection()
-            c.blockchain = self.protocol.blockchain
-            c.notification_listener = self.mserver.protocol.get_notification_listener()
-            c.is_purchase = True
-            addr = c.contract["buyer_order"]["order"]["payment"]["address"]
-
-            def history_fetched(ec, history):
-                if not ec:
-                    # pylint: disable=W0612
-                    # pylint: disable=W0640
-                    for objid, txhash, index, height, value in history:
-                        def cb_txpool(ec, result):
-                            if ec:
-                                self.protocol.blockchain.fetch_transaction(txhash, cb_chain)
-                            else:
-                                c.on_tx_received(None, None, None, None, result)
-
-                        def cb_chain(ec, result):
-                            if not ec:
-                                c.on_tx_received(None, None, None, None, result)
-
-                        self.protocol.blockchain.fetch_txpool_transaction(txhash, cb_txpool)
-
-            self.protocol.blockchain.fetch_history2(addr, history_fetched)
-
+            check_order_for_payment(request.args["order_id"][0], self.db,
+                                    self.protocol.blockchain.refresh_connection(),
+                                    self.mserver.protocol.get_notification_listener(),
+                                    self.protocol.testnet)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
