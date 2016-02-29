@@ -565,16 +565,19 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             val = cursor.fetchone()
             if val[0] is not None:
                 avatar_hash = None
+                handle = ""
                 try:
                     with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)
                     avatar_hash = p.avatar_hash.encode("hex")
+                    handle = p.handle
                 except Exception:
                     pass
                 ret.append({"guid": g[0],
                             "avatar_hash": avatar_hash,
+                            "handle": handle,
                             "last_message": val[1],
                             "timestamp": val[2],
                             "public_key": val[3].encode("hex"),
