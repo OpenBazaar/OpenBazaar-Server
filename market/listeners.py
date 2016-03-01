@@ -4,6 +4,7 @@ import bleach
 import json
 import time
 import random
+from log import Logger
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
@@ -19,6 +20,7 @@ class MessageListenerImpl(object):
     def __init__(self, web_socket_factory, database):
         self.ws = web_socket_factory
         self.db = database
+        self.log = Logger(system=self)
 
     def notify(self, plaintext, signature):
         try:
@@ -43,8 +45,8 @@ class MessageListenerImpl(object):
             if plaintext.handle:
                 message_json["message"]["handle"] = plaintext.handle
             self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4), tags=ALLOWED_TAGS)))
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.error('Market.Listener.notify Exception: %s' % e)
 
 
 class BroadcastListenerImpl(object):

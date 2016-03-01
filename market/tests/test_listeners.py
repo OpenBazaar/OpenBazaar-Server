@@ -74,3 +74,11 @@ class MarketListenersTest(unittest.TestCase):
                                                          'test_avatar_hash',
                                                          signature, False)
         self.ws.push.assert_called_with(self._create_valid_message_json('test_handle'))
+
+    def test_MarketListeners_save_message_exception(self):
+        p = self._create_valid_plaintext_message('test_handle')
+        signature = 'test_signature'
+        l = MessageListenerImpl(self.ws, self.db)
+        self.db.messages.save_message.side_effect = Exception("test_exception")
+        l.notify(p, signature)
+        self.assertEqual('[ERROR] Market.Listener.notify Exception: test_exception', self.catcher[0]['message'][0])
