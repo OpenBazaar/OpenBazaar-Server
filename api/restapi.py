@@ -417,13 +417,13 @@ class OpenBazaarAPI(APIResource):
             if "email" in request.args:
                 u.email = request.args["email"][0].decode("utf8")
             if "primary_color" in request.args:
-                u.primary_color = int(request.args["primary_color"][0])
+                p.profile.primary_color = int(request.args["primary_color"][0])
             if "secondary_color" in request.args:
-                u.secondary_color = int(request.args["secondary_color"][0])
+                p.profile.secondary_color = int(request.args["secondary_color"][0])
             if "background_color" in request.args:
-                u.background_color = int(request.args["background_color"][0])
+                p.profile.background_color = int(request.args["background_color"][0])
             if "text_color" in request.args:
-                u.text_color = int(request.args["text_color"][0])
+                p.profile.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
                 u.avatar_hash = unhexlify(request.args["avatar"][0])
             if "header" in request.args:
