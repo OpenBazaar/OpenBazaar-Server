@@ -12,7 +12,7 @@ from os.path import expanduser, join, isfile
 from ConfigParser import ConfigParser
 from urlparse import urlparse
 
-PROTOCOL_VERSION = 14
+PROTOCOL_VERSION = 1
 CONFIG_FILE = join(os.getcwd(), 'ob.cfg')
 
 # FIXME probably a better way to do this. This curretly checks two levels deep.
@@ -92,7 +92,7 @@ def _platform_agnostic_data_folder(data_folder):
     elif _is_linux():
         name = '.openbazaar'
     else:
-        name = 'OpenBazaar'
+        name = join(os.getenv('APPDATA'), 'OpenBazaar')
 
     return name
 

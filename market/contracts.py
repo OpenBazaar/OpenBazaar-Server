@@ -349,6 +349,7 @@ class Contract(object):
             order_json["buyer_order"]["order"]["payment"]["redeem_script"] = redeem_script.encode("hex")
             payment_address = str(P2SHBitcoinAddress.from_redeemScript(redeem_script))
             order_json["buyer_order"]["order"]["payment"]["address"] = payment_address
+            order_json["buyer_order"]["order"]["payment"]["refund_tx_fee"] = TRANSACTION_FEE
         else:
             chaincode = sha256(str(random.getrandbits(256))).digest().encode("hex")
             order_json["buyer_order"]["order"]["payment"]["chaincode"] = chaincode
@@ -632,10 +633,10 @@ class Contract(object):
                 signatures.append(signature_obj)
 
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
-            if tx.multisign(signatures, redeem_script):
-                tx.broadcast(self.blockchain)
-                self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
-                receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
+            tx.multisign(signatures, redeem_script)
+            tx.broadcast(self.blockchain)
+            self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
+            receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
 
             receipt_json["buyer_receipt"]["receipt"]["payout"]["signature(s)"] = buyer_signatures
             receipt_json["buyer_receipt"]["receipt"]["payout"]["value"] = tx.get_out_value()
@@ -975,10 +976,13 @@ class Contract(object):
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
             refund_address = self.contract["buyer_order"]["order"]["refund_address"]
             redeem_script = self.contract["buyer_order"]["order"]["payment"]["redeem_script"]
-            value = int(float(refund_json["refund"]["value"]) * 100000000)
+            in_value = 0
+            for outpoint in outpoints:
+                in_value += outpoint["value"]
+            out_value = in_value - long(self.contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
             tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
                                                   testnet=self.testnet,
-                                                  out_value=value)
+                                                  out_value=out_value)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_b = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
             buyer_priv = derive_childkey(masterkey_b, chaincode, bitcointools.MAINNET_PRIVATE)
@@ -1000,7 +1004,7 @@ class Contract(object):
             tx.broadcast(blockchain)
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
-        self.db.sales.update_status(order_id, 7)
+        self.db.purchases.update_status(order_id, 7)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -1019,7 +1023,6 @@ class Contract(object):
         else:
             handle = ""
         notification_listener.notify(buyer_guid, handle, "refund", order_id, title, image_hash)
-
 
     def verify(self, sender_key):
         """
@@ -1328,11 +1331,11 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
 
 def check_order_for_payment(order_id, db, libbitcoin_client, notification_listener, testnet=False):
     try:
-        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"):
-            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id[0] + ".json"
+        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
             is_purchase = True
-        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id[0] + ".json"
+        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"):
+            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
             is_purchase = False
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)

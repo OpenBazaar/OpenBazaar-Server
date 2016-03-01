@@ -114,12 +114,8 @@ class BitcoinTransaction(object):
             i = sig["index"]
             s = sig["signatures"]
             self.tx.vin[i].scriptSig = CScript([OP_0, x(s[0]), x(s[1]), CScript(x(redeem_script))])
-            try:
-                VerifyScript(self.tx.vin[i].scriptSig, CScript(x(redeem_script)).to_p2sh_scriptPubKey(),
-                             self.tx, i, (SCRIPT_VERIFY_P2SH,))
-                return True
-            except Exception:
-                return False
+            VerifyScript(self.tx.vin[i].scriptSig, CScript(x(redeem_script)).to_p2sh_scriptPubKey(),
+                         self.tx, i, (SCRIPT_VERIFY_P2SH,))
 
     def to_raw_tx(self):
         """

@@ -1024,8 +1024,6 @@ class Server(object):
             contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
             encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
         refund_address = contract["buyer_order"]["order"]["refund_address"]
-        tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
-                                              testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
         vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
@@ -1033,11 +1031,20 @@ class Server(object):
         refund_json = {"refund": {}}
         refund_json["refund"]["order_id"] = order_id
         if "moderator" in contract["buyer_order"]["order"]:
+            in_value = 0
+            for outpoint in outpoints:
+                in_value += outpoint["value"]
+            out_value = in_value - long(contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
+            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                  testnet=self.protocol.multiplexer.testnet,
+                                                  out_value=out_value)
             redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
             sigs = tx.create_signature(vendor_priv, redeem_script)
             refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
             refund_json["refund"]["signature(s)"] = sigs
         else:
+            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                  testnet=self.protocol.multiplexer.testnet)
             tx.sign(vendor_priv)
             tx.broadcast(self.protocol.multiplexer.blockchain)
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())

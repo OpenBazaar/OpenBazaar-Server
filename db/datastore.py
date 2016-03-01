@@ -157,6 +157,8 @@ class Database(object):
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
         cursor.execute('''CREATE INDEX index_rating_id ON ratings(ratingID);''')
 
+        cursor.execute('''CREATE TABLE transactions(tx BLOB);''')
+
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
     termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
@@ -563,16 +565,19 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             val = cursor.fetchone()
             if val[0] is not None:
                 avatar_hash = None
+                handle = ""
                 try:
                     with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)
                     avatar_hash = p.avatar_hash.encode("hex")
+                    handle = p.handle
                 except Exception:
                     pass
                 ret.append({"guid": g[0],
                             "avatar_hash": avatar_hash,
+                            "handle": handle,
                             "last_message": val[1],
                             "timestamp": val[2],
                             "public_key": val[3].encode("hex"),

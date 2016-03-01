@@ -272,7 +272,7 @@ class WSProtocol(Protocol):
             elif request_json["request"]["command"] == "send_message":
                 self.send_message(message_id, request_json["request"]["guid"],
                                   request_json["request"]["handle"],
-                                  request_json["request"]["message"],
+                                  request_json["request"]["message"].decode("utf8"),
                                   request_json["request"]["subject"],
                                   request_json["request"]["message_type"],
                                   request_json["request"]["public_key"])

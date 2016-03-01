@@ -389,21 +389,21 @@ class OpenBazaarAPI(APIResource):
 
             u = objects.Profile()
             if "name" in request.args:
-                u.name = request.args["name"][0]
+                u.name = request.args["name"][0].decode("utf8")
             if "location" in request.args:
                 # This needs to be formatted. Either here or from the UI.
                 u.location = CountryCode.Value(request.args["location"][0].upper())
             if "handle" in request.args:
                 if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
-                    u.handle = request.args["handle"][0]
+                    u.handle = request.args["handle"][0].decode("utf8")
                     self.db.profile.set_temp_handle("")
                 else:
                     u.handle = ""
-                    self.db.profile.set_temp_handle(request.args["handle"][0])
+                    self.db.profile.set_temp_handle(request.args["handle"][0].decode("utf8"))
             if "about" in request.args:
-                u.about = request.args["about"][0]
+                u.about = request.args["about"][0].decode("utf8")
             if "short_description" in request.args:
-                u.short_description = request.args["short_description"][0]
+                u.short_description = request.args["short_description"][0].decode("utf8")
             if "nsfw" in request.args:
                 p.profile.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
@@ -413,17 +413,17 @@ class OpenBazaarAPI(APIResource):
             if "moderation_fee" in request.args:
                 u.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
-                u.website = request.args["website"][0]
+                u.website = request.args["website"][0].decode("utf8")
             if "email" in request.args:
-                u.email = request.args["email"][0]
+                u.email = request.args["email"][0].decode("utf8")
             if "primary_color" in request.args:
-                u.primary_color = int(request.args["primary_color"][0])
+                p.profile.primary_color = int(request.args["primary_color"][0])
             if "secondary_color" in request.args:
-                u.secondary_color = int(request.args["secondary_color"][0])
+                p.profile.secondary_color = int(request.args["secondary_color"][0])
             if "background_color" in request.args:
-                u.background_color = int(request.args["background_color"][0])
+                p.profile.background_color = int(request.args["background_color"][0])
             if "text_color" in request.args:
-                u.text_color = int(request.args["text_color"][0])
+                p.profile.text_color = int(request.args["text_color"][0])
             if "avatar" in request.args:
                 u.avatar_hash = unhexlify(request.args["avatar"][0])
             if "header" in request.args:
@@ -452,8 +452,10 @@ class OpenBazaarAPI(APIResource):
         try:
             p = Profile(self.db)
             if "account_type" in request.args and "username" in request.args:
-                p.add_social_account(request.args["account_type"][0], request.args["username"][0],
-                                     request.args["proof"][0] if "proof" in request.args else None)
+                p.add_social_account(request.args["account_type"][0].decode("utf8"),
+                                     request.args["username"][0].decode("utf8"),
+                                     request.args["proof"][0].decode("utf8") if
+                                     "proof" in request.args else None)
             else:
                 raise Exception("Missing required fields")
             request.write(json.dumps({"success": True}))
@@ -1061,35 +1063,11 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         try:
-            file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
-            with open(file_path, 'r') as filename:
-                order = json.load(filename, object_pairs_hook=OrderedDict)
-            c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
             self.protocol.blockchain.refresh_connection()
-            c.blockchain = self.protocol.blockchain
-            c.notification_listener = self.mserver.protocol.get_notification_listener()
-            c.is_purchase = True
-            addr = c.contract["buyer_order"]["order"]["payment"]["address"]
-
-            def history_fetched(ec, history):
-                if not ec:
-                    # pylint: disable=W0612
-                    # pylint: disable=W0640
-                    for objid, txhash, index, height, value in history:
-                        def cb_txpool(ec, result):
-                            if ec:
-                                self.protocol.blockchain.fetch_transaction(txhash, cb_chain)
-                            else:
-                                c.on_tx_received(None, None, None, None, result)
-
-                        def cb_chain(ec, result):
-                            if not ec:
-                                c.on_tx_received(None, None, None, None, result)
-
-                        self.protocol.blockchain.fetch_txpool_transaction(txhash, cb_txpool)
-
-            self.protocol.blockchain.fetch_history2(addr, history_fetched)
-
+            check_order_for_payment(request.args["order_id"][0], self.db,
+                                    self.protocol.blockchain.refresh_connection(),
+                                    self.mserver.protocol.get_notification_listener(),
+                                    self.protocol.testnet)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1182,7 +1160,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def dispute_contract(self, request):
         try:
-            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0])
+            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0].decode("utf8"))
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1204,7 +1182,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
 
             d = self.mserver.close_dispute(request.args["order_id"][0],
-                                           request.args["resolution"][0],
+                                           request.args["resolution"][0].decode("utf8"),
                                            request.args["buyer_percentage"][0],
                                            request.args["vendor_percentage"][0],
                                            request.args["moderator_percentage"][0],
