@@ -531,28 +531,31 @@ class OpenBazaarAPI(APIResource):
             c.create(
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
-                request.args["title"][0],
-                request.args["description"][0],
+                request.args["title"][0].decode("utf8"),
+                request.args["description"][0].decode("utf8"),
                 request.args["currency_code"][0],
                 request.args["price"][0],
-                request.args["process_time"][0],
+                request.args["process_time"][0].decode("utf8"),
                 str_to_bool(request.args["nsfw"][0]),
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
-                est_delivery_domestic=request.args["est_delivery_domestic"][0]
+                est_delivery_domestic=request.args["est_delivery_domestic"][0].decode("utf8")
                 if "est_delivery_domestic" in request.args else None,
-                est_delivery_international=request.args["est_delivery_international"][0]
+                est_delivery_international=request.args["est_delivery_international"][0].decode("utf8")
                 if "est_delivery_international" in request.args else None,
-                terms_conditions=request.args["terms_conditions"][0]
+                terms_conditions=request.args["terms_conditions"][0].decode("utf8")
                 if request.args["terms_conditions"][0] is not "" else None,
-                returns=request.args["returns"][0] if request.args["returns"][0] is not "" else None,
+                returns=request.args["returns"][0].decode("utf8")
+                if request.args["returns"][0] is not "" else None,
                 shipping_currency_code=request.args["shipping_currency_code"][0],
                 shipping_domestic=request.args["shipping_domestic"][0],
                 shipping_international=request.args["shipping_international"][0],
                 keywords=request.args["keywords"] if "keywords" in request.args else None,
-                category=request.args["category"][0] if request.args["category"][0] is not "" else None,
-                condition=request.args["condition"][0] if request.args["condition"][0] is not "" else None,
-                sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
+                category=request.args["category"][0].decode("utf8")
+                if request.args["category"][0] is not "" else None,
+                condition=request.args["condition"][0].decode("utf8")
+                if request.args["condition"][0] is not "" else None,
+                sku=request.args["sku"][0].decode("utf8") if request.args["sku"][0] is not "" else None,
                 images=request.args["images"],
                 free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
