@@ -101,7 +101,7 @@ enum CountryCode {
     GHANA                          = 87;
     GIBRALTAR                      = 88;
     GREECE                         = 89;
-    Greenland                      = 90;
+    GREENLAND                      = 90;
     GRENADA                        = 91;
     GUADELOUPE                     = 92;
     GUAM                           = 93;
@@ -179,7 +179,7 @@ enum CountryCode {
     NIGERIA                        = 165;
     NIUE                           = 166;
     NORFOLK_ISLAND                 = 167;
-    Northern_Mariana_Islands       = 168;
+    NORTHERN_MARIANA_ISLANDS       = 168;
     NORWAY                         = 169;
     OMAN                           = 170;
     PAKISTAN                       = 171;
