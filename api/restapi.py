@@ -1004,6 +1004,19 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
+    @DELETE('^/api/v1/chat_conversation')
+    @authenticated
+    def delete_conversations(self, request):
+        try:
+            self.db.messages.delete_messages(request.args["guid"][0])
+            request.write(json.dumps({"success": True}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
     @POST('^/api/v1/mark_chat_message_as_read')
     @authenticated
     def mark_chat_message_as_read(self, request):

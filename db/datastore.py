@@ -616,7 +616,7 @@ WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
             conn.commit()
         conn.close()
 
-    def delete_message(self, guid):
+    def delete_messages(self, guid):
         """
         Delete all messages of type 'CHAT' for guid.
         """
