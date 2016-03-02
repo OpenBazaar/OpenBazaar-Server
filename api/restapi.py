@@ -522,7 +522,12 @@ class OpenBazaarAPI(APIResource):
             if "options" in request.args:
                 options = {}
                 for option in request.args["options"]:
-                    options[option] = request.args[option]
+                    options[option.decode("utf8")] = request.args[option.decode("utf8")]
+            keywords = None
+            if "keywords" in request.args:
+                keywords = []
+                for keyword in request.args["keywords"]:
+                    keywords.append(keyword.decode("utf8"))
             if "contract_id" in request.args:
                 c = Contract(self.db, hash_value=unhexlify(request.args["contract_id"][0]),
                              testnet=self.protocol.testnet)
@@ -550,7 +555,7 @@ class OpenBazaarAPI(APIResource):
                 shipping_currency_code=request.args["shipping_currency_code"][0],
                 shipping_domestic=request.args["shipping_domestic"][0],
                 shipping_international=request.args["shipping_international"][0],
-                keywords=request.args["keywords"] if "keywords" in request.args else None,
+                keywords=keywords,
                 category=request.args["category"][0].decode("utf8")
                 if request.args["category"][0] is not "" else None,
                 condition=request.args["condition"][0].decode("utf8")
