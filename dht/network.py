@@ -221,9 +221,13 @@ class Server(object):
             ds.append(self.protocol.stun(neighbor))
         return defer.gatherResults(ds).addCallback(handle)
 
-    def get(self, keyword):
+    def get(self, keyword, save_at_nearest=True):
         """
         Get a key if the network has it.
+
+        Args:
+            keyword = the keyword to save to
+            save_at_nearest = save value at the nearest without value
 
         Returns:
             :class:`None` if not found, the value otherwise.
@@ -236,7 +240,7 @@ class Server(object):
         if len(nearest) == 0:
             self.log.warning("there are no known neighbors to get key %s" % dkey.encode('hex'))
             return defer.succeed(None)
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha, save_at_nearest)
         return spider.find()
 
     def set(self, keyword, key, value, ttl=604800):

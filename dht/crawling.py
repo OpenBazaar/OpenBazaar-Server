@@ -71,11 +71,12 @@ class SpiderCrawl(object):
 
 
 class ValueSpiderCrawl(SpiderCrawl):
-    def __init__(self, protocol, node, peers, ksize, alpha):
+    def __init__(self, protocol, node, peers, ksize, alpha, save_at_nearest=True):
         SpiderCrawl.__init__(self, protocol, node, peers, ksize, alpha)
         # keep track of the single nearest node without value - per
         # section 2.3 so we can set the key there if found
         self.nearestWithoutValue = NodeHeap(self.node, 1)
+        self.saveToNearestWitoutValue = save_at_nearest
 
     def find(self):
         """
@@ -141,18 +142,19 @@ class ValueSpiderCrawl(SpiderCrawl):
             val.ttl = ttl[0]
             value.append(val.SerializeToString())
 
-        ds = []
-        peerToSaveTo = self.nearestWithoutValue.popleft()
-        if peerToSaveTo is not None:
-            for v in value:
-                try:
-                    val = objects.Value()
-                    val.ParseFromString(v)
-                    ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey,
-                                                      val.serializedData, val.ttl))
-                except Exception:
-                    pass
-            return defer.gatherResults(ds).addCallback(lambda _: value)
+        if self.saveToNearestWitoutValue:
+            ds = []
+            peerToSaveTo = self.nearestWithoutValue.popleft()
+            if peerToSaveTo is not None:
+                for v in value:
+                    try:
+                        val = objects.Value()
+                        val.ParseFromString(v)
+                        ds.append(self.protocol.callStore(peerToSaveTo, self.node.id, val.valueKey,
+                                                          val.serializedData, val.ttl))
+                    except Exception:
+                        pass
+                return defer.gatherResults(ds).addCallback(lambda _: value)
         return value
 
 

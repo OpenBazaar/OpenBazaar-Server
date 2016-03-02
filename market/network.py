@@ -577,7 +577,7 @@ class Server(object):
                         self.kserver.delete(self.kserver.node.id, value.valueKey, signature)
                     except Exception:
                         pass
-        self.kserver.get(self.kserver.node.id).addCallback(parse_messages)
+        self.kserver.get(self.kserver.node.id, False).addCallback(parse_messages)
 
     def purchase(self, node_to_ask, contract):
         """
