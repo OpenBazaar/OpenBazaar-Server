@@ -10,7 +10,7 @@ from interfaces import MessageProcessor
 from log import Logger
 from net.dos import BanScore
 from protos.message import Message, PING, NOT_FOUND
-from protos.objects import FULL_CONE
+from protos.objects import RESTRICTED, FULL_CONE
 from random import shuffle
 from twisted.internet import task, reactor
 from twisted.internet.task import LoopingCall
@@ -57,7 +57,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.node = None
             self.relay_node = relay_node
             self.keep_alive_loop = LoopingCall(self.keep_alive)
-            self.keep_alive_loop.start(300 if nat_type == FULL_CONE else 30, now=False)
+            self.keep_alive_loop.start(30 if nat_type == RESTRICTED else 1200, now=False)
             self.addr = None
             self.ban_score = None
             self.is_new_node = True
