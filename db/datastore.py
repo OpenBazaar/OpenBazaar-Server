@@ -516,8 +516,9 @@ class MessageStore(object):
                                 message, timestamp, avatar_hash, signature, outgoing, 0))
                 conn.commit()
             conn.close()
+            return True
         except Exception:
-            pass
+            return False
 
     def get_messages(self, guid, message_type):
         """
