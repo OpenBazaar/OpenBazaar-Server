@@ -717,14 +717,17 @@ class OpenBazaarAPI(APIResource):
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
             c.add_order_confirmation(self.protocol.blockchain,
                                      request.args["payout_address"][0],
-                                     comments=request.args["comments"][0] if "comments" in request.args else None,
-                                     shipper=request.args["shipper"][0] if "shipper" in request.args else None,
-                                     tracking_number=request.args["tracking_number"][0]
+                                     comments=request.args["comments"][0].decode("utf8")
+                                     if "comments" in request.args else None,
+                                     shipper=request.args["shipper"][0].decode("utf8")
+                                     if "shipper" in request.args else None,
+                                     tracking_number=request.args["tracking_number"][0].decode("utf8")
                                      if "tracking_number" in request.args else None,
-                                     est_delivery=request.args["est_delivery"][0]
+                                     est_delivery=request.args["est_delivery"][0].decode("utf8")
                                      if "est_delivery" in request.args else None,
-                                     url=request.args["url"][0] if "url" in request.args else None,
-                                     password=request.args["password"][0] if "password" in request.args else None)
+                                     url=request.args["url"][0].decode("utf8") if "url" in request.args else None,
+                                     password=request.args["password"][0].decode("utf8")
+                                     if "password" in request.args else None)
             guid = c.contract["buyer_order"]["order"]["id"]["guid"]
             self.mserver.confirm_order(guid, c).addCallback(respond)
             return server.NOT_DONE_YET
@@ -791,7 +794,7 @@ class OpenBazaarAPI(APIResource):
                       if "delivery_time" in request.args else None,
                       customer_service=request.args["customer_service"][0]
                       if "customer_service" in request.args else None,
-                      review=request.args["review"][0] if "review" in request.args else "")
+                      review=request.args["review"][0].decode("utf8") if "review" in request.args else "")
         guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
         self.mserver.complete_order(guid, c).addCallback(respond)
         return server.NOT_DONE_YET
