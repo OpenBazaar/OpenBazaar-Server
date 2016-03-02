@@ -8,6 +8,7 @@ import time
 import nacl.signing
 import nacl.encoding
 from config import DATA_FOLDER
+from log import Logger
 from market.profile import Profile
 from keys.keychain import KeyChain
 from random import shuffle
@@ -28,6 +29,9 @@ class WSProtocol(Protocol):
     """
     Handles new incoming requests coming from a websocket.
     """
+
+    def __init__(self):
+        self.log = Logger(system=self)
 
     def connectionMade(self):
         self.factory.register(self)
@@ -72,6 +76,7 @@ class WSProtocol(Protocol):
             else:
                 if node.id in self.factory.mserver.protocol.multiplexer.vendors:
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
+                self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
                 return False
 
         for node in to_query[:30]:
@@ -131,8 +136,8 @@ class WSProtocol(Protocol):
             self.factory.outstanding_listings = {}
             self.factory.outstanding_listings[message_id] = []
 
-        vendors = self.factory.mserver.protocol.multiplexer.vendors.values()
-        shuffle(vendors)
+        vendors = dict(self.factory.mserver.protocol.multiplexer.vendors)
+        self.log.info("Fetching listings from %s vendors" % len(vendors))
 
         def handle_response(listings, node):
             count = 0
@@ -172,13 +177,22 @@ class WSProtocol(Protocol):
                                 break
                     except Exception:
                         pass
-                vendors.remove(node)
+                if node.id in vendors:
+                    del vendors[node.id]
             else:
-                vendors.remove(node)
+                if node.id in vendors:
+                    del vendors[node.id]
                 if node.id in self.factory.mserver.protocol.multiplexer.vendors:
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
+                    self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
+                vendor_list = vendors.values()
+                shuffle(vendor_list)
+                node_to_ask = vendor_list[0]
+                self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
 
-        for vendor in vendors[:15]:
+        vendor_list = vendors.values()
+        shuffle(vendor_list)
+        for vendor in vendor_list[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
 
     def send_message(self, message_id, guid, handle, message, subject, message_type, recipient_key):
