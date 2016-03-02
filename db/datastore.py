@@ -563,9 +563,9 @@ avatarHash, signature, outgoing, read FROM messages WHERE subject=? ''',
             cursor.execute('''SELECT avatarHash, message, max(timestamp), pubkey FROM messages
 WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             val = cursor.fetchone()
+            avatar_hash = None
+            handle = ""
             if val[0] is not None:
-                avatar_hash = None
-                handle = ""
                 try:
                     with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
                         profile = filename.read()
@@ -574,7 +574,12 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                     avatar_hash = p.avatar_hash.encode("hex")
                     handle = p.handle
                 except Exception:
-                    pass
+                    cursor.execute('''SELECT avatarHash FROM messages
+WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
+                    avi = cursor.fetchone()
+                    if avi[0] is not None:
+                        avatar_hash = avi[0].encode("hex")
+
                 ret.append({"guid": g[0],
                             "avatar_hash": avatar_hash,
                             "handle": handle,
