@@ -9,7 +9,6 @@ from dht.node import Node
 from dht.utils import digest
 from interfaces import MessageProcessor
 from log import Logger
-from net.dos import BanScore
 from protos.message import Message, PING, NOT_FOUND
 from protos.objects import RESTRICTED, FULL_CONE
 from random import shuffle
@@ -63,14 +62,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.ban_score = None
             self.is_new_node = True
             self.on_connection_made()
-            self.time_last_message = time.time()
+            self.time_last_message = 0
 
         def on_connection_made(self):
             if self.connection is None or self.connection.state == State.CONNECTING:
                 return task.deferLater(reactor, .1, self.on_connection_made)
             if self.connection.state == State.CONNECTED:
-                self.ban_score = BanScore((str(self.connection.dest_addr[0]),
-                                           int(self.connection.dest_addr[1])), self.processors[0].multiplexer)
                 self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
                 self.log.info("connected to %s" % self.addr)
 
@@ -89,15 +86,16 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  (m.sender.relayAddress.ip, m.sender.relayAddress.port),
                                  m.sender.natType,
                                  m.sender.vendor)
-                pubkey = m.sender.publicKey
-                verify_key = nacl.signing.VerifyKey(pubkey)
-                signature = m.signature
-                m.ClearField("signature")
-                verify_key.verify(m.SerializeToString(), signature)
-                h = nacl.hash.sha512(m.sender.publicKey)
-                pow_hash = h[40:]
-                if int(pow_hash[:6], 16) >= 50 or m.sender.guid.encode("hex") != h[:40]:
-                    raise Exception('Invalid GUID')
+                if self.time_last_message == 0:
+                    pubkey = m.sender.publicKey
+                    verify_key = nacl.signing.VerifyKey(pubkey)
+                    signature = m.signature
+                    m.ClearField("signature")
+                    verify_key.verify(m.SerializeToString(), signature)
+                    h = nacl.hash.sha512(m.sender.publicKey)
+                    pow_hash = h[40:]
+                    if int(pow_hash[:6], 16) >= 50 or m.sender.guid.encode("hex") != h[:40]:
+                        raise Exception('Invalid GUID')
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
                         processor.receive_message(m, self.node, self.connection)

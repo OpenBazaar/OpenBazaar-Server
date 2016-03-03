@@ -157,6 +157,8 @@ class RPCProtocol:
             pass
 
         def func(node, *args):
+            address = (node.ip, node.port)
+
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
@@ -169,7 +171,7 @@ class RPCProtocol:
             m.signature = self.signing_key.sign(m.SerializeToString())[:64]
             data = m.SerializeToString()
 
-            address = (node.ip, node.port)
+
             relay_addr = None
             if node.nat_type == SYMMETRIC or \
                     (node.nat_type == RESTRICTED and self.sourceNode.nat_type == SYMMETRIC):

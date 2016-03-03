@@ -188,7 +188,8 @@ class WSProtocol(Protocol):
                 vendor_list = vendors.values()
                 shuffle(vendor_list)
                 node_to_ask = vendor_list[0]
-                self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
+                if node_to_ask is not None:
+                    self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
 
         vendor_list = vendors.values()
         shuffle(vendor_list)
