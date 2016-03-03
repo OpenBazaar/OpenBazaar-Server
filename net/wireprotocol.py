@@ -99,7 +99,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
                         processor.receive_message(m, self.node, self.connection)
-                self.time_last_message = time.time()
+                if m.command != PING:
+                    self.time_last_message = time.time()
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received an invalid message from %s, ignoring" % self.addr)
@@ -132,7 +133,17 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.change_relay_node()
 
         def keep_alive(self):
-            if time.time() - self.time_last_message >= 30:
+            """
+            Let's check that this node has been active in the last 15 minutes. If not
+            and if it's not in our routing table, we don't need to keep the connection
+            open. Otherwise PING it to make sure the NAT doesn't drop the mapping.
+            """
+            t = time.time()
+            router = self.processors[0].router
+            if t - self.time_last_message >= 900 and router.isNewNode(self.node):
+                self.connection.shutdown()
+                return
+            if t - self.time_last_message >= 30:
                 for processor in self.processors:
                     if PING in processor and self.node is not None:
                         processor.callPing(self.node)
