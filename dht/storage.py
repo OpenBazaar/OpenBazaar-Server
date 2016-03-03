@@ -105,7 +105,6 @@ class ForgetfulStorage(object):
         return default
 
     def getSpecific(self, keyword, key):
-        self.cull()
         if keyword in self.data and key in self.data[keyword]:
             return self.data[keyword][key]
 
