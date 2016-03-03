@@ -4,7 +4,6 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-
 from twisted.internet import reactor
 from zope.interface import implements
 import nacl.signing

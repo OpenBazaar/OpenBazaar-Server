@@ -203,8 +203,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.blockchain = blockchain
 
     def keep_alive(self):
-        for connection in self:
-            if connection.state != State.CONNECTING:
+        for connection in self.values():
+            if connection.state == State.CONNECTED:
                 connection.handler.keep_alive()
 
     def send_message(self, datagram, address, relay_addr):
