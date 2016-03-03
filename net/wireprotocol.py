@@ -45,6 +45,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.vendors = db.vendors.get_vendors()
         self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
         self.log = Logger(system=self)
+        self.keep_alive_loop = LoopingCall(self.keep_alive)
+        self.keep_alive_loop.start(30 if nat_type == RESTRICTED else 1200, now=False)
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
 
     class ConnHandler(Handler):
@@ -56,8 +58,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.connection = None
             self.node = None
             self.relay_node = relay_node
-            self.keep_alive_loop = LoopingCall(self.keep_alive)
-            self.keep_alive_loop.start(30 if nat_type == RESTRICTED else 1200, now=False)
             self.addr = None
             self.ban_score = None
             self.is_new_node = True
@@ -202,6 +202,11 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.ws = ws
         self.blockchain = blockchain
 
+    def keep_alive(self):
+        for connection in self:
+            if connection.state != State.CONNECTING:
+                connection.handler.keep_alive()
+
     def send_message(self, datagram, address, relay_addr):
         """
         Sends a datagram over the wire to the given address. It will create a new rudp connection if one
@@ -221,4 +226,3 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             con.set_relay_address(relay_addr)
 
         con.send_message(datagram)
-
