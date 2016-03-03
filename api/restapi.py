@@ -1160,8 +1160,9 @@ class OpenBazaarAPI(APIResource):
             txs = []
             def history_fetched(ec, history):
                 if ec:
-                    print ec
-                else:
+                    return_order()
+                elif timeout.active():
+                    timeout.cancel()
                     for tx_type, txid, i, height, value in history:  # pylint: disable=W0612
                         tx = {
                             "txid": txid.encode("hex"),
@@ -1175,7 +1176,6 @@ class OpenBazaarAPI(APIResource):
                             tx["type"] = "outgoing"
                         txs.append(tx)
                     order["bitcoin_txs"] = txs
-                    timeout.cancel()
                     request.setHeader('content-type', "application/json")
                     request.write(json.dumps(order, indent=4))
                     request.finish()

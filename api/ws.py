@@ -186,10 +186,11 @@ class WSProtocol(Protocol):
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
                     self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
                 vendor_list = vendors.values()
-                shuffle(vendor_list)
-                node_to_ask = vendor_list[0]
-                if node_to_ask is not None:
-                    self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
+                if len(vendor_list) > 0:
+                    shuffle(vendor_list)
+                    node_to_ask = vendor_list[0]
+                    if node_to_ask is not None:
+                        self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
 
         vendor_list = vendors.values()
         shuffle(vendor_list)
