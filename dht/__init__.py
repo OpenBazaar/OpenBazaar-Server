@@ -9,5 +9,3 @@ Modifications include:
     RUDP in place of straight UDP.
     The node ID is generated using a proof of work and validated when a new message is received.
 """
-version_info = (0, 1)
-version = '.'.join([str(i) for i in version_info])
