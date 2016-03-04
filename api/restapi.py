@@ -32,7 +32,7 @@ DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
 
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
-                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
+                'em', 'strike', 'hr', 'br', 'img', 'blockquote', 'span')
 
 
 class OpenBazaarAPI(APIResource):

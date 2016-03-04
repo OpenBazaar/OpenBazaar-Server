@@ -21,7 +21,7 @@ from twisted.internet.protocol import Protocol, Factory, connectionDone
 from txws import WebSocketProtocol, WebSocketFactory
 
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
-                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
+                'em', 'strike', 'hr', 'br', 'img', 'blockquote', 'span')
 
 
 # pylint: disable=W0232
