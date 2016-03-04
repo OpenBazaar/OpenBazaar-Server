@@ -693,7 +693,7 @@ class Contract(object):
             image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
         else:
             image_hash = ""
-        buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+        buyer_guid = unhexlify(self.contract["buyer_order"]["order"]["id"]["guid"])
         if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
             handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
         else:
