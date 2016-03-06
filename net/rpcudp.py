@@ -13,7 +13,7 @@ from hashlib import sha1
 from log import Logger
 from protos.message import Message, Command, NOT_FOUND, HOLE_PUNCH
 from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, threads
 from txrudp.connection import State
 
 

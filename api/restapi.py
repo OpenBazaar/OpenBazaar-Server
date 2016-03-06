@@ -936,8 +936,9 @@ class OpenBazaarAPI(APIResource):
     def get_notifications(self, request):
         notifications = self.db.notifications.get_notifications()
         limit = int(request.args["limit"][0]) if "limit" in request.args else len(notifications)
+        start = int(request.args["start"][0]) if "start" in request.args else 0
         notification_list = []
-        for n in notifications[len(notifications) - limit:]:
+        for n in notifications[::-1][start: start + limit]:
             notification_json = {
                 "id": n[0],
                 "guid": n[1],
