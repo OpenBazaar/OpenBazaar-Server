@@ -303,16 +303,16 @@ class DatastoreTest(unittest.TestCase):
         self.assertIsNone(sale)
 
     def test_NotificationStore(self):
-        n = self.ns.get_notifications()
+        n = self.ns.get_notifications("1234", 20)
         self.assertTrue(len(n) == 0)
         self.ns.save_notification("1234", self.u.guid, self.m.handle, 'NOTICE', "", ""
                                   '0000-00-00 00:00:00', '', 0)
-        n = self.ns.get_notifications()
+        n = self.ns.get_notifications("1234", 20)
         self.assertIsNotNone(n)
         self.ns.mark_as_read("1234")
 
         self.ns.delete_notification("1234")
-        n = self.ns.get_notifications()
+        n = self.ns.get_notifications("1234", 20)
         self.assertTrue(len(n) == 0)
 
     def test_VendorStore(self):

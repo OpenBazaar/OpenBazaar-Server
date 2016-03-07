@@ -9,6 +9,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
+from db.migrations import migration1
 
 
 class Database(object):
@@ -53,6 +54,8 @@ class Database(object):
             cache = join(DATA_FOLDER, "cache.pickle")
             if os.path.exists(cache):
                 os.remove(cache)
+
+        self._run_migrations()
 
     @staticmethod
     def _database_path(testnet, filepath):
@@ -111,7 +114,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 0''')
+        cursor.execute('''PRAGMA user_version = 1''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -131,7 +134,7 @@ class Database(object):
         cursor.execute('''CREATE INDEX index_subject ON messages(subject);''')
         cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
 
-        cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
+        cursor.execute('''CREATE TABLE notifications(notifID TEXT UNIQUE, guid BLOB, handle TEXT, type TEXT,
     orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
 
         cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
@@ -165,6 +168,15 @@ class Database(object):
 
         conn.commit()
         conn.close()
+
+    def _run_migrations(self):
+        conn = self.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''PRAGMA user_version''')
+        version = cursor.fetchone()[0]
+        conn.close()
+        if version == 0:
+            migration1.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -639,26 +651,39 @@ class NotificationStore(object):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''INSERT INTO notifications(id, guid, handle, type, orderId, title, timestamp,
+            cursor.execute('''INSERT INTO notifications(notifID, guid, handle, type, orderId, title, timestamp,
 imageHash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
                                                  image_hash, 0))
             conn.commit()
         conn.close()
 
-    def get_notifications(self):
+    def get_notifications(self, notif_id, limit):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id, guid, handle, type, orderId, title, timestamp,
-imageHash, read FROM notifications''')
+        start = self.get_row(notif_id)
+        cursor.execute('''SELECT notifID, guid, handle, type, orderId, title, timestamp,
+imageHash, read FROM notifications WHERE rowid <=? AND rowid > ?''', (start, start-limit))
         ret = cursor.fetchall()
         conn.close()
         return ret
+
+    def get_row(self, notif_id):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT MAX(rowid) FROM notifications''')
+        max_row = cursor.fetchone()[0]
+        if max_row is None:
+            max_row = 0
+        cursor.execute('''SELECT rowid FROM notifications WHERE notifID=?''', (notif_id, ))
+        ret = cursor.fetchone()
+        conn.close()
+        return max_row if not ret else ret[0]
 
     def mark_as_read(self, notif_id):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''UPDATE notifications SET read=? WHERE id=?;''', (1, notif_id))
+            cursor.execute('''UPDATE notifications SET read=? WHERE notifID=?;''', (1, notif_id))
             conn.commit()
         conn.close()
 
@@ -666,7 +691,7 @@ imageHash, read FROM notifications''')
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''DELETE FROM notifications WHERE id=?''', (notif_id,))
+            cursor.execute('''DELETE FROM notifications WHERE notifID=?''', (notif_id,))
             conn.commit()
         conn.close()
 
