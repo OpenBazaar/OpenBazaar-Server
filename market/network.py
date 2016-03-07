@@ -11,6 +11,7 @@ import nacl.encoding
 import nacl.utils
 import obelisk
 import os.path
+import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
@@ -44,8 +45,7 @@ class Server(object):
         self.db = database
         self.log = Logger(system=self)
         self.protocol = MarketProtocol(kserver.node, self.router, signing_key, database)
-
-        # TODO: we need a loop here that republishes keywords when they are about to expire
+        task.LoopingCall(self.republish_keywords).start(3600, now=True)
 
         # TODO: we also need a loop here to delete expiring contract (if they are set to expire)
 
@@ -1082,6 +1082,30 @@ class Server(object):
 
         self.log.info("sending refund message to %s" % buyer_guid)
         return self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node)
+
+    def republish_keywords(self):
+        if self.protocol.multiplexer is None:
+            return reactor.callLater(1, self.republish_keywords)
+        fname = DATA_FOLDER + "store/listings.pickle"
+        if os.path.exists(fname):
+            with open(fname, 'r') as f:
+                data = pickle.load(f)
+        else:
+            data = {}
+
+        l = objects.Listings()
+        l.ParseFromString(self.db.listings.get_proto())
+        for listing in l.listing:
+            contract_hash = listing.contract_hash
+            if contract_hash not in data or time.time() - data[contract_hash] > 500000:
+                c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
+                for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                    self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
+                                     self.kserver.node.getProto().SerializeToString())
+                data[contract_hash] = time.time()
+        with open(fname, 'w') as f:
+            pickle.dump(data, f)
+
 
     @staticmethod
     def cache(file_to_save, filename):
