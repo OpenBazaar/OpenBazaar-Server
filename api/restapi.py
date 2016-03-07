@@ -990,9 +990,13 @@ class OpenBazaarAPI(APIResource):
         messages = self.db.messages.get_messages(request.args["guid"][0], "CHAT")
         limit = int(request.args["limit"][0]) if "limit" in request.args else len(messages)
         start = int(request.args["start"][0]) if "start" in request.args else 0
+        for i in range(len(messages)):
+            if messages[i][11] == start:
+                start = i
         message_list = []
         for m in messages[::-1][start: start + limit]:
             message_json = {
+                "id": m[11],
                 "guid": m[0],
                 "handle": m[1],
                 "message": m[5],

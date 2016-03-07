@@ -187,7 +187,8 @@ class RPCProtocol:
 
             if self.multiplexer[address].state != State.CONNECTED and \
                             node.nat_type == RESTRICTED and \
-                            self.sourceNode.nat_type != SYMMETRIC:
+                            self.sourceNode.nat_type != SYMMETRIC and \
+                            node.relay_node is not None:
                 self.hole_punch(Node(digest("null"), node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
                                 address[0], address[1], "True")
                 self.log.debug("sending hole punch message to %s" % address[0] + ":" + str(address[1]))

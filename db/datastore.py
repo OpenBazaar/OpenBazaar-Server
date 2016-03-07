@@ -539,7 +539,7 @@ class MessageStore(object):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message,
-timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=? ''',
+timestamp, avatarHash, signature, outgoing, read, msgID FROM messages WHERE guid=? AND messageType=? ''',
                        (guid, message_type))
         ret = cursor.fetchall()
         conn.close()
