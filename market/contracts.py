@@ -873,6 +873,16 @@ class Contract(object):
     def get_order_id(self):
         return digest(json.dumps(self.contract, indent=4)).encode("hex")
 
+    def check_expired(self):
+        expiry = self.contract["vendor_offer"]["listing"]["metadata"]["expiry"]
+        if expiry == "never":
+            return False
+        elif datetime.strptime(expiry[:len(expiry)-4], '%Y-%m-%dT%H:%M') < datetime.utcnow():
+            return True
+        else:
+            return False
+
+
     def delete(self, delete_images=False):
         """
         Deletes the contract json from the OpenBazaar directory as well as the listing

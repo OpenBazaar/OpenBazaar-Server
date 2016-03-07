@@ -935,7 +935,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def get_notifications(self, request):
         limit = int(request.args["limit"][0]) if "limit" in request.args else 20
-        start = int(request.args["start"][0])
+        start = request.args["start"][0] if "start" in request.args else ""
         notifications = self.db.notifications.get_notifications(start, limit)
         notification_list = []
         for n in notifications[::-1]:
