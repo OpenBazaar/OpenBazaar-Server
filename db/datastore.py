@@ -104,7 +104,7 @@ class Database(object):
             for directory in sub_tree:
                 path = join(path, directory)
             if not os.path.exists(path):
-                os.makedirs(path)
+                os.makedirs(path, mode=0o750)
 
     @staticmethod
     def _create_database(database_path):
