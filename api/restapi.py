@@ -111,6 +111,7 @@ class OpenBazaarAPI(APIResource):
             def _setContentDispositionAndSend(file_path, extension, content_type):
                 request.setHeader('content-disposition', 'filename="%s.%s"' % (file_path, extension))
                 request.setHeader('content-type', content_type)
+                request.setHeader('cache-control', 'max-age=604800')
 
                 f = open(file_path, "rb")
                 yield FileSender().beginFileTransfer(f, request)
