@@ -45,7 +45,7 @@ class Multiplexer(Interface):
     def __getitem__(addr):
         """
         Return the `Connection` of the given address.
-        
+
         Args:
             addr: Tuple of destination address (ip, port).
         Raises:

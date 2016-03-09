@@ -12,7 +12,7 @@ import time
 from binascii import unhexlify
 from bitcoin import SelectParams
 from bitcoin.core.script import CScript, OP_2, OP_3, OP_CHECKMULTISIG
-from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress
+from bitcoin.wallet import P2SHBitcoinAddress, P2PKHBitcoinAddress, CBitcoinAddress
 from collections import OrderedDict
 from config import DATA_FOLDER, TRANSACTION_FEE
 from copy import deepcopy
@@ -829,43 +829,47 @@ class Contract(object):
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.blockchain.unsubscribe_address(
                         self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
-                    order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
-                    title = self.contract["vendor_offer"]["listing"]["item"]["title"]
-                    if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
-                        image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
-                    else:
-                        image_hash = ""
-                    if self.is_purchase:
-                        unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
-                        in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-                        if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
-                            handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
-                        else:
-                            handle = ""
-                        vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
-                        self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
-                                                          order_id, title, image_hash)
-                        # update the db
-                        self.db.purchases.update_status(order_id, 1)
-                        self.db.purchases.update_outpoint(order_id, json.dumps(self.outpoints))
-                        self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
-                    else:
-                        unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
-                        in_progress_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-                        buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
-                        if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
-                            handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
-                        else:
-                            handle = ""
-                        self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
-                                                          title, image_hash)
-                        self.db.sales.update_status(order_id, 1)
-                        self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
-                        self.log.info("Received new order %s" % order_id)
+                    self.payment_received()
 
-                    os.rename(unfunded_path, in_progress_path)
         except Exception:
             self.log.critical("Error processing bitcoin transaction")
+
+    def payment_received(self):
+        order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+        title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+        if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
+            image_hash = unhexlify(self.contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+        else:
+            image_hash = ""
+        if self.is_purchase:
+            unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
+            in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
+                handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
+            else:
+                handle = ""
+            vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
+            self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
+                                              order_id, title, image_hash)
+            # update the db
+            self.db.purchases.update_status(order_id, 1)
+            self.db.purchases.update_outpoint(order_id, json.dumps(self.outpoints))
+            self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
+        else:
+            unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
+            in_progress_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+            buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
+            if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
+                handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
+            else:
+                handle = ""
+            self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
+                                              title, image_hash)
+            self.db.sales.update_status(order_id, 1)
+            self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
+            self.log.info("Received new order %s" % order_id)
+
+        os.rename(unfunded_path, in_progress_path)
 
     def get_contract_id(self):
         return self.contract["vendor_offer"]["listing"]["contract_id"]
@@ -881,7 +885,6 @@ class Contract(object):
             return True
         else:
             return False
-
 
     def delete(self, delete_images=False):
         """
@@ -1354,22 +1357,28 @@ def check_order_for_payment(order_id, db, libbitcoin_client, notification_listen
         c.notification_listener = notification_listener
         c.is_purchase = is_purchase
         addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+        script_pubkey = CBitcoinAddress(addr).to_scriptPubKey().encode("hex")
+
         def history_fetched(ec, history):
             if not ec:
                 # pylint: disable=W0612
                 # pylint: disable=W0640
+                amount_funded = 0
+                outpoints = []
                 for objid, txhash, index, height, value in history:
-                    def cb_txpool(ec, result):
-                        if ec:
-                            libbitcoin_client.fetch_transaction(txhash, cb_chain)
-                        else:
-                            c.on_tx_received(None, None, None, None, result)
+                    amount_funded += value
+                    o = {
+                        "txid": txhash.encode("hex"),
+                        "vout": index,
+                        "value": value,
+                        "scriptPubKey": script_pubkey
+                    }
+                    outpoints.append(o)
 
-                    def cb_chain(ec, result):
-                        if not ec:
-                            c.on_tx_received(None, None, None, None, result)
-
-                    libbitcoin_client.fetch_txpool_transaction(txhash, cb_txpool)
+                # get the amount (in satoshi) the user is expected to pay
+                amount_to_pay = int(float(c.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
+                if amount_funded >= amount_to_pay:
+                    c.payment_received()
 
         libbitcoin_client.fetch_history2(addr, history_fetched)
     except Exception:
