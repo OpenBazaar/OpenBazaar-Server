@@ -159,7 +159,16 @@ def run(*args):
 
         heartbeat_server.set_status("online")
 
-        logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
+        logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
+
+        def shutdown():
+            logger.info("shutting down server")
+            for vendor in protocol.vendors.values():
+                db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
+            PortMapper().clean_my_mappings(PORT)
+            protocol.shutdown()
+
+        reactor.addSystemEventTrigger('before', 'shutdown', shutdown)
 
     # database
     db = Database(TESTNET)
@@ -191,7 +200,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.1.1',
+                description='OpenBazaar-Server v0.1.2',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
@@ -252,15 +261,9 @@ commands:
                 description="Shutdown the server and disconnect",
                 usage='''usage:
         python openbazaard.py stop''')
-            parser.add_argument('-r', '--restapiport', help="set the rest api port to shutdown cleanly",
-                                default=18469)
             args = parser.parse_args(sys.argv[2:])
             print "OpenBazaar server stopping..."
-            try:
-                request = urllib2.build_opener()
-                request.open('http://localhost:' + args.restapiport + '/api/v1/shutdown')
-            except Exception:
-                self.daemon.stop()
+            self.daemon.stop()
 
         def restart(self):
             # pylint: disable=W0612

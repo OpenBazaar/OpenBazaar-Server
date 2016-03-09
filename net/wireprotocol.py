@@ -140,7 +140,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             """
             t = time.time()
             router = self.processors[0].router
-            if self.node is not None and t - self.time_last_message >= 900 and router.isNewNode(self.node):
+            if (
+                    self.node is not None and
+                    t - self.time_last_message >= 900 and
+                    router.isNewNode(self.node) and
+                    self.relay_node != (self.connection.dest_addr[0], self.connection.dest_addr[1])
+            ):
                 self.connection.shutdown()
                 return
             if t - self.time_last_message >= 30:

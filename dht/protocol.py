@@ -224,7 +224,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if result[0]:
             if self.isNewConnection(node):
-                self.log.debug("Call response from new node, transferring key/values")
+                self.log.debug("call response from new node, transferring key/values")
                 reactor.callLater(1, self.transferKeyValues, node)
             self.router.addContact(node)
         else:
@@ -239,7 +239,7 @@ class KademliaProtocol(RPCProtocol):
         if they are new and within our neighborhood.
         """
         if self.isNewConnection(node):
-            self.log.debug("Found a new node, transferring key/values")
+            self.log.debug("found a new node, transferring key/values")
             reactor.callLater(1, self.transferKeyValues, node)
         self.router.addContact(node)
 

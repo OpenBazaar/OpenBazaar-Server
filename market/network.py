@@ -1082,31 +1082,34 @@ class Server(object):
         return self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node)
 
     def update_listings(self):
-        if self.protocol.multiplexer is None:
-            return reactor.callLater(1, self.update_listings)
-        fname = DATA_FOLDER + "store/listings.pickle"
-        if os.path.exists(fname):
-            with open(fname, 'r') as f:
-                data = pickle.load(f)
-        else:
-            data = {}
+        try:
+            if self.protocol.multiplexer is None:
+                return reactor.callLater(1, self.update_listings)
+            fname = DATA_FOLDER + "store/listings.pickle"
+            if os.path.exists(fname):
+                with open(fname, 'r') as f:
+                    data = pickle.load(f)
+            else:
+                data = {}
 
-        l = objects.Listings()
-        l.ParseFromString(self.db.listings.get_proto())
-        for listing in l.listing:
-            contract_hash = listing.contract_hash
-            c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
-            if contract_hash not in data or time.time() - data[contract_hash] > 500000:
-                for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
-                    self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
-                                     self.kserver.node.getProto().SerializeToString())
-                data[contract_hash] = time.time()
-            if c.check_expired():
-                c.delete(True)
-                if contract_hash in data:
-                    del data[contract_hash]
-        with open(fname, 'w') as f:
-            pickle.dump(data, f)
+            l = objects.Listings()
+            l.ParseFromString(self.db.listings.get_proto())
+            for listing in l.listing:
+                contract_hash = listing.contract_hash
+                c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
+                if contract_hash not in data or time.time() - data[contract_hash] > 500000:
+                    for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                        self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
+                                         self.kserver.node.getProto().SerializeToString())
+                    data[contract_hash] = time.time()
+                if c.check_expired():
+                    c.delete(True)
+                    if contract_hash in data:
+                        del data[contract_hash]
+            with open(fname, 'w') as f:
+                pickle.dump(data, f)
+        except Exception:
+            pass
 
     @staticmethod
     def cache(file_to_save, filename):
