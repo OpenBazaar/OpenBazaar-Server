@@ -1359,16 +1359,15 @@ def check_order_for_payment(order_id, db, libbitcoin_client, notification_listen
                 # pylint: disable=W0612
                 # pylint: disable=W0640
                 for objid, txhash, index, height, value in history:
-                    def cb_txpool(ec, result):
+                    def cb_txpool(ec, result, hash=txhash):
                         if ec:
-                            libbitcoin_client.fetch_transaction(txhash, cb_chain)
+                            libbitcoin_client.fetch_transaction(hash, cb_chain)
                         else:
                             c.on_tx_received(None, None, None, None, result)
 
-                    def cb_chain(ec, result):
+                    def cb_chain(ec, result_cb):
                         if not ec:
-                            c.on_tx_received(None, None, None, None, result)
-
+                            c.on_tx_received(None, None, None, None, result_cb)
                     libbitcoin_client.fetch_txpool_transaction(txhash, cb_txpool)
 
         libbitcoin_client.fetch_history2(addr, history_fetched)
