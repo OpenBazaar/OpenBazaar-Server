@@ -1,5 +1,5 @@
 __author__ = 'chris'
-import sys, os, time, atexit
+import sys, os, atexit
 from signal import SIGTERM
 
 

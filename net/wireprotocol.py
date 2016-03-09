@@ -7,7 +7,7 @@ import time
 from config import SEEDS
 from dht.node import Node
 from dht.utils import digest
-from interfaces import MessageProcessor
+from interfaces import MessageProcessor, Multiplexer, ConnectionHandler
 from log import Logger
 from protos.message import Message, PING, NOT_FOUND
 from protos.objects import RESTRICTED, FULL_CONE
@@ -18,6 +18,7 @@ from txrudp.connection import HandlerFactory, Handler, State
 from txrudp.crypto_connection import CryptoConnectionFactory
 from txrudp.rudp import ConnectionMultiplexer
 from zope.interface.verify import verifyObject
+from zope.interface import implements
 
 
 class OpenBazaarProtocol(ConnectionMultiplexer):
@@ -27,6 +28,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     of all connections, parses messages coming off the wire and passes them off to
     the appropriate classes for processing.
     """
+    implements(Multiplexer)
 
     def __init__(self, db, ip_address, nat_type, testnet=False, relaying=False):
         """
@@ -50,6 +52,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         ConnectionMultiplexer.__init__(self, CryptoConnectionFactory(self.factory), self.ip_address[0], relaying)
 
     class ConnHandler(Handler):
+        implements(ConnectionHandler)
 
         def __init__(self, processors, nat_type, relay_node, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
@@ -59,7 +62,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.node = None
             self.relay_node = relay_node
             self.addr = None
-            self.ban_score = None
             self.is_new_node = True
             self.on_connection_made()
             self.time_last_message = 0

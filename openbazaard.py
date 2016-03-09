@@ -7,7 +7,6 @@ import socket
 import stun
 import sys
 import time
-import urllib2
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
