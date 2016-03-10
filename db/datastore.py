@@ -690,7 +690,7 @@ imageHash, read FROM notifications WHERE rowid <=? AND rowid > ?''', (start, sta
     def get_unread_count(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT notifID FROM notifications WHERE read=?''', (1, ))
+        cursor.execute('''SELECT notifID FROM notifications WHERE read=?''', (0, ))
         ret = cursor.fetchall()
         conn.close()
         return len(ret)
