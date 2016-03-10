@@ -1,25 +1,27 @@
 __author__ = 'chris'
 
 import ast
-import bleach
 import json
 import os
 import time
-import nacl.signing
-import nacl.encoding
-from config import DATA_FOLDER
-from log import Logger
-from market.profile import Profile
-from keys.keychain import KeyChain
-from random import shuffle
-from protos.countries import CountryCode
-from protos.objects import PlaintextMessage, Value, Listings
-from protos import objects
 from binascii import unhexlify
-from dht.node import Node
+from random import shuffle
+
+import bleach
+import nacl.encoding
+import nacl.signing
 from twisted.internet.protocol import Protocol, Factory, connectionDone
 from txws import WebSocketProtocol, WebSocketFactory
-from utils import smart_unicode
+
+from api.utils import smart_unicode
+from config import DATA_FOLDER
+from dht.node import Node
+from keys.keychain import KeyChain
+from log import Logger
+from market.profile import Profile
+from protos import objects
+from protos.countries import CountryCode
+from protos.objects import PlaintextMessage, Value, Listings
 
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
                 'em', 'strike', 'hr', 'br', 'img', 'blockquote', 'span')

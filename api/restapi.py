@@ -957,6 +957,15 @@ class OpenBazaarAPI(APIResource):
         request.finish()
         return server.NOT_DONE_YET
 
+    @GET('^/api/v1/get_unread_count')
+    @authenticated
+    def get_unread_count(self, request):
+        count = self.db.notifications.get_unread_count()
+        request.setHeader('content-type', "application/json")
+        request.write(json.dumps({"unread": count}, indent=4))
+        request.finish()
+        return server.NOT_DONE_YET
+
     @POST('^/api/v1/mark_notification_as_read')
     @authenticated
     def mark_notification_as_read(self, request):
