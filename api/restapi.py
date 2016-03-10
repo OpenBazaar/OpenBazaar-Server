@@ -940,7 +940,7 @@ class OpenBazaarAPI(APIResource):
         limit = int(request.args["limit"][0]) if "limit" in request.args else 20
         start = request.args["start"][0] if "start" in request.args else ""
         notifications = self.db.notifications.get_notifications(start, limit)
-        notification_list = []
+        notification_list = [{"unread": self.db.notifications.get_unread_count()}]
         for n in notifications[::-1]:
             notification_json = {
                 "id": n[0],
@@ -956,15 +956,6 @@ class OpenBazaarAPI(APIResource):
             notification_list.append(notification_json)
         request.setHeader('content-type', "application/json")
         request.write(bleach.clean(json.dumps(notification_list, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
-        request.finish()
-        return server.NOT_DONE_YET
-
-    @GET('^/api/v1/get_unread_count')
-    @authenticated
-    def get_unread_count(self, request):
-        count = self.db.notifications.get_unread_count()
-        request.setHeader('content-type', "application/json")
-        request.write(json.dumps({"unread": count}, indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
