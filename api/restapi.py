@@ -1106,7 +1106,6 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         try:
-            self.protocol.blockchain.refresh_connection()
             check_order_for_payment(request.args["order_id"][0], self.db,
                                     self.protocol.blockchain,
                                     self.mserver.protocol.get_notification_listener(),
@@ -1155,7 +1154,6 @@ class OpenBazaarAPI(APIResource):
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
 
-        self.protocol.blockchain.refresh_connection()
         if status == 0:
             check_order_for_payment(request.args["order_id"][0], self.db, self.protocol.blockchain,
                                     self.mserver.protocol.get_notification_listener(),

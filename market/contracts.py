@@ -480,7 +480,6 @@ class Contract(object):
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["value"] = tx.get_out_value()
             conf_json["vendor_order_confirmation"]["invoice"]["payout"]["signature(s)"] = sigs
         else:
-            self.blockchain.refresh_connection()
             tx = BitcoinTransaction.make_unsigned(outpoints, payout_address, testnet=self.testnet)
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_v = bitcointools.bip32_extract_key(self.keychain.bitcoin_master_privkey)
@@ -609,7 +608,6 @@ class Contract(object):
 
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
-            self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -700,7 +698,6 @@ class Contract(object):
             handle = ""
 
         if "moderator" in self.contract["buyer_order"]["order"]:
-            self.blockchain.refresh_connection()
             outpoints = json.loads(self.db.sales.get_outpoint(order_id))
             payout_address = str(self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"])
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -756,7 +753,6 @@ class Contract(object):
         self.notification_listener = notification_listener
         self.blockchain = libbitcoin_client
         self.is_purchase = is_purchase
-        self.blockchain.refresh_connection()
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         payment_address = self.contract["buyer_order"]["order"]["payment"]["address"]
         vendor_item = self.contract["vendor_offer"]["listing"]["item"]
@@ -1331,7 +1327,6 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
     libbitcoin server to see if they received a payment.
     """
     current_time = time.time()
-    libbitcoin_client.refresh_connection()
     purchases = db.purchases.get_unfunded()
     for purchase in purchases:
         if current_time - purchase[1] <= 86400:
