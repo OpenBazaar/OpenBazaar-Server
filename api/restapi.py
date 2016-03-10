@@ -131,12 +131,14 @@ class OpenBazaarAPI(APIResource):
             else:
                 image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
             if not os.path.exists(image_path) and "guid" in request.args:
-                def get_node(node):
-                    if node is not None:
+                node = None
+                for connection in self.protocol.values():
+                    if connection.handler.node is not None and \
+                                    connection.handler.node.id == unhexlify(request.args["guid"][0]):
+                        node = connection.handler.node
                         self.mserver.get_image(node, unhexlify(request.args["hash"][0])).addCallback(_showImage)
-                    else:
-                        _showImage()
-                self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
+                if node is None:
+                    _showImage()
             else:
                 _showImage()
         else:
