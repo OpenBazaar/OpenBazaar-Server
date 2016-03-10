@@ -1357,6 +1357,7 @@ def check_order_for_payment(order_id, db, libbitcoin_client, notification_listen
         c.notification_listener = notification_listener
         c.is_purchase = is_purchase
         addr = c.contract["buyer_order"]["order"]["payment"]["address"]
+        SelectParams("testnet" if testnet else "mainnet")
         script_pubkey = CBitcoinAddress(addr).to_scriptPubKey().encode("hex")
 
         def history_fetched(ec, history):

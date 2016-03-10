@@ -1108,7 +1108,7 @@ class OpenBazaarAPI(APIResource):
         try:
             self.protocol.blockchain.refresh_connection()
             check_order_for_payment(request.args["order_id"][0], self.db,
-                                    self.protocol.blockchain.refresh_connection(),
+                                    self.protocol.blockchain,
                                     self.mserver.protocol.get_notification_listener(),
                                     self.protocol.testnet)
             request.write(json.dumps({"success": True}, indent=4))
