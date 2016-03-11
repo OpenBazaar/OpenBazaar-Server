@@ -302,7 +302,7 @@ class WSProtocol(Protocol):
 
 class WSFactory(Factory):
 
-    def __init__(self, mserver, kserver, only_ip="127.0.0.1"):
+    def __init__(self, mserver, kserver, only_ip=["127.0.0.1"]):
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
@@ -313,7 +313,7 @@ class WSFactory(Factory):
         self.clients = []
 
     def buildProtocol(self, addr):
-        if addr.host != self.only_ip and self.only_ip != "0.0.0.0":
+        if addr.host not in self.only_ip and "0.0.0.0" not in self.only_ip:
             return
         return Factory.buildProtocol(self, addr)
 
