@@ -47,18 +47,19 @@ class BtcPrice(Thread):
 
             self.condition.acquire()
 
-            try:
-                request = Request('https://api.bitcoinaverage.com/ticker/all')
-                result = json.loads(urlopen(request).read())
+            success = self.loadbitcoinaverage()
 
-                for currency, info in result.iteritems():
-                    if currency != "timestamp":
-                        self.prices[currency] = info["last"]
+            if not success:
+                success = self.loadblockchain()
 
-            except URLError as e:
-                print "Error loading bitcoinaverage url " + str(e)
-            except (ValueError, KeyError, TypeError) as e:
-                print "Error reading bitcoinaverage data" + str(e)
+            if not success:
+                success = self.loadcoinkite()
+
+            if not success:
+                success = self.loadbitcoincharts()
+
+            if not success:
+                print "BtcPrice unable to load Bitcoin exchange price"
 
             now = datetime.now()
             sleepTime = timedelta(minutes=minuteInterval - now.minute % minuteInterval).total_seconds() - now.second
@@ -67,3 +68,69 @@ class BtcPrice(Thread):
             self.condition.release()
 
         BtcPrice.__instance = None
+
+    def loadbitcoinaverage(self):
+        try:
+            request = Request('https://api.bitcoinaverage.com/ticker/all')
+            result = json.loads(urlopen(request).read())
+
+            for currency, info in result.iteritems():
+                if currency != "timestamp":
+                    self.prices[currency] = info["last"]
+
+            return True
+        except URLError as e:
+            print "Error loading bitcoinaverage url " + str(e)
+        except (ValueError, KeyError, TypeError) as e:
+            print "Error reading bitcoinaverage data" + str(e)
+
+        return False
+
+    def loadblockchain(self):
+        try:
+            request = Request('https://blockchain.info/ticker')
+            result = json.loads(urlopen(request).read())
+
+            for currency, info in result.iteritems():
+                self.prices[currency] = info["last"]
+
+            return True
+        except URLError as e:
+            print "Error loading bitcoinaverage url " + str(e)
+        except (ValueError, KeyError, TypeError) as e:
+            print "Error reading bitcoinaverage data" + str(e)
+
+        return False
+
+    def loadcoinkite(self):
+        try:
+            request = Request('https://api.coinkite.com/public/rates')
+            result = json.loads(urlopen(request).read())
+
+            for currency, info in result["rates"]["BTC"].iteritems():
+                self.prices[currency] = info["rate"]
+
+            return True
+        except URLError as e:
+            print "Error loading bitcoinaverage url " + str(e)
+        except (ValueError, KeyError, TypeError) as e:
+            print "Error reading bitcoinaverage data" + str(e)
+
+        return False
+
+    def loadbitcoincharts(self):
+        try:
+            request = Request('http://api.bitcoincharts.com/v1/weighted_prices.json')
+            result = json.loads(urlopen(request).read())
+
+            for currency, info in result.iteritems():
+                if currency != "timestamp":
+                    self.prices[currency] = info["24h"]
+
+            return True
+        except URLError as e:
+            print "Error loading bitcoinaverage url " + str(e)
+        except (ValueError, KeyError, TypeError) as e:
+            print "Error reading bitcoinaverage data" + str(e)
+
+        return False
