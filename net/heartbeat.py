@@ -23,7 +23,9 @@ class HeartbeatProtocol(Protocol):
 
 class HeartbeatFactory(Factory):
 
-    def __init__(self, only_ip=["127.0.0.1"]):
+    def __init__(self, only_ip=None):
+        if only_ip == None:
+            only_ip = ["127.0.0.1"]
         self.only_ip = only_ip
         self.status = "starting up"
         self.protocol = HeartbeatProtocol
@@ -32,7 +34,7 @@ class HeartbeatFactory(Factory):
         LoopingCall(self._heartbeat).start(10, now=True)
 
     def buildProtocol(self, addr):
-        if self.status in ("starting up", "generating GUID") and "127.0.0.1" not in self.only_ip:
+        if self.status in ("starting up", "generating GUID") and self.only_ip != ["127.0.0.1"]:
             return
         if addr.host not in self.only_ip and "0.0.0.0" not in self.only_ip:
             return

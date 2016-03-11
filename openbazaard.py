@@ -177,7 +177,7 @@ def run(*args):
 
     # heartbeat server
     interface = "0.0.0.0" if ALLOWIP != ["127.0.0.1"] else "127.0.0.1"
-        
+
     heartbeat_server = HeartbeatFactory(only_ip=ALLOWIP)
     if SSL:
         reactor.listenSSL(HEARTBEATPORT, WebSocketFactory(heartbeat_server),

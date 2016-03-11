@@ -302,7 +302,9 @@ class WSProtocol(Protocol):
 
 class WSFactory(Factory):
 
-    def __init__(self, mserver, kserver, only_ip=["127.0.0.1"]):
+    def __init__(self, mserver, kserver, only_ip=None):
+        if only_ip == None:
+            only_ip = ["127.0.0.1"]
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
