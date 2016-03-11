@@ -1348,7 +1348,9 @@ class OpenBazaarAPI(APIResource):
 class RestAPI(Site):
 
     def __init__(self, mserver, kserver, openbazaar_protocol, username, password,
-                 authenticated_sessions, only_ip=["127.0.0.1"], timeout=60 * 60 * 1):
+                 authenticated_sessions, only_ip=None, timeout=60 * 60 * 1):
+        if only_ip == None:
+            only_ip = ["127.0.0.1"]
         self.only_ip = only_ip
         api_resource = OpenBazaarAPI(mserver, kserver, openbazaar_protocol,
                                      username, password, authenticated_sessions)
