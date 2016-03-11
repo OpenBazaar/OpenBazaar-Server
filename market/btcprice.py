@@ -59,13 +59,13 @@ class BtcPrice(Thread):
                     break
 
                 except URLError as e:
-                    if self.loadFailure == 0:
+                    if self.loadFailure == 0:  # pragma: no cover
                         print "Error loading " + priority + " url " + str(e)
                 except (ValueError, KeyError, TypeError) as e:
-                    if self.loadFailure == 0:
+                    if self.loadFailure == 0:  # pragma: no cover
                         print "Error reading " + priority + " data" + str(e)
 
-            if not success and self.loadFailure == 0:
+            if not success and self.loadFailure == 0:  # pragma: no cover
                 print "BtcPrice unable to load Bitcoin exchange price"
 
             now = datetime.now()
@@ -77,10 +77,13 @@ class BtcPrice(Thread):
         BtcPrice.__instance = None
 
     def dictForUrl(self, url):
+        if self.loadFailure == 0:
+            request = Request(url)
+            result = urlopen(request).read()
         if self.loadFailure == 1:
             url = 'http://google.com/404'
-        request = Request(url)
-        result = urlopen(request).read()
+            request = Request(url)
+            result = urlopen(request).read()
         if self.loadFailure == 2:
             result = None
         if self.loadFailure == 3:
