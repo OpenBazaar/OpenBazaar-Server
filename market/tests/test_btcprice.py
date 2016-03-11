@@ -10,24 +10,49 @@ class MarketProtocolTest(unittest.TestCase):
         rate = BtcPrice.instance().get("USD")
         self.assertGreater(rate, 0)
         btcPrice.closethread()
-        btcPrice.join(1)
+        btcPrice.join()
+
+    @staticmethod
+    def test_BtcPrice_loadFailures():
+        for x in range(1, 5):
+            btcPrice = BtcPrice()
+            btcPrice.loadFailure = x
+            btcPrice.start()
+            btcPrice.closethread()
+            btcPrice.join()
 
     def test_BtcPrice_loadbitcoinaverage(self):
         btcPrice = BtcPrice()
-        self.assertTrue(btcPrice.loadbitcoinaverage())
-        self.assertGreater(btcPrice.get("USD"), 0)
+        btcPrice.loadPriorities = ["loadbitcoinaverage"]
+        btcPrice.start()
+        rate = btcPrice.get("USD")
+        self.assertGreater(rate, 0)
+        btcPrice.closethread()
+        btcPrice.join()
 
     def test_BtcPrice_loadblockchain(self):
         btcPrice = BtcPrice()
-        self.assertTrue(btcPrice.loadblockchain())
-        self.assertGreater(btcPrice.get("USD"), 0)
+        btcPrice.loadPriorities = ["loadblockchain"]
+        btcPrice.start()
+        rate = btcPrice.get("USD")
+        self.assertGreater(rate, 0)
+        btcPrice.closethread()
+        btcPrice.join()
 
     def test_BtcPrice_loadcoinkite(self):
         btcPrice = BtcPrice()
-        self.assertTrue(btcPrice.loadcoinkite())
-        self.assertGreater(btcPrice.get("USD"), 0)
+        btcPrice.loadPriorities = ["loadcoinkite"]
+        btcPrice.start()
+        rate = btcPrice.get("USD")
+        self.assertGreater(rate, 0)
+        btcPrice.closethread()
+        btcPrice.join()
 
     def test_BtcPrice_loadbitcoincharts(self):
         btcPrice = BtcPrice()
-        self.assertTrue(btcPrice.loadbitcoincharts())
-        self.assertGreater(btcPrice.get("USD"), 0)
+        btcPrice.loadPriorities = ["loadbitcoincharts"]
+        btcPrice.start()
+        rate = btcPrice.get("USD")
+        self.assertGreater(rate, 0)
+        btcPrice.closethread()
+        btcPrice.join()
