@@ -22,6 +22,7 @@ from log import Logger, FileLogObserver
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from market.contracts import check_unfunded_for_payment
+from market.btcprice import BtcPrice
 from market.profile import Profile
 from net.heartbeat import HeartbeatFactory
 from net.sslcontext import ChainedOpenSSLContextFactory
@@ -185,10 +186,16 @@ def run(*args):
     else:
         reactor.listenTCP(HEARTBEATPORT, WebSocketFactory(heartbeat_server), interface=interface)
 
+    btcPrice = BtcPrice()
+    btcPrice.start()
+
     # key generation
     KeyChain(db, start_server, heartbeat_server)
 
     reactor.run()
+
+    btcPrice.closethread()
+    btcPrice.join(1)
 
 if __name__ == "__main__":
     # pylint: disable=anomalous-backslash-in-string
