@@ -133,6 +133,7 @@ class Database(object):
         cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
         cursor.execute('''CREATE INDEX index_subject ON messages(subject);''')
         cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
+        cursor.execute('''CREATE INDEX index_timestamp ON messages(timestamp);''')
 
         cursor.execute('''CREATE TABLE notifications(notifID TEXT UNIQUE, guid BLOB, handle TEXT, type TEXT,
     orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
@@ -533,15 +534,19 @@ class MessageStore(object):
         except Exception:
             return False
 
-    def get_messages(self, guid, message_type):
+    def get_messages(self, guid, message_type, msgID=None, limit=20):
         """
         Return all messages matching guid and message_type.
         """
+        if msgID == None:
+            timestamp = 4294967295
+        else:
+            timestamp = self.get_timestamp(msgID)
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message,
-timestamp, avatarHash, signature, outgoing, read, msgID FROM messages WHERE guid=? AND messageType=? ''',
-                       (guid, message_type))
+timestamp, avatarHash, signature, outgoing, read, msgID FROM messages
+WHERE guid=? AND messageType=? AND timestamp<? ORDER BY timestamp DESC LIMIT 20''', (guid, message_type, timestamp))
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -617,6 +622,16 @@ WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
             ret.append(g[0])
         conn.close()
         return Counter(ret)
+
+    def get_timestamp(self, msgID):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT timestamp FROM messages WHERE msgID=? and messageType=?''', (msgID, "CHAT"))
+        ts = cursor.fetchone()[0]
+        if ts is None:
+            ts = 0
+        conn.close()
+        return ts
 
     def mark_as_read(self, guid):
         """
