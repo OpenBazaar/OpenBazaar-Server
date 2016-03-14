@@ -1348,13 +1348,15 @@ class OpenBazaarAPI(APIResource):
 class RestAPI(Site):
 
     def __init__(self, mserver, kserver, openbazaar_protocol, username, password,
-                 authenticated_sessions, only_ip="127.0.0.1", timeout=60 * 60 * 1):
+                 authenticated_sessions, only_ip=None, timeout=60 * 60 * 1):
+        if only_ip == None:
+            only_ip = ["127.0.0.1"]
         self.only_ip = only_ip
         api_resource = OpenBazaarAPI(mserver, kserver, openbazaar_protocol,
                                      username, password, authenticated_sessions)
         Site.__init__(self, api_resource, timeout=timeout)
 
     def buildProtocol(self, addr):
-        if addr.host != self.only_ip and self.only_ip != "0.0.0.0":
+        if addr.host not in self.only_ip and "0.0.0.0" not in self.only_ip:
             return
         return Site.buildProtocol(self, addr)

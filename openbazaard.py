@@ -109,7 +109,7 @@ def run(*args):
 
         looping_retry(reactor.listenUDP, port, protocol)
 
-        interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
+        interface = "0.0.0.0" if ALLOWIP != ["127.0.0.1"] else "127.0.0.1"
 
         # websockets api
         authenticated_sessions = []
@@ -176,7 +176,8 @@ def run(*args):
     username, password = get_credentials(db)
 
     # heartbeat server
-    interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
+    interface = "0.0.0.0" if ALLOWIP != ["127.0.0.1"] else "127.0.0.1"
+
     heartbeat_server = HeartbeatFactory(only_ip=ALLOWIP)
     if SSL:
         reactor.listenSSL(HEARTBEATPORT, WebSocketFactory(heartbeat_server),
@@ -228,7 +229,7 @@ commands:
             parser.add_argument('-l', '--loglevel', default="info",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
-            parser.add_argument('-a', '--allowip', default="127.0.0.1",
+            parser.add_argument('-a', '--allowip', default=["127.0.0.1"], action="append",
                                 help="only allow api connections from this ip")
             parser.add_argument('-r', '--restapiport', help="set the rest api port", default=18469)
             parser.add_argument('-w', '--websocketport', help="set the websocket api port", default=18466)
