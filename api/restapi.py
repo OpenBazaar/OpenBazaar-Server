@@ -993,7 +993,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_chat_messages')
     @authenticated
     def get_chat_messages(self, request):
-        start = int(request.args["start"][0]) if "start" in request.args else None
+        start = request.args["start"][0] if "start" in request.args else None
         messages = self.db.messages.get_messages(request.args["guid"][0], "CHAT", start)
         message_list = []
         for m in messages[::-1]:
