@@ -823,14 +823,14 @@ class Contract(object):
                         self.received_txs.append(tx)
                         self.outpoints.append(outpoint)
                 if self.amount_funded >= amount_to_pay:  # if fully funded
-                    self.blockchain.unsubscribe_address(
-                        self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
                     self.payment_received()
 
         except Exception:
             self.log.critical("Error processing bitcoin transaction")
 
     def payment_received(self):
+        self.blockchain.unsubscribe_address(
+                        self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         title = self.contract["vendor_offer"]["listing"]["item"]["title"]
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:

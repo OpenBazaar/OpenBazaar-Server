@@ -136,6 +136,7 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE notifications(notifID TEXT UNIQUE, guid BLOB, handle TEXT, type TEXT,
     orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
+        cursor.execute('''CREATE INDEX index_notification_read ON notifications(read);''')
 
         cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
     timestamp INTEGER, avatarHash BLOB)''')
