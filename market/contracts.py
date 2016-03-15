@@ -816,7 +816,7 @@ class Contract(object):
 
     def payment_received(self):
         self.blockchain.unsubscribe_address(
-                        self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
+            self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         title = self.contract["vendor_offer"]["listing"]["item"]["title"]
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:

@@ -1,6 +1,6 @@
 import os
 import unittest
-
+import time
 from db.datastore import Database
 from dht.utils import digest
 from protos.objects import Profile, Listings, Following, Metadata, Followers, Node, FULL_CONE
@@ -179,7 +179,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertEqual(0, len(conversations))
 
         self.ms.save_message(self.u.guid, self.m.handle, self.u.pubkey,
-                             'SUBJECT', 'CHAT', 'MESSAGE', ZERO_TIMESTAMP,
+                             'SUBJECT', 'CHAT', 'MESSAGE', time.time(),
                              '', '', '')
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')
         self.assertEqual(1, len(msgs))
