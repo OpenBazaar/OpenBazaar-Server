@@ -1172,7 +1172,7 @@ class OpenBazaarAPI(APIResource):
                         tx = {
                             "txid": txid.encode("hex"),
                             "value": round(float(value) / 100000000, 8),
-                            "confirmaions": chain_height - height + 1 if height != 0 else 0
+                            "confirmations": chain_height - height + 1 if height != 0 else 0
                         }
 
                         if tx_type == obelisk.PointIdent.Output:
