@@ -1329,6 +1329,7 @@ class OpenBazaarAPI(APIResource):
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/btc_price')
+    @authenticated
     def btc_price(self, request):
         request.setHeader('content-type', "application/json")
         if "currency" in request.args:
