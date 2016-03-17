@@ -26,6 +26,7 @@ from keys.keychain import KeyChain
 from dht.utils import digest
 from market.profile import Profile
 from market.contracts import Contract, check_order_for_payment
+from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 
 DEFAULT_RECORDS_COUNT = 20
@@ -1326,6 +1327,18 @@ class OpenBazaarAPI(APIResource):
             request.write(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
             request.finish()
         return server.NOT_DONE_YET
+
+    @GET('^/api/v1/btc_price')
+    @authenticated
+    def btc_price(self, request):
+        request.setHeader('content-type', "application/json")
+        if "currency" in request.args:
+            try:
+                result = BtcPrice.instance().get(request.args["currency"][0].upper())
+                return json.dumps({"btcExchange":result, "currencyCodes":BtcPrice.instance().prices})
+            except KeyError:
+                pass
+        return json.dumps({"currencyCodes":BtcPrice.instance().prices})
 
     @POST('^/api/v1/refund')
     @authenticated
