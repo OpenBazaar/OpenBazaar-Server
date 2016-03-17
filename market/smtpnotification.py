@@ -1,6 +1,7 @@
 __author__ = 'hoffmabc'
 
 import smtplib
+from smtplib import SMTPAuthenticationError
 from email.mime.text import MIMEText
 from log import Logger
 
@@ -56,8 +57,3 @@ class SMTPNotification(object):
                 print e
 
             server.quit()
-
-
-if __name__ == "__main__":
-    notification = SMTPNotification()
-    notification.send('test', 'test')
