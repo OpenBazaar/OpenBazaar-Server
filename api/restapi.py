@@ -1335,10 +1335,10 @@ class OpenBazaarAPI(APIResource):
         if "currency" in request.args:
             try:
                 result = BtcPrice.instance().get(request.args["currency"][0].upper())
-                return json.dumps({"btcExchange":result, "currencyCodes":BtcPrice.instance().prices.keys()})
+                return json.dumps({"btcExchange":result, "currencyCodes":BtcPrice.instance().prices})
             except KeyError:
                 pass
-        return json.dumps({"currencyCodes":BtcPrice.instance().prices.keys()})
+        return json.dumps({"currencyCodes":BtcPrice.instance().prices})
 
     @POST('^/api/v1/refund')
     @authenticated
