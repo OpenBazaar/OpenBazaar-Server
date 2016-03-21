@@ -920,9 +920,9 @@ class Contract(object):
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
-        if isinstance(self.previous_title, unicode):
-            self.previous_title = self.previous_title.encode('utf8')
         if self.previous_title and self.previous_title != self.contract["vendor_offer"]["listing"]["item"]["title"]:
+            if isinstance(self.previous_title, unicode):
+                self.previous_title = self.previous_title.encode('utf8')
             old_name = str(self.previous_title[:100])
             old_name = re.sub(r"[^\w\s]", '', file_name)
             old_name = re.sub(r"\s+", '_', file_name)
