@@ -1106,6 +1106,11 @@ class Server(object):
                     c.delete(True)
                     if contract_hash in data:
                         del data[contract_hash]
+            guid = KeyChain(self.db).guid
+            moderator = Profile(self.db).get().moderator
+            if (guid not in data or time.time() - data[guid] > 500000) and moderator:
+                self.make_moderator()
+                data[guid] = time.time()
             with open(fname, 'w') as f:
                 pickle.dump(data, f)
         except Exception:
