@@ -7,7 +7,7 @@ gnupg==2.0.2
 pynacl==1.0.1
 txrestapi==0.2
 txws==0.9.1
-python-libbitcoinclient==0.4.0
+python-libbitcoinclient==0.4.1
 python-bitcoinlib==0.5.0
 pyopenssl==0.15.1
 miniupnpc==1.9
