@@ -261,9 +261,9 @@ if __name__ == '__main__':
         good = ('seed.openbazaar.org:8080', '5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117')
         bad_not_tuple = 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117'
         bad_not_seed_tuple = ('aoioai', 'aoioai')
-        assert _is_tuple(good)
-        assert not _is_tuple(bad_not_tuple)
-        assert not _is_tuple(bad_not_seed_tuple)
+        assert _is_tuple(good, "seed")
+        assert not _is_tuple(bad_not_tuple, "seed")
+        assert not _is_tuple(bad_not_seed_tuple, "seed")
 
 
     _is_linux()

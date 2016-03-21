@@ -821,7 +821,8 @@ class OpenBazaarAPI(APIResource):
                 else request.args["resolver"][0]
             if "libbitcoin_server" in request.args and request.args["libbitcoin_server"][0] != "":
                 if self.protocol.testnet:
-                    set_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom", request.args["libbitcoin_server"][0])
+                    set_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom",
+                              request.args["libbitcoin_server"][0])
                 else:
                     set_value("LIBBITCOIN_SERVERS", "server_custom", request.args["libbitcoin_server"][0])
             else:
