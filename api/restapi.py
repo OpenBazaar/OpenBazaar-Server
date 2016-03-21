@@ -727,19 +727,21 @@ class OpenBazaarAPI(APIResource):
             with open(file_path, 'r') as filename:
                 order = json.load(filename, object_pairs_hook=OrderedDict)
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
-            c.add_order_confirmation(self.protocol.blockchain,
-                                     request.args["payout_address"][0],
-                                     comments=request.args["comments"][0].decode("utf8")
-                                     if "comments" in request.args else None,
-                                     shipper=request.args["shipper"][0].decode("utf8")
-                                     if "shipper" in request.args else None,
-                                     tracking_number=request.args["tracking_number"][0].decode("utf8")
-                                     if "tracking_number" in request.args else None,
-                                     est_delivery=request.args["est_delivery"][0].decode("utf8")
-                                     if "est_delivery" in request.args else None,
-                                     url=request.args["url"][0].decode("utf8") if "url" in request.args else None,
-                                     password=request.args["password"][0].decode("utf8")
-                                     if "password" in request.args else None)
+            if "vendor_order_confirmation" not in c.contract:
+                c.add_order_confirmation(self.protocol.blockchain,
+                                         request.args["payout_address"][0],
+                                         comments=request.args["comments"][0].decode("utf8")
+                                         if "comments" in request.args else None,
+                                         shipper=request.args["shipper"][0].decode("utf8")
+                                         if "shipper" in request.args else None,
+                                         tracking_number=request.args["tracking_number"][0].decode("utf8")
+                                         if "tracking_number" in request.args else None,
+                                         est_delivery=request.args["est_delivery"][0].decode("utf8")
+                                         if "est_delivery" in request.args else None,
+                                         url=request.args["url"][0].decode("utf8")
+                                         if "url" in request.args else None,
+                                         password=request.args["password"][0].decode("utf8")
+                                         if "password" in request.args else None)
             guid = c.contract["buyer_order"]["order"]["id"]["guid"]
             self.mserver.confirm_order(guid, c).addCallback(respond)
             return server.NOT_DONE_YET
