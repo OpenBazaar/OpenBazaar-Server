@@ -9,8 +9,8 @@ import sys
 import time
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
-from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
-    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SSL
+from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVERS,\
+    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SSL
 from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
@@ -135,9 +135,9 @@ def run(*args):
 
         # blockchain
         if TESTNET:
-            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET, log=Logger(service="LibbitcoinClient"))
+            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVERS_TESTNET, log=Logger(service="LibbitcoinClient"))
         else:
-            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER, log=Logger(service="LibbitcoinClient"))
+            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVERS, log=Logger(service="LibbitcoinClient"))
         heartbeat_server.libbitcoin = libbitcoin_client
 
         # listeners

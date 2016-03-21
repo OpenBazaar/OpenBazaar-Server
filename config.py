@@ -27,8 +27,8 @@ DEFAULTS = {
     'ksize': '20',
     'alpha': '3',
     'transaction_fee': '10000',
-    'libbitcoin_server': 'tcp://libbitcoin1.openbazaar.org:9091',
-    'libbitcoin_server_testnet': 'tcp://libbitcoin2.openbazaar.org:9091',
+    'libbitcoin_servers': 'tcp://libbitcoin1.openbazaar.org:9091,None',
+    'libbitcoin_servers_testnet': 'tcp://libbitcoin2.openbazaar.org:9091, <Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM',
     'resolver': 'http://resolver.onename.com/',
     'ssl_cert': None,
     'ssl_key': None,
@@ -137,18 +137,21 @@ def _validate_key(key):
     return True
 
 
-def _is_seed_tuple(tup):
+def _is_tuple(tup, key):
     if isinstance(tup, tuple):
-        return 'seed' in tup[0]
+        return key in tup[0]
 
     return False
 
 
-def _tuple_from_seed_string(string):
+def _tuple_from_string(string):
     '''
     Accepts well formed seed string, returns tuple (url:port, key)
     '''
-    return tuple(string.split(','))
+    l = string.split(',')
+    if len(l) == 1:
+        l.append(None)
+    return tuple(l)
 
 
 cfg = ConfigParser(DEFAULTS)
@@ -162,26 +165,52 @@ DATA_FOLDER = _platform_agnostic_data_path(cfg.get('CONSTANTS', 'DATA_FOLDER'))
 KSIZE = int(cfg.get('CONSTANTS', 'KSIZE'))
 ALPHA = int(cfg.get('CONSTANTS', 'ALPHA'))
 TRANSACTION_FEE = int(cfg.get('CONSTANTS', 'TRANSACTION_FEE'))
-LIBBITCOIN_SERVER = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER')
-LIBBITCOIN_SERVER_TESTNET = cfg.get('CONSTANTS', 'LIBBITCOIN_SERVER_TESTNET')
 RESOLVER = cfg.get('CONSTANTS', 'RESOLVER')
 SSL = str_to_bool(cfg.get('AUTHENTICATION', 'SSL'))
 SSL_CERT = cfg.get('AUTHENTICATION', 'SSL_CERT')
 SSL_KEY = cfg.get('AUTHENTICATION', 'SSL_KEY')
 USERNAME = cfg.get('AUTHENTICATION', 'USERNAME')
 PASSWORD = cfg.get('AUTHENTICATION', 'PASSWORD')
+LIBBITCOIN_SERVERS = []
+LIBBITCOIN_SERVERS_TESTNET = []
 SEEDS = []
 
 items = cfg.items('SEEDS')  # this also includes items in DEFAULTS
 for item in items:
-    if _is_seed_tuple(item):
+    if _is_tuple(item, "seed"):
         seed = item[1]
         if _is_well_formed_seed_string(seed):
-            new_seed = _tuple_from_seed_string(seed)
+            new_seed = _tuple_from_string(seed)
             if new_seed not in SEEDS:
                 SEEDS.append(new_seed)
         else:
             print 'Warning: please check your configuration file: %s' % seed
+
+items = cfg.items('LIBBITCOIN_SERVERS')  # this also includes items in DEFAULTS
+for item in items:
+    if _is_tuple(item, "server"):
+        server = item[1]
+        new_server = _tuple_from_string(server)
+        if item[0] == "server_custom":
+            LIBBITCOIN_SERVERS = [new_server]
+            break
+        elif new_server not in LIBBITCOIN_SERVERS:
+            LIBBITCOIN_SERVERS.append(new_server)
+        else:
+            print 'Warning: please check your configuration file: %s' % server
+
+items = cfg.items('LIBBITCOIN_SERVERS_TESTNET')  # this also includes items in DEFAULTS
+for item in items:
+    if _is_tuple(item, "testnet_server"):
+        server = item[1]
+        new_server = _tuple_from_string(server)
+        if item[0] == "testnet_server_custom":
+            LIBBITCOIN_SERVERS_TESTNET = [new_server]
+            break
+        elif new_server not in LIBBITCOIN_SERVERS_TESTNET:
+            LIBBITCOIN_SERVERS_TESTNET.append(new_server)
+        else:
+            print 'Warning: please check your configuration file: %s' % server
 
 
 def set_value(section, name, value):
@@ -197,8 +226,19 @@ def get_value(section, name):
     config = ConfigParser()
     if isfile(CONFIG_FILE):
         config.read(CONFIG_FILE)
-        return config.get(section, name)
+        try:
+            return config.get(section, name)
+        except Exception:
+            return None
 
+
+def delete_value(section, name):
+    config = ConfigParser()
+    if isfile(CONFIG_FILE):
+        config.read(CONFIG_FILE)
+        config.remove_option(section, name)
+        with open(CONFIG_FILE, 'wb') as configfile:
+            config.write(configfile)
 
 if __name__ == '__main__':
 
@@ -221,9 +261,9 @@ if __name__ == '__main__':
         good = ('seed.openbazaar.org:8080', '5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117')
         bad_not_tuple = 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117'
         bad_not_seed_tuple = ('aoioai', 'aoioai')
-        assert _is_seed_tuple(good)
-        assert not _is_seed_tuple(bad_not_tuple)
-        assert not _is_seed_tuple(bad_not_seed_tuple)
+        assert _is_tuple(good)
+        assert not _is_tuple(bad_not_tuple)
+        assert not _is_tuple(bad_not_seed_tuple)
 
 
     _is_linux()

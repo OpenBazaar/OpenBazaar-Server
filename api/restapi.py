@@ -17,8 +17,7 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor, task
 from twisted.protocols.basic import FileSender
 
-from config import DATA_FOLDER, RESOLVER, LIBBITCOIN_SERVER_TESTNET, LIBBITCOIN_SERVER, \
-    set_value, get_value, str_to_bool, TRANSACTION_FEE
+from config import DATA_FOLDER, RESOLVER, delete_value, set_value, get_value, str_to_bool, TRANSACTION_FEE
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -820,17 +819,16 @@ class OpenBazaarAPI(APIResource):
             settings = self.db.settings
             resolver = RESOLVER if "resolver" not in request.args or request.args["resolver"][0] == "" \
                 else request.args["resolver"][0]
-            if self.protocol.testnet:
-                libbitcoin_server = LIBBITCOIN_SERVER_TESTNET if "libbitcoin_server" not in request.args \
-                    or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
+            if "libbitcoin_server" in request.args and request.args["libbitcoin_server"][0] != "":
+                if self.protocol.testnet:
+                    set_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom", request.args["libbitcoin_server"][0])
+                else:
+                    set_value("LIBBITCOIN_SERVERS", "server_custom", request.args["libbitcoin_server"][0])
             else:
-                libbitcoin_server = LIBBITCOIN_SERVER if "libbitcoin_server" not in request.args \
-                    or request.args["libbitcoin_server"][0] == "" else request.args["libbitcoin_server"][0]
-
-            if self.protocol.testnet and libbitcoin_server != get_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET"):
-                set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
-            elif not self.protocol.testnet and libbitcoin_server != get_value("CONSTANTS", "LIBBITCOIN_SERVER"):
-                set_value("CONSTANTS", "LIBBITCOIN_SERVER_TESTNET", libbitcoin_server)
+                if self.protocol.testnet:
+                    delete_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")
+                else:
+                    delete_value("LIBBITCOIN_SERVERS", "server_custom")
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
@@ -888,8 +886,8 @@ class OpenBazaarAPI(APIResource):
                 "shipping_addresses": json.loads(settings[7]),
                 "blocked_guids": json.loads(settings[8]),
                 "libbitcoin_server": get_value(
-                    "CONSTANTS", "LIBBITCOIN_SERVER_TESTNET")if self.protocol.testnet else get_value(
-                        "CONSTANTS", "LIBBITCOIN_SERVER"),
+                    "LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")if self.protocol.testnet else get_value(
+                        "LIBBITCOIN_SERVERS", "server_custom"),
                 "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 "terms_conditions": "" if settings[9] is None else settings[9],
                 "refund_policy": "" if settings[10] is None else settings[10],
