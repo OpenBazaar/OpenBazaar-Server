@@ -1117,46 +1117,49 @@ class Server(object):
             pass
 
     def update_moderators_on_listings(self, moderator_list):
-        l = objects.Listings()
-        l.ParseFromString(self.db.listings.get_proto())
-        for listing in l.listing:
-            contract_hash = listing.contract_hash
-            c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
-            contract_moderators = []
-            if "moderators" in c.contract["vendor_offer"]["listing"]:
-                for m in c.contract["vendor_offer"]["listing"]["moderators"]:
-                    contract_moderators.append(m["guid"])
-            mods_to_remove = list(set(contract_moderators) - set(moderator_list))
-            mods_to_add = list(set(moderator_list) - set(contract_moderators))
-            for mod in mods_to_add:
-                mod_info = self.db.moderators.get_moderator(mod)
-                if mod_info is not None:
-                    moderator_json = {
-                        "guid": mod,
-                        "name": mod_info[5],
-                        "avatar": mod_info[7].encode("hex"),
-                        "short_description": mod_info[6],
-                        "fee": str(mod_info[8]) + "%",
-                        "blockchain_id": mod_info[4],
-                        "pubkeys": {
-                            "guid": mod_info[1].encode("hex"),
-                            "bitcoin": {
-                                "key": mod_info[2].encode("hex"),
-                                "signature": base64.b64encode(mod_info[3])
+        try:
+            l = objects.Listings()
+            l.ParseFromString(self.db.listings.get_proto())
+            for listing in l.listing:
+                contract_hash = listing.contract_hash
+                c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
+                contract_moderators = []
+                if "moderators" in c.contract["vendor_offer"]["listing"]:
+                    for m in c.contract["vendor_offer"]["listing"]["moderators"]:
+                        contract_moderators.append(m["guid"])
+                mods_to_remove = list(set(contract_moderators) - set(moderator_list))
+                mods_to_add = list(set(moderator_list) - set(contract_moderators))
+                for mod in mods_to_add:
+                    mod_info = self.db.moderators.get_moderator(mod)
+                    if mod_info is not None:
+                        moderator_json = {
+                            "guid": mod,
+                            "name": mod_info[5],
+                            "avatar": mod_info[7].encode("hex"),
+                            "short_description": mod_info[6],
+                            "fee": str(mod_info[8]) + "%",
+                            "blockchain_id": mod_info[4],
+                            "pubkeys": {
+                                "guid": mod_info[1].encode("hex"),
+                                "bitcoin": {
+                                    "key": mod_info[2].encode("hex"),
+                                    "signature": base64.b64encode(mod_info[3])
+                                }
                             }
                         }
-                    }
-                    if "moderators" not in c.contract["vendor_offer"]["listing"]:
-                        c.contract["vendor_offer"]["listing"]["moderators"] = []
-                    c.contract["vendor_offer"]["listing"]["moderators"].append(moderator_json)
-            for mod in mods_to_remove:
-                for rem in c.contract["vendor_offer"]["listing"]["moderators"]:
-                    if rem["guid"] == mod:
-                        c.contract["vendor_offer"]["listing"]["moderators"].remove(rem)
-            if len(c.contract["vendor_offer"]["listing"]["moderators"]) == 0:
-                del c.contract["vendor_offer"]["listing"]["moderators"]
-            c.previous_title = None
-            c.save()
+                        if "moderators" not in c.contract["vendor_offer"]["listing"]:
+                            c.contract["vendor_offer"]["listing"]["moderators"] = []
+                        c.contract["vendor_offer"]["listing"]["moderators"].append(moderator_json)
+                for mod in mods_to_remove:
+                    for rem in c.contract["vendor_offer"]["listing"]["moderators"]:
+                        if rem["guid"] == mod:
+                            c.contract["vendor_offer"]["listing"]["moderators"].remove(rem)
+                if len(c.contract["vendor_offer"]["listing"]["moderators"]) == 0:
+                    del c.contract["vendor_offer"]["listing"]["moderators"]
+                c.previous_title = None
+                c.save()
+        except Exception:
+            pass
 
     @staticmethod
     def cache(file_to_save, filename):
