@@ -1,5 +1,4 @@
 '''Parses configuration file and sets project wide constants.
-
 This file has intrinsic naming difficulties because it is trying to be platform
 agnostic but naming variables is inherently platform specific (i.e directory vs
 folder)
@@ -7,6 +6,7 @@ folder)
 __author__ = 'foxcarlos-TeamCreed', 'Tobin Harding'
 
 import os
+from random import shuffle
 from platform import platform
 from os.path import expanduser, join, isfile
 from ConfigParser import ConfigParser
@@ -53,12 +53,10 @@ def str_to_bool(s):
 def _platform_agnostic_data_path(data_folder):
     '''
     Create absolute path name, exported as DATA_FOLDER.
-
     User may configure using relative path, absolute path or use default.
       Relative path puts named folder in users home directory.
       Absolute path uses (obviously) the named absolute path.
       Default is currently to use 'OpenBazaar' in home directory.
-
     See issue #163
     '''
     if data_folder:
@@ -115,7 +113,6 @@ def _is_osx():
 def _is_well_formed_seed_string(string):
     '''
     Parse string url:port,key
-
     '''
     if ',' in string:
         url, key = string.split(',')
@@ -198,6 +195,7 @@ for item in items:
             LIBBITCOIN_SERVERS.append(new_server)
         else:
             print 'Warning: please check your configuration file: %s' % server
+        shuffle(LIBBITCOIN_SERVERS)
 
 items = cfg.items('LIBBITCOIN_SERVERS_TESTNET')  # this also includes items in DEFAULTS
 for item in items:
@@ -211,6 +209,7 @@ for item in items:
             LIBBITCOIN_SERVERS_TESTNET.append(new_server)
         else:
             print 'Warning: please check your configuration file: %s' % server
+        shuffle(LIBBITCOIN_SERVERS_TESTNET)
 
 
 def set_value(section, name, value):
