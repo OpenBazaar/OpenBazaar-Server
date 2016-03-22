@@ -819,7 +819,9 @@ class OpenBazaarAPI(APIResource):
             settings = self.db.settings
             resolver = RESOLVER if "resolver" not in request.args or request.args["resolver"][0] == "" \
                 else request.args["resolver"][0]
-            if "libbitcoin_server" in request.args and request.args["libbitcoin_server"][0] != "":
+            if "libbitcoin_server" in request.args and \
+                            request.args["libbitcoin_server"][0] != "" and \
+                            request.args["libbitcoin_server"][0] != "null":
                 if self.protocol.testnet:
                     set_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom",
                               request.args["libbitcoin_server"][0])
@@ -827,9 +829,11 @@ class OpenBazaarAPI(APIResource):
                     set_value("LIBBITCOIN_SERVERS", "server_custom", request.args["libbitcoin_server"][0])
             else:
                 if self.protocol.testnet:
-                    delete_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")
+                    if get_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom"):
+                        delete_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")
                 else:
-                    delete_value("LIBBITCOIN_SERVERS", "server_custom")
+                    if get_value("LIBBITCOIN_SERVERS", "server_custom"):
+                        delete_value("LIBBITCOIN_SERVERS", "server_custom")
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 

@@ -1130,24 +1130,25 @@ class Server(object):
             mods_to_add = list(set(moderator_list) - set(contract_moderators))
             for mod in mods_to_add:
                 mod_info = self.db.moderators.get_moderator(mod)
-                moderator_json = {
-                    "guid": mod,
-                    "name": mod_info[5],
-                    "avatar": mod_info[7].encode("hex"),
-                    "short_description": mod_info[6],
-                    "fee": str(mod_info[8]) + "%",
-                    "blockchain_id": mod_info[4],
-                    "pubkeys": {
-                        "guid": mod_info[1].encode("hex"),
-                        "bitcoin": {
-                            "key": mod_info[2].encode("hex"),
-                            "signature": base64.b64encode(mod_info[3])
+                if mod_info is not None:
+                    moderator_json = {
+                        "guid": mod,
+                        "name": mod_info[5],
+                        "avatar": mod_info[7].encode("hex"),
+                        "short_description": mod_info[6],
+                        "fee": str(mod_info[8]) + "%",
+                        "blockchain_id": mod_info[4],
+                        "pubkeys": {
+                            "guid": mod_info[1].encode("hex"),
+                            "bitcoin": {
+                                "key": mod_info[2].encode("hex"),
+                                "signature": base64.b64encode(mod_info[3])
+                            }
                         }
                     }
-                }
-                if "moderators" not in c.contract["vendor_offer"]["listing"]:
-                    c.contract["vendor_offer"]["listing"]["moderators"] = []
-                c.contract["vendor_offer"]["listing"]["moderators"].append(moderator_json)
+                    if "moderators" not in c.contract["vendor_offer"]["listing"]:
+                        c.contract["vendor_offer"]["listing"]["moderators"] = []
+                    c.contract["vendor_offer"]["listing"]["moderators"].append(moderator_json)
             for mod in mods_to_remove:
                 for rem in c.contract["vendor_offer"]["listing"]["moderators"]:
                     if rem["guid"] == mod:
