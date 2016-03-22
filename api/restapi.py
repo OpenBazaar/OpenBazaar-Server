@@ -837,8 +837,9 @@ class OpenBazaarAPI(APIResource):
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
-            if "moderators" in request.args:
-                mod_json = settings.get()[11]
+            settings_list = settings.get()
+            if "moderators" in request.args and settings_list is not None:
+                mod_json = settings_list[11]
                 if mod_json != "":
                     prev_mods = json.loads(mod_json)
                     current_mods = request.args["moderators"]
