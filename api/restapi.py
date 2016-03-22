@@ -834,12 +834,14 @@ class OpenBazaarAPI(APIResource):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
             if "moderators" in request.args:
-                prev_mods = json.loads(settings.get()[11])
-                current_mods = request.args["moderators"]
-                to_add = list(set(current_mods) - set(prev_mods))
-                to_remove = list(set(prev_mods) - set(current_mods))
-                if len(to_remove) > 0 or len(to_add) > 0:
-                    self.mserver.update_moderators_on_listings(request.args["moderators"])
+                mod_json = settings.get()[11]
+                if mod_json != "":
+                    prev_mods = json.loads(mod_json)
+                    current_mods = request.args["moderators"]
+                    to_add = list(set(current_mods) - set(prev_mods))
+                    to_remove = list(set(prev_mods) - set(current_mods))
+                    if len(to_remove) > 0 or len(to_add) > 0:
+                        self.mserver.update_moderators_on_listings(request.args["moderators"])
 
             settings.update(
                 request.args["refund_address"][0],
