@@ -1122,6 +1122,7 @@ class Server(object):
             l.ParseFromString(self.db.listings.get_proto())
         except Exception:
             return
+        keychain = KeyChain(self.db)
         for listing in l.listing:
             contract_hash = listing.contract_hash
             c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
@@ -1159,6 +1160,14 @@ class Server(object):
             if "moderators" in c.contract["vendor_offer"]["listing"] and \
                             len(c.contract["vendor_offer"]["listing"]["moderators"]) == 0:
                 del c.contract["vendor_offer"]["listing"]["moderators"]
+
+            listing = json.dumps(c.contract["vendor_offer"]["listing"], indent=4)
+            c.contract["vendor_offer"]["signatures"] = {}
+            c.contract["vendor_offer"]["signatures"]["guid"] = \
+                base64.b64encode(keychain.signing_key.sign(listing)[:64])
+            c.contract["vendor_offer"]["signatures"]["bitcoin"] = \
+                bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(
+                    listing, bitcointools.bip32_extract_key(keychain.bitcoin_master_privkey)))
             c.previous_title = None
             c.save()
 
