@@ -195,7 +195,7 @@ for item in items:
             LIBBITCOIN_SERVERS.append(new_server)
         else:
             print 'Warning: please check your configuration file: %s' % server
-        shuffle(LIBBITCOIN_SERVERS)
+shuffle(LIBBITCOIN_SERVERS)
 
 items = cfg.items('LIBBITCOIN_SERVERS_TESTNET')  # this also includes items in DEFAULTS
 for item in items:
@@ -209,7 +209,7 @@ for item in items:
             LIBBITCOIN_SERVERS_TESTNET.append(new_server)
         else:
             print 'Warning: please check your configuration file: %s' % server
-        shuffle(LIBBITCOIN_SERVERS_TESTNET)
+shuffle(LIBBITCOIN_SERVERS_TESTNET)
 
 
 def set_value(section, name, value):
