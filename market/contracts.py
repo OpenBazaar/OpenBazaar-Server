@@ -712,9 +712,7 @@ class Contract(object):
 
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
-            self.notification_listener.notify(buyer_guid, handle, "payment received", order_id, title, image_hash)
-        else:
-            self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
+        self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
 
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
             self.db.ratings.add_rating(self.contract["buyer_receipt"]["receipt"]
