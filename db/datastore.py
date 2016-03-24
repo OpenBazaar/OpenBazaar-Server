@@ -586,7 +586,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             handle = ""
             if val[0] is not None:
                 try:
-                    with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
+                    with open(join(DATA_FOLDER, 'cache', g[0]), "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)

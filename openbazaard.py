@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import argparse
 import json
+import os.path
 import platform
 import socket
 import stun
@@ -47,7 +48,10 @@ def run(*args):
 
     def start_server(keys, first_startup=False):
         # logging
-        logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
+        logFile = logfile.LogFile.fromFullPath(
+            os.path.join(DATA_FOLDER, "debug.log"),
+            rotateLength=15000000,
+            maxRotatedFiles=1)
         log.addObserver(FileLogObserver(logFile, level=LOGLEVEL).emit)
         log.addObserver(FileLogObserver(level=LOGLEVEL).emit)
         logger = Logger(system="OpenBazaard")
@@ -91,7 +95,7 @@ def run(*args):
                     pass
 
         try:
-            kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
+            kserver = Server.loadState(os.path.join(DATA_FOLDER, 'cache.pickle'), ip_address, port, protocol, db,
                                        nat_type, relay_node, on_bootstrap_complete, storage)
         except Exception:
             node = Node(keys.guid, ip_address, port, keys.verify_key.encode(),
@@ -100,7 +104,7 @@ def run(*args):
             kserver = Server(node, db, keys.signing_key, KSIZE, ALPHA, storage=storage)
             kserver.protocol.connect_multiplexer(protocol)
             kserver.bootstrap(kserver.querySeed(SEEDS)).addCallback(on_bootstrap_complete)
-        kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
+        kserver.saveStateRegularly(os.path.join(DATA_FOLDER, 'cache.pickle'), 10)
         protocol.register_processor(kserver.protocol)
 
         # market
