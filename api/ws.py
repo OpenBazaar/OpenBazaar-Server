@@ -14,7 +14,7 @@ from twisted.internet.protocol import Protocol, Factory, connectionDone
 from txws import WebSocketProtocol, WebSocketFactory
 
 from api.utils import smart_unicode
-from config import DATA_FOLDER
+from config import DATA_FOLDER, str_to_bool
 from dht.node import Node
 from keys.keychain import KeyChain
 from log import Logger
@@ -134,13 +134,27 @@ class WSProtocol(Protocol):
                         pass
         self.factory.kserver.get("moderators").addCallback(parse_response)
 
-    def get_homepage_listings(self, message_id):
+    def get_homepage_listings(self, message_id, only_following=False):
         if message_id not in self.factory.outstanding_listings:
             self.factory.outstanding_listings = {}
             self.factory.outstanding_listings[message_id] = []
 
         vendors = dict(self.factory.mserver.protocol.multiplexer.vendors)
         self.log.info("Fetching listings from %s vendors" % len(vendors))
+
+        def get_following_from_vendors(vendors):
+            follow_data = self.factory.mserver.db.follow.get_following()
+            following_guids = []
+            if follow_data is not None:
+                f = objects.Following()
+                f.ParseFromString(follow_data)
+                for user in f.users:
+                    following_guids.append(user.guid)
+            vendor_list = []
+            for k, v in vendors.items():
+                if k in following_guids:
+                    vendor_list.append(v)
+            return vendor_list
 
         def handle_response(listings, node):
             count = 0
@@ -188,14 +202,19 @@ class WSProtocol(Protocol):
                 if node.id in self.factory.mserver.protocol.multiplexer.vendors:
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
                     self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
-                vendor_list = vendors.values()
+                if only_following:
+                    vendor_list = get_following_from_vendors(vendors)
+                else:
+                    vendor_list = vendors.values()
                 if len(vendor_list) > 0:
                     shuffle(vendor_list)
                     node_to_ask = vendor_list[0]
                     if node_to_ask is not None:
                         self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
-
-        vendor_list = vendors.values()
+        if only_following:
+            vendor_list = get_following_from_vendors(vendors)
+        else:
+            vendor_list = vendors.values()
         shuffle(vendor_list)
         for vendor in vendor_list[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
@@ -283,7 +302,9 @@ class WSProtocol(Protocol):
                 self.get_moderators(message_id)
 
             elif request_json["request"]["command"] == "get_homepage_listings":
-                self.get_homepage_listings(message_id)
+                self.get_homepage_listings(message_id,
+                                           str_to_bool(request_json["request"]["only_following"])
+                                           if "only_following" in request_json["request"] else False)
 
             elif request_json["request"]["command"] == "search":
                 self.search(message_id, request_json["request"]["keyword"].lower())
