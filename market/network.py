@@ -727,31 +727,36 @@ class Server(object):
                     proof_sig = None
             except Exception:
                 return False
-        keychain = KeyChain(self.db)
-        contract["dispute"] = {}
-        contract["dispute"]["info"] = {}
-        contract["dispute"]["info"]["claim"] = claim
-        contract["dispute"]["info"]["guid"] = keychain.guid.encode("hex")
-        contract["dispute"]["info"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
-        if proof_sig:
-            contract["dispute"]["info"]["proof_sig"] = base64.b64encode(proof_sig)
-        info = json.dumps(contract["dispute"]["info"], indent=4)
-        contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(info)[:64])
+
+        if "dispute" not in contract:
+            keychain = KeyChain(self.db)
+            contract["dispute"] = {}
+            contract["dispute"]["info"] = {}
+            contract["dispute"]["info"]["claim"] = claim
+            contract["dispute"]["info"]["guid"] = keychain.guid.encode("hex")
+            contract["dispute"]["info"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
+            if proof_sig:
+                contract["dispute"]["info"]["proof_sig"] = base64.b64encode(proof_sig)
+            info = json.dumps(contract["dispute"]["info"], indent=4)
+            contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(info)[:64])
+            with open(file_path, 'wb') as outfile:
+                outfile.write(json.dumps(contract, indent=4))
+
+            if self.db.purchases.get_purchase(order_id) is not None:
+                self.db.purchases.update_status(order_id, 4)
+
+            elif self.db.sales.get_sale(order_id) is not None:
+                self.db.sales.update_status(order_id, 4)
+
+            avatar_hash = Profile(self.db).get().avatar_hash
+
+            self.db.messages.save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
+                                          claim, time.time(), avatar_hash, "", True)
+
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
                 mod_key = mod["pubkeys"]["guid"]
-
-        if self.db.purchases.get_purchase(order_id) is not None:
-            self.db.purchases.update_status(order_id, 4)
-
-        elif self.db.sales.get_sale(order_id) is not None:
-            self.db.sales.update_status(order_id, 4)
-
-        avatar_hash = Profile(self.db).get().avatar_hash
-
-        self.db.messages.save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
-                                      claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):
@@ -791,11 +796,6 @@ class Server(object):
             raise Exception("Libbitcoin server not online")
         with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
-
-        if "vendor_order_confirmation" in contract and float(vendor_percentage) > 0:
-            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-        elif "vendor_order_confirmation" not in contract and float(vendor_percentage) > 0:
-            raise Exception("Cannot refund seller before order confirmation is sent")
 
         buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
@@ -870,38 +870,53 @@ class Server(object):
                     base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
                         dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
 
-                def get_node(node_to_ask, recipient_guid, public_key):
-                    def parse_response(response):
-                        if not response[0]:
-                            self.send_message(Node(unhexlify(recipient_guid)),
-                                              public_key.encode(),
-                                              objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
-                                              dispute_json,
-                                              order_id,
-                                              store_only=True)
+                contract["dispute_resolution"] = dispute_json["dispute_resolution"]
+                with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
+                    outfile.write(json.dumps(contract, indent=4))
 
-                    if node_to_ask:
-                        skephem = PrivateKey.generate()
-                        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                        box = Box(skephem, public_key)
-                        nonce = nacl.utils.random(Box.NONCE_SIZE)
-                        ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
-                        self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
-                    else:
-                        parse_response([False])
+                send(dispute_json)
 
-                self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
-                self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
-                self.db.cases.update_status(order_id, 1)
-                d.callback(True)
+        def send(dispute_json):
+            def get_node(node_to_ask, recipient_guid, public_key):
+                def parse_response(response):
+                    if not response[0]:
+                        self.send_message(Node(unhexlify(recipient_guid)),
+                                          public_key.encode(),
+                                          objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
+                                          dispute_json,
+                                          order_id,
+                                          store_only=True)
+
+                if node_to_ask:
+                    skephem = PrivateKey.generate()
+                    pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+                    box = Box(skephem, public_key)
+                    nonce = nacl.utils.random(Box.NONCE_SIZE)
+                    ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
+                    self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
+                else:
+                    parse_response([False])
+
+            self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
+            self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
+            self.db.cases.update_status(order_id, 1)
+            d.callback(True)
 
         d = defer.Deferred()
 
-        def libbitcoin_timeout():
-            d.callback("timed out")
+        if "dispute_resolution" not in contract:
+            if "vendor_order_confirmation" in contract and float(vendor_percentage) > 0:
+                vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            elif "vendor_order_confirmation" not in contract and float(vendor_percentage) > 0:
+                raise Exception("Cannot refund seller before order confirmation is sent")
+            def libbitcoin_timeout():
+                d.callback("timed out")
 
-        timeout = reactor.callLater(5, libbitcoin_timeout)
-        self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
+            timeout = reactor.callLater(5, libbitcoin_timeout)
+            self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
+        else:
+            dispute_json = {"dispute_resolution": contract["dispute_resolution"]}
+            send(dispute_json)
         return d
 
     def release_funds(self, order_id):

@@ -800,16 +800,17 @@ class OpenBazaarAPI(APIResource):
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
         c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
-        c.add_receipt(True,
-                      self.protocol.blockchain,
-                      feedback=request.args["feedback"][0] if "feedback" in request.args else None,
-                      quality=request.args["quality"][0] if "quality" in request.args else None,
-                      description=request.args["description"][0] if "description" in request.args else None,
-                      delivery_time=request.args["delivery_time"][0]
-                      if "delivery_time" in request.args else None,
-                      customer_service=request.args["customer_service"][0]
-                      if "customer_service" in request.args else None,
-                      review=request.args["review"][0].decode("utf8") if "review" in request.args else "")
+        if "buyer_receipt" not in c.contract:
+            c.add_receipt(True,
+                          self.protocol.blockchain,
+                          feedback=request.args["feedback"][0] if "feedback" in request.args else None,
+                          quality=request.args["quality"][0] if "quality" in request.args else None,
+                          description=request.args["description"][0] if "description" in request.args else None,
+                          delivery_time=request.args["delivery_time"][0]
+                          if "delivery_time" in request.args else None,
+                          customer_service=request.args["customer_service"][0]
+                          if "customer_service" in request.args else None,
+                          review=request.args["review"][0].decode("utf8") if "review" in request.args else "")
         guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
         self.mserver.complete_order(guid, c).addCallback(respond)
         return server.NOT_DONE_YET
@@ -1217,7 +1218,8 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def dispute_contract(self, request):
         try:
-            self.mserver.open_dispute(request.args["order_id"][0], request.args["claim"][0].decode("utf8"))
+            self.mserver.open_dispute(request.args["order_id"][0],
+                                      request.args["claim"][0].decode("utf8") if "claim" in request.args else None)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1239,11 +1241,16 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
 
             d = self.mserver.close_dispute(request.args["order_id"][0],
-                                           request.args["resolution"][0].decode("utf8"),
-                                           request.args["buyer_percentage"][0],
-                                           request.args["vendor_percentage"][0],
-                                           request.args["moderator_percentage"][0],
-                                           request.args["moderator_address"][0])
+                                           request.args["resolution"][0].decode("utf8")
+                                           if "resolution" in request.args else None,
+                                           request.args["buyer_percentage"][0]
+                                           if "buyer_percentage" in request.args else None,
+                                           request.args["vendor_percentage"][0]
+                                           if "vendor_percentage" in request.args else None,
+                                           request.args["moderator_percentage"][0]
+                                           if "moderator_percentage" in request.args else None,
+                                           request.args["moderator_address"][0]
+                                           if "moderator_address" in request.args else None)
 
             d.addCallback(cb)
             return server.NOT_DONE_YET
