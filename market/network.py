@@ -973,6 +973,7 @@ class Server(object):
 
         tx.multisign(signatures, redeem_script)
         tx.broadcast(self.protocol.multiplexer.blockchain)
+        self.db.transactions.add_transaction(tx.to_raw_tx())
         self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
         if self.db.purchases.get_purchase(order_id) is not None:
@@ -1060,6 +1061,7 @@ class Server(object):
                                                   testnet=self.protocol.multiplexer.testnet)
             tx.sign(vendor_priv)
             tx.broadcast(self.protocol.multiplexer.blockchain)
+            self.db.transactions.add_transaction(tx.to_raw_tx())
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
             refund_json["refund"]["txid"] = tx.get_hash()
 

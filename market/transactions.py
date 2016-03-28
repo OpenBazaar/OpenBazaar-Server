@@ -167,3 +167,15 @@ class BitcoinTransaction(object):
 
     def __repr__(self):
         return repr(self.tx)
+
+
+def rebroadcast_unconfirmed(db, libbitcoin_client, testnet=False):
+    # pylint: disable=cell-var-from-loop
+    for raw in db.transactions.get_transactions():
+        def cb_chain(ec, result):
+            if ec == "not_found":
+                tx.broadcast(libbitcoin_client)
+            else:
+                db.transactions.delete_transaction(raw)
+        tx = BitcoinTransaction.from_serialized(raw, testnet)
+        libbitcoin_client.fetch_transaction(x(tx.get_hash()), cb_chain)

@@ -24,6 +24,7 @@ from market.listeners import MessageListenerImpl, BroadcastListenerImpl, Notific
 from market.contracts import check_unfunded_for_payment
 from market.btcprice import BtcPrice
 from market.profile import Profile
+from market.transactions import rebroadcast_unconfirmed
 from net.heartbeat import HeartbeatFactory
 from net.sslcontext import ChainedOpenSSLContextFactory
 from net.upnp import PortMapper
@@ -74,6 +75,7 @@ def run(*args):
             logger.info("bootstrap complete")
             task.LoopingCall(mserver.get_messages, mlistener).start(3600)
             task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
+            task.LoopingCall(rebroadcast_unconfirmed, db, libbitcoin_client, TESTNET).start(600)
 
         protocol = OpenBazaarProtocol(db, (ip_address, port), nat_type, testnet=TESTNET,
                                       relaying=True if nat_type == FULL_CONE else False)

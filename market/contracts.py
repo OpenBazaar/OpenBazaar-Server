@@ -472,6 +472,7 @@ class Contract(object):
             vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
             tx.sign(vendor_priv)
             tx.broadcast(self.blockchain)
+            self.db.transactions.add_transaction(tx.to_raw_tx())
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
@@ -619,6 +620,8 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["payout"] = {}
             tx.multisign(signatures, redeem_script)
             tx.broadcast(self.blockchain)
+            self.db.transactions.add_transaction(tx.to_raw_tx())
+
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
             receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
 
@@ -708,6 +711,7 @@ class Contract(object):
 
             tx.multisign(signatures, redeem_script)
             tx.broadcast(self.blockchain)
+            self.db.transactions.add_transaction(tx.to_raw_tx())
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
@@ -995,6 +999,7 @@ class Contract(object):
 
             tx.multisign(signatures, redeem_script)
             tx.broadcast(blockchain)
+            self.db.transactions.add_transaction(tx.to_raw_tx())
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
         self.db.purchases.update_status(order_id, 7)

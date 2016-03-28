@@ -16,7 +16,7 @@ class Database(object):
 
     __slots__ = ['PATH', 'filemap', 'profile', 'listings', 'keys', 'follow', 'messages',
                  'notifications', 'broadcasts', 'vendors', 'moderators', 'purchases', 'sales',
-                 'cases', 'ratings', 'settings']
+                 'cases', 'ratings', 'transactions', 'settings']
 
     def __init__(self, testnet=False, filepath=None):
         object.__setattr__(self, 'PATH', self._database_path(testnet, filepath))
@@ -34,6 +34,7 @@ class Database(object):
         object.__setattr__(self, 'sales', Sales(self.PATH))
         object.__setattr__(self, 'cases', Cases(self.PATH))
         object.__setattr__(self, 'ratings', Ratings(self.PATH))
+        object.__setattr__(self, 'transactions', Transactions(self.PATH))
         object.__setattr__(self, 'settings', Settings(self.PATH))
 
         self._initialize_datafolder_tree()
@@ -1191,6 +1192,40 @@ class Ratings(object):
                 ret = cursor.fetchall()
                 conn.close()
                 return ret
+
+
+class Transactions(object):
+    """
+    Store transactions that we broadcast to the network but have yet to confirm.
+    The transactions should be periodically rebroadcast to ensure they make it in the chain.
+    """
+
+    def __init__(self, database_path):
+        self.PATH = database_path
+
+    def add_transaction(self, tx):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''INSERT INTO transactions(tx) VALUES (?)''', (tx,))
+            conn.commit()
+        conn.close()
+
+    def delete_transaction(self, tx):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''DELETE FROM transactions WHERE tx=?''', (tx,))
+            conn.commit()
+        conn.close()
+
+    def get_transactions(self):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT tx FROM transactions''')
+        ret = cursor.fetchall()
+        conn.close()
+        return ret
 
 
 class Settings(object):
