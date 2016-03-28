@@ -547,7 +547,6 @@ class Contract(object):
                     review="",
                     dispute=False,
                     claim=None,
-                    payout=True,
                     anonymous=True):
 
         """
@@ -600,7 +599,8 @@ class Contract(object):
                     self.keychain.verify_key.encode(encoder=nacl.encoding.HexEncoder)
 
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
-        if payout and "moderator" in self.contract["buyer_order"]["order"]:
+        status = self.db.purchases.get_status(order_id)
+        if status < 3 and "moderator" in self.contract["buyer_order"]["order"]:
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
             payout_address = self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -649,13 +649,18 @@ class Contract(object):
                     base64.b64encode(self.keychain.signing_key.sign(json.dumps(
                         self.contract["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4))[:64])
 
-        self.db.purchases.update_status(order_id, 3)
-        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
-        with open(file_path, 'w') as outfile:
-            outfile.write(json.dumps(self.contract, indent=4))
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if status < 3:
+            self.db.purchases.update_status(order_id, 3)
+            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(self.contract, indent=4))
+            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        else:
+            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+            with open(file_path, 'wb') as outfile:
+                outfile.write(json.dumps(self.contract, indent=4))
 
     def accept_receipt(self, notification_listener, blockchain, receipt_json=None):
         """
@@ -669,6 +674,10 @@ class Contract(object):
                                                         object_pairs_hook=OrderedDict)
         contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
         del contract_dict["buyer_receipt"]
+        if "dispute" in contract_dict:
+            del contract_dict["dispute"]
+        if "dispute_resolution" in contract_dict:
+            del contract_dict["dispute_resolution"]
         contract_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         ref_hash = self.contract["buyer_receipt"]["receipt"]["ref_hash"]
         if ref_hash != contract_hash:
@@ -682,8 +691,10 @@ class Contract(object):
         # TODO: verify buyer signature
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
 
-        if self.db.sales.get_status(order_id) == 3:
-            raise Exception("Receipt already processed for this order")
+        status = self.db.sales.get_status(order_id)
+        if status not in (2, 5, 6):
+            raise Exception("Can only process a receipt after an order confirmation "
+                            "is sent or a dispute is finalized")
 
         title = self.contract["vendor_offer"]["listing"]["item"]["title"]
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
@@ -696,7 +707,7 @@ class Contract(object):
         else:
             handle = ""
 
-        if "moderator" in self.contract["buyer_order"]["order"]:
+        if "moderator" in self.contract["buyer_order"]["order"] and status not in (5, 6):
             outpoints = json.loads(self.db.sales.get_outpoint(order_id))
             payout_address = str(self.contract["vendor_order_confirmation"]["invoice"]["payout"]["address"])
             redeem_script = str(self.contract["buyer_order"]["order"]["payment"]["redeem_script"])
@@ -733,7 +744,8 @@ class Contract(object):
                                        ["rating"]["tx_summary"]["listing"],
                                        json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"], indent=4))
 
-        self.db.sales.update_status(order_id, 3)
+        if status == 2:
+            self.db.sales.update_status(order_id, 3)
         file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
