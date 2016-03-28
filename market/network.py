@@ -1007,6 +1007,16 @@ class Server(object):
                         if not valid:
                             raise Exception("Bitcoin signature not valid")
 
+                        if "buyer_guid" in rating["tx_summary"] or "buyer_guid_key" in rating["tx_summary"]:
+                            buyer_key_bin = unhexlify(rating["tx_summary"]["buyer_guid_key"])
+                            buyer_key = nacl.signing.VerifyKey(buyer_key_bin)
+                            buyer_key.verify(json.dumps(rating["tx_summary"], indent=4),
+                                             base64.b64decode(rating["guid_signature"]))
+                            h = nacl.hash.sha512(buyer_key_bin)
+                            pow_hash = h[40:]
+                            if int(pow_hash[:6], 16) >= 50 or rating["tx_summary"]["buyer_guid"] != h[:40]:
+                                raise Exception('Invalid GUID')
+
                         ret.append(rating)
                     except Exception:
                         pass

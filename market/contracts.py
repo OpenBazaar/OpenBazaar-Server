@@ -547,7 +547,8 @@ class Contract(object):
                     review="",
                     dispute=False,
                     claim=None,
-                    payout=True):
+                    payout=True,
+                    anonymous=True):
 
         """
         Add the final piece of the contract that appends the review and payout transaction.
@@ -592,6 +593,11 @@ class Contract(object):
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["listing"] = listing_hash
             receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["proof_of_tx"] = \
                 base64.b64encode(self.db.purchases.get_proof_sig(order_id))
+            if not anonymous:
+                receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["buyer_guid"] = \
+                    self.keychain.guid.encode("hex")
+                receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["buyer_guid_key"] = \
+                    self.keychain.verify_key.encode(encoder=nacl.encoding.HexEncoder)
 
         order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         if payout and "moderator" in self.contract["buyer_order"]["order"]:
@@ -638,6 +644,10 @@ class Contract(object):
             self.contract["buyer_receipt"]["receipt"]["rating"]["signature"] = \
                 bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(json.dumps(
                     self.contract["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4), buyer_priv))
+            if not anonymous:
+                self.contract["buyer_receipt"]["receipt"]["rating"]["guid_signature"] = \
+                    base64.b64encode(self.keychain.signing_key.sign(json.dumps(
+                        self.contract["buyer_receipt"]["receipt"]["rating"]["tx_summary"], indent=4))[:64])
 
         self.db.purchases.update_status(order_id, 3)
         file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"

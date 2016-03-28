@@ -810,7 +810,8 @@ class OpenBazaarAPI(APIResource):
                           if "delivery_time" in request.args else None,
                           customer_service=request.args["customer_service"][0]
                           if "customer_service" in request.args else None,
-                          review=request.args["review"][0].decode("utf8") if "review" in request.args else "")
+                          review=request.args["review"][0].decode("utf8") if "review" in request.args else "",
+                          anonymous=str_to_bool(request.args["anonymous"]) if "anonymous" in request.args else True)
         guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
         self.mserver.complete_order(guid, c).addCallback(respond)
         return server.NOT_DONE_YET
