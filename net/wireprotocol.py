@@ -126,10 +126,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                 self.ban_score.scoring_loop.stop()
             except Exception:
                 pass
-            try:
-                self.keep_alive_loop.stop()
-            except Exception:
-                pass
             if self.relay_node == (self.connection.dest_addr[0], self.connection.dest_addr[1]):
                 self.log.info("Disconnected from relay node. Picking new one...")
                 self.change_relay_node()

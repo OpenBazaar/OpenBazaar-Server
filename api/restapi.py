@@ -53,6 +53,8 @@ class OpenBazaarAPI(APIResource):
                 request.finish()
                 return server.NOT_DONE_YET
             else:
+                if request.getHeader("Content-Type") == "application/json":
+                    request.args = json.loads(request.content.read())
                 func(self, request)
                 return server.NOT_DONE_YET
         return wraps(func)(_authenticate)
