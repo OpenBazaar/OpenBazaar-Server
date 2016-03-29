@@ -553,10 +553,16 @@ class Contract(object):
         Add the final piece of the contract that appends the review and payout transaction.
         """
         self.blockchain = libbitcoin_client
+        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+        if "dispute" in contract_dict:
+            del contract_dict["dispute"]
+        if "dispute_resolution" in contract_dict:
+            del contract_dict["dispute_resolution"]
+        reference_hash = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         receipt_json = {
             "buyer_receipt": {
                 "receipt": {
-                    "ref_hash": digest(json.dumps(self.contract, indent=4)).encode("hex"),
+                    "ref_hash": reference_hash,
                     "listing": {
                         "received": received,
                         "listing_hash": self.contract["buyer_order"]["order"]["ref_hash"]
@@ -1135,6 +1141,7 @@ class Contract(object):
                                                                      float(conversion_rate))) * quantity
                     asking_price += shipping_amount
 
+            print round(float(asking_price), 8), float(self.contract["buyer_order"]["order"]["payment"]["amount"])
             if round(float(asking_price), 8) > float(self.contract["buyer_order"]["order"]["payment"]["amount"]):
                 raise Exception("Insuffient Payment")
 
