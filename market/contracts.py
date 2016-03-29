@@ -567,7 +567,15 @@ class Contract(object):
                 }
             }
         }
-        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+        if "vendor_order_confirmation" in self.contract:
+            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+        else:
+            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+            if "dispute" in self.contract:
+                del contract_dict["dispute"]
+            if "dispute_resolution" in self.contract:
+                del contract_dict["dispute_resolution"]
+            order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
         if None not in (feedback, quality, description, delivery_time, customer_service):
             address = self.contract["buyer_order"]["order"]["payment"]["address"]
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
@@ -598,7 +606,6 @@ class Contract(object):
                 receipt_json["buyer_receipt"]["receipt"]["rating"]["tx_summary"]["buyer_guid_key"] = \
                     self.keychain.verify_key.encode(encoder=nacl.encoding.HexEncoder)
 
-        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         status = self.db.purchases.get_status(order_id)
         if status < 3 and "moderator" in self.contract["buyer_order"]["order"]:
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
