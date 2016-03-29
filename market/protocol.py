@@ -288,10 +288,15 @@ class MarketProtocol(RPCProtocol):
         try:
             box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
-            c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+            json.loads(order, object_pairs_hook=OrderedDict)
+            temp = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                            testnet=self.multiplexer.testnet)
+            c = Contract(self.db, hash_value=unhexlify(temp.get_order_id()),
                          testnet=self.multiplexer.testnet)
 
-            contract_id = c.accept_receipt(self.get_notification_listener(), self.multiplexer.blockchain)
+            contract_id = c.accept_receipt(self.get_notification_listener(),
+                                           self.multiplexer.blockchain,
+                                           receipt_json=temp.contract["buyer_receipt"])
             self.router.addContact(sender)
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]

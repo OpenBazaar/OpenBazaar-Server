@@ -576,12 +576,7 @@ class Contract(object):
         if "vendor_order_confirmation" in self.contract:
             order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
         else:
-            contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
-            if "dispute" in self.contract:
-                del contract_dict["dispute"]
-            if "dispute_resolution" in self.contract:
-                del contract_dict["dispute_resolution"]
-            order_id = digest(json.dumps(contract_dict, indent=4)).encode("hex")
+            order_id = self.get_order_id()
         if None not in (feedback, quality, description, delivery_time, customer_service):
             address = self.contract["buyer_order"]["order"]["payment"]["address"]
             chaincode = self.contract["buyer_order"]["order"]["payment"]["chaincode"]
@@ -696,13 +691,11 @@ class Contract(object):
         if ref_hash != contract_hash:
             raise Exception("Order number doesn't match")
 
-        # The buyer may have sent over this whole contract, make sure the data we added wasn't manipulated.
-        verify_key = self.keychain.signing_key.verify_key
-        verify_key.verify(json.dumps(self.contract["vendor_order_confirmation"]["invoice"], indent=4),
-                          base64.b64decode(self.contract["vendor_order_confirmation"]["signature"]))
-
         # TODO: verify buyer signature
-        order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+        if "vendor_order_confirmation" in self.contract:
+            order_id = self.contract["vendor_order_confirmation"]["invoice"]["ref_hash"]
+        else:
+            order_id = self.get_order_id()
 
         status = self.db.sales.get_status(order_id)
         if status not in (2, 5, 6):
@@ -894,7 +887,16 @@ class Contract(object):
         return self.contract["vendor_offer"]["listing"]["contract_id"]
 
     def get_order_id(self):
-        return digest(json.dumps(self.contract, indent=4)).encode("hex")
+        contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
+        if "vendor_order_confirmation" in contract_dict:
+            del contract_dict["vendor_order_confirmation"]
+        if "buyer_receipt" in contract_dict:
+            del contract_dict["buyer_receipt"]
+        if "dispute" in contract_dict:
+            del contract_dict["dispute"]
+        if "dispute_resolution" in contract_dict:
+            del contract_dict["dispute_resolution"]
+        return digest(json.dumps(contract_dict, indent=4)).encode("hex")
 
     def check_expired(self):
         expiry = self.contract["vendor_offer"]["listing"]["metadata"]["expiry"]
