@@ -296,7 +296,7 @@ class MarketProtocol(RPCProtocol):
 
             contract_id = c.accept_receipt(self.get_notification_listener(),
                                            self.multiplexer.blockchain,
-                                           receipt_json=temp.contract["buyer_receipt"])
+                                           receipt_json=json.dumps(temp.contract["buyer_receipt"], indent=4))
             self.router.addContact(sender)
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]
