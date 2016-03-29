@@ -176,6 +176,6 @@ def rebroadcast_unconfirmed(db, libbitcoin_client, testnet=False):
             if ec == "not_found":
                 tx.broadcast(libbitcoin_client)
             else:
-                db.transactions.delete_transaction(raw)
-        tx = BitcoinTransaction.from_serialized(raw, testnet)
+                db.transactions.delete_transaction(raw[0])
+        tx = BitcoinTransaction.from_serialized(x(raw[0]), testnet)
         libbitcoin_client.fetch_transaction(x(tx.get_hash()), cb_chain)
