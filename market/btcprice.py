@@ -35,6 +35,7 @@ class BtcPrice(Thread):
         :param currency: an upper case 3 letter currency code
         :return: a floating point number representing the exchange rate from BTC => currency
         """
+        self.loadPrices()
         self.condition.acquire()
         try:
             last = self.prices[currency]
@@ -48,25 +49,7 @@ class BtcPrice(Thread):
         while self.keepRunning:
 
             self.condition.acquire()
-
-            success = False
-
-            for priority in self.loadPriorities:
-                try:
-                    getattr(self, priority)()
-
-                    success = True
-                    break
-
-                except URLError as e:
-                    if self.loadFailure == 0:  # pragma: no cover
-                        print "Error loading " + priority + " url " + str(e)
-                except (ValueError, KeyError, TypeError) as e:
-                    if self.loadFailure == 0:  # pragma: no cover
-                        print "Error reading " + priority + " data" + str(e)
-
-            if not success and self.loadFailure == 0:  # pragma: no cover
-                print "BtcPrice unable to load Bitcoin exchange price"
+            self.loadPrices()
 
             now = datetime.now()
             sleepTime = timedelta(minutes=minuteInterval - now.minute % minuteInterval).total_seconds() - now.second
@@ -75,6 +58,25 @@ class BtcPrice(Thread):
             self.condition.release()
 
         BtcPrice.__instance = None
+
+    def loadPrices(self):
+        success = False
+        for priority in self.loadPriorities:
+            try:
+                getattr(self, priority)()
+
+                success = True
+                break
+
+            except URLError as e:
+                if self.loadFailure == 0:  # pragma: no cover
+                    print "Error loading " + priority + " url " + str(e)
+            except (ValueError, KeyError, TypeError) as e:
+                if self.loadFailure == 0:  # pragma: no cover
+                    print "Error reading " + priority + " data" + str(e)
+
+        if not success and self.loadFailure == 0:  # pragma: no cover
+            print "BtcPrice unable to load Bitcoin exchange price"
 
     def dictForUrl(self, url):
         if self.loadFailure == 0:
