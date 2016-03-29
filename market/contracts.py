@@ -677,9 +677,12 @@ class Contract(object):
         """
         self.notification_listener = notification_listener
         self.blockchain = blockchain
+        if "buyer_receipt" in self.contract:
+            raise Exception("A receipt has already been processed for this order")
         if receipt_json:
             self.contract["buyer_receipt"] = json.loads(receipt_json,
                                                         object_pairs_hook=OrderedDict)
+
         contract_dict = json.loads(json.dumps(self.contract, indent=4), object_pairs_hook=OrderedDict)
         del contract_dict["buyer_receipt"]
         if "dispute" in contract_dict:
