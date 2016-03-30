@@ -14,6 +14,8 @@ SCORES = {
     INV: 0,
     VALUES: 0,
     GET_LISTINGS: 0,
+    FOLLOW: 0,
+    UNFOLLOW: 0,
     RECONNECTIONS: 0,
     MALFORMATED: 0
 }
