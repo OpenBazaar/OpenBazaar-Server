@@ -96,7 +96,7 @@ class MessageProcessor(Interface):
     multiplexer = Attribute("""The main `ConnectionMultiplexer` protocol.
         We pass it in here so we can send datagrams from this class.""")
 
-    def receive_message(datagram, sender, connection):
+    def receive_message(datagram, sender, connection, ban_score):
         """
         Called by OpenBazaarProtocol when it receives a new message intended for this processor.
 
@@ -108,6 +108,9 @@ class MessageProcessor(Interface):
 
             connection: the txrudp connection to the peer who sent the message. To respond directly to the peer call
                       connection.send_message()
+            ban_score: a `net.dos.BanScore` object used to keep track of misbehaving peers. We need it here because
+                the processor determines if the incoming message is a request or a response before passing it into
+                the BanScore.
         """
 
     def connect_multiplexer(multiplexer):

@@ -48,11 +48,13 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.db = Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
+
         self.wire_protocol = OpenBazaarProtocol(self.db, self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None,
+                                                      self.wire_protocol.ban_score)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
@@ -232,7 +234,8 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None,
+                                                      self.wire_protocol.ban_score)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)

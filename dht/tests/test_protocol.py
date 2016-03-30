@@ -57,7 +57,8 @@ class KademliaProtocolTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None,
+                                                      self.wire_protocol.ban_score)
         self.handler.connection = self.con
 
         transport = mock.Mock(spec_set=udp.Port)

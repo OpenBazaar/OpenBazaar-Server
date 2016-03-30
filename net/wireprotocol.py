@@ -9,6 +9,7 @@ from dht.node import Node
 from dht.utils import digest
 from interfaces import MessageProcessor, Multiplexer, ConnectionHandler
 from log import Logger
+from net.dos import BanScore
 from protos.message import Message, PING, NOT_FOUND
 from protos.objects import RESTRICTED, FULL_CONE
 from random import shuffle
@@ -45,7 +46,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
         self.relay_node = None
         self.nat_type = nat_type
         self.vendors = db.vendors.get_vendors()
-        self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node)
+        self.ban_score = BanScore(self)
+        self.factory = self.ConnHandlerFactory(self.processors, nat_type, self.relay_node, self.ban_score)
         self.log = Logger(system=self)
         self.keep_alive_loop = LoopingCall(self.keep_alive)
         self.keep_alive_loop.start(30 if nat_type == RESTRICTED else 1200, now=False)
@@ -54,13 +56,14 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
     class ConnHandler(Handler):
         implements(ConnectionHandler)
 
-        def __init__(self, processors, nat_type, relay_node, *args, **kwargs):
+        def __init__(self, processors, nat_type, relay_node, ban_score, *args, **kwargs):
             super(OpenBazaarProtocol.ConnHandler, self).__init__(*args, **kwargs)
             self.log = Logger(system=self)
             self.processors = processors
             self.connection = None
             self.node = None
             self.relay_node = relay_node
+            self.ban_score = ban_score
             self.addr = None
             self.is_new_node = True
             self.on_connection_made()
@@ -72,10 +75,12 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             if self.connection.state == State.CONNECTED:
                 self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
                 self.log.info("connected to %s" % self.addr)
+            self.ban_score.process_message(self.connection.dest_addr, 100)
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
                 self.log.warning("received datagram too small from %s, ignoring" % self.addr)
+                self.ban_score.process_message(self.connection.dest_addr, 110)
                 return False
             try:
                 m = Message()
@@ -100,12 +105,13 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                         raise Exception('Invalid GUID')
                 for processor in self.processors:
                     if m.command in processor or m.command == NOT_FOUND:
-                        processor.receive_message(m, self.node, self.connection)
+                        processor.receive_message(m, self.node, self.connection, self.ban_score)
                 if m.command != PING:
                     self.time_last_message = time.time()
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received an invalid message from %s, ignoring" % self.addr)
+                self.ban_score.process_message(self.connection.dest_addr, 110)
                 return False
 
         def handle_shutdown(self):
@@ -122,10 +128,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
             if self.addr:
                 self.log.info("connection with %s terminated" % self.addr)
-            try:
-                self.ban_score.scoring_loop.stop()
-            except Exception:
-                pass
+
             if self.relay_node == (self.connection.dest_addr[0], self.connection.dest_addr[1]):
                 self.log.info("Disconnected from relay node. Picking new one...")
                 self.change_relay_node()
@@ -182,14 +185,15 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
     class ConnHandlerFactory(HandlerFactory):
 
-        def __init__(self, processors, nat_type, relay_node):
+        def __init__(self, processors, nat_type, relay_node, ban_score):
             super(OpenBazaarProtocol.ConnHandlerFactory, self).__init__()
             self.processors = processors
             self.nat_type = nat_type
             self.relay_node = relay_node
+            self.ban_score = ban_score
 
         def make_new_handler(self, *args, **kwargs):
-            return OpenBazaarProtocol.ConnHandler(self.processors, self.nat_type, self.relay_node)
+            return OpenBazaarProtocol.ConnHandler(self.processors, self.nat_type, self.relay_node, self.ban_score)
 
     def register_processor(self, processor):
         """Add a new class which implements the `MessageProcessor` interface."""
