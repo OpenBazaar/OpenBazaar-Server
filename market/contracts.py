@@ -381,7 +381,7 @@ class Contract(object):
                             "price"]["domestic"]
                         currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
                             "fiat"]["currency_code"]
-                        conversion_rate = BtcPrice.instance().get(currency.upper())
+                        conversion_rate = BtcPrice.instance().get(currency.upper(), False)
                         shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
                 else:
                     if "bitcoin" in self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"]:
@@ -393,7 +393,7 @@ class Contract(object):
                         currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
                             "fiat"]["currency_code"]
 
-                        conversion_rate = BtcPrice.instance().get(currency.upper())
+                        conversion_rate = BtcPrice.instance().get(currency.upper(), False)
                         shipping_amount = float("{0:.8f}".format(float(price) / float(conversion_rate))) * quantity
                 amount_to_pay += shipping_amount
 
@@ -1128,7 +1128,7 @@ class Contract(object):
                             currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
                                 "fiat"]["currency_code"]
 
-                            conversion_rate = BtcPrice.instance().get(currency.upper())
+                            conversion_rate = BtcPrice.instance().get(currency.upper(), False)
                             shipping_amount = float("{0:.8f}".format(float(price) /
                                                                      float(conversion_rate))) * quantity
                     else:
@@ -1141,7 +1141,7 @@ class Contract(object):
                             currency = self.contract["vendor_offer"]["listing"]["shipping"]["flat_fee"][
                                 "fiat"]["currency_code"]
 
-                            conversion_rate = BtcPrice.instance().get(currency.upper())
+                            conversion_rate = BtcPrice.instance().get(currency.upper(), False)
                             shipping_amount = float("{0:.8f}".format(float(price) /
                                                                      float(conversion_rate))) * quantity
                     asking_price += shipping_amount

@@ -22,7 +22,7 @@ class MarketProtocolTest(unittest.TestCase):
         btcPrice.start()
         time.sleep(0.01)
         rate = btcPrice.get("USD")
-        self.assertGreater(rate, 0)
+        self.assertGreaterEqual(rate, 0)
         btcPrice.closethread()
         btcPrice.join()
 
@@ -32,7 +32,7 @@ class MarketProtocolTest(unittest.TestCase):
         btcPrice.start()
         time.sleep(0.01)
         rate = btcPrice.get("USD")
-        self.assertGreater(rate, 0)
+        self.assertGreaterEqual(rate, 0)
         btcPrice.closethread()
         btcPrice.join()
 
@@ -42,7 +42,7 @@ class MarketProtocolTest(unittest.TestCase):
         btcPrice.start()
         time.sleep(0.01)
         rate = btcPrice.get("USD")
-        self.assertGreater(rate, 0)
+        self.assertGreaterEqual(rate, 0)
         btcPrice.closethread()
         btcPrice.join()
 
