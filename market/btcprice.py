@@ -5,6 +5,7 @@ from threading import Thread, Condition
 from urllib2 import Request, urlopen, URLError
 from datetime import datetime, timedelta
 
+
 class BtcPrice(Thread):
     """
     A class for loading and caching the current Bitcoin exchange price.
@@ -20,8 +21,7 @@ class BtcPrice(Thread):
         self.prices = {}
         self.condition = Condition()
         self.keepRunning = True
-        self.loadPriorities = ["loadbitcoinaverage", "loadblockchain", "loadcoinkite", "loadbitcoincharts"]
-        self.loadFailure = 0
+        self.loadPriorities = ["loadbitcoinaverage", "loadbitpay", "loadblockchain", "loadbitcoincharts"]
         BtcPrice.__instance = self
 
     def closethread(self):
@@ -30,15 +30,18 @@ class BtcPrice(Thread):
         self.condition.notify()
         self.condition.release()
 
-    def get(self, currency):
+    def get(self, currency, refresh_rates=True):
         """
         :param currency: an upper case 3 letter currency code
         :return: a floating point number representing the exchange rate from BTC => currency
         """
-        self.loadPrices()
+        if refresh_rates:
+            self.loadPrices()
         self.condition.acquire()
         try:
             last = self.prices[currency]
+        except Exception:
+            last = 0
         finally:
             self.condition.release()
         return last
@@ -69,29 +72,17 @@ class BtcPrice(Thread):
                 break
 
             except URLError as e:
-                if self.loadFailure == 0:  # pragma: no cover
-                    print "Error loading " + priority + " url " + str(e)
+                print "Error loading " + priority + " url " + str(e)
             except (ValueError, KeyError, TypeError) as e:
-                if self.loadFailure == 0:  # pragma: no cover
-                    print "Error reading " + priority + " data" + str(e)
+                print "Error reading " + priority + " data" + str(e)
 
-        if not success and self.loadFailure == 0:  # pragma: no cover
+        if not success:  # pragma: no cover
             print "BtcPrice unable to load Bitcoin exchange price"
 
-    def dictForUrl(self, url):
-        if self.loadFailure == 0:
-            request = Request(url)
-            result = urlopen(request).read()
-        if self.loadFailure == 1:
-            url = 'http://google.com/404'
-            request = Request(url)
-            result = urlopen(request).read()
-        if self.loadFailure == 2:
-            result = None
-        if self.loadFailure == 3:
-            result = ""
-        if self.loadFailure == 4:
-            result = '{"a":}'
+    @staticmethod
+    def dictForUrl(url):
+        request = Request(url)
+        result = urlopen(request, timeout=5).read()
         return json.loads(result)
 
     def loadbitcoinaverage(self):
@@ -99,13 +90,13 @@ class BtcPrice(Thread):
             if currency != "timestamp":
                 self.prices[currency] = info["last"]
 
+    def loadbitpay(self):
+        for currency in self.dictForUrl('https://bitpay.com/api/rates'):
+            self.prices[currency["code"]] = currency["rate"]
+
     def loadblockchain(self):
         for currency, info in self.dictForUrl('https://blockchain.info/ticker').iteritems():
             self.prices[currency] = info["last"]
-
-    def loadcoinkite(self):
-        for currency, info in self.dictForUrl('https://api.coinkite.com/public/rates')["rates"]["BTC"].iteritems():
-            self.prices[currency] = info["rate"]
 
     def loadbitcoincharts(self):
         for currency, info in self.dictForUrl('https://api.bitcoincharts.com/v1/weighted_prices.json').iteritems():

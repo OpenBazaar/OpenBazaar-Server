@@ -1361,7 +1361,7 @@ class OpenBazaarAPI(APIResource):
         request.setHeader('content-type', "application/json")
         if "currency" in request.args:
             try:
-                result = BtcPrice.instance().get(request.args["currency"][0].upper())
+                result = BtcPrice.instance().get(request.args["currency"][0].upper(), False)
                 request.write(json.dumps({"btcExchange":result, "currencyCodes":BtcPrice.instance().prices}))
                 request.finish()
                 return server.NOT_DONE_YET
