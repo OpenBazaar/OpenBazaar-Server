@@ -280,9 +280,9 @@ class MarketProtocol(RPCProtocol):
             else:
                 self.log.warning("received invalid order confirmation from %s" % sender)
                 return ["False"]
-        except Exception:
+        except Exception, e:
             self.log.error("unable to decrypt order confirmation from %s" % sender)
-            return ["False"]
+            return [str(e.message)]
 
     def rpc_complete_order(self, sender, pubkey, encrypted):
         try:
@@ -300,11 +300,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]
-        except Exception:
-            import traceback
-            traceback.print_exc()
+        except Exception, e:
             self.log.error("unable to parse receipt from %s" % sender)
-            return ["False"]
+            return [e.message]
 
     def rpc_dispute_open(self, sender, pubkey, encrypted):
         try:

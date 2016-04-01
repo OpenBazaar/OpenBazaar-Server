@@ -636,7 +636,7 @@ class Server(object):
                                       store_only=True)
                     return True
                 else:
-                    return False
+                    return response[1][0]
 
             if node_to_ask:
                 public_key = nacl.signing.VerifyKey(
@@ -680,7 +680,7 @@ class Server(object):
                                       store_only=True)
                     return True
                 else:
-                    return False
+                    return response[1][0]
 
             if node_to_ask:
                 public_key = nacl.signing.VerifyKey(

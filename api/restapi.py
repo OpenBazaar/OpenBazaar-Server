@@ -722,7 +722,7 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": True}))
                     request.finish()
                 else:
-                    request.write(json.dumps({"success": False, "reason": "Failed to send order confirmation"}))
+                    request.write(json.dumps({"success": False, "reason": success}))
                     request.finish()
             file_path = DATA_FOLDER + "store/contracts/in progress/" + request.args["id"][0] + ".json"
             with open(file_path, 'r') as filename:
@@ -794,7 +794,7 @@ class OpenBazaarAPI(APIResource):
                 request.write(json.dumps({"success": True}))
                 request.finish()
             else:
-                request.write(json.dumps({"success": False, "reason": "Failed to send receipt to vendor"}))
+                request.write(json.dumps({"success": False, "reason": success}))
                 request.finish()
         file_path = DATA_FOLDER + "purchases/in progress/" + request.args["id"][0] + ".json"
         if not os.path.exists(file_path):
