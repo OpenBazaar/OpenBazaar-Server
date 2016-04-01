@@ -48,7 +48,7 @@ class BanScore(object):
                 return
             if message.command == PING:
                 self.peers[peer[0]][PING] += 1
-                if self.peers[peer[0]][PING] > 4:
+                if self.peers[peer[0]][PING] > 10:
                     self.ban(peer, PING)
             elif message.command == STUN:
                 self.peers[peer[0]][STUN] += 1

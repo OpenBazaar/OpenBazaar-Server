@@ -326,22 +326,27 @@ class Server(object):
         Args:
             guid: the 20 raw bytes representing the guid.
         """
+        self.log.debug("crawling dht to find IP for %s" % guid.encode("hex"))
 
         node_to_find = Node(guid)
         for connection in self.protocol.multiplexer.values():
             if connection.handler.node is not None and connection.handler.node.id == node_to_find.id:
+                self.log.debug("%s successfully resolved as %s" % (guid.encode("hex"), connection.handler.node))
                 return defer.succeed(connection.handler.node)
 
         def check_for_node(nodes):
             for node in nodes:
                 if node.id == node_to_find.id:
+                    self.log.debug("%s successfully resolved as %s" % (guid.encode("hex"), node))
                     return node
+            self.log.debug("%s was not found in the dht" % guid.encode("hex"))
             return None
 
         index = self.protocol.router.getBucketFor(node_to_find)
         nodes = self.protocol.router.buckets[index].getNodes()
         for node in nodes:
             if node.id == node_to_find.id:
+                self.log.debug("%s successfully resolved as %s" % (guid.encode("hex"), node))
                 return defer.succeed(node)
 
         nearest = self.protocol.router.findNeighbors(node_to_find)

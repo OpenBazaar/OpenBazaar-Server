@@ -61,7 +61,6 @@ class Node(object):
     def __str__(self):
         return "%s:%s" % (self.ip, str(self.port))
 
-
 class NodeHeap(object):
     """
     A heap of nodes ordered by distance to a given node.
