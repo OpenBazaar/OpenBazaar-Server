@@ -1384,7 +1384,7 @@ class OpenBazaarAPI(APIResource):
                 else:
                     request.write(json.dumps({"success": False, "reason": success}))
                     request.finish()
-            self.mserver.refund(request.args["order_id"][0]).addCallBack(respond)
+            self.mserver.refund(request.args["order_id"][0]).addCallback(respond)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

@@ -1045,13 +1045,13 @@ class Server(object):
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
 
+        buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
+        buyer_enc_key = nacl.signing.VerifyKey(
+            contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
+            encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
         if "refund" in contract:
             refund_json = {"refund": contract["refund"]}
         else:
-            buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
-            buyer_enc_key = nacl.signing.VerifyKey(
-                contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
-                encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
             refund_address = contract["buyer_order"]["order"]["refund_address"]
             chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
             masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
