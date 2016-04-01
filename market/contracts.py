@@ -532,9 +532,9 @@ class Contract(object):
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             self.notification_listener.notify(vendor_guid, handle, "order confirmation", contract_hash, title,
                                               image_hash)
-            return contract_hash
-        except Exception:
-            return False
+            return True
+        except Exception, e:
+            return e.message
 
     def add_receipt(self,
                     received,

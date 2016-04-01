@@ -272,14 +272,14 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            contract_id = c.accept_order_confirmation(self.get_notification_listener())
-            if contract_id:
+            valid = c.accept_order_confirmation(self.get_notification_listener())
+            if valid is True:
                 self.router.addContact(sender)
-                self.log.info("received confirmation for order %s" % contract_id)
+                self.log.info("received confirmation for order %s" % c.get_order_id())
                 return ["True"]
             else:
                 self.log.warning("received invalid order confirmation from %s" % sender)
-                return ["False"]
+                return [valid]
         except Exception, e:
             self.log.error("unable to decrypt order confirmation from %s" % sender)
             return [str(e.message)]

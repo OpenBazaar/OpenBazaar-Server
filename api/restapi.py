@@ -718,7 +718,7 @@ class OpenBazaarAPI(APIResource):
     def confirm_order(self, request):
         try:
             def respond(success):
-                if success:
+                if success is True:
                     request.write(json.dumps({"success": True}))
                     request.finish()
                 else:
@@ -790,7 +790,7 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def complete_order(self, request):
         def respond(success):
-            if success:
+            if success is True:
                 request.write(json.dumps({"success": True}))
                 request.finish()
             else:
