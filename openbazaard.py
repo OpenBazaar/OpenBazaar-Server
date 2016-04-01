@@ -10,7 +10,7 @@ import time
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVERS,\
-    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SSL
+    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SEEDS_TESTNET, SSL
 from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
@@ -81,10 +81,11 @@ def run(*args):
                                       relaying=True if nat_type == FULL_CONE else False)
 
         # kademlia
+        SEED_URLS = SEEDS_TESTNET if TESTNET else SEEDS
         storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.get_database_path())
         relay_node = None
         if nat_type != FULL_CONE:
-            for seed in SEEDS:
+            for seed in SEED_URLS:
                 try:
                     relay_node = (socket.gethostbyname(seed[0].split(":")[0]),
                                   28469 if TESTNET else 18469)
@@ -101,7 +102,7 @@ def run(*args):
             protocol.relay_node = node.relay_node
             kserver = Server(node, db, keys.signing_key, KSIZE, ALPHA, storage=storage)
             kserver.protocol.connect_multiplexer(protocol)
-            kserver.bootstrap(kserver.querySeed(SEEDS)).addCallback(on_bootstrap_complete)
+            kserver.bootstrap(kserver.querySeed(SEED_URLS)).addCallback(on_bootstrap_complete)
         kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
         protocol.register_processor(kserver.protocol)
 

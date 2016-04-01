@@ -38,7 +38,7 @@ class BanScore(object):
         try:
             if message == 100:
                 self.peers[peer[0]][RECONNECTIONS] += 1
-                if self.peers[peer[0]][RECONNECTIONS] > 4:
+                if self.peers[peer[0]][RECONNECTIONS] > 10:
                     self.ban(peer, RECONNECTIONS)
                 return
             elif message == 110:

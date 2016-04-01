@@ -27,7 +27,7 @@ from dht.crawling import NodeSpiderCrawl
 
 from protos import objects
 
-from config import SEEDS
+from config import SEEDS, SEEDS_TESTNET
 from random import shuffle
 
 
@@ -386,16 +386,14 @@ class Server(object):
         s = Server(n, db, data['signing_key'], data['ksize'], data['alpha'], storage=storage)
         s.protocol.connect_multiplexer(multiplexer)
         if len(data['neighbors']) > 0:
-            if callback is not None:
-                s.bootstrap(data['neighbors']).addCallback(callback)
-            else:
-                s.bootstrap(data['neighbors'])
+            d = s.bootstrap(data['neighbors'])
         else:
-            if callback is not None:
-                s.bootstrap(s.querySeed(SEEDS))\
-                    .addCallback(callback)
+            if multiplexer.testnet:
+                d = s.bootstrap(s.querySeed(SEEDS_TESTNET))
             else:
-                s.bootstrap(s.querySeed(SEEDS))
+                d = s.bootstrap(s.querySeed(SEEDS))
+        if callback is not None:
+            d.addCallback(callback)
         return s
 
     def saveStateRegularly(self, fname, frequency=600):

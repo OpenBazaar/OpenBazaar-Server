@@ -35,7 +35,9 @@ DEFAULTS = {
     'ssl': False,
     'username': None,
     'password': None,
-    'seed': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
+    'mainnet_seeds': 'seed2.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
+    'testnet_seeds': 'seed.openbazaar.org:8080,5b44be5c18ced1bc9400fe5e79c8ab90204f06bebacc04dd9c70a95eaca6e117',
+
 }
 
 
@@ -171,15 +173,27 @@ PASSWORD = cfg.get('AUTHENTICATION', 'PASSWORD')
 LIBBITCOIN_SERVERS = []
 LIBBITCOIN_SERVERS_TESTNET = []
 SEEDS = []
+SEEDS_TESTNET = []
 
-items = cfg.items('SEEDS')  # this also includes items in DEFAULTS
+items = cfg.items('MAINNET_SEEDS')  # this also includes items in DEFAULTS
 for item in items:
-    if _is_tuple(item, "seed"):
+    if _is_tuple(item, "mainnet_seed"):
         seed = item[1]
         if _is_well_formed_seed_string(seed):
             new_seed = _tuple_from_string(seed)
             if new_seed not in SEEDS:
                 SEEDS.append(new_seed)
+        else:
+            print 'Warning: please check your configuration file: %s' % seed
+
+items = cfg.items('TESTNET_SEEDS')  # this also includes items in DEFAULTS
+for item in items:
+    if _is_tuple(item, "testnet_seed"):
+        seed = item[1]
+        if _is_well_formed_seed_string(seed):
+            new_seed = _tuple_from_string(seed)
+            if new_seed not in SEEDS_TESTNET:
+                SEEDS_TESTNET.append(new_seed)
         else:
             print 'Warning: please check your configuration file: %s' % seed
 
