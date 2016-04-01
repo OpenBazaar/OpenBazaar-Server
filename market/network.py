@@ -1038,54 +1038,61 @@ class Server(object):
         to the buyer with contain the signature.
         """
         file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        if not os.path.exists(file_path):
+            file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
         outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
 
-        buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
-        buyer_enc_key = nacl.signing.VerifyKey(
-            contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
-            encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
-        refund_address = contract["buyer_order"]["order"]["refund_address"]
-        chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
-        masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-        vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
-
-        refund_json = {"refund": {}}
-        refund_json["refund"]["order_id"] = order_id
-        if "moderator" in contract["buyer_order"]["order"]:
-            in_value = 0
-            for outpoint in outpoints:
-                in_value += outpoint["value"]
-            out_value = in_value - long(contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
-            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
-                                                  testnet=self.protocol.multiplexer.testnet,
-                                                  out_value=out_value)
-            redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
-            sigs = tx.create_signature(vendor_priv, redeem_script)
-            refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
-            refund_json["refund"]["signature(s)"] = sigs
+        if "refund" in contract:
+            refund_json = {"refund": contract["refund"]}
         else:
-            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
-                                                  testnet=self.protocol.multiplexer.testnet)
-            tx.sign(vendor_priv)
-            tx.broadcast(self.protocol.multiplexer.blockchain)
-            self.db.transactions.add_transaction(tx.to_raw_tx())
-            self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
-            refund_json["refund"]["txid"] = tx.get_hash()
+            buyer_guid = contract["buyer_order"]["order"]["id"]["guid"]
+            buyer_enc_key = nacl.signing.VerifyKey(
+                contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
+                encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
+            refund_address = contract["buyer_order"]["order"]["refund_address"]
+            chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
 
-        contract["refund"] = refund_json["refund"]
-        self.db.sales.update_status(order_id, 7)
-        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
-        with open(file_path, 'w') as outfile:
-            outfile.write(json.dumps(contract, indent=4))
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-        if os.path.exists(file_path):
-            os.remove(file_path)
+            refund_json = {"refund": {}}
+            refund_json["refund"]["order_id"] = order_id
+            if "moderator" in contract["buyer_order"]["order"]:
+                in_value = 0
+                for outpoint in outpoints:
+                    in_value += outpoint["value"]
+                out_value = in_value - long(contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
+                tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                      testnet=self.protocol.multiplexer.testnet,
+                                                      out_value=out_value)
+                redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
+                sigs = tx.create_signature(vendor_priv, redeem_script)
+                refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
+                refund_json["refund"]["signature(s)"] = sigs
+            else:
+                tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                      testnet=self.protocol.multiplexer.testnet)
+                tx.sign(vendor_priv)
+                tx.broadcast(self.protocol.multiplexer.blockchain)
+                self.db.transactions.add_transaction(tx.to_raw_tx())
+                self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
+                refund_json["refund"]["txid"] = tx.get_hash()
+
+            contract["refund"] = refund_json["refund"]
+            self.db.sales.update_status(order_id, 7)
+            file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(contract, indent=4))
+            file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
         def get_node(node_to_ask):
             def parse_response(response):
+                if response[0] and response[1][0] == "True":
+                    return True
                 if not response[0]:
                     self.send_message(Node(unhexlify(buyer_guid)),
                                       buyer_enc_key.encode(),
@@ -1093,6 +1100,9 @@ class Server(object):
                                       refund_json,
                                       order_id,
                                       store_only=True)
+                    return True
+                else:
+                    return response[1][0]
 
             if node_to_ask:
                 skephem = PrivateKey.generate()

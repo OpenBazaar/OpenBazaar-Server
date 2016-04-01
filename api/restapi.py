@@ -1377,9 +1377,14 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def refund(self, request):
         try:
-            self.mserver.refund(request.args["order_id"][0])
-            request.write(json.dumps({"success": True}, indent=4))
-            request.finish()
+            def respond(success):
+                if success is True:
+                    request.write(json.dumps({"success": True}))
+                    request.finish()
+                else:
+                    request.write(json.dumps({"success": False, "reason": success}))
+                    request.finish()
+            self.mserver.refund(request.args["order_id"][0]).addCallBack(respond)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

@@ -1006,6 +1006,8 @@ class Contract(object):
         self.db.listings.add_listing(data)
 
     def process_refund(self, refund_json, blockchain, notification_listener):
+        if "refund" in self.contract:
+            raise Exception("Refund already processed for this order")
         self.contract["refund"] = refund_json["refund"]
         order_id = refund_json["refund"]["order_id"]
 

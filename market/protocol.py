@@ -361,9 +361,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("order %s refunded by vendor" % refund_json["refund"]["order_id"])
             return ["True"]
-        except Exception:
+        except Exception, e:
             self.log.error("unable to parse refund message from %s" % sender)
-            return ["False"]
+            return [e.message]
 
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
