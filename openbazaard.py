@@ -15,7 +15,7 @@ from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
 from dht.node import Node
-from dht.storage import PersistentStorage, ForgetfulStorage
+from dht.storage import ForgetfulStorage
 from keys.credentials import get_credentials
 from keys.keychain import KeyChain
 from log import Logger, FileLogObserver
