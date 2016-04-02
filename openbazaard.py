@@ -82,7 +82,7 @@ def run(*args):
 
         # kademlia
         SEED_URLS = SEEDS_TESTNET if TESTNET else SEEDS
-        storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.get_database_path())
+        storage = ForgetfulStorage()
         relay_node = None
         if nat_type != FULL_CONE:
             for seed in SEED_URLS:
