@@ -909,6 +909,7 @@ class Server(object):
                 vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
             elif "vendor_order_confirmation" not in contract and float(vendor_percentage) > 0:
                 raise Exception("Cannot refund seller before order confirmation is sent")
+
             def libbitcoin_timeout():
                 d.callback("timed out")
 
@@ -936,20 +937,20 @@ class Server(object):
 
         outputs = []
 
-        outputs.append({'value': int(float(contract["dispute_resolution"]
-                                           ["resolution"]["moderator_fee"]) * 100000000),
+        outputs.append({'value': int(round(float(contract["dispute_resolution"]
+                                                 ["resolution"]["moderator_fee"]) * 100000000)),
                         'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
-            outputs.append({'value': int(float(contract["dispute_resolution"]
-                                               ["resolution"]["buyer_payout"]) * 100000000),
+            outputs.append({'value': int(round(float(contract["dispute_resolution"]
+                                                     ["resolution"]["buyer_payout"]) * 100000000)),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
             vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-            outputs.append({'value': int(float(contract["dispute_resolution"]
-                                               ["resolution"]["vendor_payout"]) * 100000000),
+            outputs.append({'value': int(round(float(contract["dispute_resolution"]
+                                                     ["resolution"]["vendor_payout"]) * 100000000)),
                             'address': vendor_address})
 
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
