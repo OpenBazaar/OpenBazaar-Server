@@ -794,6 +794,17 @@ class Server(object):
         """
         if not self.protocol.multiplexer.blockchain.connected:
             raise Exception("Libbitcoin server not online")
+        if not self.protocol.multiplexer.testnet and \
+                not (moderator_address[:1] == "1" or moderator_address[:1] == "3"):
+            raise Exception("Bitcoin address is not a mainnet address")
+        elif self.protocol.multiplexer.testnet and not \
+                (moderator_address[:1] == "n" or moderator_address[:1] == "m" or moderator_address[:1] == "2"):
+            raise Exception("Bitcoin address is not a testnet address")
+        try:
+            bitcointools.b58check_to_hex(moderator_address)
+        except AssertionError:
+            raise Exception("Invalid Bitcoin address")
+
         with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
 
