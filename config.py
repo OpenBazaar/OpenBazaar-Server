@@ -199,10 +199,10 @@ for item in items:
 
 items = cfg.items('LIBBITCOIN_SERVERS')  # this also includes items in DEFAULTS
 for item in items:
-    if _is_tuple(item, "server"):
+    if _is_tuple(item, "mainnet_server"):
         server = item[1]
         new_server = _tuple_from_string(server)
-        if item[0] == "server_custom":
+        if item[0] == "mainnet_server_custom":
             LIBBITCOIN_SERVERS = [new_server]
             break
         elif new_server not in LIBBITCOIN_SERVERS:

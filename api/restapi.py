@@ -416,7 +416,7 @@ class OpenBazaarAPI(APIResource):
             if "moderator" in request.args:
                 p.profile.moderator = str_to_bool(request.args["moderator"][0])
             if "moderation_fee" in request.args:
-                u.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
+                p.profile.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
                 u.website = request.args["website"][0].decode("utf8")
             if "email" in request.args:
@@ -832,14 +832,15 @@ class OpenBazaarAPI(APIResource):
                     set_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom",
                               request.args["libbitcoin_server"][0])
                 else:
-                    set_value("LIBBITCOIN_SERVERS", "server_custom", request.args["libbitcoin_server"][0])
+                    set_value("LIBBITCOIN_SERVERS", "mainnet_server_custom",
+                              request.args["libbitcoin_server"][0])
             else:
                 if self.protocol.testnet:
                     if get_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom"):
                         delete_value("LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")
                 else:
-                    if get_value("LIBBITCOIN_SERVERS", "server_custom"):
-                        delete_value("LIBBITCOIN_SERVERS", "server_custom")
+                    if get_value("LIBBITCOIN_SERVERS", "mainnet_server_custom"):
+                        delete_value("LIBBITCOIN_SERVERS", "mainnet_server_custom")
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
