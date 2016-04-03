@@ -835,7 +835,8 @@ class Server(object):
                 moderator_fee = int(float(moderator_percentage) * satoshis)
                 satoshis -= moderator_fee
 
-                outputs.append({'value': moderator_fee, 'address': moderator_address})
+                if moderator_fee > 0:
+                    outputs.append({'value': moderator_fee, 'address': moderator_address})
                 dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
                 dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
                     round(moderator_fee / float(100000000), 8)
@@ -937,9 +938,11 @@ class Server(object):
 
         outputs = []
 
-        outputs.append({'value': int(round(float(contract["dispute_resolution"]
-                                                 ["resolution"]["moderator_fee"]) * 100000000)),
-                        'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
+        moderator_fee = int(round(float(contract["dispute_resolution"]
+                                        ["resolution"]["moderator_fee"]) * 100000000))
+        if moderator_fee > 0:
+            outputs.append({'value': moderator_fee,
+                            'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
