@@ -28,10 +28,13 @@ class BanScore(object):
         self.ban_time = ban_time
         self.peers = {}
         self.scoring_loop = task.LoopingCall(self.adjust_scores)
-        self.scoring_loop.start(30, now=False)
+        #self.scoring_loop.start(30, now=False)
         self.log = Logger(system=self)
 
     def process_message(self, peer, message):
+        if peer:
+            # disabled for now
+            return
         if peer[0] not in self.peers:
             self.peers[peer[0]] = SCORES.copy()
 
