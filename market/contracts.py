@@ -1395,6 +1395,7 @@ def check_order_for_payment(order_id, db, libbitcoin_client, notification_listen
                 # get the amount (in satoshi) the user is expected to pay
                 amount_to_pay = int(float(c.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
                 if amount_funded >= amount_to_pay:
+                    c.outpoints = outpoints
                     c.payment_received()
 
         libbitcoin_client.fetch_history2(addr, history_fetched)
