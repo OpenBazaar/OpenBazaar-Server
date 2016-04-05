@@ -354,7 +354,7 @@ class Server(object):
             self.log.warning("there are no known neighbors to find node %s" % node_to_find.id.encode("hex"))
             return defer.succeed(None)
 
-        spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha)
+        spider = NodeSpiderCrawl(self.protocol, node_to_find, nearest, self.ksize, self.alpha, True)
         return spider.find().addCallback(check_for_node)
 
     def saveState(self, fname):

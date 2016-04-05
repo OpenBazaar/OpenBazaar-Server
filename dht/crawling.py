@@ -160,6 +160,10 @@ class ValueSpiderCrawl(SpiderCrawl):
 
 class NodeSpiderCrawl(SpiderCrawl):
 
+    def __init__(self, protocol, node, peers, ksize, alpha, find_exact=False):
+        SpiderCrawl.__init__(self, protocol, node, peers, ksize, alpha)
+        self.find_exact = find_exact
+
     def find(self):
         """
         Find the closest nodes.
@@ -176,7 +180,12 @@ class NodeSpiderCrawl(SpiderCrawl):
             if not response.happened():
                 toremove.append(peerid)
             else:
-                self.nearest.push(response.getNodeList())
+                node_list = response.getNodeList()
+                self.nearest.push(node_list)
+                if self.find_exact:
+                    for node in node_list:
+                        if node.id == self.node.id:
+                            return [node]
         self.nearest.remove(toremove)
 
         if self.nearest.allBeenContacted():
