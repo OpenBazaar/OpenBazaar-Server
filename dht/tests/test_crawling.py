@@ -85,9 +85,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
         spider.find()
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
     def test_nodesFound(self):
         self._connecting_to_connected()
@@ -107,9 +107,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         # test all been contacted
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
@@ -170,7 +170,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         # test store value at nearest without value
         spider.nearestWithoutValue.push(self.node1)
         spider._handleFoundValues(found_values)
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         self.assertTrue(len(self.proto_mock.send_datagram.call_args_list) > 1)
         self.proto_mock.send_datagram.call_args_list = []
@@ -266,9 +266,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         spider = NodeSpiderCrawl(self.protocol, node, nearest, 20, 3)
         spider.find()
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
     def test_nodesFound(self):
         self._connecting_to_connected()
@@ -288,9 +288,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                            self.node3.getProto().SerializeToString()))

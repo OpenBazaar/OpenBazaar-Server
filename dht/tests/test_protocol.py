@@ -404,7 +404,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.wire_protocol[self.addr1] = self.con
         self.protocol.callPing(n)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         sent_message = sent_packet.payload
@@ -425,7 +425,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.protocol.callStore(n, digest("Keyword"), digest("Key"),
                                 self.protocol.sourceNode.getProto().SerializeToString(), 10)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         sent_message = sent_packet.payload
@@ -449,7 +449,7 @@ class KademliaProtocolTest(unittest.TestCase):
         keyword = Node(digest("Keyword"))
         self.protocol.callFindValue(n, keyword)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         sent_message = sent_packet.payload
@@ -471,7 +471,7 @@ class KademliaProtocolTest(unittest.TestCase):
         keyword = Node(digest("nodetofind"))
         self.protocol.callFindNode(n, keyword)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         sent_message = sent_packet.payload
@@ -492,7 +492,7 @@ class KademliaProtocolTest(unittest.TestCase):
         self.wire_protocol[self.addr1] = self.con
         self.protocol.callDelete(n, digest("Keyword"), digest("Key"), digest("Signature"))
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         sent_packet = packet.Packet.from_bytes(self.proto_mock.send_datagram.call_args_list[0][0][0])
         sent_message = sent_packet.payload

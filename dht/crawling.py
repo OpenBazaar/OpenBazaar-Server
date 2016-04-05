@@ -159,6 +159,7 @@ class ValueSpiderCrawl(SpiderCrawl):
 
 
 class NodeSpiderCrawl(SpiderCrawl):
+
     def find(self):
         """
         Find the closest nodes.
