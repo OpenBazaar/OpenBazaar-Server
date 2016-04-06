@@ -135,7 +135,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
 
         def keep_alive(self):
             """
-            Let's check that this node has been active in the last 15 minutes. If not
+            Let's check that this node has been active in the last 5 minutes. If not
             and if it's not in our routing table, we don't need to keep the connection
             open. Otherwise PING it to make sure the NAT doesn't drop the mapping.
             """

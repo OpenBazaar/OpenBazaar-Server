@@ -936,7 +936,12 @@ class OpenBazaarAPI(APIResource):
     @authenticated
     def get_connected_peers(self, request):
         request.setHeader('content-type', "application/json")
-        request.write(bleach.clean(json.dumps(self.protocol.keys(), indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+        peers = self.protocol.keys()
+        resp = {
+            "num_peers": len(peers),
+            "peers": peers
+        }
+        request.write(bleach.clean(json.dumps(resp, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
         request.finish()
         return server.NOT_DONE_YET
 
