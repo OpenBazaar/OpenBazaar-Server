@@ -94,11 +94,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  m.sender.natType,
                                  m.sender.vendor)
                 if self.time_last_message == 0:
-                    pubkey = m.sender.publicKey
-                    verify_key = nacl.signing.VerifyKey(pubkey)
-                    signature = m.signature
-                    m.ClearField("signature")
-                    verify_key.verify(m.SerializeToString(), signature)
                     h = nacl.hash.sha512(m.sender.publicKey)
                     pow_hash = h[40:]
                     if int(pow_hash[:6], 16) >= 50 or m.sender.guid.encode("hex") != h[:40]:
