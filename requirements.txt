@@ -1,5 +1,5 @@
 protobuf==3.0.0b2
-Twisted==16.0.1
+Twisted==16.1.0
 txrudp==0.5.1
 pystun==0.1.0
 bitcointools==1.1.44
