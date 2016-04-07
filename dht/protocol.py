@@ -128,7 +128,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_values(self, sender, *serialized_values):
         self.addToRouter(sender)
-        for val in serialized_values:
+        for val in serialized_values[:100]:
             try:
                 v = objects.Value()
                 v.ParseFromString(val)
@@ -215,7 +215,7 @@ class KademliaProtocol(RPCProtocol):
                     i.valueKey = k
                     inv.append(i.SerializeToString())
         if len(inv) > 0:
-            self.callInv(node, inv).addCallback(send_values)
+            self.callInv(node, inv[:100]).addCallback(send_values)
 
     def handleCallResponse(self, result, node):
         """
