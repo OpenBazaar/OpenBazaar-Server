@@ -136,6 +136,7 @@ class Server(object):
                             self.get_image(node_to_ask, unhexlify(image_hash))
                     return contract
                 else:
+                    self.log.warning("Fetched an invalid contract from %s" % node_to_ask.id.encode("hex"))
                     return None
             except Exception:
                 return None
