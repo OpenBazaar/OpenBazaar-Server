@@ -27,7 +27,7 @@ DEFAULTS = {
     'ksize': '20',
     'alpha': '3',
     'transaction_fee': '10000',
-    'libbitcoin_servers': 'tcp://libbitcoin1.openbazaar.org:9091, ptCDh+i&@k3CYEa)(tC=j9$yN/eD&}@LJojDUGo7',
+    'libbitcoin_servers': 'tcp://libbitcoin1.openbazaar.org:9091',
     'libbitcoin_servers_testnet': 'tcp://libbitcoin2.openbazaar.org:9091, <Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM',
     'resolver': 'http://resolver.onename.com/',
     'ssl_cert': None,

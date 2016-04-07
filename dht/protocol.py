@@ -214,6 +214,8 @@ class KademliaProtocol(RPCProtocol):
                     i.keyword = keyword
                     i.valueKey = k
                     inv.append(i.SerializeToString())
+        if len(inv) > 100:
+            random.shuffle(inv)
         if len(inv) > 0:
             self.callInv(node, inv[:100]).addCallback(send_values)
 
