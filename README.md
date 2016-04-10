@@ -46,10 +46,25 @@ optional arguments:
 ```
 
 ## Docker
-Install [Docker](https://docs.docker.com/engine/installation/).
-Install [DockerCompose](https://docs.docker.com/compose/install/).
 
+- Install [Docker](https://docs.docker.com/engine/installation/).
+- Install [DockerCompose](https://docs.docker.com/compose/install/).
 
+#### Set Username and Password
+```bash
+nano ./docker-compose.yml
+```
+
+#### Build and run
+```bash
+docker-compose up
+```
+
+#### Backup
+All relevant data will go to
+```bash
+./data
+```
 
 
 ## License
