@@ -45,5 +45,12 @@ optional arguments:
   --pidfile PIDFILE     name of the pid file
 ```
 
+## Docker
+Install [Docker](https://docs.docker.com/engine/installation/).
+Install [DockerCompose](https://docs.docker.com/compose/install/).
+
+
+
+
 ## License
 OpenBazaar Server is licensed under the [MIT License](LICENSE).
