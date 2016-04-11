@@ -151,7 +151,7 @@ class Server(object):
         neighbors = self.protocol.router.findNeighbors(self.node)
         return [tuple(n)[-2:] for n in neighbors]
 
-    def bootstrap(self, addrs):
+    def bootstrap(self, addrs, deferred=None):
         """
         Bootstrap the server by connecting to other known nodes in the network.
 
@@ -165,9 +165,18 @@ class Server(object):
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
         self.log.info("bootstrapping with %s addresses, finding neighbors..." % len(addrs))
 
-        d = defer.Deferred()
+        if deferred is None:
+            d = defer.Deferred()
+        else:
+            d = deferred
 
         def initTable(results):
+            if len(results) == 0:
+                if self.protocol.multiplexer.testnet:
+                    self.bootstrap(self.querySeed(SEEDS_TESTNET), d)
+                else:
+                    self.bootstrap(self.querySeed(SEEDS), d)
+                return
             potential_relay_nodes = []
             for addr, result in results.items():
                 if result[0]:

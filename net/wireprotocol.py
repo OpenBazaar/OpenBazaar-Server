@@ -68,6 +68,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.is_new_node = True
             self.on_connection_made()
             self.time_last_message = 0
+            self.ping_interval = 30 if nat_type != FULL_CONE else 300
 
         def on_connection_made(self):
             if self.connection is None or self.connection.state == State.CONNECTING:
@@ -144,7 +145,8 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             ):
                 self.connection.shutdown()
                 return
-            if t - self.time_last_message >= 30:
+
+            if t - self.time_last_message >= self.ping_interval:
                 for processor in self.processors:
                     if PING in processor and self.node is not None:
                         processor.callPing(self.node)
