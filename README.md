@@ -66,6 +66,19 @@ All relevant data will go to
 ./data
 ```
 
+#### SSL Support
+- Generate certificate as described [here](https://slack-files.com/T02FPGBKB-F0XK9ND2Q-fc5e6500a3)
+
+- Place the *server.crt* and *server.key* into
+```bash
+./ssl
+```
+
+- Enable SSL in
+```bash
+./docker-compose.yml
+```
+
 
 ## License
 OpenBazaar Server is licensed under the [MIT License](LICENSE).
