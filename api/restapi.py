@@ -1193,7 +1193,6 @@ class OpenBazaarAPI(APIResource):
         def height_fetched(ec, chain_height):
             payment_address = order["buyer_order"]["order"]["payment"]["address"]
             txs = []
-            
             def history_fetched(ec, history):
                 if ec:
                     return_order()
