@@ -93,9 +93,10 @@ class Server(object):
             ds.append(spider.find())
 
         def republishKeys(_):
-            for bucket in self.protocol.router.buckets:
-                for node in bucket.nodes.values():
-                    self.protocol.transferKeyValues(node)
+            self.log.debug("Republishing key/values...")
+            neighbors = self.protocol.router.findNeighbors(self.node, exclude=self.node)
+            for node in neighbors:
+                self.protocol.transferKeyValues(node)
 
         return defer.gatherResults(ds).addCallback(republishKeys)
 
