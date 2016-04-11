@@ -62,3 +62,6 @@ _trial_temp/
 
 # Docker data
 data/
+
+# SSL
+ssl/
