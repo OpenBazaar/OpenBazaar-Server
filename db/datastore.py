@@ -912,7 +912,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
     def get_unfunded(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id, timestamp FROM purchases WHERE status=0''')
+        cursor.execute('''SELECT id, timestamp FROM purchases WHERE status=0 OR status=2''')
         ret = cursor.fetchall()
         conn.close()
         return ret

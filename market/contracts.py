@@ -867,7 +867,8 @@ class Contract(object):
             self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
                                               order_id, title, image_hash)
             # update the db
-            self.db.purchases.update_status(order_id, 1)
+            if self.db.purchase.get_status(order_id) == 0:
+                self.db.purchases.update_status(order_id, 1)
             self.db.purchases.update_outpoint(order_id, json.dumps(self.outpoints))
             self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
         else:

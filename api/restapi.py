@@ -1180,7 +1180,7 @@ class OpenBazaarAPI(APIResource):
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
 
-        if status == 0:
+        if status == 0 or status == 2:
             check_order_for_payment(request.args["order_id"][0], self.db, self.protocol.blockchain,
                                     self.mserver.protocol.get_notification_listener(),
                                     self.protocol.testnet)
@@ -1193,6 +1193,7 @@ class OpenBazaarAPI(APIResource):
         def height_fetched(ec, chain_height):
             payment_address = order["buyer_order"]["order"]["payment"]["address"]
             txs = []
+            
             def history_fetched(ec, history):
                 if ec:
                     return_order()
