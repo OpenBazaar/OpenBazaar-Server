@@ -86,7 +86,7 @@ class BtcPrice(Thread):
         return json.loads(result)
 
     def loadbitcoinaverage(self):
-        for currency, info in self.dictForUrl('https://api.bitcoinaverage.com/ticker/all').iteritems():
+        for currency, info in self.dictForUrl('https://api.bitcoinaverage.com/ticker/global/all').iteritems():
             if currency != "timestamp":
                 self.prices[currency] = info["last"]
 
