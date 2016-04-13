@@ -49,7 +49,7 @@ class ForgetfulStorageTest(unittest.TestCase):
         p = ForgetfulStorage()
         p[self.keyword1] = (self.key1, self.value, 10)
         for k in p.iterkeys():
-            self.assertEqual(k, self.keyword1)
+            self.assertEqual(k[0].decode("hex"), self.keyword1)
 
     def test_iteritems(self):
         p = ForgetfulStorage()

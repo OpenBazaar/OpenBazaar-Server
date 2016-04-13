@@ -201,6 +201,7 @@ class KademliaProtocol(RPCProtocol):
 
         inv = []
         for keyword in self.storage.iterkeys():
+            keyword = keyword[0].decode("hex")
             keynode = Node(keyword)
             neighbors = self.router.findNeighbors(keynode, exclude=node)
             if len(neighbors) > 0:

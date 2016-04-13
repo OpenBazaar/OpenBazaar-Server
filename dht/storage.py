@@ -132,10 +132,7 @@ class ForgetfulStorage(object):
             cursor = self.db.cursor()
             cursor.execute('''SELECT DISTINCT keyword FROM dht''')
             keywords = cursor.fetchall()
-            kw_list = []
-            for kw in keywords:
-                kw_list.append(kw[0].decode("hex"))
-            return kw_list.__iter__()
+            return keywords.__iter__()
         except Exception:
             return None
 
