@@ -165,7 +165,8 @@ class OpenBazaarAPI(APIResource):
                         "moderation_fee": round(profile.moderation_fee, 2),
                         "handle": bleach.clean(profile.handle, tags=ALLOWED_TAGS).encode("utf-8"),
                         "about": bleach.clean(profile.about, tags=ALLOWED_TAGS).encode("utf-8"),
-                        "short_description": bleach.clean(profile.short_description, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "short_description": bleach.clean(profile.short_description,
+                                                          tags=ALLOWED_TAGS).encode("utf-8"),
                         "website": bleach.clean(profile.website, tags=ALLOWED_TAGS).encode("utf-8"),
                         "email": bleach.clean(profile.email, tags=ALLOWED_TAGS).encode("utf-8"),
                         "primary_color": profile.primary_color,
@@ -316,7 +317,8 @@ class OpenBazaarAPI(APIResource):
                         "handle": bleach.clean(f.metadata.handle, tags=ALLOWED_TAGS).encode("utf-8"),
                         "name": bleach.clean(f.metadata.name, tags=ALLOWED_TAGS).encode("utf-8"),
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": bleach.clean(f.metadata.short_description, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "short_description": bleach.clean(f.metadata.short_description,
+                                                          tags=ALLOWED_TAGS).encode("utf-8"),
                         "nsfw": f.metadata.nsfw
                     }
                     response["following"].append(user_json)
