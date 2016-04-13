@@ -173,15 +173,11 @@ class Server(object):
             d = deferred
 
         def initTable(results):
-            if len(results) == 0:
-                if self.protocol.multiplexer.testnet:
-                    self.bootstrap(self.querySeed(SEEDS_TESTNET), d)
-                else:
-                    self.bootstrap(self.querySeed(SEEDS), d)
-                return
+            response = False
             potential_relay_nodes = []
             for addr, result in results.items():
                 if result[0]:
+                    response = True
                     n = objects.Node()
                     try:
                         n.ParseFromString(result[1][0])
@@ -199,6 +195,12 @@ class Server(object):
                             potential_relay_nodes.append((addr[0], addr[1]))
                     except Exception:
                         self.log.warning("bootstrap node returned invalid GUID")
+            if not response:
+                if self.protocol.multiplexer.testnet:
+                    self.bootstrap(self.querySeed(SEEDS_TESTNET), d)
+                else:
+                    self.bootstrap(self.querySeed(SEEDS), d)
+                return
             if len(potential_relay_nodes) > 0 and self.node.nat_type != objects.FULL_CONE:
                 shuffle(potential_relay_nodes)
                 self.node.relay_node = potential_relay_nodes[0]

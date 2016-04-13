@@ -174,7 +174,6 @@ class RPCProtocol:
             m.signature = self.signing_key.sign(m.SerializeToString())[:64]
             data = m.SerializeToString()
 
-
             relay_addr = None
             if node.nat_type == SYMMETRIC or \
                     (node.nat_type == RESTRICTED and self.sourceNode.nat_type == SYMMETRIC):
