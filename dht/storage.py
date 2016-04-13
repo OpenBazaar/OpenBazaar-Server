@@ -75,14 +75,13 @@ class ForgetfulStorage(object):
         self.db.commit()
 
     def __setitem__(self, keyword, values):
+        keyword = keyword.encode("hex")
         cursor = self.db.cursor()
-        cursor.execute('''SELECT id, value FROM dht WHERE keyword=? AND id=?''',
-                       (keyword.encode("hex"), values[0]))
-        if cursor.fetchone() is None:
-            birthday = time.time() - (self.ttl - values[2])
-            cursor.execute('''INSERT OR REPLACE INTO dht(keyword, id, value, birthday)
-                          VALUES (?,?,?,?)''', (keyword.encode("hex"), values[0], values[1], birthday))
-            self.db.commit()
+        birthday = time.time() - (self.ttl - values[2])
+        cursor.execute('''INSERT INTO dht(keyword, id, value, birthday)
+                      SELECT ?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM dht WHERE keyword=? AND id=?)''',
+                       (keyword, values[0], values[1], birthday, keyword, values[0]))
+        self.db.commit()
 
     def __getitem__(self, keyword):
         self.cull()
