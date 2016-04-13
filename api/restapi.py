@@ -156,30 +156,31 @@ class OpenBazaarAPI(APIResource):
             if profile is not None:
                 profile_json = {
                     "profile": {
-                        "name": profile.name,
+                        "name": bleach.clean(profile.name, tags=ALLOWED_TAGS).encode("utf-8"),
                         "location": str(CountryCode.Name(profile.location)),
                         "public_key": profile.guid_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
                         "moderation_fee": round(profile.moderation_fee, 2),
-                        "handle": profile.handle,
-                        "about": profile.about,
-                        "short_description": profile.short_description,
-                        "website": profile.website,
-                        "email": profile.email,
+                        "handle": bleach.clean(profile.handle, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "about": bleach.clean(profile.about, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "short_description": bleach.clean(profile.short_description, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "website": bleach.clean(profile.website, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "email": bleach.clean(profile.email, tags=ALLOWED_TAGS).encode("utf-8"),
                         "primary_color": profile.primary_color,
                         "secondary_color": profile.secondary_color,
                         "background_color": profile.background_color,
                         "text_color": profile.text_color,
-                        "pgp_key": profile.pgp_key.public_key,
+                        "pgp_key": bleach.clean(profile.pgp_key.public_key, tags=ALLOWED_TAGS).encode("utf-8"),
                         "avatar_hash": profile.avatar_hash.encode("hex"),
                         "header_hash": profile.header_hash.encode("hex"),
                         "social_accounts": {}
                     }
                 }
                 if temp_handle:
-                    profile_json["profile"]["temp_handle"] = temp_handle
+                    profile_json["profile"]["temp_handle"] = \
+                        bleach.clean(temp_handle, tags=ALLOWED_TAGS).encode("utf-8")
                 if "guid" in request.args:
                     profile_json["profile"]["guid"] = request.args["guid"][0]
                 else:
@@ -187,14 +188,14 @@ class OpenBazaarAPI(APIResource):
                 for account in profile.social:
                     profile_json["profile"]["social_accounts"][str(
                         objects.Profile.SocialAccount.SocialType.Name(account.type)).lower()] = {
-                            "username": account.username,
-                            "proof_url": account.proof_url
+                            "username": bleach.clean(account.username, tags=ALLOWED_TAGS).encode("utf-8"),
+                            "proof_url": bleach.clean(account.proof_url, tags=ALLOWED_TAGS).encode("utf-8")
                         }
                 if (profile.handle is not "" and "(unconfirmed)" not in profile.handle and
                         not blockchainid.validate(profile.handle, profile_json["profile"]["guid"])):
                     profile_json["profile"]["handle"] = ""
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(profile_json, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(profile_json, indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -225,10 +226,10 @@ class OpenBazaarAPI(APIResource):
                 response = {"listings": []}
                 for l in listings.listing:
                     listing_json = {
-                        "title": l.title,
+                        "title": bleach.clean(l.title, tags=ALLOWED_TAGS).encode("utf-8"),
                         "contract_hash": l.contract_hash.encode("hex"),
                         "thumbnail_hash": l.thumbnail_hash.encode("hex"),
-                        "category": l.category,
+                        "category": bleach.clean(l.category, tags=ALLOWED_TAGS).encode("utf-8"),
                         "price": l.price,
                         "currency_code": l.currency_code,
                         "nsfw": l.nsfw,
@@ -239,7 +240,7 @@ class OpenBazaarAPI(APIResource):
                         listing_json["ships_to"].append(str(CountryCode.Name(country)))
                     response["listings"].append(listing_json)
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(response, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(response, indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -312,15 +313,15 @@ class OpenBazaarAPI(APIResource):
                 for f in following.users:
                     user_json = {
                         "guid": f.guid.encode("hex"),
-                        "handle": f.metadata.handle,
-                        "name": f.metadata.name,
+                        "handle": bleach.clean(f.metadata.handle, tags=ALLOWED_TAGS).encode("utf-8"),
+                        "name": bleach.clean(f.metadata.name, tags=ALLOWED_TAGS).encode("utf-8"),
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": f.metadata.short_description,
+                        "short_description": bleach.clean(f.metadata.short_description, tags=ALLOWED_TAGS).encode("utf-8"),
                         "nsfw": f.metadata.nsfw
                     }
                     response["following"].append(user_json)
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(response, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(response, indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))

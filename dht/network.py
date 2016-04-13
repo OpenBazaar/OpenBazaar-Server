@@ -66,7 +66,8 @@ class Server(object):
         self.storage = storage or ForgetfulStorage()
         self.node = node
         self.protocol = KademliaProtocol(self.node, self.storage, ksize, db, signing_key)
-        self.refreshLoop = LoopingCall(self.refreshTable).start(3600)
+        self.refreshLoop = LoopingCall(self.refreshTable)
+        reactor.callLater(1800, self.refreshLoop.start)
 
     def listen(self, port):
         """
