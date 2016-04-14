@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import os
 import sqlite3 as lite
+from api.restapi import clean
 from collections import Counter
 from config import DATA_FOLDER
 from dht.node import Node
@@ -602,8 +603,8 @@ WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
 
                 ret.append({"guid": g[0],
                             "avatar_hash": avatar_hash,
-                            "handle": handle,
-                            "last_message": val[1],
+                            "handle": clean(handle),
+                            "last_message": clean(val[1]),
                             "timestamp": val[2],
                             "public_key": val[3].encode("hex"),
                             "unread": 0 if g[0] not in unread else unread[g[0]]})
