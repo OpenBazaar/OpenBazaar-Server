@@ -28,7 +28,7 @@ from market.contracts import Contract, check_order_for_payment
 from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
-from utils import sanitize_html
+from api.utils import sanitize_html
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
