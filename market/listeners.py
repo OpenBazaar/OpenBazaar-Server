@@ -1,16 +1,13 @@
 __author__ = 'chris'
 
-import bleach
 import json
 import time
 import random
+from api.restapi import clean
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
 from dht.utils import digest
-
-ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
-                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
 
 
 class MessageListenerImpl(object):
@@ -34,9 +31,9 @@ class MessageListenerImpl(object):
                 message_json = {
                     "message": {
                         "sender": plaintext.sender_guid.encode("hex"),
-                        "subject": plaintext.subject,
+                        "subject": clean(plaintext.subject),
                         "message_type": PlaintextMessage.Type.Name(plaintext.type),
-                        "message": plaintext.message,
+                        "message": clean(plaintext.message),
                         "timestamp": plaintext.timestamp,
                         "avatar_hash": plaintext.avatar_hash.encode("hex"),
                         "public_key": plaintext.pubkey.encode("hex")
@@ -44,7 +41,7 @@ class MessageListenerImpl(object):
                 }
                 if plaintext.handle:
                     message_json["message"]["handle"] = plaintext.handle
-                self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4), tags=ALLOWED_TAGS)))
+                self.ws.push(json.dumps(message_json, indent=4))
         except Exception:
             pass
 
@@ -74,13 +71,13 @@ class BroadcastListenerImpl(object):
             "broadcast": {
                 "id": broadcast_id,
                 "guid": guid.encode("hex"),
-                "handle": handle,
-                "message": message,
+                "handle": clean(handle),
+                "message": clean(message),
                 "timestamp": timestamp,
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(broadcast_json, indent=4), tags=ALLOWED_TAGS)))
+        self.ws.push(json.dumps(broadcast_json, indent=4))
 
 
 class NotificationListenerImpl(object):
@@ -99,7 +96,7 @@ class NotificationListenerImpl(object):
             "notification": {
                 "id": notif_id,
                 "guid": guid.encode("hex"),
-                "handle": handle,
+                "handle": clean(handle),
                 "type": notif_type,
                 "order_id": order_id,
                 "title": title,
@@ -107,4 +104,4 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(notification_json, indent=4), tags=ALLOWED_TAGS)))
+        self.ws.push(json.dumps(notification_json, indent=4))
