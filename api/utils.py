@@ -1,5 +1,7 @@
 import bleach
 
+from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
+
 # pylint: disable=W1402
 def smart_unicode(s, encoding='utf8'):
     """ Convert str to unicode. If s is unicode, return itself.
@@ -43,5 +45,5 @@ def sanitize_html(value):
     elif isinstance(value, list):
         value = [sanitize_html(v) for v in value]
     elif isinstance(value, basestring):
-        value = bleach.clean(value)
+        value = bleach.clean(value, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES)
     return value
