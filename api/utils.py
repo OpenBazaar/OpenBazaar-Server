@@ -39,7 +39,7 @@ def smart_str(s, encoding='utf8'):
     return s.encode(encoding)
 
 def sanitize_html(value):
-    """ Recursively sanitize all strings within a data structure. """    
+    """ Recursively sanitize all strings within a data structure. """
     if isinstance(value, dict):
         value = {k:sanitize_html(v) for k, v in value.iteritems()}
     elif isinstance(value, list):
