@@ -793,6 +793,10 @@ class Server(object):
         Called when a moderator closes a dispute. It will create a payout transactions refunding both
         parties and send it to them in a dispute_close message.
         """
+        if float(vendor_percentage) < 0 or float(moderator_percentage) < 0 or float(buyer_percentage) < 0:
+            raise Exception("Payouts percentages must be positive")
+        if float(vendor_percentage) + float(buyer_percentage) > 1:
+            raise Exception("Payout exceeds 100% of value")
         if not self.protocol.multiplexer.blockchain.connected:
             raise Exception("Libbitcoin server not online")
         if not self.protocol.multiplexer.testnet and \
