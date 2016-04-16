@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1
+from db.migrations import migration1, migration2
 
 
 class Database(object):
@@ -125,7 +125,8 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
 
-        cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+        cursor.execute('''CREATE TABLE followers(guid TEXT PRIMARY KEY, serializedFollower TEXT)''')
+        cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
@@ -181,6 +182,9 @@ class Database(object):
         conn.close()
         if version == 0:
             migration1.migrate(self.PATH)
+            migration2.migrate(self.PATH)
+        elif version == 1:
+            migration2.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -494,7 +498,7 @@ class FollowData(object):
             conn.commit()
         conn.close()
 
-    def get_followers(self):
+    def get_followers(self, start=None, count=None):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
@@ -588,7 +592,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             handle = ""
             if val[0] is not None:
                 try:
-                    with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
+                    with open(DATA_FOLDER + 'cache/' + g[0] + ".profile", "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)

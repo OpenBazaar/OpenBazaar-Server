@@ -195,7 +195,7 @@ class Server(object):
                     self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
                     self.get_image(node_to_ask, p.header_hash)
-                self.cache(result[1][0], node_to_ask.id.encode("hex"))
+                self.cache(result[1][0], node_to_ask.id.encode("hex") + ".profile")
                 return p
             except Exception:
                 return None
@@ -406,6 +406,14 @@ class Server(object):
                     f.followers.remove(follower)
             return f
 
+        cached_followers = objects.Followers()
+        try:
+            cf = self.load_from_cache(node_to_ask.id.encode("hex") + ".followers")
+            if cf is not None:
+                cached_followers.ParseFromString(cf)
+                last = cached_followers.followers[-1]
+        except Exception:
+            return defer.succeed(None)
         d = self.protocol.callGetFollowers(node_to_ask)
         self.log.info("fetching followers from %s" % node_to_ask)
         return d.addCallback(get_response)
@@ -1234,3 +1242,15 @@ class Server(object):
         """
         with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
             outfile.write(file_to_save)
+
+    @staticmethod
+    def load_from_cache(filename):
+        """
+        Loads a file from cache
+        """
+        filepath = DATA_FOLDER + "cache/" + filename
+        if not os.path.exists(filepath):
+            return None
+        with open(filepath, "r") as filename:
+                f = filename.read()
+        return f
