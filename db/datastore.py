@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1
+from db.migrations import migration1, migration2
 
 
 class Database(object):
@@ -181,6 +181,9 @@ class Database(object):
         conn.close()
         if version == 0:
             migration1.migrate(self.PATH)
+            migration2.migrate(self.PATH)
+        elif version == 1:
+            migration2.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -211,7 +214,7 @@ class HashMap(object):
         conn.close()
         if ret is None:
             return None
-        return ret[0]
+        return DATA_FOLDER + ret[0]
 
     def get_all(self):
         conn = Database.connect_database(self.PATH)

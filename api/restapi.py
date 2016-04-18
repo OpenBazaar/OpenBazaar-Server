@@ -762,23 +762,23 @@ class OpenBazaarAPI(APIResource):
                 for image in request.args["image"]:
                     img = image.decode('base64')
                     hash_value = digest(img).encode("hex")
-                    with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
+                    with open(DATA_FOLDER +"store/media/" + hash_value, 'wb') as outfile:
                         outfile.write(img)
-                    self.db.filemap.insert(hash_value, DATA_FOLDER + "store/media/" + hash_value)
+                    self.db.filemap.insert(hash_value, "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(avi)
-                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/avatar")
+                self.db.filemap.insert(hash_value, "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
                 with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                     outfile.write(hdr)
-                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/header")
+                self.db.filemap.insert(hash_value, "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
