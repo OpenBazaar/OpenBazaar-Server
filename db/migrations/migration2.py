@@ -3,7 +3,7 @@ from config import DATA_FOLDER
 
 
 def migrate(database_path):
-    print "migrating to db version 1"
+    print "migrating to db version 2"
     conn = sqlite3.connect(database_path)
     conn.text_factory = str
     cursor = conn.cursor()
