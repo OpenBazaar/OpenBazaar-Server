@@ -246,8 +246,6 @@ class Server(object):
             :class:`None` if not found, the value otherwise.
         """
         dkey = digest(keyword)
-        if self.storage.get(dkey) is not None:
-            return defer.succeed(self.storage.get(dkey))
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
