@@ -849,6 +849,14 @@ class OpenBazaarAPI(APIResource):
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
+            if "smtp_notifications" not in request.args:
+                request.args["smtp_notifications"] = ['false']
+
+            smtp_attrs = ["smtp_server", "smtp_sender", "smtp_recipient", "smtp_username", "smtp_password"]
+            for smtp_attr in smtp_attrs:
+                if smtp_attr not in request.args:
+                    request.args[smtp_attr] = ['']
+
             settings_list = settings.get()
             if "moderators" in request.args and settings_list is not None:
                 mod_json = settings_list[11]
