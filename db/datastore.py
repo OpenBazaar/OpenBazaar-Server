@@ -1244,16 +1244,19 @@ class Settings(object):
         self.PATH = database_path
 
     def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
-               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list):
+               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list, smtp_notifications,
+               smtp_server, smtp_sender, smtp_recipient, smtp_username, smtp_password):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, termsConditions,
-refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+refundPolicy, moderatorList, smtpNotifications, smtpServer, smtpSender,
+smtpRecipient, smtpUsername, smtpPassword) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked, terms_conditions,
-                            refund_policy, moderator_list))
+                            refund_policy, moderator_list, smtp_notifications, smtp_server,
+                            smtp_sender, smtp_recipient, smtp_username, smtp_password))
             conn.commit()
         conn.close()
 
