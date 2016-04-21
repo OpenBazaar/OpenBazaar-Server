@@ -1,3 +1,7 @@
+import bleach
+
+from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
+
 # pylint: disable=W1402
 def smart_unicode(s, encoding='utf8'):
     """ Convert str to unicode. If s is unicode, return itself.
@@ -33,3 +37,13 @@ def smart_str(s, encoding='utf8'):
     if isinstance(s, str):
         return s
     return s.encode(encoding)
+
+def sanitize_html(value):
+    """ Recursively sanitize all strings within a data structure. """
+    if isinstance(value, dict):
+        value = {k:sanitize_html(v) for k, v in value.iteritems()}
+    elif isinstance(value, list):
+        value = [sanitize_html(v) for v in value]
+    elif isinstance(value, basestring):
+        value = bleach.clean(value, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES)
+    return value
