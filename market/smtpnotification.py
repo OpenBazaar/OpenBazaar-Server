@@ -24,7 +24,7 @@ class SMTPNotification(object):
         self.get_smtp_settings()
 
     def get_smtp_settings(self):
-        settings = self.db.Settings.get()
+        settings = self.db.settings.get()
         self.server = settings[15]
         self.sender = settings[16]
         self.recipient = settings[17]
@@ -33,7 +33,7 @@ class SMTPNotification(object):
 
     def send(self, subject, body):
 
-        settings = self.db.Settings.get()
+        settings = self.db.settings.get()
         is_enabled = True if settings[14] == 1 else False
 
         if is_enabled:
