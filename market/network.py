@@ -373,7 +373,7 @@ class Server(object):
         self.log.info("sending unfollow request to %s" % node_to_unfollow)
         return d.addCallback(save_to_db)
 
-    def get_followers(self, node_to_ask):
+    def get_followers(self, node_to_ask, start=0):
         """
         Query the given node for a list if its followers. The response will be a
         `Followers` protobuf object. We will verify the signature for each follower
@@ -388,8 +388,11 @@ class Server(object):
                 verify_key.verify(response[1][0], response[1][1])
                 f.ParseFromString(response[1][0])
             except Exception:
-                return None
+                return (None, None)
             # Verify the signature and guid of each follower.
+            count = None
+            if len(response[1]) > 2:
+                count = response[1][2]
             for follower in f.followers:
                 try:
                     v_key = nacl.signing.VerifyKey(follower.pubkey)
@@ -404,17 +407,14 @@ class Server(object):
                         raise Exception('Invalid follower')
                 except Exception:
                     f.followers.remove(follower)
-            return f
+            return (f, count)
 
-        cached_followers = objects.Followers()
-        try:
-            cf = self.load_from_cache(node_to_ask.id.encode("hex") + ".followers")
-            if cf is not None:
-                cached_followers.ParseFromString(cf)
-                last = cached_followers.followers[-1]
-        except Exception:
-            return defer.succeed(None)
-        d = self.protocol.callGetFollowers(node_to_ask)
+        peer = (node_to_ask.ip, node_to_ask.port)
+        if peer in self.protocol.multiplexer and \
+                        self.protocol.multiplexer[peer].handler.self.remote_node_version > 1:
+            d = self.protocol.callGetFollowers(node_to_ask, start=start)
+        else:
+            d = self.protocol.callGetFollowers(node_to_ask)
         self.log.info("fetching followers from %s" % node_to_ask)
         return d.addCallback(get_response)
 
@@ -801,6 +801,10 @@ class Server(object):
         Called when a moderator closes a dispute. It will create a payout transactions refunding both
         parties and send it to them in a dispute_close message.
         """
+        if float(vendor_percentage) < 0 or float(moderator_percentage) < 0 or float(buyer_percentage) < 0:
+            raise Exception("Payouts percentages must be positive")
+        if float(vendor_percentage) + float(buyer_percentage) > 1:
+            raise Exception("Payout exceeds 100% of value")
         if not self.protocol.multiplexer.blockchain.connected:
             raise Exception("Libbitcoin server not online")
         if not self.protocol.multiplexer.testnet and \
@@ -851,51 +855,54 @@ class Server(object):
                         if o not in outpoints:
                             outpoints.append(o)
 
-                satoshis -= TRANSACTION_FEE
-                moderator_fee = int(float(moderator_percentage) * satoshis)
-                satoshis -= moderator_fee
+                if satoshis <= 0:
+                    d.callback(False)
+                else:
+                    satoshis -= TRANSACTION_FEE
+                    moderator_fee = int(float(moderator_percentage) * satoshis)
+                    satoshis -= moderator_fee
 
-                if moderator_fee > 0:
-                    outputs.append({'value': moderator_fee, 'address': moderator_address})
-                dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
-                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
-                    round(moderator_fee / float(100000000), 8)
-                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
-                    round(TRANSACTION_FEE / float(100000000), 8)
-                if float(buyer_percentage) > 0:
-                    amt = int(float(buyer_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
-                        round(amt / float(100000000), 8)
-                    outputs.append({'value': amt,
-                                    'address': buyer_address})
-                if float(vendor_percentage) > 0:
-                    amt = int(float(vendor_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
-                        round(amt / float(100000000), 8)
-                    outputs.append({'value': amt,
-                                    'address': vendor_address})
+                    if moderator_fee > 0:
+                        outputs.append({'value': moderator_fee, 'address': moderator_address})
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
+                        round(moderator_fee / float(100000000), 8)
+                    dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
+                        round(TRANSACTION_FEE / float(100000000), 8)
+                    if float(buyer_percentage) > 0:
+                        amt = int(float(buyer_percentage) * satoshis)
+                        dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
+                            round(amt / float(100000000), 8)
+                        outputs.append({'value': amt,
+                                        'address': buyer_address})
+                    if float(vendor_percentage) > 0:
+                        amt = int(float(vendor_percentage) * satoshis)
+                        dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
+                            round(amt / float(100000000), 8)
+                        outputs.append({'value': amt,
+                                        'address': vendor_address})
 
-                tx = BitcoinTransaction.make_unsigned(outpoints, outputs,
-                                                      testnet=self.protocol.multiplexer.testnet)
-                chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
-                redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
-                masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-                moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
+                    tx = BitcoinTransaction.make_unsigned(outpoints, outputs,
+                                                          testnet=self.protocol.multiplexer.testnet)
+                    chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+                    redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
+                    masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+                    moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
 
-                signatures = tx.create_signature(moderator_priv, redeem_script)
-                dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
-                dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
-                dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.cases.get_claim(order_id)
-                dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
-                dispute_json["dispute_resolution"]["signature"] = \
-                    base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
-                        dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
+                    signatures = tx.create_signature(moderator_priv, redeem_script)
+                    dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
+                    dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
+                    dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.cases.get_claim(order_id)
+                    dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
+                    dispute_json["dispute_resolution"]["signature"] = \
+                        base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
+                            dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
 
-                contract["dispute_resolution"] = dispute_json["dispute_resolution"]
-                with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
-                    outfile.write(json.dumps(contract, indent=4))
+                    contract["dispute_resolution"] = dispute_json["dispute_resolution"]
+                    with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
+                        outfile.write(json.dumps(contract, indent=4))
 
-                send(dispute_json)
+                    send(dispute_json)
 
         def send(dispute_json):
             def get_node(node_to_ask, recipient_guid, public_key):

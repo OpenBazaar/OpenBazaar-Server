@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2
+from db.migrations import migration1, migration2, migration3
 
 
 class Database(object):
@@ -116,7 +116,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 1''')
+        cursor.execute('''PRAGMA user_version = 2''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -125,7 +125,7 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
 
-        cursor.execute('''CREATE TABLE followers(guid TEXT PRIMARY KEY, serializedFollower TEXT)''')
+        cursor.execute('''CREATE TABLE followers(guid TEXT UNIQUE, serializedFollower TEXT)''')
         cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
@@ -183,8 +183,12 @@ class Database(object):
         if version == 0:
             migration1.migrate(self.PATH)
             migration2.migrate(self.PATH)
+            migration3.migrate(self.PATH)
         elif version == 1:
             migration2.migrate(self.PATH)
+            migration3.migrate(self.PATH)
+        elif version == 2:
+            migration3.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -215,7 +219,7 @@ class HashMap(object):
         conn.close()
         if ret is None:
             return None
-        return ret[0]
+        return DATA_FOLDER + ret[0]
 
     def get_all(self):
         conn = Database.connect_database(self.PATH)
@@ -467,18 +471,12 @@ class FollowData(object):
 
     def set_follower(self, proto):
         conn = Database.connect_database(self.PATH)
+        p = Followers.Follower()
+        p.ParseFromString(proto)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == proto.guid:
-                        f.followers.remove(follower)
-            f.followers.extend([proto])
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''INSERT OR REPLACE INTO followers(guid, serializedFollowers) VALUES (?,?)''',
+                           (p.guid.encode("hex"), proto))
             conn.commit()
         conn.close()
 
@@ -486,28 +484,27 @@ class FollowData(object):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == guid:
-                        f.followers.remove(follower)
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''DELETE FROM followers WHERE guid=?''', (guid.encode("hex"), ))
             conn.commit()
         conn.close()
 
-    def get_followers(self, start=None, count=None):
+    def get_followers(self, start=0):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-        proto = cursor.fetchone()
+        cursor.execute('''SELECT COALESCE(MAX(id)+1, 0) FROM followers''')
+        max_row = cursor.fetchone()[0]
+        cursor.execute('''SELECT Count(*) FROM followers''')
+        count = cursor.fetchone()[0]
+        start = max_row - start
+        cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''', (start, start-30))
+        serialized_followers = cursor.fetchall()
         conn.close()
-        if not proto:
-            return None
-        else:
-            return proto[0]
+        f = Followers()
+        for proto in serialized_followers:
+            p = Followers.Follower()
+            p.ParseFromString(proto[0])
+            f.followers.append(p)
+        return (f.SerializeToString(), count)
 
 
 class MessageStore(object):

@@ -1,5 +1,5 @@
 import sqlite3
-from protos import objects
+from config import DATA_FOLDER
 
 
 def migrate(database_path):
@@ -8,26 +8,20 @@ def migrate(database_path):
     conn.text_factory = str
     cursor = conn.cursor()
 
-    # read followers from db
-    cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-    followers = cursor.fetchone()[0]
+    # read hashmap from db
+    cursor.execute('''SELECT * FROM hashmap''')
+    mappings = cursor.fetchall()
 
-    # delete follower table
-    cursor.execute('''DROP TABLE followers''')
-
-    # create new table
-    cursor.execute('''CREATE TABLE followers(guid TEXT PRIMARY KEY, serializedFollower TEXT)''')
-    cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
-
-    # write followers back into db
-
-    f = objects.Followers()
-    f.ParseFromString(followers)
-    for follower in f.followers:
-        cursor.execute('''INSERT INTO followers(guid, serializedFollower) VALUES (?,?)''',
-                       (follower.guid.encode("hex"), follower.SerializeToString().encode("hex"),))
+    for mapping in mappings:
+        if DATA_FOLDER not in mapping[1]:
+            raise Exception("To complete migration 2 please run openbazaard at least once using the original "
+                            "data folder location before moving it to a different location.")
+        path = mapping[1][len(DATA_FOLDER):]
+        cursor.execute('''INSERT OR REPLACE INTO hashmap(hash, filepath)
+                          VALUES (?,?)''', (mapping[0], path))
 
     # update version
     cursor.execute('''PRAGMA user_version = 2''')
     conn.commit()
+
     conn.close()

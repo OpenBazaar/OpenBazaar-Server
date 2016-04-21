@@ -1001,7 +1001,7 @@ class Contract(object):
                 data.ships_to.append(CountryCode.Value(region.upper()))
 
         # save the mapping of the contract file path and contract hash in the database
-        self.db.filemap.insert(data.contract_hash.encode("hex"), file_path)
+        self.db.filemap.insert(data.contract_hash.encode("hex"), file_path[len(DATA_FOLDER):])
 
         # save the `ListingMetadata` protobuf to the database as well
         self.db.listings.add_listing(data)

@@ -269,7 +269,7 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_followers')
     @authenticated
     def get_followers(self, request):
-        def parse_followers(followers):
+        def parse_followers(followers, count=None):
             if followers is not None:
                 response = {"followers": []}
                 for f in followers.followers:
@@ -282,26 +282,31 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": f.metadata.nsfw
                     }
                     response["followers"].append(follower_json)
+                if count is not None:
+                    response["count"] = count
                 request.setHeader('content-type', "application/json")
                 request.write(json.dumps(response, indent=4).encode("utf-8"))
                 request.finish()
             else:
                 request.write(json.dumps({}))
                 request.finish()
+        start = 0
+        if "start" in request.args:
+            start = int(request.args["start"])
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
-                    self.mserver.get_followers(node).addCallback(parse_followers)
+                    self.mserver.get_followers(node, start).addCallback(parse_followers)
                 else:
                     request.write(json.dumps({}))
                     request.finish()
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
-            ser = self.db.follow.get_followers()
+            ser = self.db.follow.get_followers(start)
             if ser is not None:
                 f = objects.Followers()
-                f.ParseFromString(ser)
-                parse_followers(f)
+                f.ParseFromString(ser[0])
+                parse_followers(f, ser[1])
             else:
                 parse_followers(None)
         return server.NOT_DONE_YET
@@ -763,23 +768,23 @@ class OpenBazaarAPI(APIResource):
                 for image in request.args["image"]:
                     img = image.decode('base64')
                     hash_value = digest(img).encode("hex")
-                    with open(DATA_FOLDER + "store/media/" + hash_value, 'wb') as outfile:
+                    with open(DATA_FOLDER +"store/media/" + hash_value, 'wb') as outfile:
                         outfile.write(img)
-                    self.db.filemap.insert(hash_value, DATA_FOLDER + "store/media/" + hash_value)
+                    self.db.filemap.insert(hash_value, "store/media/" + hash_value)
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
                 with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
                     outfile.write(avi)
-                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/avatar")
+                self.db.filemap.insert(hash_value, "store/avatar")
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
                 with open(DATA_FOLDER + "store/header", 'wb') as outfile:
                     outfile.write(hdr)
-                self.db.filemap.insert(hash_value, DATA_FOLDER + "store/header")
+                self.db.filemap.insert(hash_value, "store/header")
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
