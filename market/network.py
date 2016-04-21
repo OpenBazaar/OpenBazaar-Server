@@ -191,9 +191,9 @@ class Server(object):
                     if not gpg.verify(p.pgp_key.signature) or \
                                     node_to_ask.id.encode('hex') not in p.pgp_key.signature:
                         p.ClearField("pgp_key")
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.avatar_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', p.avatar_hash.encode("hex"))):
                     self.get_image(node_to_ask, p.avatar_hash)
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', p.header_hash.encode("hex"))):
                     self.get_image(node_to_ask, p.header_hash)
                 self.cache(result[1][0], node_to_ask.id.encode("hex"))
                 return p
@@ -220,7 +220,7 @@ class Server(object):
                 verify_key.verify(result[1][0], result[1][1])
                 m = objects.Metadata()
                 m.ParseFromString(result[1][0])
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + m.avatar_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', m.avatar_hash.encode("hex"))):
                     self.get_image(node_to_ask, m.avatar_hash)
                 return m
             except Exception:
@@ -269,7 +269,7 @@ class Server(object):
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
                 if l.thumbnail_hash != "":
-                    if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                    if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', l.thumbnail_hash.encode("hex"))):
                         self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
             except Exception:
@@ -706,7 +706,7 @@ class Server(object):
         it in the DHT for them.
         """
         try:
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             with open(file_path, 'r') as filename:
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
@@ -717,7 +717,7 @@ class Server(object):
                 proof_sig = self.db.purchases.get_proof_sig(order_id)
         except Exception:
             try:
-                file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+                file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                     guid = contract["buyer_order"]["order"]["id"]["guid"]
@@ -810,7 +810,7 @@ class Server(object):
         except AssertionError:
             raise Exception("Invalid Bitcoin address")
 
-        with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
+        with open(os.path.join(DATA_FOLDER, "cases", order_id + ".json"), "r") as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
 
         buyer_address = contract["buyer_order"]["order"]["refund_address"]
@@ -945,11 +945,11 @@ class Server(object):
         This function should be called to release funds from a disputed contract after
         the moderator has resolved the dispute and provided his signature.
         """
-        if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
-        elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
@@ -1060,9 +1060,9 @@ class Server(object):
         immediately broadcast to the Bitcoin network otherwise the refund message sent
         to the buyer with contain the signature.
         """
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER + "store", "contracts", "in progress", order_id + ".json")
         if not os.path.exists(file_path):
-            file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
         outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
@@ -1105,10 +1105,10 @@ class Server(object):
 
             contract["refund"] = refund_json["refund"]
             self.db.sales.update_status(order_id, 7)
-            file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
             with open(file_path, 'w') as outfile:
                 outfile.write(json.dumps(contract, indent=4))
-            file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
             if os.path.exists(file_path):
                 os.remove(file_path)
 
@@ -1145,7 +1145,7 @@ class Server(object):
         try:
             if self.protocol.multiplexer is None:
                 return reactor.callLater(1, self.update_listings)
-            fname = DATA_FOLDER + "store/listings.pickle"
+            fname = os.path.join(DATA_FOLDER, "store", "listings.pickle")
             if os.path.exists(fname):
                 with open(fname, 'r') as f:
                     data = pickle.load(f)
@@ -1239,5 +1239,5 @@ class Server(object):
         """
         Saves the file to a cache folder override previous versions if any.
         """
-        with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+        with open(os.path.join(DATA_FOLDER, "cache", filename), 'wb') as outfile:
             outfile.write(file_to_save)

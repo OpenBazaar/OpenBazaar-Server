@@ -182,9 +182,11 @@ class WSProtocol(Protocol):
                             }
                             for country in l.ships_to:
                                 listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', l.thumbnail_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, l.thumbnail_hash)
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', listings.avatar_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, listings.avatar_hash)
                             self.transport.write(str(bleach.clean(
                                 json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))
