@@ -28,6 +28,7 @@ from market.contracts import Contract, check_order_for_payment
 from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
+from api.utils import sanitize_html
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -494,7 +495,7 @@ class OpenBazaarAPI(APIResource):
         def parse_contract(contract):
             if contract is not None:
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(contract, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(sanitize_html(contract), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
