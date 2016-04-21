@@ -13,12 +13,10 @@ def migrate(database_path):
     mappings = cursor.fetchall()
 
     for mapping in mappings:
-        if DATA_FOLDER not in mapping[1]:
-            raise Exception("To complete migration 2 please run openbazaard at least once using the original "
-                            "data folder location before moving it to a different location.")
-        path = mapping[1][len(DATA_FOLDER):]
-        cursor.execute('''INSERT OR REPLACE INTO hashmap(hash, filepath)
-                          VALUES (?,?)''', (mapping[0], path))
+        if DATA_FOLDER in mapping[1]:
+            path = mapping[1][len(DATA_FOLDER):]
+            cursor.execute('''INSERT OR REPLACE INTO hashmap(hash, filepath)
+                              VALUES (?,?)''', (mapping[0], path))
 
     # update version
     cursor.execute('''PRAGMA user_version = 2''')
