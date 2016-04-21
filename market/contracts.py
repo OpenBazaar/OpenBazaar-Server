@@ -27,6 +27,7 @@ from market.btcprice import BtcPrice
 from market.transactions import BitcoinTransaction
 from protos.countries import CountryCode
 from protos.objects import Listings
+from market.smtpnotification import SMTPNotification
 
 
 class Contract(object):
@@ -531,6 +532,12 @@ class Contract(object):
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             self.notification_listener.notify(vendor_guid, handle, "order confirmation", contract_hash, title,
                                               image_hash)
+
+            # Send SMTP notification
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Order Confirmation: #%s" % contract_hash,
+                              "You have received an order confirmation from %s for \"%s\"" % (vendor_guid, title))
+
             return True
         except Exception, e:
             return e.message
@@ -746,6 +753,13 @@ class Contract(object):
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
 
         self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
+
+        notification_rater = handle if handle else buyer_guid.encode('hex')
+
+        notification = SMTPNotification(self.db)
+        notification.send("[OpenBazaar] New Rating Received",
+                          "You received a new rating from %s for Order #%s - \"%s\". " % (notification_rater, order_id,
+                                                                                          title))
 
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
             self.db.ratings.add_rating(self.contract["buyer_receipt"]["receipt"]
