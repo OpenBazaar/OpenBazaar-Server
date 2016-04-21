@@ -764,37 +764,23 @@ class OpenBazaarAPI(APIResource):
                 for image in request.args["image"]:
                     img = image.decode('base64')
                     hash_value = digest(img).encode("hex")
-<<<<<<< HEAD
-                    with open(DATA_FOLDER +"store/media/" + hash_value, 'wb') as outfile:
-                        outfile.write(img)
-                    self.db.filemap.insert(hash_value, "store/media/" + hash_value)
-=======
                     with open(os.path.join(DATA_FOLDER, "store", "media", hash_value), 'wb') as outfile:
                         outfile.write(img)
-                    self.db.filemap.insert(hash_value, os.path.join(DATA_FOLDER, "store", "media", hash_value))
->>>>>>> dbb6784f4627c543b4611e825e2729c60f46cb1b
+                    self.db.filemap.insert(hash_value, os.path.join("store", "media", hash_value))
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
                 with open(os.path.join(DATA_FOLDER, "store", "avatar"), 'wb') as outfile:
                     outfile.write(avi)
-<<<<<<< HEAD
-                self.db.filemap.insert(hash_value, "store/avatar")
-=======
-                self.db.filemap.insert(hash_value, os.path.join(DATA_FOLDER, "store", "avatar"))
->>>>>>> dbb6784f4627c543b4611e825e2729c60f46cb1b
+                self.db.filemap.insert(hash_value, os.path.join("store", "avatar"))
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
                 with open(os.path.join(DATA_FOLDER, "store", "header"), 'wb') as outfile:
                     outfile.write(hdr)
-<<<<<<< HEAD
-                self.db.filemap.insert(hash_value, "store/header")
-=======
-                self.db.filemap.insert(hash_value, os.path.join(DATA_FOLDER, "store", "header"))
->>>>>>> dbb6784f4627c543b4611e825e2729c60f46cb1b
+                self.db.filemap.insert(hash_value, os.path.join("store", "header"))
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
@@ -814,13 +800,9 @@ class OpenBazaarAPI(APIResource):
             else:
                 request.write(json.dumps({"success": False, "reason": success}))
                 request.finish()
-<<<<<<< HEAD
-        file_path = DATA_FOLDER + "purchases/in progress/" + request.args["id"][0] + ".json"
-        if not os.path.exists(file_path):
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["id"][0] + ".json"
-=======
         file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", request.args["id"][0] + ".json")
->>>>>>> dbb6784f4627c543b4611e825e2729c60f46cb1b
+        if not os.path.exists(file_path):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", request.args["id"][0] + ".json")
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
         c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
