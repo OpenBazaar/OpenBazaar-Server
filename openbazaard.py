@@ -82,7 +82,6 @@ def run(*args):
 
         # kademlia
         SEED_URLS = SEEDS_TESTNET if TESTNET else SEEDS
-        storage = ForgetfulStorage()
         relay_node = None
         if nat_type != FULL_CONE:
             for seed in SEED_URLS:
@@ -175,6 +174,7 @@ def run(*args):
 
     # database
     db = Database(TESTNET)
+    storage = ForgetfulStorage()
 
     # client authentication
     username, password = get_credentials(db)
