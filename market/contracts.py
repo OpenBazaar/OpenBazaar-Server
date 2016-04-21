@@ -535,7 +535,7 @@ class Contract(object):
 
             # Send SMTP notification
             notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] Order Confirmation: #%s" % contract_hash,
+            notification.send("[OpenBazaar] Order Confirmed and Shipped: #%s" % contract_hash,
                               "You have received an order confirmation from %s for \"%s\"" % (vendor_guid, title))
 
             return True
