@@ -859,7 +859,7 @@ bitcoinSignature, handle, name, description, avatar, fee)
         with conn:
             cursor = conn.cursor()
             cursor.execute('''DELETE FROM moderators WHERE guid NOT IN ({seq})'''.format(
-    seq=','.join(['?']*len(except_guids))), except_guids)
+                seq=','.join(['?']*len(except_guids))), except_guids)
             conn.commit()
 
         conn.close()

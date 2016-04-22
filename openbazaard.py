@@ -214,7 +214,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.1.7',
+                description='OpenBazaar-Server v0.1.8',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
