@@ -89,7 +89,7 @@ class WSProtocol(Protocol):
 
         def parse_response(moderators):
             if moderators is not None:
-                current_mods = self.factory.db.settings.get()[11]
+                current_mods = json.loads(self.factory.db.settings.get()[11])
                 self.factory.db.moderators.clear_all(except_guids=current_mods)
 
                 def parse_profile(profile, node):
