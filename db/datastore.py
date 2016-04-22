@@ -853,22 +853,14 @@ bitcoinSignature, handle, name, description, avatar, fee)
         conn.close()
 
     def clear_all(self, except_guids=None):
-        mods = []
-        if except_guids is not None:
-            for guid in except_guids:
-                info = self.get_moderator(guid)
-                mods.append(info)
+        if except_guids is None:
+            except_guids = []
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''DELETE FROM moderators''')
+            cursor.execute('''DELETE FROM moderators WHERE guid NOT IN ({seq})'''.format(
+    seq=','.join(['?']*len(except_guids))), except_guids)
             conn.commit()
-        for mod in mods:
-            if mod is not None:
-                cursor.execute('''INSERT OR REPLACE INTO moderators(guid, pubkey, bitcoinKey,
-    bitcoinSignature, handle, name, description, avatar, fee)
-        VALUES (?,?,?,?,?,?,?,?,?)''', (mod[0], mod[1], mod[2], mod[3], mod[4],
-                                        mod[5], mod[6], mod[7], mod[8]))
 
         conn.close()
 
