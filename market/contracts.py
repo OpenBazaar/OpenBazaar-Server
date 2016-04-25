@@ -1209,8 +1209,8 @@ class Contract(object):
 
             return True
 
-        except Exception:
-            return False
+        except Exception, e:
+            return e.message
 
     def validate_for_moderation(self, proof_sig):
         validation_failures = []

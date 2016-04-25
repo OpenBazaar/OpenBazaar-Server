@@ -246,7 +246,8 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            if c.verify(sender.pubkey):
+            v = c.verify(sender.pubkey)
+            if v is True:
                 self.router.addContact(sender)
                 self.log.info("received an order from %s, waiting for payment..." % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
@@ -260,10 +261,10 @@ class MarketProtocol(RPCProtocol):
                 c.await_funding(self.get_notification_listener(), self.multiplexer.blockchain, signature, False)
                 return [signature]
             else:
-                self.log.warning("received invalid order from %s" % sender)
+                self.log.warning("received invalid order from %s reason %s" % (sender, v))
                 return ["False"]
-        except Exception:
-            self.log.error("unable to decrypt order from %s" % sender)
+        except Exception, e:
+            self.log.error("Exception (%s) occurred processing order from %s" % (e.message, sender))
             return ["False"]
 
     def rpc_order_confirmation(self, sender, pubkey, encrypted):
