@@ -270,10 +270,10 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_followers')
     @authenticated
     def get_followers(self, request):
-        def parse_followers(followers, count=None):
-            if followers is not None:
+        def parse_followers(followers):
+            if followers[0] is not None:
                 response = {"followers": []}
-                for f in followers.followers:
+                for f in followers[0].followers:
                     follower_json = {
                         "guid": f.guid.encode("hex"),
                         "handle": clean(f.metadata.handle),
@@ -283,8 +283,8 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": f.metadata.nsfw
                     }
                     response["followers"].append(follower_json)
-                if count is not None:
-                    response["count"] = count
+                if followers[1] is not None:
+                    response["count"] = followers[1]
                 request.setHeader('content-type', "application/json")
                 request.write(json.dumps(response, indent=4).encode("utf-8"))
                 request.finish()
@@ -307,9 +307,9 @@ class OpenBazaarAPI(APIResource):
             if ser[0] is not None:
                 f = objects.Followers()
                 f.ParseFromString(ser[0])
-                parse_followers(f, ser[1])
+                parse_followers((f, ser[1]))
             else:
-                parse_followers(None)
+                parse_followers((None,0))
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_following')

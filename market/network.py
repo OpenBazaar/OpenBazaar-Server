@@ -411,7 +411,7 @@ class Server(object):
 
         peer = (node_to_ask.ip, node_to_ask.port)
         if peer in self.protocol.multiplexer and \
-                        self.protocol.multiplexer[peer].handler.self.remote_node_version > 1:
+                        self.protocol.multiplexer[peer].handler.remote_node_version > 1:
             d = self.protocol.callGetFollowers(node_to_ask, start=start)
         else:
             d = self.protocol.callGetFollowers(node_to_ask)
