@@ -3,7 +3,7 @@ __author__ = 'chris'
 import json
 import time
 import random
-from api.restapi import clean
+from api.utils import sanitize_html
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
@@ -31,9 +31,9 @@ class MessageListenerImpl(object):
                 message_json = {
                     "message": {
                         "sender": plaintext.sender_guid.encode("hex"),
-                        "subject": clean(plaintext.subject),
+                        "subject": plaintext.subject,
                         "message_type": PlaintextMessage.Type.Name(plaintext.type),
-                        "message": clean(plaintext.message),
+                        "message": plaintext.message,
                         "timestamp": plaintext.timestamp,
                         "avatar_hash": plaintext.avatar_hash.encode("hex"),
                         "public_key": plaintext.pubkey.encode("hex")
@@ -41,7 +41,7 @@ class MessageListenerImpl(object):
                 }
                 if plaintext.handle:
                     message_json["message"]["handle"] = plaintext.handle
-                self.ws.push(json.dumps(message_json, indent=4))
+                self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
         except Exception:
             pass
 
@@ -71,13 +71,13 @@ class BroadcastListenerImpl(object):
             "broadcast": {
                 "id": broadcast_id,
                 "guid": guid.encode("hex"),
-                "handle": clean(handle),
-                "message": clean(message),
+                "handle": handle,
+                "message": message,
                 "timestamp": timestamp,
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        self.ws.push(json.dumps(broadcast_json, indent=4))
+        self.ws.push(json.dumps(sanitize_html(broadcast_json), indent=4))
 
 
 class NotificationListenerImpl(object):
@@ -96,7 +96,7 @@ class NotificationListenerImpl(object):
             "notification": {
                 "id": notif_id,
                 "guid": guid.encode("hex"),
-                "handle": clean(handle),
+                "handle": handle,
                 "type": notif_type,
                 "order_id": order_id,
                 "title": title,
@@ -104,4 +104,4 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(json.dumps(notification_json, indent=4))
+        self.ws.push(json.dumps(sanitize_html(notification_json), indent=4))
