@@ -35,7 +35,7 @@ DEFAULT_RECORDS_OFFSET = 0
 
 
 def clean(s):
-    return bleach.s, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES
+    return bleach.clean(s, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES)
 
 class OpenBazaarAPI(APIResource):
     """
