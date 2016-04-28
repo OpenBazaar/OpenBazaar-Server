@@ -1,6 +1,5 @@
 __author__ = 'chris'
 
-import bleach
 import json
 import os
 import obelisk
@@ -27,15 +26,11 @@ from market.profile import Profile
 from market.contracts import Contract, check_order_for_payment
 from market.btcprice import BtcPrice
 from net.upnp import PortMapper
-from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
 from api.utils import sanitize_html
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
 
-
-def clean(s):
-    return bleach.clean(s, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES)
 
 class OpenBazaarAPI(APIResource):
     """
@@ -158,31 +153,30 @@ class OpenBazaarAPI(APIResource):
             if profile is not None:
                 profile_json = {
                     "profile": {
-                        "name": clean(profile.name).encode("utf-8"),
+                        "name": profile.name,
                         "location": str(CountryCode.Name(profile.location)),
                         "public_key": profile.guid_key.public_key.encode("hex"),
                         "nsfw": profile.nsfw,
                         "vendor": profile.vendor,
                         "moderator": profile.moderator,
                         "moderation_fee": round(profile.moderation_fee, 2),
-                        "handle": clean(profile.handle).encode("utf-8"),
-                        "about": clean(profile.about).encode("utf-8"),
-                        "short_description": clean(profile.short_description).encode("utf-8"),
-                        "website": clean(profile.website).encode("utf-8"),
-                        "email": clean(profile.email).encode("utf-8"),
+                        "handle": profile.handle,
+                        "about": profile.about,
+                        "short_description": profile.short_description,
+                        "website": profile.website,
+                        "email": profile.email,
                         "primary_color": profile.primary_color,
                         "secondary_color": profile.secondary_color,
                         "background_color": profile.background_color,
                         "text_color": profile.text_color,
-                        "pgp_key": clean(profile.pgp_key.public_key).encode("utf-8"),
+                        "pgp_key": profile.pgp_key.public_key,
                         "avatar_hash": profile.avatar_hash.encode("hex"),
                         "header_hash": profile.header_hash.encode("hex"),
                         "social_accounts": {}
                     }
                 }
                 if temp_handle:
-                    profile_json["profile"]["temp_handle"] = \
-                        clean(temp_handle).encode("utf-8")
+                    profile_json["profile"]["temp_handle"] = temp_handle
                 if "guid" in request.args:
                     profile_json["profile"]["guid"] = request.args["guid"][0]
                 else:
@@ -190,14 +184,14 @@ class OpenBazaarAPI(APIResource):
                 for account in profile.social:
                     profile_json["profile"]["social_accounts"][str(
                         objects.Profile.SocialAccount.SocialType.Name(account.type)).lower()] = {
-                            "username": clean(account.username).encode("utf-8"),
-                            "proof_url": clean(account.proof_url).encode("utf-8")
+                            "username": account.username,
+                            "proof_url": account.proof_url
                         }
                 if (profile.handle is not "" and "(unconfirmed)" not in profile.handle and
                         not blockchainid.validate(profile.handle, profile_json["profile"]["guid"])):
                     profile_json["profile"]["handle"] = ""
                 request.setHeader('content-type', "application/json")
-                request.write(json.dumps(profile_json, indent=4))
+                request.write(json.dumps(sanitize_html(profile_json), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -228,10 +222,10 @@ class OpenBazaarAPI(APIResource):
                 response = {"listings": []}
                 for l in listings.listing:
                     listing_json = {
-                        "title": clean(l.title).encode("utf-8"),
+                        "title": l.title,
                         "contract_hash": l.contract_hash.encode("hex"),
                         "thumbnail_hash": l.thumbnail_hash.encode("hex"),
-                        "category": clean(l.category).encode("utf-8"),
+                        "category": l.category,
                         "price": l.price,
                         "currency_code": l.currency_code,
                         "nsfw": l.nsfw,
@@ -242,7 +236,7 @@ class OpenBazaarAPI(APIResource):
                         listing_json["ships_to"].append(str(CountryCode.Name(country)))
                     response["listings"].append(listing_json)
                 request.setHeader('content-type', "application/json")
-                request.write(json.dumps(response, indent=4))
+                request.write(json.dumps(sanitize_html(response), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -275,15 +269,15 @@ class OpenBazaarAPI(APIResource):
                 for f in followers.followers:
                     follower_json = {
                         "guid": f.guid.encode("hex"),
-                        "handle": clean(f.metadata.handle),
-                        "name": clean(f.metadata.name),
+                        "handle": f.metadata.handle,
+                        "name": f.metadata.name,
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": clean(f.metadata.short_description),
+                        "short_description": f.metadata.short_description,
                         "nsfw": f.metadata.nsfw
                     }
                     response["followers"].append(follower_json)
                 request.setHeader('content-type', "application/json")
-                request.write(json.dumps(response, indent=4).encode("utf-8"))
+                request.write(json.dumps(sanitize_html(response), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -315,15 +309,15 @@ class OpenBazaarAPI(APIResource):
                 for f in following.users:
                     user_json = {
                         "guid": f.guid.encode("hex"),
-                        "handle": clean(f.metadata.handle).encode("utf-8"),
-                        "name": clean(f.metadata.name).encode("utf-8"),
+                        "handle": f.metadata.handle,
+                        "name": f.metadata.name,
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": clean(f.metadata.short_description).encode("utf-8"),
+                        "short_description": f.metadata.short_description,
                         "nsfw": f.metadata.nsfw
                     }
                     response["following"].append(user_json)
                 request.setHeader('content-type', "application/json")
-                request.write(json.dumps(response, indent=4))
+                request.write(json.dumps(sanitize_html(response), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -932,7 +926,7 @@ class OpenBazaarAPI(APIResource):
                 pass
             settings_json["moderators"] = mods
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(settings_json, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(settings_json), indent=4))
             request.finish()
         return server.NOT_DONE_YET
 
@@ -945,7 +939,7 @@ class OpenBazaarAPI(APIResource):
             "num_peers": len(peers),
             "peers": peers
         }
-        request.write(bleach.clean(json.dumps(resp, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(resp), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -964,7 +958,7 @@ class OpenBazaarAPI(APIResource):
                 }
                 nodes.append(n)
         request.setHeader('content-type', "application/json")
-        request.write(bleach.clean(json.dumps(nodes, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(nodes), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -982,17 +976,17 @@ class OpenBazaarAPI(APIResource):
             notification_json = {
                 "id": n[0],
                 "guid": n[1],
-                "handle": clean(n[2]),
+                "handle": n[2],
                 "type": n[3],
                 "order_id": n[4],
-                "title": clean(n[5]),
+                "title": n[5],
                 "timestamp": n[6],
                 "image_hash": n[7].encode("hex"),
                 "read": False if n[8] == 0 else True
             }
             notification_dict["notifications"].append(notification_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(notification_dict, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(notification_dict), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1034,8 +1028,8 @@ class OpenBazaarAPI(APIResource):
             message_json = {
                 "id": m[11],
                 "guid": m[0],
-                "handle": clean(m[1]),
-                "message": clean(m[5]),
+                "handle": m[1],
+                "message": m[5],
                 "timestamp": m[6],
                 "avatar_hash": m[7].encode("hex"),
                 "outgoing": False if m[9] == 0 else True,
@@ -1043,7 +1037,7 @@ class OpenBazaarAPI(APIResource):
             }
             message_list.append(message_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(message_list, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(message_list), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1090,18 +1084,18 @@ class OpenBazaarAPI(APIResource):
         for sale in sales:
             sale_json = {
                 "order_id": sale[0],
-                "title": clean(sale[1]),
-                "description": clean(sale[2]),
+                "title": sale[1],
+                "description": sale[2],
                 "timestamp": sale[3],
                 "btc_total": sale[4],
                 "status": sale[5],
                 "thumbnail_hash": sale[6],
-                "buyer": clean(sale[7]),
+                "buyer": sale[7],
                 "contract_type": sale[8]
             }
             sales_list.append(sale_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(sales_list, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(sales_list), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1113,8 +1107,8 @@ class OpenBazaarAPI(APIResource):
         for purchase in purchases:
             purchase_json = {
                 "order_id": purchase[0],
-                "title": clean(purchase[1]),
-                "description": clean(purchase[2]),
+                "title": purchase[1],
+                "description": purchase[2],
                 "timestamp": purchase[3],
                 "btc_total": purchase[4],
                 "status": purchase[5],
@@ -1124,7 +1118,7 @@ class OpenBazaarAPI(APIResource):
             }
             purchases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(purchases_list, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(purchases_list), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1191,7 +1185,7 @@ class OpenBazaarAPI(APIResource):
 
         def return_order():
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(order, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(order), indent=4))
             request.finish()
 
         def height_fetched(ec, chain_height):
@@ -1293,19 +1287,19 @@ class OpenBazaarAPI(APIResource):
         for case in cases:
             purchase_json = {
                 "order_id": case[0],
-                "title": clean(case[1]),
+                "title": case[1],
                 "timestamp": case[2],
                 "order_date": case[3],
                 "btc_total": case[4],
                 "thumbnail_hash": case[5],
-                "buyer": clean(case[6]),
-                "vendor": clean(case[7]),
+                "buyer": case[6],
+                "vendor": case[7],
                 "validation": json.loads(case[8]),
                 "status": "closed" if case[10] == 1 else "open"
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(cases_list, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(cases_list), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1318,8 +1312,8 @@ class OpenBazaarAPI(APIResource):
             if m[0] is not None:
                 message_json = {
                     "guid": m[0],
-                    "handle": clean(m[1]),
-                    "message": clean(m[5]),
+                    "handle": m[1],
+                    "message": m[5],
                     "timestamp": m[6],
                     "avatar_hash": m[7].encode("hex"),
                     "message_type": m[4],
@@ -1327,7 +1321,7 @@ class OpenBazaarAPI(APIResource):
                 }
                 message_list.append(message_json)
         request.setHeader('content-type', "application/json")
-        request.write(json.dumps(message_list, indent=4).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(message_list), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1337,7 +1331,7 @@ class OpenBazaarAPI(APIResource):
         def parse_response(ratings):
             if ratings is not None:
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(sanitize_html(ratings), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -1363,7 +1357,7 @@ class OpenBazaarAPI(APIResource):
                 for rating in self.db.ratings.get_all_ratings():
                     ratings.append(json.loads(rating[0]))
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(ratings, indent=4)).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(ratings), indent=4))
             request.finish()
         return server.NOT_DONE_YET
 
