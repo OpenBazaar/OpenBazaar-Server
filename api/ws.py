@@ -13,7 +13,7 @@ import nacl.signing
 from twisted.internet.protocol import Protocol, Factory, connectionDone
 from txws import WebSocketProtocol, WebSocketFactory
 
-from api.utils import smart_unicode
+from api.utils import smart_unicode, sanitize_html
 from config import DATA_FOLDER, str_to_bool
 from dht.node import Node
 from keys.keychain import KeyChain
@@ -73,7 +73,7 @@ class WSProtocol(Protocol):
                             "nsfw": metadata.nsfw
                         }
                 }
-                self.transport.write(str(bleach.clean(json.dumps(vendor, indent=4), tags=ALLOWED_TAGS)))
+                self.transport.write(json.dumps(sanitize_html(vendor), indent=4))
                 queried.append(node.id)
                 return True
             else:
@@ -113,7 +113,7 @@ class WSProtocol(Protocol):
                                     "fee": profile.moderation_fee
                                 }
                         }
-                        self.transport.write(str(bleach.clean(json.dumps(moderator, indent=4), tags=ALLOWED_TAGS)))
+                        self.transport.write(json.dumps(sanitize_html(moderator), indent=4))
                     else:
                         self.factory.db.moderators.delete_moderator(node.id)
                 for mod in moderators:
@@ -189,8 +189,7 @@ class WSProtocol(Protocol):
                             if not os.path.isfile(os.path.join( \
                                     DATA_FOLDER, 'cache', listings.avatar_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, listings.avatar_hash)
-                            self.transport.write(str(bleach.clean(
-                                json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))
+                            self.transport.write(json.dumps(sanitize_html(listing_json), indent=4))
                             count += 1
                             self.factory.outstanding_listings[message_id].append(l.contract_hash)
                             if count == 3:
