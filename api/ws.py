@@ -7,7 +7,6 @@ import time
 from binascii import unhexlify
 from random import shuffle
 
-import bleach
 import nacl.encoding
 import nacl.signing
 from twisted.internet.protocol import Protocol, Factory, connectionDone

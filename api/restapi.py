@@ -1,6 +1,5 @@
 __author__ = 'chris'
 
-import bleach
 import json
 import os
 import obelisk
