@@ -932,7 +932,7 @@ class OpenBazaarAPI(APIResource):
                 pass
             settings_json["moderators"] = mods
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(settings_json, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(settings_json), indent=4))
             request.finish()
         return server.NOT_DONE_YET
 
@@ -945,7 +945,7 @@ class OpenBazaarAPI(APIResource):
             "num_peers": len(peers),
             "peers": peers
         }
-        request.write(bleach.clean(json.dumps(resp, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(resp), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -964,7 +964,7 @@ class OpenBazaarAPI(APIResource):
                 }
                 nodes.append(n)
         request.setHeader('content-type', "application/json")
-        request.write(bleach.clean(json.dumps(nodes, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+        request.write(json.dumps(sanitize_html(nodes), indent=4))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -1191,7 +1191,7 @@ class OpenBazaarAPI(APIResource):
 
         def return_order():
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(order, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(order), indent=4))
             request.finish()
 
         def height_fetched(ec, chain_height):
@@ -1337,7 +1337,7 @@ class OpenBazaarAPI(APIResource):
         def parse_response(ratings):
             if ratings is not None:
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(ratings, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(sanitize_html(ratings), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -1363,7 +1363,7 @@ class OpenBazaarAPI(APIResource):
                 for rating in self.db.ratings.get_all_ratings():
                     ratings.append(json.loads(rating[0]))
             request.setHeader('content-type', "application/json")
-            request.write(bleach.clean(json.dumps(ratings, indent=4)).encode("utf-8"))
+            request.write(json.dumps(sanitize_html(ratings), indent=4))
             request.finish()
         return server.NOT_DONE_YET
 

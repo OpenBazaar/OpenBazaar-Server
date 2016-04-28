@@ -260,7 +260,7 @@ class WSProtocol(Protocol):
                 }
                 for country in l.ships_to:
                     listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                self.transport.write(str(bleach.clean(json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))
+                    self.transport.write(json.dumps(sanitize_html(listing_json), indent=4))
 
         def parse_results(values):
             if values is not None:
