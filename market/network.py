@@ -1259,5 +1259,5 @@ class Server(object):
         if not os.path.exists(filepath):
             return None
         with open(filepath, "r") as filename:
-                f = filename.read()
+            f = filename.read()
         return f

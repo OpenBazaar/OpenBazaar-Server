@@ -309,7 +309,7 @@ class OpenBazaarAPI(APIResource):
                 f.ParseFromString(ser[0])
                 parse_followers((f, ser[1]))
             else:
-                parse_followers((None,0))
+                parse_followers((None, 0))
         return server.NOT_DONE_YET
 
     @GET('^/api/v1/get_following')

@@ -163,13 +163,13 @@ class DatastoreTest(unittest.TestCase):
         self.assertFalse(self.fd.is_following(self.u.guid))
 
     def test_deleteFollower(self):
-        self.fd.set_follower(self.f)
-        self.fd.set_follower(self.f)
+        self.fd.set_follower(self.f.SerializeToString())
+        self.fd.set_follower(self.f.SerializeToString())
         f = self.fd.get_followers()
         self.assertIsNotNone(f)
         self.fd.delete_follower(self.f.guid)
         f = self.fd.get_followers()
-        self.assertEqual(f, '')
+        self.assertEqual(f[0], '')
 
     def test_MassageStore(self):
         msgs = self.ms.get_messages(self.u.guid, 'CHAT')

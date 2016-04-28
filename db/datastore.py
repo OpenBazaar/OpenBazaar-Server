@@ -116,7 +116,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 2''')
+        cursor.execute('''PRAGMA user_version = 3''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -475,8 +475,8 @@ class FollowData(object):
         p.ParseFromString(proto)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''INSERT OR REPLACE INTO followers(guid, serializedFollowers) VALUES (?,?)''',
-                           (p.guid.encode("hex"), proto))
+            cursor.execute('''INSERT OR REPLACE INTO followers(guid, serializedFollower) VALUES (?,?)''',
+                           (p.guid.encode("hex"), proto.encode("hex")))
             conn.commit()
         conn.close()
 
@@ -495,22 +495,22 @@ class FollowData(object):
         cursor.execute('''SELECT Count(*) FROM followers''')
         count = cursor.fetchone()[0]
 
+        f = Followers()
         if count > 0:
-            cursor.execute('''SELECT COALESCE(MAX(id)+1, 0) FROM followers''')
+            cursor.execute('''SELECT COALESCE(MAX(rowid)+1, 0) FROM followers''')
             max_row = cursor.fetchone()[0]
 
             start = max_row - start
-            cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''', (start, start-30))
+            cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''',
+                           (start, start-30))
             serialized_followers = cursor.fetchall()
             conn.close()
-            f = Followers()
             for proto in serialized_followers:
                 p = Followers.Follower()
-                p.ParseFromString(proto[0])
-                f.followers.append(p)
-            return (f.SerializeToString(), count)
-        else:
-            return(None, 0)
+                p.ParseFromString(proto[0].decode("hex"))
+                f.followers.extend([p])
+        return (f.SerializeToString(), count)
+
 
 class MessageStore(object):
     """

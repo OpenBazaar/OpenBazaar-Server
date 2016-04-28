@@ -179,10 +179,10 @@ class MarketProtocol(RPCProtocol):
         self.log.info("serving followers list to %s" % sender)
         self.router.addContact(sender)
         if start is not None:
-            ser = self.db.follow.get_followers(start)
+            ser = self.db.follow.get_followers(int(start))
         else:
             ser = self.db.follow.get_followers()
-        return [ser[0], self.signing_key.sign(ser)[:64], ser[1]]
+        return [ser[0], self.signing_key.sign(ser[0])[:64], ser[1]]
 
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
