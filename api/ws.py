@@ -181,6 +181,8 @@ class WSProtocol(Protocol):
                                         "ships_to": []
                                     }
                             }
+                            if l.contract_type != 0:
+                                listing_json["contract_type"] = str(Listings.ContractType.Name(l.contract_type))
                             for country in l.ships_to:
                                 listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
                             if not os.path.isfile(os.path.join( \

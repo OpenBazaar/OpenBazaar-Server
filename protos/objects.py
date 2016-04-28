@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='objects.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\robjects.proto\x1a\x0f\x63ountries.proto\"\xc6\x01\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x11\n\tpublicKey\x18\x02 \x01(\x0c\x12\x19\n\x07natType\x18\x03 \x01(\x0e\x32\x08.NATType\x12$\n\x0bnodeAddress\x18\x04 \x01(\x0b\x32\x0f.Node.IPAddress\x12%\n\x0crelayAddress\x18\x05 \x01(\x0b\x32\x0f.Node.IPAddress\x12\x0e\n\x06vendor\x18\x06 \x01(\x08\x1a%\n\tIPAddress\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\r\"O\n\x05Value\x12\x0f\n\x07keyword\x18\x01 \x01(\x0c\x12\x10\n\x08valueKey\x18\x02 \x01(\x0c\x12\x16\n\x0eserializedData\x18\x03 \x01(\x0c\x12\x0b\n\x03ttl\x18\x04 \x01(\r\"(\n\x03Inv\x12\x0f\n\x07keyword\x18\x01 \x01(\x0c\x12\x10\n\x08valueKey\x18\x02 \x01(\x0c\"\x91\x06\n\x07Profile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1e\n\x08location\x18\x02 \x01(\x0e\x32\x0c.CountryCode\x12$\n\x08guid_key\x18\x03 \x01(\x0b\x32\x12.Profile.PublicKey\x12\'\n\x0b\x62itcoin_key\x18\x04 \x01(\x0b\x32\x12.Profile.PublicKey\x12\x0c\n\x04nsfw\x18\x05 \x01(\x08\x12\x0e\n\x06vendor\x18\x06 \x01(\x08\x12\x11\n\tmoderator\x18\x07 \x01(\x08\x12\x16\n\x0emoderation_fee\x18\x08 \x01(\x02\x12\x0e\n\x06handle\x18\t \x01(\t\x12\r\n\x05\x61\x62out\x18\n \x01(\t\x12\x19\n\x11short_description\x18\x0b \x01(\t\x12\x0f\n\x07website\x18\x0c \x01(\t\x12\r\n\x05\x65mail\x18\r \x01(\t\x12&\n\x06social\x18\x0e \x03(\x0b\x32\x16.Profile.SocialAccount\x12\x15\n\rprimary_color\x18\x0f \x01(\r\x12\x17\n\x0fsecondary_color\x18\x10 \x01(\r\x12\x18\n\x10\x62\x61\x63kground_color\x18\x11 \x01(\r\x12\x12\n\ntext_color\x18\x12 \x01(\r\x12\x16\n\x0e\x66ollower_count\x18\x13 \x01(\r\x12\x17\n\x0f\x66ollowing_count\x18\x14 \x01(\r\x12#\n\x07pgp_key\x18\x15 \x01(\x0b\x32\x12.Profile.PublicKey\x12\x13\n\x0b\x61vatar_hash\x18\x16 \x01(\x0c\x12\x13\n\x0bheader_hash\x18\x17 \x01(\x0c\x1a\xab\x01\n\rSocialAccount\x12/\n\x04type\x18\x01 \x01(\x0e\x32!.Profile.SocialAccount.SocialType\x12\x10\n\x08username\x18\x02 \x01(\t\x12\x11\n\tproof_url\x18\x03 \x01(\t\"D\n\nSocialType\x12\x0c\n\x08\x46\x41\x43\x45\x42OOK\x10\x00\x12\x0b\n\x07TWITTER\x10\x01\x12\r\n\tINSTAGRAM\x10\x02\x12\x0c\n\x08SNAPCHAT\x10\x03\x1a\x32\n\tPublicKey\x12\x12\n\npublic_key\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"f\n\x08Metadata\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x19\n\x11short_description\x18\x03 \x01(\t\x12\x13\n\x0b\x61vatar_hash\x18\x04 \x01(\x0c\x12\x0c\n\x04nsfw\x18\x05 \x01(\x08\"\xd6\x02\n\x08Listings\x12*\n\x07listing\x18\x01 \x03(\x0b\x32\x19.Listings.ListingMetadata\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x13\n\x0b\x61vatar_hash\x18\x03 \x01(\x0c\x1a\xf8\x01\n\x0fListingMetadata\x12\x15\n\rcontract_hash\x18\x01 \x01(\x0c\x12\r\n\x05title\x18\x02 \x01(\t\x12\x16\n\x0ethumbnail_hash\x18\x03 \x01(\x0c\x12\x10\n\x08\x63\x61tegory\x18\x04 \x01(\t\x12\r\n\x05price\x18\x05 \x01(\x02\x12\x15\n\rcurrency_code\x18\x06 \x01(\t\x12\x0c\n\x04nsfw\x18\x07 \x01(\x08\x12\x1c\n\x06origin\x18\x08 \x01(\x0e\x32\x0c.CountryCode\x12\x1e\n\x08ships_to\x18\t \x03(\x0e\x32\x0c.CountryCode\x12\x13\n\x0b\x61vatar_hash\x18\n \x01(\x0c\x12\x0e\n\x06handle\x18\x0b \x01(\t\"\xa0\x01\n\tFollowers\x12&\n\tfollowers\x18\x01 \x03(\x0b\x32\x13.Followers.Follower\x1ak\n\x08\x46ollower\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x11\n\tfollowing\x18\x02 \x01(\x0c\x12\x0e\n\x06pubkey\x18\x03 \x01(\x0c\x12\x1b\n\x08metadata\x18\x04 \x01(\x0b\x32\t.Metadata\x12\x11\n\tsignature\x18\x05 \x01(\x0c\"\x81\x01\n\tFollowing\x12\x1e\n\x05users\x18\x01 \x03(\x0b\x32\x0f.Following.User\x1aT\n\x04User\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x1b\n\x08metadata\x18\x03 \x01(\x0b\x32\t.Metadata\x12\x11\n\tsignature\x18\x04 \x01(\x0c\"\xbd\x02\n\x10PlaintextMessage\x12\x13\n\x0bsender_guid\x18\x01 \x01(\x0c\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x0e\n\x06pubkey\x18\x03 \x01(\x0c\x12\x0f\n\x07subject\x18\x04 \x01(\t\x12$\n\x04type\x18\x05 \x01(\x0e\x32\x16.PlaintextMessage.Type\x12\x0f\n\x07message\x18\x06 \x01(\t\x12\x11\n\ttimestamp\x18\x07 \x01(\x04\x12\x13\n\x0b\x61vatar_hash\x18\x08 \x01(\x0c\x12\x11\n\tsignature\x18\t \x01(\x0c\"q\n\x04Type\x12\x08\n\x04\x43HAT\x10\x00\x12\t\n\x05ORDER\x10\x01\x12\x10\n\x0c\x44ISPUTE_OPEN\x10\x02\x12\x11\n\rDISPUTE_CLOSE\x10\x03\x12\x16\n\x12ORDER_CONFIRMATION\x10\x04\x12\x0b\n\x07RECEIPT\x10\x05\x12\n\n\x06REFUND\x10\x06*7\n\x07NATType\x12\r\n\tFULL_CONE\x10\x00\x12\x0e\n\nRESTRICTED\x10\x01\x12\r\n\tSYMMETRIC\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\robjects.proto\x1a\x0f\x63ountries.proto\"\xc6\x01\n\x04Node\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x11\n\tpublicKey\x18\x02 \x01(\x0c\x12\x19\n\x07natType\x18\x03 \x01(\x0e\x32\x08.NATType\x12$\n\x0bnodeAddress\x18\x04 \x01(\x0b\x32\x0f.Node.IPAddress\x12%\n\x0crelayAddress\x18\x05 \x01(\x0b\x32\x0f.Node.IPAddress\x12\x0e\n\x06vendor\x18\x06 \x01(\x08\x1a%\n\tIPAddress\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\r\"O\n\x05Value\x12\x0f\n\x07keyword\x18\x01 \x01(\x0c\x12\x10\n\x08valueKey\x18\x02 \x01(\x0c\x12\x16\n\x0eserializedData\x18\x03 \x01(\x0c\x12\x0b\n\x03ttl\x18\x04 \x01(\r\"(\n\x03Inv\x12\x0f\n\x07keyword\x18\x01 \x01(\x0c\x12\x10\n\x08valueKey\x18\x02 \x01(\x0c\"\x91\x06\n\x07Profile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1e\n\x08location\x18\x02 \x01(\x0e\x32\x0c.CountryCode\x12$\n\x08guid_key\x18\x03 \x01(\x0b\x32\x12.Profile.PublicKey\x12\'\n\x0b\x62itcoin_key\x18\x04 \x01(\x0b\x32\x12.Profile.PublicKey\x12\x0c\n\x04nsfw\x18\x05 \x01(\x08\x12\x0e\n\x06vendor\x18\x06 \x01(\x08\x12\x11\n\tmoderator\x18\x07 \x01(\x08\x12\x16\n\x0emoderation_fee\x18\x08 \x01(\x02\x12\x0e\n\x06handle\x18\t \x01(\t\x12\r\n\x05\x61\x62out\x18\n \x01(\t\x12\x19\n\x11short_description\x18\x0b \x01(\t\x12\x0f\n\x07website\x18\x0c \x01(\t\x12\r\n\x05\x65mail\x18\r \x01(\t\x12&\n\x06social\x18\x0e \x03(\x0b\x32\x16.Profile.SocialAccount\x12\x15\n\rprimary_color\x18\x0f \x01(\r\x12\x17\n\x0fsecondary_color\x18\x10 \x01(\r\x12\x18\n\x10\x62\x61\x63kground_color\x18\x11 \x01(\r\x12\x12\n\ntext_color\x18\x12 \x01(\r\x12\x16\n\x0e\x66ollower_count\x18\x13 \x01(\r\x12\x17\n\x0f\x66ollowing_count\x18\x14 \x01(\r\x12#\n\x07pgp_key\x18\x15 \x01(\x0b\x32\x12.Profile.PublicKey\x12\x13\n\x0b\x61vatar_hash\x18\x16 \x01(\x0c\x12\x13\n\x0bheader_hash\x18\x17 \x01(\x0c\x1a\xab\x01\n\rSocialAccount\x12/\n\x04type\x18\x01 \x01(\x0e\x32!.Profile.SocialAccount.SocialType\x12\x10\n\x08username\x18\x02 \x01(\t\x12\x11\n\tproof_url\x18\x03 \x01(\t\"D\n\nSocialType\x12\x0c\n\x08\x46\x41\x43\x45\x42OOK\x10\x00\x12\x0b\n\x07TWITTER\x10\x01\x12\r\n\tINSTAGRAM\x10\x02\x12\x0c\n\x08SNAPCHAT\x10\x03\x1a\x32\n\tPublicKey\x12\x12\n\npublic_key\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"f\n\x08Metadata\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x19\n\x11short_description\x18\x03 \x01(\t\x12\x13\n\x0b\x61vatar_hash\x18\x04 \x01(\x0c\x12\x0c\n\x04nsfw\x18\x05 \x01(\x08\"\xd4\x03\n\x08Listings\x12*\n\x07listing\x18\x01 \x03(\x0b\x32\x19.Listings.ListingMetadata\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x13\n\x0b\x61vatar_hash\x18\x03 \x01(\x0c\x1a\xa7\x02\n\x0fListingMetadata\x12\x15\n\rcontract_hash\x18\x01 \x01(\x0c\x12\r\n\x05title\x18\x02 \x01(\t\x12\x16\n\x0ethumbnail_hash\x18\x03 \x01(\x0c\x12\x10\n\x08\x63\x61tegory\x18\x04 \x01(\t\x12\r\n\x05price\x18\x05 \x01(\x02\x12\x15\n\rcurrency_code\x18\x06 \x01(\t\x12\x0c\n\x04nsfw\x18\x07 \x01(\x08\x12\x1c\n\x06origin\x18\x08 \x01(\x0e\x32\x0c.CountryCode\x12\x1e\n\x08ships_to\x18\t \x03(\x0e\x32\x0c.CountryCode\x12\x13\n\x0b\x61vatar_hash\x18\n \x01(\x0c\x12\x0e\n\x06handle\x18\x0b \x01(\t\x12-\n\rcontract_type\x18\x0c \x01(\x0e\x32\x16.Listings.ContractType\"M\n\x0c\x43ontractType\x12\x0b\n\x07NOT_SET\x10\x00\x12\x11\n\rPHYSICAL_GOOD\x10\x01\x12\x10\n\x0c\x44IGITAL_GOOD\x10\x02\x12\x0b\n\x07SERVICE\x10\x03\"\xa0\x01\n\tFollowers\x12&\n\tfollowers\x18\x01 \x03(\x0b\x32\x13.Followers.Follower\x1ak\n\x08\x46ollower\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x11\n\tfollowing\x18\x02 \x01(\x0c\x12\x0e\n\x06pubkey\x18\x03 \x01(\x0c\x12\x1b\n\x08metadata\x18\x04 \x01(\x0b\x32\t.Metadata\x12\x11\n\tsignature\x18\x05 \x01(\x0c\"\x81\x01\n\tFollowing\x12\x1e\n\x05users\x18\x01 \x03(\x0b\x32\x0f.Following.User\x1aT\n\x04User\x12\x0c\n\x04guid\x18\x01 \x01(\x0c\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x1b\n\x08metadata\x18\x03 \x01(\x0b\x32\t.Metadata\x12\x11\n\tsignature\x18\x04 \x01(\x0c\"\xbd\x02\n\x10PlaintextMessage\x12\x13\n\x0bsender_guid\x18\x01 \x01(\x0c\x12\x0e\n\x06handle\x18\x02 \x01(\t\x12\x0e\n\x06pubkey\x18\x03 \x01(\x0c\x12\x0f\n\x07subject\x18\x04 \x01(\t\x12$\n\x04type\x18\x05 \x01(\x0e\x32\x16.PlaintextMessage.Type\x12\x0f\n\x07message\x18\x06 \x01(\t\x12\x11\n\ttimestamp\x18\x07 \x01(\x04\x12\x13\n\x0b\x61vatar_hash\x18\x08 \x01(\x0c\x12\x11\n\tsignature\x18\t \x01(\x0c\"q\n\x04Type\x12\x08\n\x04\x43HAT\x10\x00\x12\t\n\x05ORDER\x10\x01\x12\x10\n\x0c\x44ISPUTE_OPEN\x10\x02\x12\x11\n\rDISPUTE_CLOSE\x10\x03\x12\x16\n\x12ORDER_CONFIRMATION\x10\x04\x12\x0b\n\x07RECEIPT\x10\x05\x12\n\n\x06REFUND\x10\x06*7\n\x07NATType\x12\r\n\tFULL_CONE\x10\x00\x12\x0e\n\nRESTRICTED\x10\x01\x12\r\n\tSYMMETRIC\x10\x02\x62\x06proto3')
   ,
   dependencies=[countries__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -47,8 +47,8 @@ _NATTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=2210,
-  serialized_end=2265,
+  serialized_start=2336,
+  serialized_end=2391,
 )
 _sym_db.RegisterEnumDescriptor(_NATTYPE)
 
@@ -88,6 +88,36 @@ _PROFILE_SOCIALACCOUNT_SOCIALTYPE = _descriptor.EnumDescriptor(
 )
 _sym_db.RegisterEnumDescriptor(_PROFILE_SOCIALACCOUNT_SOCIALTYPE)
 
+_LISTINGS_CONTRACTTYPE = _descriptor.EnumDescriptor(
+  name='ContractType',
+  full_name='Listings.ContractType',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='NOT_SET', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='PHYSICAL_GOOD', index=1, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='DIGITAL_GOOD', index=2, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='SERVICE', index=3, number=3,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=1642,
+  serialized_end=1719,
+)
+_sym_db.RegisterEnumDescriptor(_LISTINGS_CONTRACTTYPE)
+
 _PLAINTEXTMESSAGE_TYPE = _descriptor.EnumDescriptor(
   name='Type',
   full_name='PlaintextMessage.Type',
@@ -125,8 +155,8 @@ _PLAINTEXTMESSAGE_TYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=2095,
-  serialized_end=2208,
+  serialized_start=2221,
+  serialized_end=2334,
 )
 _sym_db.RegisterEnumDescriptor(_PLAINTEXTMESSAGE_TYPE)
 
@@ -734,6 +764,13 @@ _LISTINGS_LISTINGMETADATA = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='contract_type', full_name='Listings.ListingMetadata.contract_type', index=11,
+      number=12, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -747,7 +784,7 @@ _LISTINGS_LISTINGMETADATA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1345,
-  serialized_end=1593,
+  serialized_end=1640,
 )
 
 _LISTINGS = _descriptor.Descriptor(
@@ -783,6 +820,7 @@ _LISTINGS = _descriptor.Descriptor(
   ],
   nested_types=[_LISTINGS_LISTINGMETADATA, ],
   enum_types=[
+    _LISTINGS_CONTRACTTYPE,
   ],
   options=None,
   is_extendable=False,
@@ -791,7 +829,7 @@ _LISTINGS = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1251,
-  serialized_end=1593,
+  serialized_end=1719,
 )
 
 
@@ -849,8 +887,8 @@ _FOLLOWERS_FOLLOWER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1649,
-  serialized_end=1756,
+  serialized_start=1775,
+  serialized_end=1882,
 )
 
 _FOLLOWERS = _descriptor.Descriptor(
@@ -879,8 +917,8 @@ _FOLLOWERS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1596,
-  serialized_end=1756,
+  serialized_start=1722,
+  serialized_end=1882,
 )
 
 
@@ -931,8 +969,8 @@ _FOLLOWING_USER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1804,
-  serialized_end=1888,
+  serialized_start=1930,
+  serialized_end=2014,
 )
 
 _FOLLOWING = _descriptor.Descriptor(
@@ -961,8 +999,8 @@ _FOLLOWING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1759,
-  serialized_end=1888,
+  serialized_start=1885,
+  serialized_end=2014,
 )
 
 
@@ -1049,8 +1087,8 @@ _PLAINTEXTMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1891,
-  serialized_end=2208,
+  serialized_start=2017,
+  serialized_end=2334,
 )
 
 _NODE_IPADDRESS.containing_type = _NODE
@@ -1068,8 +1106,10 @@ _PROFILE.fields_by_name['social'].message_type = _PROFILE_SOCIALACCOUNT
 _PROFILE.fields_by_name['pgp_key'].message_type = _PROFILE_PUBLICKEY
 _LISTINGS_LISTINGMETADATA.fields_by_name['origin'].enum_type = countries__pb2._COUNTRYCODE
 _LISTINGS_LISTINGMETADATA.fields_by_name['ships_to'].enum_type = countries__pb2._COUNTRYCODE
+_LISTINGS_LISTINGMETADATA.fields_by_name['contract_type'].enum_type = _LISTINGS_CONTRACTTYPE
 _LISTINGS_LISTINGMETADATA.containing_type = _LISTINGS
 _LISTINGS.fields_by_name['listing'].message_type = _LISTINGS_LISTINGMETADATA
+_LISTINGS_CONTRACTTYPE.containing_type = _LISTINGS
 _FOLLOWERS_FOLLOWER.fields_by_name['metadata'].message_type = _METADATA
 _FOLLOWERS_FOLLOWER.containing_type = _FOLLOWERS
 _FOLLOWERS.fields_by_name['followers'].message_type = _FOLLOWERS_FOLLOWER

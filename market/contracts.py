@@ -998,6 +998,12 @@ class Contract(object):
                 self.contract["vendor_offer"]["listing"]["shipping"]["shipping_origin"].upper())
             for region in self.contract["vendor_offer"]["listing"]["shipping"]["shipping_regions"]:
                 data.ships_to.append(CountryCode.Value(region.upper()))
+        if self.contract["vendor_offer"]["listing"]["metadata"]["category"].lower() == "physical good":
+            data.contract_type = listings.PHYSICAL_GOOD
+        elif self.contract["vendor_offer"]["listing"]["metadata"]["category"].lower() == "digital good":
+            data.contract_type = listings.DIGITAL_GOOD
+        elif self.contract["vendor_offer"]["listing"]["metadata"]["category"].lower() == "service":
+            data.contract_type = listings.SERVICE
 
         # save the mapping of the contract file path and contract hash in the database
         self.db.filemap.insert(data.contract_hash.encode("hex"), file_path[len(DATA_FOLDER):])
