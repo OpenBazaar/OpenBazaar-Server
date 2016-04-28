@@ -120,6 +120,14 @@ message Listings {
         repeated CountryCode ships_to = 9;
         bytes avatar_hash             = 10;
         string handle                 = 11;
+        ContractType contract_type    = 12;
+    }
+
+    enum ContractType {
+        NOT_SET       = 0;
+        PHYSICAL_GOOD = 1;
+        DIGITAL_GOOD  = 2;
+        SERVICE       = 3;
     }
 }
 

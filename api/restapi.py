@@ -238,6 +238,8 @@ class OpenBazaarAPI(APIResource):
                         "origin": str(CountryCode.Name(l.origin)),
                         "ships_to": []
                     }
+                    if l.contract_type != 0:
+                        listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
                     for country in l.ships_to:
                         listing_json["ships_to"].append(str(CountryCode.Name(country)))
                     response["listings"].append(listing_json)
