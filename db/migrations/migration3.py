@@ -9,7 +9,7 @@ def migrate(database_path):
     cursor = conn.cursor()
     # read followers from db
     cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-    followers = cursor.fetchone()[0]
+    followers = cursor.fetchone()
 
     # delete follower table
     cursor.execute('''DROP TABLE followers''')
@@ -20,11 +20,12 @@ def migrate(database_path):
 
     # write followers back into db
 
-    f = objects.Followers()
-    f.ParseFromString(followers)
-    for follower in f.followers:
-        cursor.execute('''INSERT INTO followers(guid, serializedFollower) VALUES (?,?)''',
-                       (follower.guid.encode("hex"), follower.SerializeToString().encode("hex"),))
+    if followers is not None:
+        f = objects.Followers()
+        f.ParseFromString(followers[0])
+        for follower in f.followers:
+            cursor.execute('''INSERT INTO followers(guid, serializedFollower) VALUES (?,?)''',
+                           (follower.guid.encode("hex"), follower.SerializeToString().encode("hex"),))
 
     # update version
     cursor.execute('''PRAGMA user_version = 3''')

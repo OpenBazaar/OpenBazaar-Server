@@ -491,21 +491,26 @@ class FollowData(object):
     def get_followers(self, start=0):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT COALESCE(MAX(id)+1, 0) FROM followers''')
-        max_row = cursor.fetchone()[0]
+
         cursor.execute('''SELECT Count(*) FROM followers''')
         count = cursor.fetchone()[0]
-        start = max_row - start
-        cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''', (start, start-30))
-        serialized_followers = cursor.fetchall()
-        conn.close()
-        f = Followers()
-        for proto in serialized_followers:
-            p = Followers.Follower()
-            p.ParseFromString(proto[0])
-            f.followers.append(p)
-        return (f.SerializeToString(), count)
 
+        if count > 0:
+            cursor.execute('''SELECT COALESCE(MAX(id)+1, 0) FROM followers''')
+            max_row = cursor.fetchone()[0]
+
+            start = max_row - start
+            cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''', (start, start-30))
+            serialized_followers = cursor.fetchall()
+            conn.close()
+            f = Followers()
+            for proto in serialized_followers:
+                p = Followers.Follower()
+                p.ParseFromString(proto[0])
+                f.followers.append(p)
+            return (f.SerializeToString(), count)
+        else:
+            return(None, 0)
 
 class MessageStore(object):
     """
@@ -589,7 +594,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             handle = ""
             if val[0] is not None:
                 try:
-                    with open(DATA_FOLDER + 'cache/' + g[0] + ".profile", "r") as filename:
+                    with open(join(DATA_FOLDER, 'cache', g[0] + ".profile"), "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)
@@ -850,12 +855,16 @@ bitcoinSignature, handle, name, description, avatar, fee)
             conn.commit()
         conn.close()
 
-    def clear_all(self):
+    def clear_all(self, except_guids=None):
+        if except_guids is None:
+            except_guids = []
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''DELETE FROM moderators''')
+            cursor.execute('''DELETE FROM moderators WHERE guid NOT IN ({seq})'''.format(
+                seq=','.join(['?']*len(except_guids))), except_guids)
             conn.commit()
+
         conn.close()
 
 

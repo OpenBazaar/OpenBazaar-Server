@@ -89,7 +89,8 @@ class WSProtocol(Protocol):
 
         def parse_response(moderators):
             if moderators is not None:
-                self.factory.db.moderators.clear_all()
+                current_mods = json.loads(self.factory.db.settings.get()[11])
+                self.factory.db.moderators.clear_all(except_guids=current_mods)
 
                 def parse_profile(profile, node):
                     if profile is not None:
@@ -182,9 +183,11 @@ class WSProtocol(Protocol):
                             }
                             for country in l.ships_to:
                                 listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', l.thumbnail_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, l.thumbnail_hash)
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', listings.avatar_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, listings.avatar_hash)
                             self.transport.write(str(bleach.clean(
                                 json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))

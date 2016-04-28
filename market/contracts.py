@@ -56,24 +56,23 @@ class Contract(object):
             try:
                 file_path = self.db.filemap.get_file(hash_value.encode("hex"))
                 if file_path is None:
-                    file_path = DATA_FOLDER + "cache/" + hash_value.encode("hex")
+                    file_path = os.path.join(DATA_FOLDER, "cache", hash_value.encode("hex"))
                 with open(file_path, 'r') as filename:
                     self.contract = json.load(filename, object_pairs_hook=OrderedDict)
             except Exception:
-                if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "purchases/unfunded/" + hash_value.encode("hex") + ".json"
-                elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "purchases/in progress/" + hash_value.encode("hex") + ".json"
-                elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "purchases/trade receipts/" + hash_value.encode("hex") + ".json"
-                elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "store/contracts/unfunded/" + hash_value.encode("hex") + ".json"
-                elif os.path.exists(DATA_FOLDER +
-                                    "store/contracts/in progress/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "store/contracts/in progress/" + hash_value.encode("hex") + ".json"
-                elif os.path.exists(DATA_FOLDER +
-                                    "store/contracts/trade receipts/" + hash_value.encode("hex") + ".json"):
-                    file_path = DATA_FOLDER + "store/contracts/trade receipts/" + hash_value.encode("hex") + ".json"
+                file_name = hash_value.encode("hex") + ".json"
+                if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "unfunded", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", file_name)
+                elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", file_name)
+                elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "trade receipts", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", file_name)
+                elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", file_name)
+                elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", file_name)
+                elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", file_name)):
+                    file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", file_name)
 
                 try:
                     with open(file_path, 'r') as filename:
@@ -482,7 +481,7 @@ class Contract(object):
 
         self.contract["vendor_order_confirmation"] = conf_json["vendor_order_confirmation"]
         self.db.sales.update_status(order_id, 2)
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
@@ -515,7 +514,7 @@ class Contract(object):
 
             # update the order status in the db
             self.db.purchases.update_status(contract_hash, 2)
-            file_path = DATA_FOLDER + "purchases/in progress/" + contract_hash + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", contract_hash + ".json")
 
             # update the contract in the file system
             with open(file_path, 'w') as outfile:
@@ -659,14 +658,14 @@ class Contract(object):
 
         if status < 3:
             self.db.purchases.update_status(order_id, 3)
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", order_id + ".json")
             with open(file_path, 'w') as outfile:
                 outfile.write(json.dumps(self.contract, indent=4))
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             if os.path.exists(file_path):
                 os.remove(file_path)
         else:
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", order_id + ".json")
             with open(file_path, 'wb') as outfile:
                 outfile.write(json.dumps(self.contract, indent=4))
 
@@ -755,10 +754,10 @@ class Contract(object):
 
         if status == 2:
             self.db.sales.update_status(order_id, 3)
-        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -790,7 +789,7 @@ class Contract(object):
         else:
             buyer = self.contract["buyer_order"]["order"]["id"]["guid"]
         if is_purchase:
-            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", order_id + ".json")
             self.db.purchases.new_purchase(order_id,
                                            self.contract["vendor_offer"]["listing"]["item"]["title"],
                                            self.contract["vendor_offer"]["listing"]["item"]["description"],
@@ -803,7 +802,7 @@ class Contract(object):
                                            proofSig,
                                            self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
-            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")
             self.db.sales.new_sale(order_id,
                                    self.contract["vendor_offer"]["listing"]["item"]["title"],
                                    self.contract["vendor_offer"]["listing"]["item"]["description"],
@@ -857,8 +856,8 @@ class Contract(object):
         else:
             image_hash = ""
         if self.is_purchase:
-            unfunded_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
-            in_progress_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            unfunded_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", order_id + ".json")
+            in_progress_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             if "blockchain_id" in self.contract["vendor_offer"]["listing"]["id"]:
                 handle = self.contract["vendor_offer"]["listing"]["id"]["blockchain_id"]
             else:
@@ -872,8 +871,8 @@ class Contract(object):
             self.db.purchases.update_outpoint(order_id, json.dumps(self.outpoints))
             self.log.info("Payment for order id %s successfully broadcast to network." % order_id)
         else:
-            unfunded_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
-            in_progress_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+            unfunded_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")
+            in_progress_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
             buyer_guid = self.contract["buyer_order"]["order"]["id"]["guid"]
             if "blockchain_id" in self.contract["buyer_order"]["order"]["id"]:
                 handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
@@ -959,7 +958,7 @@ class Contract(object):
         file_name += str(self.contract["vendor_offer"]["listing"]["contract_id"])[:8]
 
         # save the json contract to the file system
-        file_path = DATA_FOLDER + "store/contracts/listings/" + file_name + ".json"
+        file_path = os.path.join(DATA_FOLDER, "store", "contracts", "listings", file_name + ".json")
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
 
@@ -970,7 +969,7 @@ class Contract(object):
             old_name = re.sub(r"[^\w\s]", '', file_name)
             old_name = re.sub(r"\s+", '_', file_name)
             old_name += str(self.contract["vendor_offer"]["listing"]["contract_id"])[:8]
-            old_path = DATA_FOLDER + "store/contracts/listings/" + old_name + ".json"
+            old_path = os.path.join(DATA_FOLDER, "store", "contracts", "listings", old_name + ".json")
             if os.path.exists(old_path):
                 os.remove(old_path)
 
@@ -1046,10 +1045,10 @@ class Contract(object):
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
         self.db.purchases.update_status(order_id, 7)
-        file_path = DATA_FOLDER + "purchases/trade receipts/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", order_id + ".json")
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -1210,8 +1209,8 @@ class Contract(object):
 
             return True
 
-        except Exception:
-            return False
+        except Exception, e:
+            return e.message
 
     def validate_for_moderation(self, proof_sig):
         validation_failures = []
@@ -1361,11 +1360,11 @@ def check_unfunded_for_payment(db, libbitcoin_client, notification_listener, tes
 
 def check_order_for_payment(order_id, db, libbitcoin_client, notification_listener, testnet=False):
     try:
-        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "purchases/unfunded/" + order_id + ".json"
+        if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "unfunded", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", order_id + ".json")
             is_purchase = True
-        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/unfunded/" + order_id + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")
             is_purchase = False
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)

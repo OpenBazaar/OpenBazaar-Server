@@ -28,6 +28,7 @@ from market.contracts import Contract, check_order_for_payment
 from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 from api import ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES
+from api.utils import sanitize_html
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -133,7 +134,7 @@ class OpenBazaarAPI(APIResource):
             if self.db.filemap.get_file(request.args["hash"][0]) is not None:
                 image_path = self.db.filemap.get_file(request.args["hash"][0])
             else:
-                image_path = DATA_FOLDER + "cache/" + request.args["hash"][0]
+                image_path = os.path.join(DATA_FOLDER, "cache", request.args["hash"][0])
             if not os.path.exists(image_path) and "guid" in request.args:
                 node = None
                 for connection in self.protocol.values():
@@ -303,7 +304,7 @@ class OpenBazaarAPI(APIResource):
             self.kserver.resolve(unhexlify(request.args["guid"][0])).addCallback(get_node)
         else:
             ser = self.db.follow.get_followers(start)
-            if ser is not None:
+            if ser[0] is not None:
                 f = objects.Followers()
                 f.ParseFromString(ser[0])
                 parse_followers(f, ser[1])
@@ -500,7 +501,7 @@ class OpenBazaarAPI(APIResource):
         def parse_contract(contract):
             if contract is not None:
                 request.setHeader('content-type', "application/json")
-                request.write(bleach.clean(json.dumps(contract, indent=4), tags=ALLOWED_TAGS).encode("utf-8"))
+                request.write(json.dumps(sanitize_html(contract), indent=4))
                 request.finish()
             else:
                 request.write(json.dumps({}))
@@ -732,7 +733,8 @@ class OpenBazaarAPI(APIResource):
                 else:
                     request.write(json.dumps({"success": False, "reason": success}))
                     request.finish()
-            file_path = DATA_FOLDER + "store/contracts/in progress/" + request.args["id"][0] + ".json"
+            file_name = request.args["id"][0] + ".json"
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", file_name)
             with open(file_path, 'r') as filename:
                 order = json.load(filename, object_pairs_hook=OrderedDict)
             c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
@@ -768,23 +770,23 @@ class OpenBazaarAPI(APIResource):
                 for image in request.args["image"]:
                     img = image.decode('base64')
                     hash_value = digest(img).encode("hex")
-                    with open(DATA_FOLDER +"store/media/" + hash_value, 'wb') as outfile:
+                    with open(os.path.join(DATA_FOLDER, "store", "media", hash_value), 'wb') as outfile:
                         outfile.write(img)
-                    self.db.filemap.insert(hash_value, "store/media/" + hash_value)
+                    self.db.filemap.insert(hash_value, os.path.join("store", "media", hash_value))
                     ret.append(hash_value)
             elif "avatar" in request.args:
                 avi = request.args["avatar"][0].decode("base64")
                 hash_value = digest(avi).encode("hex")
-                with open(DATA_FOLDER + "store/avatar", 'wb') as outfile:
+                with open(os.path.join(DATA_FOLDER, "store", "avatar"), 'wb') as outfile:
                     outfile.write(avi)
-                self.db.filemap.insert(hash_value, "store/avatar")
+                self.db.filemap.insert(hash_value, os.path.join("store", "avatar"))
                 ret.append(hash_value)
             elif "header" in request.args:
                 hdr = request.args["header"][0].decode("base64")
                 hash_value = digest(hdr).encode("hex")
-                with open(DATA_FOLDER + "store/header", 'wb') as outfile:
+                with open(os.path.join(DATA_FOLDER, "store", "header"), 'wb') as outfile:
                     outfile.write(hdr)
-                self.db.filemap.insert(hash_value, "store/header")
+                self.db.filemap.insert(hash_value, os.path.join("store", "header"))
                 ret.append(hash_value)
             request.write(json.dumps({"success": True, "image_hashes": ret}, indent=4))
             request.finish()
@@ -804,9 +806,9 @@ class OpenBazaarAPI(APIResource):
             else:
                 request.write(json.dumps({"success": False, "reason": success}))
                 request.finish()
-        file_path = DATA_FOLDER + "purchases/in progress/" + request.args["id"][0] + ".json"
+        file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", request.args["id"][0] + ".json")
         if not os.path.exists(file_path):
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["id"][0] + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", request.args["id"][0] + ".json")
         with open(file_path, 'r') as filename:
             order = json.load(filename, object_pairs_hook=OrderedDict)
         c = Contract(self.db, contract=order, testnet=self.protocol.testnet)
@@ -1158,27 +1160,27 @@ class OpenBazaarAPI(APIResource):
         #TODO: if this is either a funded direct payment sale or complete moderated sale but
         #TODO: the payout tx has not hit the blockchain, rebroadcast.
 
-        if os.path.exists(DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "purchases/unfunded/" + request.args["order_id"][0] + ".json"
+        filename = request.args["order_id"][0] + ".json"
+        if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "unfunded", filename)):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "purchases/in progress/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", filename)):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "purchases/trade receipts/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "trade receipts", filename)):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER + "store/contracts/unfunded/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/unfunded/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", filename)):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/in progress/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", filename)):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER +
-                            "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/trade receipts/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", filename)):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
-        elif os.path.exists(DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"):
-            file_path = DATA_FOLDER + "cases/" + request.args["order_id"][0] + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "cases", filename)):
+            file_path = os.path.join(DATA_FOLDER, "cases", filename)
             status = 4
         else:
             request.write(json.dumps({}, indent=4))

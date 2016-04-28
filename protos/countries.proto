@@ -263,5 +263,5 @@ enum CountryCode {
     ZAMBIA                         = 249;
     ZIMBABWE                       = 250;
     AFGHANISTAN                    = 251;
-    ALAND_ISLANDS                 = 252;
+    ALAND_ISLANDS                  = 252;
 }

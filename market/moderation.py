@@ -115,7 +115,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
                               buyer, vendor, json.dumps(validation_failures),
                               contract["dispute"]["info"]["claim"])
 
-            with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
+            with open(os.path.join(DATA_FOLDER, "cases", order_id + ".json"), 'wb') as outfile:
                 outfile.write(json.dumps(contract, indent=4))
     else:
         raise Exception("Order ID for dispute not found")
@@ -142,10 +142,10 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
 
     order_id = resolution_json["dispute_resolution"]["resolution"]["order_id"]
 
-    if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-        file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
-    elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+    if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
+        file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
+    elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")):
+        file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
 
     with open(file_path, 'r') as filename:
         contract = json.load(filename, object_pairs_hook=OrderedDict)
