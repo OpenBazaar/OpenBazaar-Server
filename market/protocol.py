@@ -162,7 +162,9 @@ class MarketProtocol(RPCProtocol):
             # Send SMTP notification
             notification = SMTPNotification(self.db)
             notification.send("[OpenBazaar] %s is now following you!" % m.name,
-                              "You have a new follower:\n\nName: %s\nGUID: %s\nHandle: %s" % (m.name, f.guid.encode('hex'), m.handle))
+                              "You have a new follower:\n\nName: %s\nGUID: %s\nHandle: %s" % (m.name,
+                                                                                              f.guid.encode('hex'),
+                                                                                              m.handle))
 
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
