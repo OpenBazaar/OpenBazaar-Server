@@ -295,7 +295,7 @@ class OpenBazaarAPI(APIResource):
                 request.finish()
         start = 0
         if "start" in request.args:
-            start = int(request.args["start"])
+            start = int(request.args["start"][0])
         if "guid" in request.args:
             def get_node(node):
                 if node is not None:
