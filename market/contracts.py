@@ -879,6 +879,11 @@ class Contract(object):
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
                                               order_id, title, image_hash)
+
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Payment Received", "You received a payment from %s for Order #%s - \"%s\"."
+                              % (unhexlify(vendor_guid), order_id, title))
+
             # update the db
             if self.db.purchases.get_status(order_id) == 0:
                 self.db.purchases.update_status(order_id, 1)
@@ -894,6 +899,11 @@ class Contract(object):
                 handle = ""
             self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
                                               title, image_hash)
+
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] New Order Received", "You received Order #%s from %s for \"%s\"."
+                              % (order_id, unhexlify(buyer_guid), title))
+
             self.db.sales.update_status(order_id, 1)
             self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
             self.log.info("Received new order %s" % order_id)
@@ -1083,6 +1093,10 @@ class Contract(object):
         else:
             handle = ""
         notification_listener.notify(buyer_guid, handle, "refund", order_id, title, image_hash)
+
+        notification = SMTPNotification(self.db)
+        notification.send("[OpenBazaar] Refund Received", "You received a refund for Order #%s - \"%s\"."
+                          % (order_id, title))
 
     def verify(self, sender_key):
         """

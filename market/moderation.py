@@ -11,6 +11,7 @@ from dht.utils import digest
 from keys.keychain import KeyChain
 from market.contracts import Contract
 from protos.objects import PlaintextMessage
+from market.smtpnotification import SMTPNotification
 
 
 def process_dispute(contract, db, message_listener, notification_listener, testnet):
@@ -121,9 +122,15 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
         raise Exception("Order ID for dispute not found")
 
     message_listener.notify(p, "")
+    title = contract["vendor_offer"]["listing"]["item"]["title"]
     notification_listener.notify(guid, handle, "dispute_open", order_id,
-                                 contract["vendor_offer"]["listing"]["item"]["title"],
+                                 title,
                                  unhexlify(contract["vendor_offer"]["listing"]["item"]["image_hashes"][0]))
+
+    # Send SMTP notification
+    notification = SMTPNotification(db)
+    notification.send("[OpenBazaar] Dispute Opened: #%s" % order_id,
+                      "A dispute has been opened by %s for \"%s\"" % (guid, order_id, title))
 
 
 def close_dispute(resolution_json, db, message_listener, notification_listener, testnet):
@@ -183,6 +190,12 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     p.avatar_hash = moderator_avatar
 
     message_listener.notify(p, "")
+    title = contract["vendor_offer"]["listing"]["item"]["title"]
     notification_listener.notify(moderator_guid, moderator_handle, "dispute_close", order_id,
-                                 contract["vendor_offer"]["listing"]["item"]["title"],
+                                 title,
                                  contract["vendor_offer"]["listing"]["item"]["image_hashes"][0])
+
+    # Send SMTP notification
+    notification = SMTPNotification(db)
+    notification.send("[OpenBazaar] Dispute Closed: #%s" % order_id,
+                      "A dispute has been closed by %s for \"%s\"" % (moderator_guid, order_id, title))
