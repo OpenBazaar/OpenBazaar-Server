@@ -340,7 +340,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertIsNone(settings)
 
         self.settings.update('NEW_ADDRESS', 'BTC', 'AUSTRALIA', 'EN',
-                             '', '', '', '', '', '', '')
+                             '', '', '', '', '', '', '', '', '', '', '', '', '')
         settings = self.settings.get()
         self.assertEqual(NUM_SETTINGS, len(settings))
 
