@@ -130,7 +130,7 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     # Send SMTP notification
     notification = SMTPNotification(db)
     notification.send("[OpenBazaar] Dispute Opened: #%s" % order_id,
-                      "A dispute has been opened by %s for Order #: \"%s\"" % (guid, order_id, title))
+                      "A dispute has been opened by %s for Order #%s: \"%s\"" % (guid, order_id, title))
 
 
 def close_dispute(resolution_json, db, message_listener, notification_listener, testnet):

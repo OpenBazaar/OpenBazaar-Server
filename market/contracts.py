@@ -758,7 +758,8 @@ class Contract(object):
 
         notification = SMTPNotification(self.db)
         notification.send("[OpenBazaar] New Rating Received",
-                          "You received a new rating from %s for Order #%s - \"%s\". " % (notification_rater, order_id,
+                          "You received a new rating from %s for Order #%s - \"%s\". " % (notification_rater,
+                                                                                          order_id,
                                                                                           title))
 
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
@@ -881,7 +882,8 @@ class Contract(object):
                                               order_id, title, image_hash)
 
             notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] Payment Received", "You received a payment from %s for Order #%s - \"%s\"."
+            notification.send("[OpenBazaar] Payment Received", "You received a payment from %s for "
+                                                               "Order #%s - \"%s\"."
                               % (unhexlify(vendor_guid), order_id, title))
 
             # update the db
