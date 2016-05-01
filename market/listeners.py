@@ -25,7 +25,10 @@ class MessageListenerImpl(object):
                                                     plaintext.message, plaintext.timestamp, plaintext.avatar_hash,
                                                     signature, False)
 
-            # TODO: should probably resolve the handle and make sure it matches the guid
+            if plaintext.subject != "":
+                self.db.purchases.update_unread(plaintext.subject)
+                self.db.sales.update_unread(plaintext.subject)
+                self.db.cases.update_unread(plaintext.subject)
 
             if success:
                 message_json = {

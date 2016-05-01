@@ -151,14 +151,14 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-    proofSig BLOB, contractType TEXT)''')
+    proofSig BLOB, contractType TEXT, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
-    paymentTX TEXT, contractType TEXT)''')
+    paymentTX TEXT, contractType TEXT, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
-    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
+    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE ratings(listing TEXT, ratingID TEXT,  rating TEXT)''')
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
@@ -880,9 +880,9 @@ class Purchases(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, description, timestamp, btc,
-address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+address, status, thumbnail, vendor, proofSig, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address,
-                                status, thumbnail, vendor, proofSig, contract_type))
+                                status, thumbnail, vendor, proofSig, contract_type, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -892,7 +892,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
- thumbnail, vendor, contractType, proofSig FROM purchases WHERE id=?''', (order_id,))
+ thumbnail, vendor, contractType, proofSig, unread FROM purchases WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -912,7 +912,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
- thumbnail, vendor, contractType FROM purchases ''')
+ thumbnail, vendor, contractType, unread FROM purchases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -943,6 +943,17 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             return None
         else:
             return ret[0]
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE purchases SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE purchases SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def update_outpoint(self, order_id, outpoint):
         conn = Database.connect_database(self.PATH)
@@ -990,9 +1001,9 @@ class Sales(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO sales(id, title, description, timestamp, btc, address,
-status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+status, thumbnail, buyer, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address, status,
-                                thumbnail, buyer, contract_type))
+                                thumbnail, buyer, contract_type, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -1002,7 +1013,7 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-thumbnail, buyer, contractType FROM sales WHERE id=?''', (order_id,))
+thumbnail, buyer, contractType, unread FROM sales WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -1022,7 +1033,7 @@ thumbnail, buyer, contractType FROM sales WHERE id=?''', (order_id,))
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
-thumbnail, buyer, contractType FROM sales ''')
+thumbnail, buyer, contractType, unread FROM sales ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -1053,6 +1064,17 @@ thumbnail, buyer, contractType FROM sales ''')
             return None
         else:
             return ret[0]
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE sales SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE sales SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def update_outpoint(self, order_id, outpoint):
         conn = Database.connect_database(self.PATH)
@@ -1097,9 +1119,9 @@ class Cases(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+buyer, vendor, validation, claim, status, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, timestamp, order_date, btc,
-                                thumbnail, buyer, vendor, validation, claim, 0))
+                                thumbnail, buyer, vendor, validation, claim, 0, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -1117,10 +1139,21 @@ buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim, status FROM cases ''')
+buyer, vendor, validation, claim, status, unread FROM cases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE cases SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE cases SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def get_claim(self, order_id):
         conn = Database.connect_database(self.PATH)

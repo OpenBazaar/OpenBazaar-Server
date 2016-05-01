@@ -1397,6 +1397,19 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
+    @POST('^/api/v1/mark_discussion_as_read')
+    @authenticated
+    def mark_discussion_as_read(self, request):
+        try:
+            self.db.purchases.update_unread(request.args["id"][0], reset=True)
+            self.db.sales.update_unread(request.args["id"][0], reset=True)
+            self.db.cases.update_unread(request.args["id"][0], reset=True)
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
 
 class RestAPI(Site):
 
