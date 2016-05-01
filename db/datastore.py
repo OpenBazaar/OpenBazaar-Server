@@ -497,12 +497,8 @@ class FollowData(object):
 
         f = Followers()
         if count > 0:
-            cursor.execute('''SELECT COALESCE(MAX(rowid)+1, 0) FROM followers''')
-            max_row = cursor.fetchone()[0]
-
-            start = max_row - start
-            cursor.execute('''SELECT serializedFollower FROM followers WHERE rowid <=? AND rowid > ?''',
-                           (start, start-30))
+            smt = '''select serializedFollower from followers order by rowid desc limit 30 offset ''' + str(start)
+            cursor.execute(smt)
             serialized_followers = cursor.fetchall()
             conn.close()
             for proto in serialized_followers:
