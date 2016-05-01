@@ -158,7 +158,8 @@ class Database(object):
     paymentTX TEXT, contractType TEXT, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
-    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER, unread INTEGER)''')
+    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER,
+    unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE ratings(listing TEXT, ratingID TEXT,  rating TEXT)''')
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')

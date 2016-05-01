@@ -1093,7 +1093,8 @@ class OpenBazaarAPI(APIResource):
                 "status": sale[5],
                 "thumbnail_hash": sale[6],
                 "buyer": sale[7],
-                "contract_type": sale[8]
+                "contract_type": sale[8],
+                "unread": sale[9]
             }
             sales_list.append(sale_json)
         request.setHeader('content-type', "application/json")
@@ -1116,7 +1117,8 @@ class OpenBazaarAPI(APIResource):
                 "status": purchase[5],
                 "thumbnail_hash": purchase[6],
                 "vendor": purchase[7],
-                "contract_type": purchase[8]
+                "contract_type": purchase[8],
+                "unread": purchase[9]
             }
             purchases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
@@ -1297,7 +1299,8 @@ class OpenBazaarAPI(APIResource):
                 "buyer": case[6],
                 "vendor": case[7],
                 "validation": json.loads(case[8]),
-                "status": "closed" if case[10] == 1 else "open"
+                "status": "closed" if case[10] == 1 else "open",
+                "unread": case[9]
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
