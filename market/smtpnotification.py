@@ -43,14 +43,14 @@ class SMTPNotification(object):
             msg['From'] = self.sender
             msg['To'] = self.recipient
 
-            server = smtplib.SMTP(self.server)
-            server.starttls()
-
-            # Authenticate if username/password set
-            if self.username and self.password:
-                server.login(self.username, self.password)
-
             try:
+                server = smtplib.SMTP(self.server)
+                server.starttls()
+
+                # Authenticate if username/password set
+                if self.username and self.password:
+                    server.login(self.username, self.password)
+
                 server.sendmail(self.sender, self.recipient, msg.as_string())
             except SMTPAuthenticationError as e:
                 self.log.error(e)
