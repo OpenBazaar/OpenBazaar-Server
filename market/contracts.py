@@ -818,9 +818,11 @@ class Contract(object):
                                            self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
             file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")
+            title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+            description = self.contract["vendor_offer"]["listing"]["item"]["description"]
             self.db.sales.new_sale(order_id,
-                                   self.contract["vendor_offer"]["listing"]["item"]["title"],
-                                   self.contract["vendor_offer"]["listing"]["item"]["description"],
+                                   title,
+                                   description,
                                    time.time(),
                                    self.contract["buyer_order"]["order"]["payment"]["amount"],
                                    payment_address,
@@ -828,6 +830,14 @@ class Contract(object):
                                    thumbnail_hash,
                                    buyer,
                                    self.contract["vendor_offer"]["listing"]["metadata"]["category"])
+
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Order Received", "Order #%s\n"
+                                                             "Buyer: %s\n"
+                                                             "BTC Address: %s\n"
+                                                             "Title: %s\n"
+                                                             "Description: %s\n"
+                              % (order_id, buyer, payment_address, title, description))
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -882,8 +892,7 @@ class Contract(object):
                                               order_id, title, image_hash)
 
             notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] Payment Received", "You received a payment from %s for "
-                                                               "Order #%s - \"%s\"."
+            notification.send("[OpenBazaar] Payment Received", "Your payment to %s was received for Order #%s - \"%s\"."
                               % (unhexlify(vendor_guid), order_id, title))
 
             # update the db
