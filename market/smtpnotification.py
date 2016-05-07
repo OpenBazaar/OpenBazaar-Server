@@ -2,6 +2,7 @@ __author__ = 'hoffmabc'
 
 import smtplib
 from smtplib import SMTPAuthenticationError
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from log import Logger
 
@@ -38,10 +39,13 @@ class SMTPNotification(object):
 
         if is_enabled:
             # Construct MIME message
-            msg = MIMEText(body)
+            msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = self.sender
             msg['To'] = self.recipient
+
+            html_body = MIMEText(body, 'html')
+            msg.attach(html_body)
 
             try:
                 server = smtplib.SMTP(self.server)
