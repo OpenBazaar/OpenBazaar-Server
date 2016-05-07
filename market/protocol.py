@@ -162,9 +162,9 @@ class MarketProtocol(RPCProtocol):
             # Send SMTP notification
             notification = SMTPNotification(self.db)
             notification.send("[OpenBazaar] %s is now following you!" % m.name,
-                              "You have a new follower:\n\nName: %s\nGUID: %s\nHandle: %s" % (m.name,
-                                                                                              f.guid.encode('hex'),
-                                                                                              m.handle))
+                              "You have a new follower:<br><br>Name: %s<br>GUID: <a href=\"ob://%s\">%s</a><br>"
+                              "Handle: %s" %
+                              (m.name, f.guid.encode('hex'), f.guid.encode('hex'), m.handle))
 
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
@@ -324,8 +324,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("Contract dispute opened by %s" % sender)
             return ["True"]
-        except Exception:
+        except Exception as e:
             self.log.error("unable to parse disputed contract from %s" % sender)
+            self.log.error("Exception: %s" % e.message)
             return ["False"]
 
     def rpc_dispute_close(self, sender, pubkey, encrypted):

@@ -536,8 +536,8 @@ class Contract(object):
             # Send SMTP notification
             notification = SMTPNotification(self.db)
             notification.send("[OpenBazaar] Order Confirmed and Shipped",
-                              "You have received an order confirmation.\n\n"
-                              "Order: %s\nVendor: %s\nTitle: %s\n" % (contract_hash, vendor_guid, title))
+                              "You have received an order confirmation.<br><br>"
+                              "Order: %s<br>Vendor: %s<br>Title: %s<br>" % (contract_hash, vendor_guid, title))
 
             return True
         except Exception, e:
@@ -834,11 +834,11 @@ class Contract(object):
 
             try:
                 notification = SMTPNotification(self.db)
-                notification.send("[OpenBazaar] Order Received", "Order #%s\n"
-                                                                 "Buyer: %s\n"
-                                                                 "BTC Address: %s\n"
-                                                                 "Title: %s\n"
-                                                                 "Description: %s\n"
+                notification.send("[OpenBazaar] Order Received", "Order #%s<br>"
+                                                                 "Buyer: %s<br>"
+                                                                 "BTC Address: %s<br>"
+                                                                 "Title: %s<br>"
+                                                                 "Description: %s<br>"
                                   % (order_id, buyer, payment_address, title, description))
             except Exception as e:
                 self.log.info("Error with SMTP notification: %s" % e.message)
@@ -896,9 +896,9 @@ class Contract(object):
                                               order_id, title, image_hash)
 
             notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] Purchase Payment Received", "Your payment was received.\n\n"
-                                                                        "Order: %s\n"
-                                                                        "Vendor: %s\n"
+            notification.send("[OpenBazaar] Purchase Payment Received", "Your payment was received.<br><br>"
+                                                                        "Order: %s<br>"
+                                                                        "Vendor: %s<br>"
                                                                         "Title: %s"
                               % (order_id, vendor_guid, title))
 
@@ -1113,8 +1113,8 @@ class Contract(object):
         notification_listener.notify(buyer_guid, handle, "refund", order_id, title, image_hash)
 
         notification = SMTPNotification(self.db)
-        notification.send("[OpenBazaar] Refund Received", "You received a refund.\n\n"
-                                                          "Order: %s\nTitle: %s"
+        notification.send("[OpenBazaar] Refund Received", "You received a refund.<br><br>"
+                                                          "Order: %s<br>Title: %s"
                           % (order_id, title))
 
     def verify(self, sender_key):
