@@ -175,14 +175,14 @@ class MarketProtocol(RPCProtocol):
             self.log.warning("failed to validate signature on unfollow request")
             return ["False"]
 
-    def rpc_get_followers(self, sender):
+    def rpc_get_followers(self, sender, start=None):
         self.log.info("serving followers list to %s" % sender)
         self.router.addContact(sender)
-        ser = self.db.follow.get_followers()
-        if ser is None:
-            return None
+        if start is not None:
+            ser = self.db.follow.get_followers(int(start))
         else:
-            return [ser, self.signing_key.sign(ser)[:64]]
+            ser = self.db.follow.get_followers()
+        return [ser[0], self.signing_key.sign(ser[0])[:64], ser[1]]
 
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
@@ -398,8 +398,11 @@ class MarketProtocol(RPCProtocol):
         d = self.unfollow(nodeToAsk, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callGetFollowers(self, nodeToAsk):
-        d = self.get_followers(nodeToAsk)
+    def callGetFollowers(self, nodeToAsk, start=None):
+        if start is None:
+            d = self.get_followers(nodeToAsk)
+        else:
+            d = self.get_followers(nodeToAsk, start)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetFollowing(self, nodeToAsk):

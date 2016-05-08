@@ -21,4 +21,5 @@ def migrate(database_path):
     # update version
     cursor.execute('''PRAGMA user_version = 2''')
     conn.commit()
+
     conn.close()
