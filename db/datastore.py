@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import *
+from db.migrations import migration1, migration2, migration3, migration4
 
 
 class Database(object):
