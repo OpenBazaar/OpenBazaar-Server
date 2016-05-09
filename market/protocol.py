@@ -144,7 +144,7 @@ class MarketProtocol(RPCProtocol):
             if f.following != self.node.id:
                 raise Exception('Following wrong node')
             f.signature = signature
-            self.db.follow.set_follower(f)
+            self.db.follow.set_follower(f.SerializeToString())
             proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
