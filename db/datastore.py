@@ -169,7 +169,9 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
+    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT,
+    smtpNotifications INTEGER, smtpServer TEXT, smtpSender TEXT, smtpRecipient TEXT, smtpUsername TEXT,
+    smtpPassword TEXT)''')
 
         conn.commit()
         conn.close()
