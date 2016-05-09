@@ -193,6 +193,8 @@ class Database(object):
         elif version == 2:
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
+        elif version == 3:
+            migration4.migrate(self.PATH)
 
 class HashMap(object):
     """

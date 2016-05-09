@@ -1,5 +1,4 @@
 import sqlite3
-from protos import objects
 
 
 def migrate(database_path):
@@ -7,25 +6,14 @@ def migrate(database_path):
     conn = sqlite3.connect(database_path)
     conn.text_factory = str
     cursor = conn.cursor()
-    # read followers from db
-    cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-    followers = cursor.fetchone()
 
-    # delete follower table
-    cursor.execute('''DROP TABLE followers''')
-
-    # create new table
-    cursor.execute('''CREATE TABLE followers(guid TEXT UNIQUE, serializedFollower TEXT)''')
-    cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
-
-    # write followers back into db
-
-    if followers is not None:
-        f = objects.Followers()
-        f.ParseFromString(followers[0])
-        for follower in f.followers:
-            cursor.execute('''INSERT INTO followers(guid, serializedFollower) VALUES (?,?)''',
-                           (follower.guid.encode("hex"), follower.SerializeToString().encode("hex"),))
+    # update settings table to include smtp server settings
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpNotifications" INTEGER''')
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpServer" TEXT''')
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpSender" TEXT''')
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpRecipient" TEXT''')
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpUsername" TEXT''')
+    cursor.execute('''ALTER TABLE settings ADD COLUMN "smtpPassword" TEXT''')
 
     # update version
     cursor.execute('''PRAGMA user_version = 4''')
