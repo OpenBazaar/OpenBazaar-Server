@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2, migration3
+from db.migrations import migration1, migration2, migration3, migration4
 
 
 class Database(object):
@@ -116,7 +116,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 3''')
+        cursor.execute('''PRAGMA user_version = 4''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -169,7 +169,9 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
+    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT,
+    smtpNotifications INTEGER, smtpServer TEXT, smtpSender TEXT, smtpRecipient TEXT, smtpUsername TEXT,
+    smtpPassword TEXT)''')
 
         conn.commit()
         conn.close()
@@ -180,16 +182,21 @@ class Database(object):
         cursor.execute('''PRAGMA user_version''')
         version = cursor.fetchone()[0]
         conn.close()
+
         if version == 0:
             migration1.migrate(self.PATH)
             migration2.migrate(self.PATH)
             migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
         elif version == 1:
             migration2.migrate(self.PATH)
             migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
         elif version == 2:
             migration3.migrate(self.PATH)
-
+            migration4.migrate(self.PATH)
+        elif version == 3:
+            migration4.migrate(self.PATH)
 
 class HashMap(object):
     """
@@ -1244,16 +1251,19 @@ class Settings(object):
         self.PATH = database_path
 
     def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
-               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list):
+               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list, smtp_notifications,
+               smtp_server, smtp_sender, smtp_recipient, smtp_username, smtp_password):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, termsConditions,
-refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+refundPolicy, moderatorList, smtpNotifications, smtpServer, smtpSender,
+smtpRecipient, smtpUsername, smtpPassword) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked, terms_conditions,
-                            refund_policy, moderator_list))
+                            refund_policy, moderator_list, smtp_notifications, smtp_server,
+                            smtp_sender, smtp_recipient, smtp_username, smtp_password))
             conn.commit()
         conn.close()
 

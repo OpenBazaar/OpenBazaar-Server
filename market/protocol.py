@@ -13,6 +13,7 @@ from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
+from market.smtpnotification import SMTPNotification
 from nacl.public import PublicKey, Box
 from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,\
@@ -157,6 +158,14 @@ class MarketProtocol(RPCProtocol):
                     listener.notify(sender.id, f.metadata.handle, "follow", "", "", f.metadata.avatar_hash)
                 except DoesNotImplement:
                     pass
+
+            # Send SMTP notification
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] %s is now following you!" % m.name,
+                              "You have a new follower:<br><br>Name: %s<br>GUID: <a href=\"ob://%s\">%s</a><br>"
+                              "Handle: %s" %
+                              (m.name, f.guid.encode('hex'), f.guid.encode('hex'), m.handle))
+
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.warning("failed to validate follower")
@@ -315,8 +324,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("Contract dispute opened by %s" % sender)
             return ["True"]
-        except Exception:
+        except Exception as e:
             self.log.error("unable to parse disputed contract from %s" % sender)
+            self.log.error("Exception: %s" % e.message)
             return ["False"]
 
     def rpc_dispute_close(self, sender, pubkey, encrypted):

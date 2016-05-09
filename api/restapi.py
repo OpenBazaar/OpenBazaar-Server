@@ -849,6 +849,14 @@ class OpenBazaarAPI(APIResource):
             if resolver != get_value("CONSTANTS", "RESOLVER"):
                 set_value("CONSTANTS", "RESOLVER", resolver)
 
+            if "smtp_notifications" not in request.args:
+                request.args["smtp_notifications"] = ['false']
+
+            smtp_attrs = ["smtp_server", "smtp_sender", "smtp_recipient", "smtp_username", "smtp_password"]
+            for smtp_attr in smtp_attrs:
+                if smtp_attr not in request.args:
+                    request.args[smtp_attr] = ['']
+
             settings_list = settings.get()
             if "moderators" in request.args and settings_list is not None:
                 mod_json = settings_list[11]
@@ -871,7 +879,13 @@ class OpenBazaarAPI(APIResource):
                 json.dumps(request.args["blocked"] if request.args["blocked"] != "" else []),
                 request.args["terms_conditions"][0],
                 request.args["refund_policy"][0],
-                json.dumps(request.args["moderators"] if request.args["moderators"] != "" else [])
+                json.dumps(request.args["moderators"] if request.args["moderators"] != "" else []),
+                1 if str_to_bool(request.args["smtp_notifications"][0]) else 0,
+                request.args["smtp_server"][0],
+                request.args["smtp_sender"][0],
+                request.args["smtp_recipient"][0],
+                request.args["smtp_username"][0],
+                request.args["smtp_password"][0]
             )
 
             request.write(json.dumps({"success": True}, indent=4))
@@ -913,7 +927,13 @@ class OpenBazaarAPI(APIResource):
                 "refund_policy": "" if settings[10] is None else settings[10],
                 "resolver": get_value("CONSTANTS", "RESOLVER"),
                 "network_connection": nat_type,
-                "transaction_fee": TRANSACTION_FEE
+                "transaction_fee": TRANSACTION_FEE,
+                "smtp_notifications": True if settings[14] == 1 else False,
+                "smtp_server": settings[15],
+                "smtp_sender": settings[16],
+                "smtp_recipient": settings[17],
+                "smtp_username": settings[18],
+                "smtp_password": settings[19],
             }
             mods = []
             try:
