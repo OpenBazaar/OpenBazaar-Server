@@ -3,7 +3,7 @@ from protos import objects
 
 
 def migrate(database_path):
-    print "migrating to db version 3"
+    print "migrating to db version 4"
     conn = sqlite3.connect(database_path)
     conn.text_factory = str
     cursor = conn.cursor()
@@ -28,6 +28,6 @@ def migrate(database_path):
                            (follower.guid.encode("hex"), follower.SerializeToString().encode("hex"),))
 
     # update version
-    cursor.execute('''PRAGMA user_version = 3''')
+    cursor.execute('''PRAGMA user_version = 4''')
     conn.commit()
     conn.close()
