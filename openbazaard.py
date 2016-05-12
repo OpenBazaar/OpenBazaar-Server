@@ -37,6 +37,7 @@ from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from txws import WebSocketFactory
 
+# pylint: disable=reload-builtin
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
