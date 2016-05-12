@@ -404,21 +404,21 @@ class OpenBazaarAPI(APIResource):
 
             u = objects.Profile()
             if "name" in request.args:
-                u.name = request.args["name"][0].decode("utf8")
+                u.name = request.args["name"][0]
             if "location" in request.args:
                 # This needs to be formatted. Either here or from the UI.
                 u.location = CountryCode.Value(request.args["location"][0].upper())
             if "handle" in request.args:
                 if blockchainid.validate(request.args["handle"][0], self.keychain.guid.encode("hex")):
-                    u.handle = request.args["handle"][0].decode("utf8")
+                    u.handle = request.args["handle"][0]
                     self.db.profile.set_temp_handle("")
                 else:
                     u.handle = ""
-                    self.db.profile.set_temp_handle(request.args["handle"][0].decode("utf8"))
+                    self.db.profile.set_temp_handle(request.args["handle"][0])
             if "about" in request.args:
-                u.about = request.args["about"][0].decode("utf8")
+                u.about = request.args["about"][0]
             if "short_description" in request.args:
-                u.short_description = request.args["short_description"][0].decode("utf8")[0:160]
+                u.short_description = request.args["short_description"][0]
             if "nsfw" in request.args:
                 p.profile.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
@@ -428,9 +428,9 @@ class OpenBazaarAPI(APIResource):
             if "moderation_fee" in request.args:
                 p.profile.moderation_fee = round(float(request.args["moderation_fee"][0]), 2)
             if "website" in request.args:
-                u.website = request.args["website"][0].decode("utf8")
+                u.website = request.args["website"][0]
             if "email" in request.args:
-                u.email = request.args["email"][0].decode("utf8")
+                u.email = request.args["email"][0]
             if "primary_color" in request.args:
                 p.profile.primary_color = int(request.args["primary_color"][0])
             if "secondary_color" in request.args:
@@ -468,9 +468,9 @@ class OpenBazaarAPI(APIResource):
         try:
             p = Profile(self.db)
             if "account_type" in request.args and "username" in request.args:
-                p.add_social_account(request.args["account_type"][0].decode("utf8"),
-                                     request.args["username"][0].decode("utf8"),
-                                     request.args["proof"][0].decode("utf8") if
+                p.add_social_account(request.args["account_type"][0],
+                                     request.args["username"][0],
+                                     request.args["proof"][0] if
                                      "proof" in request.args else None)
             else:
                 raise Exception("Missing required fields")
@@ -538,12 +538,12 @@ class OpenBazaarAPI(APIResource):
             if "options" in request.args:
                 options = {}
                 for option in request.args["options"]:
-                    options[option.decode("utf8")] = request.args[option.decode("utf8")]
+                    options[option] = request.args[option]
             keywords = None
             if "keywords" in request.args:
                 keywords = []
                 for keyword in request.args["keywords"]:
-                    keywords.append(keyword.decode("utf8"))
+                    keywords.append(keyword)
                 if len(keywords) > 10:
                     raise Exception("Too many keywords")
             if "contract_id" in request.args:
@@ -557,31 +557,31 @@ class OpenBazaarAPI(APIResource):
                 str_to_bool(request.args["hidden"][0]) if "hidden" in request.args else False,
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
-                request.args["title"][0].decode("utf8"),
-                request.args["description"][0].decode("utf8"),
-                request.args["currency_code"][0].decode("utf8"),
-                request.args["price"][0].decode("utf8"),
-                request.args["process_time"][0].decode("utf8"),
-                str_to_bool(request.args["nsfw"][0].decode("utf8")),
+                request.args["title"][0],
+                request.args["description"][0],
+                request.args["currency_code"][0],
+                request.args["price"][0],
+                request.args["process_time"][0],
+                str_to_bool(request.args["nsfw"][0]),
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
-                est_delivery_domestic=request.args["est_delivery_domestic"][0].decode("utf8")
+                est_delivery_domestic=request.args["est_delivery_domestic"][0]
                 if "est_delivery_domestic" in request.args else None,
-                est_delivery_international=request.args["est_delivery_international"][0].decode("utf8")
+                est_delivery_international=request.args["est_delivery_international"][0]
                 if "est_delivery_international" in request.args else None,
-                terms_conditions=request.args["terms_conditions"][0].decode("utf8")
+                terms_conditions=request.args["terms_conditions"][0]
                 if request.args["terms_conditions"][0] is not "" else None,
-                returns=request.args["returns"][0].decode("utf8")
+                returns=request.args["returns"][0]
                 if request.args["returns"][0] is not "" else None,
                 shipping_currency_code=request.args["shipping_currency_code"][0],
                 shipping_domestic=request.args["shipping_domestic"][0],
                 shipping_international=request.args["shipping_international"][0],
                 keywords=keywords,
-                category=request.args["category"][0].decode("utf8")
+                category=request.args["category"][0]
                 if request.args["category"][0] is not "" else None,
-                condition=request.args["condition"][0].decode("utf8")
+                condition=request.args["condition"][0]
                 if request.args["condition"][0] is not "" else None,
-                sku=request.args["sku"][0].decode("utf8") if request.args["sku"][0] is not "" else None,
+                sku=request.args["sku"][0] if request.args["sku"][0] is not "" else None,
                 images=request.args["images"],
                 free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
@@ -699,17 +699,17 @@ class OpenBazaarAPI(APIResource):
             payment = c.\
                 add_purchase_info(int(request.args["quantity"][0]),
                                   request.args["refund_address"][0],
-                                  request.args["ship_to"][0].decode("utf8")
+                                  request.args["ship_to"][0]
                                   if "ship_to" in request.args else None,
-                                  request.args["address"][0].decode("utf8")
+                                  request.args["address"][0]
                                   if "address" in request.args else None,
-                                  request.args["city"][0].decode("utf8")
+                                  request.args["city"][0]
                                   if "city" in request.args else None,
-                                  request.args["state"][0].decode("utf8")
+                                  request.args["state"][0]
                                   if "state" in request.args else None,
-                                  request.args["postal_code"][0].decode("utf8")
+                                  request.args["postal_code"][0]
                                   if "postal_code" in request.args else None,
-                                  request.args["country"][0].decode("utf8")
+                                  request.args["country"][0]
                                   if "country" in request.args else None,
                                   request.args["moderator"][0] if "moderator" in request.args else None,
                                   options,
@@ -749,17 +749,17 @@ class OpenBazaarAPI(APIResource):
             if "vendor_order_confirmation" not in c.contract:
                 c.add_order_confirmation(self.protocol.blockchain,
                                          request.args["payout_address"][0],
-                                         comments=request.args["comments"][0].decode("utf8")
+                                         comments=request.args["comments"][0]
                                          if "comments" in request.args else None,
-                                         shipper=request.args["shipper"][0].decode("utf8")
+                                         shipper=request.args["shipper"][0]
                                          if "shipper" in request.args else None,
-                                         tracking_number=request.args["tracking_number"][0].decode("utf8")
+                                         tracking_number=request.args["tracking_number"][0]
                                          if "tracking_number" in request.args else None,
-                                         est_delivery=request.args["est_delivery"][0].decode("utf8")
+                                         est_delivery=request.args["est_delivery"][0]
                                          if "est_delivery" in request.args else None,
-                                         url=request.args["url"][0].decode("utf8")
+                                         url=request.args["url"][0]
                                          if "url" in request.args else None,
-                                         password=request.args["password"][0].decode("utf8")
+                                         password=request.args["password"][0]
                                          if "password" in request.args else None)
             guid = c.contract["buyer_order"]["order"]["id"]["guid"]
             self.mserver.confirm_order(guid, c).addCallback(respond)
@@ -830,7 +830,7 @@ class OpenBazaarAPI(APIResource):
                           if "delivery_time" in request.args else None,
                           customer_service=request.args["customer_service"][0]
                           if "customer_service" in request.args else None,
-                          review=request.args["review"][0].decode("utf8") if "review" in request.args else "",
+                          review=request.args["review"][0] if "review" in request.args else "",
                           anonymous=str_to_bool(request.args["anonymous"]) if "anonymous" in request.args else True)
         guid = c.contract["vendor_offer"]["listing"]["id"]["guid"]
         self.mserver.complete_order(guid, c).addCallback(respond)
@@ -1281,7 +1281,7 @@ class OpenBazaarAPI(APIResource):
     def dispute_contract(self, request):
         try:
             self.mserver.open_dispute(request.args["order_id"][0],
-                                      request.args["claim"][0].decode("utf8") if "claim" in request.args else None)
+                                      request.args["claim"][0] if "claim" in request.args else None)
             request.write(json.dumps({"success": True}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
@@ -1303,7 +1303,7 @@ class OpenBazaarAPI(APIResource):
                     request.finish()
 
             d = self.mserver.close_dispute(request.args["order_id"][0],
-                                           request.args["resolution"][0].decode("utf8")
+                                           request.args["resolution"][0]
                                            if "resolution" in request.args else None,
                                            request.args["buyer_percentage"][0]
                                            if "buyer_percentage" in request.args else None,
