@@ -597,11 +597,6 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
-            import sys, os
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            print 'BOOOM MAMMA ======> JAMMA lysol!'
-            print str(e)
-            print(exc_type, exc_tb.tb_lineno)
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
