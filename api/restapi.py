@@ -559,10 +559,10 @@ class OpenBazaarAPI(APIResource):
                 request.args["metadata_category"][0],
                 request.args["title"][0].decode("utf8"),
                 request.args["description"][0].decode("utf8"),
-                request.args["currency_code"][0],
-                request.args["price"][0],
+                request.args["currency_code"][0].decode("utf8"),
+                request.args["price"][0].decode("utf8"),
                 request.args["process_time"][0].decode("utf8"),
-                str_to_bool(request.args["nsfw"][0]),
+                str_to_bool(request.args["nsfw"][0].decode("utf8")),
                 shipping_origin=request.args["shipping_origin"][0] if "shipping_origin" in request.args else None,
                 shipping_regions=request.args["ships_to"] if "ships_to" in request.args else None,
                 est_delivery_domestic=request.args["est_delivery_domestic"][0].decode("utf8")
@@ -586,7 +586,8 @@ class OpenBazaarAPI(APIResource):
                 free_shipping=str_to_bool(request.args["free_shipping"][0]),
                 options=options if "options" in request.args else None,
                 moderators=request.args["moderators"] if "moderators" in request.args else None,
-                contract_id=request.args["contract_id"][0] if "contract_id" in request.args else None)
+                contract_id=request.args["contract_id"][0].encode("utf8") if "contract_id" in request.args else None,
+                )
 
             for keyword in request.args["keywords"]:
                 if keyword != "":
@@ -596,6 +597,11 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
         except Exception, e:
+            import sys, os
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print 'BOOOM MAMMA ======> JAMMA lysol!'
+            print str(e)
+            print(exc_type, exc_tb.tb_lineno)
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
