@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2, migration3, migration4
+from db.migrations import migration1, migration2, migration3, migration4, migration5
 
 
 class Database(object):
@@ -189,15 +189,22 @@ class Database(object):
             migration2.migrate(self.PATH)
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
         elif version == 1:
             migration2.migrate(self.PATH)
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
         elif version == 2:
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
         elif version == 3:
             migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
+        elif version == 4:
+            migration5.migrate(self.PATH)
+
 
 class HashMap(object):
     """
