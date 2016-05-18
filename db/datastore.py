@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2
+from db.migrations import migration1, migration2, migration3, migration4
 
 
 class Database(object):
@@ -116,7 +116,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 2''')
+        cursor.execute('''PRAGMA user_version = 4''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -125,7 +125,8 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
 
-        cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+        cursor.execute('''CREATE TABLE followers(guid TEXT UNIQUE, serializedFollower TEXT)''')
+        cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
@@ -169,7 +170,9 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
+    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT,
+    smtpNotifications INTEGER, smtpServer TEXT, smtpSender TEXT, smtpRecipient TEXT, smtpUsername TEXT,
+    smtpPassword TEXT)''')
 
         conn.commit()
         conn.close()
@@ -180,12 +183,21 @@ class Database(object):
         cursor.execute('''PRAGMA user_version''')
         version = cursor.fetchone()[0]
         conn.close()
+
         if version == 0:
             migration1.migrate(self.PATH)
             migration2.migrate(self.PATH)
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
         elif version == 1:
             migration2.migrate(self.PATH)
-
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
+        elif version == 2:
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
+        elif version == 3:
+            migration4.migrate(self.PATH)
 
 class HashMap(object):
     """
@@ -467,18 +479,12 @@ class FollowData(object):
 
     def set_follower(self, proto):
         conn = Database.connect_database(self.PATH)
+        p = Followers.Follower()
+        p.ParseFromString(proto)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == proto.guid:
-                        f.followers.remove(follower)
-            f.followers.extend([proto])
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''INSERT OR REPLACE INTO followers(guid, serializedFollower) VALUES (?,?)''',
+                           (p.guid.encode("hex"), proto.encode("hex")))
             conn.commit()
         conn.close()
 
@@ -486,28 +492,28 @@ class FollowData(object):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == guid:
-                        f.followers.remove(follower)
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''DELETE FROM followers WHERE guid=?''', (guid.encode("hex"), ))
             conn.commit()
         conn.close()
 
-    def get_followers(self):
+    def get_followers(self, start=0):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-        proto = cursor.fetchone()
-        conn.close()
-        if not proto:
-            return None
-        else:
-            return proto[0]
+
+        cursor.execute('''SELECT Count(*) FROM followers''')
+        count = cursor.fetchone()[0]
+
+        f = Followers()
+        if count > 0:
+            smt = '''select serializedFollower from followers order by rowid desc limit 30 offset ''' + str(start)
+            cursor.execute(smt)
+            serialized_followers = cursor.fetchall()
+            conn.close()
+            for proto in serialized_followers:
+                p = Followers.Follower()
+                p.ParseFromString(proto[0].decode("hex"))
+                f.followers.extend([p])
+        return (f.SerializeToString(), count)
 
 
 class MessageStore(object):
@@ -592,7 +598,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             handle = ""
             if val[0] is not None:
                 try:
-                    with open(join(DATA_FOLDER, 'cache', g[0]), "r") as filename:
+                    with open(join(DATA_FOLDER, 'cache', g[0] + ".profile"), "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)
@@ -1279,16 +1285,19 @@ class Settings(object):
         self.PATH = database_path
 
     def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
-               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list):
+               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list, smtp_notifications,
+               smtp_server, smtp_sender, smtp_recipient, smtp_username, smtp_password):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, termsConditions,
-refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+refundPolicy, moderatorList, smtpNotifications, smtpServer, smtpSender,
+smtpRecipient, smtpUsername, smtpPassword) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked, terms_conditions,
-                            refund_policy, moderator_list))
+                            refund_policy, moderator_list, smtp_notifications, smtp_server,
+                            smtp_sender, smtp_recipient, smtp_username, smtp_password))
             conn.commit()
         conn.close()
 

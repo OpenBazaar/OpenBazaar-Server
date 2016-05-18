@@ -13,6 +13,7 @@ from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
+from market.smtpnotification import SMTPNotification
 from nacl.public import PublicKey, Box
 from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,\
@@ -143,7 +144,7 @@ class MarketProtocol(RPCProtocol):
             if f.following != self.node.id:
                 raise Exception('Following wrong node')
             f.signature = signature
-            self.db.follow.set_follower(f)
+            self.db.follow.set_follower(f.SerializeToString())
             proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
@@ -157,6 +158,14 @@ class MarketProtocol(RPCProtocol):
                     listener.notify(sender.id, f.metadata.handle, "follow", "", "", f.metadata.avatar_hash)
                 except DoesNotImplement:
                     pass
+
+            # Send SMTP notification
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] %s is now following you!" % m.name,
+                              "You have a new follower:<br><br>Name: %s<br>GUID: <a href=\"ob://%s\">%s</a><br>"
+                              "Handle: %s" %
+                              (m.name, f.guid.encode('hex'), f.guid.encode('hex'), m.handle))
+
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.warning("failed to validate follower")
@@ -175,14 +184,14 @@ class MarketProtocol(RPCProtocol):
             self.log.warning("failed to validate signature on unfollow request")
             return ["False"]
 
-    def rpc_get_followers(self, sender):
+    def rpc_get_followers(self, sender, start=None):
         self.log.info("serving followers list to %s" % sender)
         self.router.addContact(sender)
-        ser = self.db.follow.get_followers()
-        if ser is None:
-            return None
+        if start is not None:
+            ser = self.db.follow.get_followers(int(start))
         else:
-            return [ser, self.signing_key.sign(ser)[:64]]
+            ser = self.db.follow.get_followers()
+        return [ser[0], self.signing_key.sign(ser[0])[:64], ser[1]]
 
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
@@ -315,8 +324,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("Contract dispute opened by %s" % sender)
             return ["True"]
-        except Exception:
+        except Exception as e:
             self.log.error("unable to parse disputed contract from %s" % sender)
+            self.log.error("Exception: %s" % e.message)
             return ["False"]
 
     def rpc_dispute_close(self, sender, pubkey, encrypted):
@@ -398,8 +408,11 @@ class MarketProtocol(RPCProtocol):
         d = self.unfollow(nodeToAsk, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callGetFollowers(self, nodeToAsk):
-        d = self.get_followers(nodeToAsk)
+    def callGetFollowers(self, nodeToAsk, start=None):
+        if start is None:
+            d = self.get_followers(nodeToAsk)
+        else:
+            d = self.get_followers(nodeToAsk, start)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetFollowing(self, nodeToAsk):

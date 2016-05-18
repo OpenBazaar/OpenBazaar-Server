@@ -68,6 +68,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             self.is_new_node = True
             self.on_connection_made()
             self.time_last_message = 0
+            self.remote_node_version = 1
             self.ping_interval = 30 if nat_type != FULL_CONE else 300
 
         def on_connection_made(self):
@@ -94,6 +95,7 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
                                  (m.sender.relayAddress.ip, m.sender.relayAddress.port),
                                  m.sender.natType,
                                  m.sender.vendor)
+                self.remote_node_version = m.protoVer
                 if self.time_last_message == 0:
                     h = nacl.hash.sha512(m.sender.publicKey)
                     pow_hash = h[40:]

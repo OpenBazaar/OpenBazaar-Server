@@ -50,12 +50,6 @@ class RPCProtocol:
             connection.shutdown()
             return False
 
-        if message.protoVer < PROTOCOL_VERSION:
-            self.log.warning("received message from %s with incompatible protocol version." %
-                             str(connection.dest_addr))
-            connection.shutdown()
-            return False
-
         self.multiplexer.vendors[sender.id] = sender
 
         msgID = message.messageID

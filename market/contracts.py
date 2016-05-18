@@ -27,6 +27,7 @@ from market.btcprice import BtcPrice
 from market.transactions import BitcoinTransaction
 from protos.countries import CountryCode
 from protos.objects import Listings
+from market.smtpnotification import SMTPNotification
 
 
 class Contract(object):
@@ -531,6 +532,13 @@ class Contract(object):
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             self.notification_listener.notify(vendor_guid, handle, "order confirmation", contract_hash, title,
                                               image_hash)
+
+            # Send SMTP notification
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Order Confirmed and Shipped",
+                              "You have received an order confirmation.<br><br>"
+                              "Order: %s<br>Vendor: %s<br>Title: %s<br>" % (contract_hash, vendor_guid, title))
+
             return True
         except Exception, e:
             return e.message
@@ -747,6 +755,14 @@ class Contract(object):
 
         self.notification_listener.notify(buyer_guid, handle, "rating received", order_id, title, image_hash)
 
+        notification_rater = handle if handle else buyer_guid.encode('hex')
+
+        notification = SMTPNotification(self.db)
+        notification.send("[OpenBazaar] New Rating Received",
+                          "You received a new rating from %s for Order #%s - \"%s\". " % (notification_rater,
+                                                                                          order_id,
+                                                                                          title))
+
         if "rating" in self.contract["buyer_receipt"]["receipt"]:
             self.db.ratings.add_rating(self.contract["buyer_receipt"]["receipt"]
                                        ["rating"]["tx_summary"]["listing"],
@@ -803,9 +819,11 @@ class Contract(object):
                                            self.contract["vendor_offer"]["listing"]["metadata"]["category"])
         else:
             file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", order_id + ".json")
+            title = self.contract["vendor_offer"]["listing"]["item"]["title"]
+            description = self.contract["vendor_offer"]["listing"]["item"]["description"]
             self.db.sales.new_sale(order_id,
-                                   self.contract["vendor_offer"]["listing"]["item"]["title"],
-                                   self.contract["vendor_offer"]["listing"]["item"]["description"],
+                                   title,
+                                   description,
                                    time.time(),
                                    self.contract["buyer_order"]["order"]["payment"]["amount"],
                                    payment_address,
@@ -813,6 +831,17 @@ class Contract(object):
                                    thumbnail_hash,
                                    buyer,
                                    self.contract["vendor_offer"]["listing"]["metadata"]["category"])
+
+            try:
+                notification = SMTPNotification(self.db)
+                notification.send("[OpenBazaar] Order Received", "Order #%s<br>"
+                                                                 "Buyer: %s<br>"
+                                                                 "BTC Address: %s<br>"
+                                                                 "Title: %s<br>"
+                                                                 "Description: %s<br>"
+                                  % (order_id, buyer, payment_address, title, description))
+            except Exception as e:
+                self.log.info("Error with SMTP notification: %s" % e.message)
 
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
@@ -843,8 +872,8 @@ class Contract(object):
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.payment_received()
 
-        except Exception:
-            self.log.critical("Error processing bitcoin transaction")
+        except Exception as e:
+            self.log.critical("Error processing bitcoin transaction: %s" % e.message)
 
     def payment_received(self):
         self.blockchain.unsubscribe_address(
@@ -865,6 +894,14 @@ class Contract(object):
             vendor_guid = self.contract["vendor_offer"]["listing"]["id"]["guid"]
             self.notification_listener.notify(unhexlify(vendor_guid), handle, "payment received",
                                               order_id, title, image_hash)
+
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Purchase Payment Received", "Your payment was received.<br><br>"
+                                                                        "Order: %s<br>"
+                                                                        "Vendor: %s<br>"
+                                                                        "Title: %s"
+                              % (order_id, vendor_guid, title))
+
             # update the db
             if self.db.purchases.get_status(order_id) == 0:
                 self.db.purchases.update_status(order_id, 1)
@@ -880,6 +917,11 @@ class Contract(object):
                 handle = ""
             self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
                                               title, image_hash)
+
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] Payment for Order Received", "Payment was received for Order #%s."
+                              % order_id)
+
             self.db.sales.update_status(order_id, 1)
             self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
             self.log.info("Received new order %s" % order_id)
@@ -1069,6 +1111,11 @@ class Contract(object):
         else:
             handle = ""
         notification_listener.notify(buyer_guid, handle, "refund", order_id, title, image_hash)
+
+        notification = SMTPNotification(self.db)
+        notification.send("[OpenBazaar] Refund Received", "You received a refund.<br><br>"
+                                                          "Order: %s<br>Title: %s"
+                          % (order_id, title))
 
     def verify(self, sender_key):
         """

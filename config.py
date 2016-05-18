@@ -12,7 +12,7 @@ from os.path import expanduser, join, isfile
 from ConfigParser import ConfigParser
 from urlparse import urlparse
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 CONFIG_FILE = join(os.getcwd(), 'ob.cfg')
 
 # FIXME probably a better way to do this. This curretly checks two levels deep.

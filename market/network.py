@@ -195,7 +195,7 @@ class Server(object):
                     self.get_image(node_to_ask, p.avatar_hash)
                 if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', p.header_hash.encode("hex"))):
                     self.get_image(node_to_ask, p.header_hash)
-                self.cache(result[1][0], node_to_ask.id.encode("hex"))
+                self.cache(result[1][0], node_to_ask.id.encode("hex") + ".profile")
                 return p
             except Exception:
                 return None
@@ -373,7 +373,7 @@ class Server(object):
         self.log.info("sending unfollow request to %s" % node_to_unfollow)
         return d.addCallback(save_to_db)
 
-    def get_followers(self, node_to_ask):
+    def get_followers(self, node_to_ask, start=0):
         """
         Query the given node for a list if its followers. The response will be a
         `Followers` protobuf object. We will verify the signature for each follower
@@ -388,8 +388,11 @@ class Server(object):
                 verify_key.verify(response[1][0], response[1][1])
                 f.ParseFromString(response[1][0])
             except Exception:
-                return None
+                return (None, None)
             # Verify the signature and guid of each follower.
+            count = None
+            if len(response[1]) > 2:
+                count = response[1][2]
             for follower in f.followers:
                 try:
                     v_key = nacl.signing.VerifyKey(follower.pubkey)
@@ -404,9 +407,14 @@ class Server(object):
                         raise Exception('Invalid follower')
                 except Exception:
                     f.followers.remove(follower)
-            return f
+            return (f, count)
 
-        d = self.protocol.callGetFollowers(node_to_ask)
+        peer = (node_to_ask.ip, node_to_ask.port)
+        if peer in self.protocol.multiplexer and \
+                        self.protocol.multiplexer[peer].handler.remote_node_version > 1:
+            d = self.protocol.callGetFollowers(node_to_ask, start=start)
+        else:
+            d = self.protocol.callGetFollowers(node_to_ask)
         self.log.info("fetching followers from %s" % node_to_ask)
         return d.addCallback(get_response)
 
@@ -1241,3 +1249,15 @@ class Server(object):
         """
         with open(os.path.join(DATA_FOLDER, "cache", filename), 'wb') as outfile:
             outfile.write(file_to_save)
+
+    @staticmethod
+    def load_from_cache(filename):
+        """
+        Loads a file from cache
+        """
+        filepath = DATA_FOLDER + "cache/" + filename
+        if not os.path.exists(filepath):
+            return None
+        with open(filepath, "r") as filename:
+            f = filename.read()
+        return f
