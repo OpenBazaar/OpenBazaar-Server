@@ -634,7 +634,7 @@ WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
         """
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0''',)
+        cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0 and subject=""''',)
         ret = []
         guids = cursor.fetchall()
         for g in guids:
