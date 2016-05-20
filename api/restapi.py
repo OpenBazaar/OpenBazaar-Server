@@ -1118,7 +1118,8 @@ class OpenBazaarAPI(APIResource):
                 "status": sale[5],
                 "thumbnail_hash": sale[6],
                 "buyer": sale[7],
-                "contract_type": sale[8]
+                "contract_type": sale[8],
+                "unread": sale[9]
             }
             sales_list.append(sale_json)
         request.setHeader('content-type', "application/json")
@@ -1141,7 +1142,8 @@ class OpenBazaarAPI(APIResource):
                 "status": purchase[5],
                 "thumbnail_hash": purchase[6],
                 "vendor": purchase[7],
-                "contract_type": purchase[8]
+                "contract_type": purchase[8],
+                "unread": purchase[9]
             }
             purchases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
@@ -1322,7 +1324,8 @@ class OpenBazaarAPI(APIResource):
                 "buyer": case[6],
                 "vendor": case[7],
                 "validation": json.loads(case[8]),
-                "status": "closed" if case[10] == 1 else "open"
+                "status": "closed" if case[10] == 1 else "open",
+                "unread": case[9]
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
@@ -1416,6 +1419,19 @@ class OpenBazaarAPI(APIResource):
                     request.write(json.dumps({"success": False, "reason": success}))
                     request.finish()
             self.mserver.refund(request.args["order_id"][0]).addCallback(respond)
+            return server.NOT_DONE_YET
+        except Exception, e:
+            request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
+            request.finish()
+            return server.NOT_DONE_YET
+
+    @POST('^/api/v1/mark_discussion_as_read')
+    @authenticated
+    def mark_discussion_as_read(self, request):
+        try:
+            self.db.purchases.update_unread(request.args["id"][0], reset=True)
+            self.db.sales.update_unread(request.args["id"][0], reset=True)
+            self.db.cases.update_unread(request.args["id"][0], reset=True)
             return server.NOT_DONE_YET
         except Exception, e:
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))

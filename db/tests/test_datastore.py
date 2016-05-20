@@ -186,7 +186,7 @@ class DatastoreTest(unittest.TestCase):
         self.assertEqual(1, len(msgs))
 
         guids = self.ms.get_unread()
-        self.assertEqual(1, len(guids))
+        self.assertEqual(0, len(guids))
 
         conversations = self.ms.get_conversations()
         self.assertEqual(1, len(conversations))
