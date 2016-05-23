@@ -108,3 +108,6 @@ class NotificationListenerImpl(object):
             }
         }
         self.ws.push(json.dumps(sanitize_html(notification_json), indent=4))
+
+    def push_ws(self, json_obj):
+        self.ws.push(json.dumps(sanitize_html(json_obj), indent=4))

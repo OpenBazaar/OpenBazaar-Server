@@ -148,3 +148,11 @@ class ForgetfulStorage(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT birthday FROM dht WHERE keyword=? AND id=?''', (keyword.encode("hex"), key,))
         return self.ttl - (time.time() - cursor.fetchall()[0][0])
+
+    def get_db_size(self):
+        cursor = self.db.cursor()
+        cursor.execute('''PRAGMA page_count;''')
+        count = cursor.fetchone()[0]
+        cursor.execute('''PRAGMA page_size;''')
+        size = cursor.fetchone()[0]
+        return count * size

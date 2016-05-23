@@ -861,16 +861,28 @@ class Contract(object):
 
             # get the amount (in satoshi) the user is expected to pay
             amount_to_pay = int(float(self.contract["buyer_order"]["order"]["payment"]["amount"]) * 100000000)
+            val = 0
             if tx not in self.received_txs:  # make sure we aren't parsing the same tx twice.
                 outpoints = transaction.check_for_funding(
                     self.contract["buyer_order"]["order"]["payment"]["address"])
                 if outpoints is not None:
                     for outpoint in outpoints:
                         self.amount_funded += outpoint["value"]
+                        val += outpoint["value"]
                         self.received_txs.append(tx)
                         self.outpoints.append(outpoint)
                 if self.amount_funded >= amount_to_pay:  # if fully funded
                     self.payment_received()
+                else:
+                    order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
+                    notification_json = {
+                        "notification": {
+                            "type": "partial payment",
+                            "amount": val,
+                            "order_id": order_id
+                        }
+                    }
+                    self.notification_listener.push_ws(notification_json)
 
         except Exception as e:
             self.log.critical("Error processing bitcoin transaction: %s" % e.message)
