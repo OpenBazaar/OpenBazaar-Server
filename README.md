@@ -8,12 +8,13 @@ a Kademlia style DHT. Rest and websocket APIs are available for clients to commu
 
 Pre-built installers which bundle the client and server components can be found [here](https://github.com/OpenBazaar/OpenBazaar-Installer/releases).
 
-To install just this server:
-```bash
-pip install -r requirements.txt
-```
-
 Depending on your system configuration you may need to install some additional dependencies. You can find more detailed, OS specific, instructions [here](https://slack-files.com/T02FPGBKB-F0KJU1CLX-cbbcf8a02c).
+
+To install just this server:
+
+```bash
+sudo pip install -r requirements.txt
+```
 
 ## Usage
 
