@@ -161,7 +161,7 @@ class MarketProtocol(RPCProtocol):
 
             # Send SMTP notification
             notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] %s is now following you!" % m.name,
+            notification.send("[OpenBazaar] %s is now following you!" % f.metadata.name,
                               "You have a new follower:<br><br>Name: %s<br>GUID: <a href=\"ob://%s\">%s</a><br>"
                               "Handle: %s" %
                               (f.metadata.name, f.guid.encode('hex'), f.guid.encode('hex'), f.metadata.handle))
