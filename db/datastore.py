@@ -183,7 +183,8 @@ class Database(object):
             "timestamp" integer NOT NULL,
             action_id integer NOT NULL
           );''')
-        cursor.execute('''CREATE INDEX IF NOT EXISTS shopper_guid_index ON audit_shopping (audit_shopping_id ASC);''')
+        cursor.execute('''CREATE INDEX IF NOT EXISTS shopper_guid_index ON audit_shopping
+                          (audit_shopping_id ASC);''')
         cursor.execute('''CREATE INDEX IF NOT EXISTS action_id_index ON audit_shopping (audit_shopping_id ASC);''')
 
         conn.commit()
