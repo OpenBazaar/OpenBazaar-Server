@@ -1325,7 +1325,7 @@ class OpenBazaarAPI(APIResource):
                 "vendor": case[7],
                 "validation": json.loads(case[8]),
                 "status": "closed" if case[10] == 1 else "open",
-                "unread": case[9]
+                "unread": case[11]
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")

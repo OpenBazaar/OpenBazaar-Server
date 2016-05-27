@@ -672,6 +672,7 @@ WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
             cursor = conn.cursor()
             cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
         conn.commit()
+        conn.close()
 
 
 class NotificationStore(object):

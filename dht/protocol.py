@@ -228,7 +228,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if result[0]:
             if self.isNewConnection(node) and node.id not in self.recent_transfers:
-                if len(self.recent_transfers) == 10:
+                for i in range(len(self.recent_transfers) - 10):
                     self.recent_transfers.pop()
                 self.recent_transfers.add(node.id)
                 self.log.debug("call response from new node, transferring key/values")
@@ -246,7 +246,7 @@ class KademliaProtocol(RPCProtocol):
         if they are new and within our neighborhood.
         """
         if self.isNewConnection(node) and node.id not in self.recent_transfers:
-            if len(self.recent_transfers) == 10:
+            for i in range(len(self.recent_transfers) - 10):
                 self.recent_transfers.pop()
             self.recent_transfers.add(node.id)
             self.log.debug("found a new node, transferring key/values")
