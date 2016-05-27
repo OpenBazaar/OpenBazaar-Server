@@ -149,7 +149,8 @@ class Contract(object):
                         "metadata": {
                             "version": "1",
                             "category": metadata_category.lower(),
-                            "category_sub": "fixed price"
+                            "category_sub": "fixed price",
+                            "last_modified": int(time.time())
                         },
                         "id": {
                             "guid": self.keychain.guid.encode("hex"),
@@ -1056,6 +1057,7 @@ class Contract(object):
             data.contract_type = listings.DIGITAL_GOOD
         elif self.contract["vendor_offer"]["listing"]["metadata"]["category"].lower() == "service":
             data.contract_type = listings.SERVICE
+        data.last_modified = int(time.time())
 
         # save the mapping of the contract file path and contract hash in the database
         self.db.filemap.insert(data.contract_hash.encode("hex"), file_path[len(DATA_FOLDER):])

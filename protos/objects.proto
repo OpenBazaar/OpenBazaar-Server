@@ -121,6 +121,7 @@ message Listings {
         bytes avatar_hash             = 10;
         string handle                 = 11;
         ContractType contract_type    = 12;
+        uint64 last_modified          = 13;
     }
 
     enum ContractType {

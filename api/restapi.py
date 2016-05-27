@@ -230,7 +230,8 @@ class OpenBazaarAPI(APIResource):
                         "currency_code": l.currency_code,
                         "nsfw": l.nsfw,
                         "origin": str(CountryCode.Name(l.origin)),
-                        "ships_to": []
+                        "ships_to": [],
+                        "last_modified": l.last_modified
                     }
                     if l.contract_type != 0:
                         listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
