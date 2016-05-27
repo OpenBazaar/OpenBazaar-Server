@@ -228,6 +228,7 @@ class KademliaProtocol(RPCProtocol):
         """
         if result[0]:
             if self.isNewConnection(node) and node.id not in self.recent_transfers:
+                # pylint: disable=W0612
                 for i in range(len(self.recent_transfers) - 10):
                     self.recent_transfers.pop()
                 self.recent_transfers.add(node.id)
@@ -246,6 +247,7 @@ class KademliaProtocol(RPCProtocol):
         if they are new and within our neighborhood.
         """
         if self.isNewConnection(node) and node.id not in self.recent_transfers:
+            # pylint: disable=W0612
             for i in range(len(self.recent_transfers) - 10):
                 self.recent_transfers.pop()
             self.recent_transfers.add(node.id)

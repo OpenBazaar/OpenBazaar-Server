@@ -876,7 +876,7 @@ class Contract(object):
                     notification_json = {
                         "notification": {
                             "type": "partial payment",
-                            "amount_funded": self.amount_funded,
+                            "amount_funded": round(self.amount_funded / float(100000000), 8),
                             "order_id": order_id
                         }
                     }
