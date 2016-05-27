@@ -8,12 +8,13 @@ a Kademlia style DHT. Rest and websocket APIs are available for clients to commu
 
 Pre-built installers which bundle the client and server components can be found [here](https://github.com/OpenBazaar/OpenBazaar-Installer/releases).
 
-To install just this server:
-```bash
-pip install -r requirements.txt
-```
-
 Depending on your system configuration you may need to install some additional dependencies. You can find more detailed, OS specific, instructions [here](https://slack-files.com/T02FPGBKB-F0KJU1CLX-cbbcf8a02c).
+
+To install just this server:
+
+```bash
+sudo pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -44,6 +45,41 @@ optional arguments:
                         set the heartbeat port
   --pidfile PIDFILE     name of the pid file
 ```
+
+## Docker
+
+- Install [Docker](https://docs.docker.com/engine/installation/).
+- Install [DockerCompose](https://docs.docker.com/compose/install/).
+
+#### Set Username and Password
+```bash
+nano ./docker-compose.yml
+```
+
+#### Build and run
+```bash
+docker-compose up
+```
+
+#### Backup
+All relevant data will go to
+```bash
+./data
+```
+
+#### SSL Support
+- Generate certificate as described [here](https://slack-files.com/T02FPGBKB-F0XK9ND2Q-fc5e6500a3)
+
+- Place the *server.crt* and *server.key* into
+```bash
+./ssl
+```
+
+- Enable SSL in
+```bash
+./docker-compose.yml
+```
+
 
 ## License
 OpenBazaar Server is licensed under the [MIT License](LICENSE).
