@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import os
 import sqlite3 as lite
+import time
 from api.utils import sanitize_html
 from collections import Counter
 from config import DATA_FOLDER
@@ -10,14 +11,14 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2, migration3, migration4, migration5
+from db.migrations import migration1, migration2, migration3, migration4, migration5, migration6
 
 
 class Database(object):
 
     __slots__ = ['PATH', 'filemap', 'profile', 'listings', 'keys', 'follow', 'messages',
                  'notifications', 'broadcasts', 'vendors', 'moderators', 'purchases', 'sales',
-                 'cases', 'ratings', 'transactions', 'settings']
+                 'cases', 'ratings', 'transactions', 'settings', 'audit_shopping']
 
     def __init__(self, testnet=False, filepath=None):
         object.__setattr__(self, 'PATH', self._database_path(testnet, filepath))
@@ -37,6 +38,7 @@ class Database(object):
         object.__setattr__(self, 'ratings', Ratings(self.PATH))
         object.__setattr__(self, 'transactions', Transactions(self.PATH))
         object.__setattr__(self, 'settings', Settings(self.PATH))
+        object.__setattr__(self, 'audit_shopping', ShoppingEvents(self.PATH))
 
         self._initialize_datafolder_tree()
         self._initialize_database(self.PATH)
@@ -116,7 +118,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 5''')
+        cursor.execute('''PRAGMA user_version = 6''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -174,6 +176,16 @@ class Database(object):
     smtpNotifications INTEGER, smtpServer TEXT, smtpSender TEXT, smtpRecipient TEXT, smtpUsername TEXT,
     smtpPassword TEXT)''')
 
+        cursor.execute('''CREATE TABLE IF NOT EXISTS audit_shopping (
+            audit_shopping_id integer PRIMARY KEY NOT NULL,
+            shopper_guid text NOT NULL,
+            contract_hash text NOT NULL,
+            "timestamp" integer NOT NULL,
+            action_id integer NOT NULL
+          );''')
+        cursor.execute('''CREATE INDEX IF NOT EXISTS shopper_guid_index ON audit_shopping (audit_shopping_id ASC);''')
+        cursor.execute('''CREATE INDEX IF NOT EXISTS action_id_index ON audit_shopping (audit_shopping_id ASC);''')
+
         conn.commit()
         conn.close()
 
@@ -190,20 +202,27 @@ class Database(object):
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
         elif version == 1:
             migration2.migrate(self.PATH)
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
         elif version == 2:
             migration3.migrate(self.PATH)
             migration4.migrate(self.PATH)
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
         elif version == 3:
             migration4.migrate(self.PATH)
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
         elif version == 4:
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
+        elif version == 5:
+            migration6.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -1331,5 +1350,41 @@ smtpRecipient, smtpUsername, smtpPassword) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
         cursor = conn.cursor()
         cursor.execute('''SELECT username, password FROM settings WHERE id=2''')
         ret = cursor.fetchone()
+        conn.close()
+        return ret
+
+class ShoppingEvents(object):
+    """
+    Stores audit events for shoppers on your storefront
+    """
+
+    def __init__(self, database_path):
+        self.PATH = database_path
+
+    def set(self, shopper_guid, action_id, contract_hash=None):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            timestamp = int(time.time())
+            if not contract_hash:
+                contract_hash = ''
+            cursor.execute('''INSERT INTO audit_shopping(shopper_guid, timestamp, contract_hash, action_id) VALUES
+                              (?,?,?,?)''', (shopper_guid, timestamp, contract_hash, action_id))
+            conn.commit()
+        conn.close()
+
+    def get(self):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT * FROM audit_shopping''')
+        ret = cursor.fetchall()
+        conn.close()
+        return ret
+
+    def get_events_by_id(self, event_id):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT * FROM audit_shopping WHERE event_id=?''', event_id)
+        ret = cursor.fetchall()
         conn.close()
         return ret
