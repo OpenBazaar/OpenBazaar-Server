@@ -921,7 +921,7 @@ class OpenBazaarAPI(APIResource):
                 "blocked_guids": json.loads(settings[8]),
                 "libbitcoin_server": get_value(
                     "LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")if self.protocol.testnet else get_value(
-                        "LIBBITCOIN_SERVERS", "server_custom"),
+                        "LIBBITCOIN_SERVERS", "mainnet_server_custom"),
                 "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 "terms_conditions": "" if settings[9] is None else settings[9],
                 "refund_policy": "" if settings[10] is None else settings[10],
