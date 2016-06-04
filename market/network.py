@@ -954,13 +954,6 @@ class Server(object):
         This function should be called to release funds from a disputed contract after
         the moderator has resolved the dispute and provided his signature.
         """
-        def sort_outpoints():
-            o = []
-            for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
-                for outpoint in outpoints:
-                    if COutPoint(lx(outpoint["txid"]), outpoint["vout"]).encode("hex") == s["outpoint"]:
-                        o.append(outpoint)
-            outpoints = o
 
         if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
             file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
@@ -992,10 +985,15 @@ class Server(object):
                                                      ["resolution"]["vendor_payout"]) * 100000000)),
                             'address': vendor_address})
 
+        # version 0.2.1 and above ensure same sort order as moderator.
+        o = []
         for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
             if "outpoint" in s:
-                sort_outpoints()
-                break
+                for outpoint in outpoints:
+                    if COutPoint(lx(outpoint["txid"]), outpoint["vout"]).encode("hex") == s["outpoint"]:
+                        o.append(outpoint)
+        if len(o) != 0:
+            outpoints = o
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])

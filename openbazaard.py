@@ -213,7 +213,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.2.0',
+                description='OpenBazaar-Server v0.2.1',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
@@ -302,6 +302,6 @@ commands:
             print "\_______  /   __/ \___  >___|  /" + OKBLUE + "______  /(____  /_____ \(____  (____  /__|" + ENDC
             print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
             print
-            print "OpenBazaar Server v0.1 starting..."
+            print "OpenBazaar Server v0.2.1 starting..."
 
     Parser(OpenBazaard('/tmp/openbazaard.pid'))
