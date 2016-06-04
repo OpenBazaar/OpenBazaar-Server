@@ -97,7 +97,8 @@ class BitcoinTransaction(object):
             sighash = SignatureHash(CScript(x(reedem_script)), self.tx, i, SIGHASH_ALL)
             signatures.append({
                 "index": i,
-                "signature": (seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)).encode("hex")
+                "signature": (seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)).encode("hex"),
+                "outpoint": self.tx.vin[i].prevout.encode("hex")
             })
         return signatures
 

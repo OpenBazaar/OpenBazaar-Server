@@ -14,6 +14,7 @@ import os.path
 import pickle
 import time
 from binascii import unhexlify
+from bitcoin.core import COutPoint, lx
 from collections import OrderedDict
 from config import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
@@ -953,6 +954,14 @@ class Server(object):
         This function should be called to release funds from a disputed contract after
         the moderator has resolved the dispute and provided his signature.
         """
+        def sort_outpoints():
+            o = []
+            for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
+                for outpoint in outpoints:
+                    if COutPoint(lx(outpoint["txid"]), outpoint["vout"]).encode("hex") == s["outpoint"]:
+                        o.append(outpoint)
+            outpoints = o
+
         if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
             file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
@@ -983,6 +992,10 @@ class Server(object):
                                                      ["resolution"]["vendor_payout"]) * 100000000)),
                             'address': vendor_address})
 
+        for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
+            if "outpoint" in s:
+                sort_outpoints()
+                break
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
