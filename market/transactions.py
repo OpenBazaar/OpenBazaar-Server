@@ -98,7 +98,7 @@ class BitcoinTransaction(object):
             signatures.append({
                 "index": i,
                 "signature": (seckey.sign(sighash) + struct.pack('<B', SIGHASH_ALL)).encode("hex"),
-                "outpoint": self.tx.vin[i].prevout.encode("hex")
+                "outpoint": b2lx(self.tx.vin[i].prevout.hash) + b2lx(struct.pack(b"<I", self.tx.vin[i].prevout.n))
             })
         return signatures
 

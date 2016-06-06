@@ -13,8 +13,9 @@ import obelisk
 import os.path
 import pickle
 import time
+import struct
 from binascii import unhexlify
-from bitcoin.core import COutPoint, lx
+from bitcoin.core import b2lx
 from collections import OrderedDict
 from config import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
@@ -990,7 +991,8 @@ class Server(object):
         for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
             if "outpoint" in s:
                 for outpoint in outpoints:
-                    if COutPoint(lx(outpoint["txid"]), outpoint["vout"]).encode("hex") == s["outpoint"]:
+                    ser = outpoint["txid"] + b2lx(struct.pack(b"<I", outpoint["vout"]))
+                    if ser == s["outpoint"]:
                         o.append(outpoint)
         if len(o) != 0:
             outpoints = o
