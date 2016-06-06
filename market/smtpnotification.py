@@ -56,8 +56,10 @@ class SMTPNotification(object):
                     server.login(self.username, self.password)
 
                 server.sendmail(self.sender, self.recipient, msg.as_string())
+                server.quit()
             except SMTPAuthenticationError as e:
                 self.log.error(e)
-                print e
-
-            server.quit()
+                pass
+            except Exception as e:
+                self.log.error(e)
+                pass
