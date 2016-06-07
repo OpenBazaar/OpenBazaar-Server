@@ -43,9 +43,9 @@ class MessageListenerImpl(object):
                         "public_key": plaintext.pubkey.encode("hex")
                     }
                 }
-            if plaintext.handle:
-                message_json["message"]["handle"] = plaintext.handle
-            self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
+                if plaintext.handle:
+                    message_json["message"]["handle"] = plaintext.handle
+                self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
         except Exception as e:
             self.log.error('Market.Listener.notify Exception: %s' % e)
 
