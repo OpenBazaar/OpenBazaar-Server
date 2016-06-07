@@ -2,28 +2,30 @@ __author__ = 'chris'
 
 import argparse
 import json
+import os.path
 import platform
 import socket
 import stun
 import sys
 import time
-import urllib2
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
-from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVER,\
-    LIBBITCOIN_SERVER_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SSL
+from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVERS,\
+    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SEEDS_TESTNET, SSL
 from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
 from dht.node import Node
-from dht.storage import PersistentStorage, ForgetfulStorage
+from dht.storage import ForgetfulStorage
 from keys.credentials import get_credentials
 from keys.keychain import KeyChain
 from log import Logger, FileLogObserver
 from market import network
 from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from market.contracts import check_unfunded_for_payment
+from market.btcprice import BtcPrice
 from market.profile import Profile
+from market.transactions import rebroadcast_unconfirmed
 from net.heartbeat import HeartbeatFactory
 from net.sslcontext import ChainedOpenSSLContextFactory
 from net.upnp import PortMapper
@@ -34,7 +36,6 @@ from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
 from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from txws import WebSocketFactory
-
 
 def run(*args):
     TESTNET = args[0]
@@ -47,7 +48,10 @@ def run(*args):
 
     def start_server(keys, first_startup=False):
         # logging
-        logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
+        logFile = logfile.LogFile.fromFullPath(
+            os.path.join(DATA_FOLDER, "debug.log"),
+            rotateLength=15000000,
+            maxRotatedFiles=1)
         log.addObserver(FileLogObserver(logFile, level=LOGLEVEL).emit)
         log.addObserver(FileLogObserver(level=LOGLEVEL).emit)
         logger = Logger(system="OpenBazaard")
@@ -74,15 +78,16 @@ def run(*args):
             logger.info("bootstrap complete")
             task.LoopingCall(mserver.get_messages, mlistener).start(3600)
             task.LoopingCall(check_unfunded_for_payment, db, libbitcoin_client, nlistener, TESTNET).start(600)
+            task.LoopingCall(rebroadcast_unconfirmed, db, libbitcoin_client, TESTNET).start(600)
 
         protocol = OpenBazaarProtocol(db, (ip_address, port), nat_type, testnet=TESTNET,
                                       relaying=True if nat_type == FULL_CONE else False)
 
         # kademlia
-        storage = ForgetfulStorage() if TESTNET else PersistentStorage(db.get_database_path())
+        SEED_URLS = SEEDS_TESTNET if TESTNET else SEEDS
         relay_node = None
         if nat_type != FULL_CONE:
-            for seed in SEEDS:
+            for seed in SEED_URLS:
                 try:
                     relay_node = (socket.gethostbyname(seed[0].split(":")[0]),
                                   28469 if TESTNET else 18469)
@@ -91,7 +96,7 @@ def run(*args):
                     pass
 
         try:
-            kserver = Server.loadState(DATA_FOLDER + 'cache.pickle', ip_address, port, protocol, db,
+            kserver = Server.loadState(os.path.join(DATA_FOLDER, 'cache.pickle'), ip_address, port, protocol, db,
                                        nat_type, relay_node, on_bootstrap_complete, storage)
         except Exception:
             node = Node(keys.guid, ip_address, port, keys.verify_key.encode(),
@@ -99,8 +104,8 @@ def run(*args):
             protocol.relay_node = node.relay_node
             kserver = Server(node, db, keys.signing_key, KSIZE, ALPHA, storage=storage)
             kserver.protocol.connect_multiplexer(protocol)
-            kserver.bootstrap(kserver.querySeed(SEEDS)).addCallback(on_bootstrap_complete)
-        kserver.saveStateRegularly(DATA_FOLDER + 'cache.pickle', 10)
+            kserver.bootstrap(kserver.querySeed(SEED_URLS)).addCallback(on_bootstrap_complete)
+        kserver.saveStateRegularly(os.path.join(DATA_FOLDER, 'cache.pickle'), 10)
         protocol.register_processor(kserver.protocol)
 
         # market
@@ -110,7 +115,7 @@ def run(*args):
 
         looping_retry(reactor.listenUDP, port, protocol)
 
-        interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
+        interface = "0.0.0.0" if ALLOWIP != ["127.0.0.1"] else "127.0.0.1"
 
         # websockets api
         authenticated_sessions = []
@@ -135,9 +140,9 @@ def run(*args):
 
         # blockchain
         if TESTNET:
-            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER_TESTNET, log=Logger(service="LibbitcoinClient"))
+            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVERS_TESTNET, log=Logger(service="LibbitcoinClient"))
         else:
-            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVER, log=Logger(service="LibbitcoinClient"))
+            libbitcoin_client = LibbitcoinClient(LIBBITCOIN_SERVERS, log=Logger(service="LibbitcoinClient"))
         heartbeat_server.libbitcoin = libbitcoin_client
 
         # listeners
@@ -159,16 +164,27 @@ def run(*args):
 
         heartbeat_server.set_status("online")
 
-        logger.info("Startup took %s seconds" % str(round(time.time() - args[7], 2)))
+        logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
+
+        def shutdown():
+            logger.info("shutting down server")
+            for vendor in protocol.vendors.values():
+                db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
+            PortMapper().clean_my_mappings(PORT)
+            protocol.shutdown()
+
+        reactor.addSystemEventTrigger('before', 'shutdown', shutdown)
 
     # database
     db = Database(TESTNET)
+    storage = ForgetfulStorage()
 
     # client authentication
     username, password = get_credentials(db)
 
     # heartbeat server
-    interface = "0.0.0.0" if ALLOWIP not in ("127.0.0.1", "0.0.0.0") else ALLOWIP
+    interface = "0.0.0.0" if ALLOWIP != ["127.0.0.1"] else "127.0.0.1"
+
     heartbeat_server = HeartbeatFactory(only_ip=ALLOWIP)
     if SSL:
         reactor.listenSSL(HEARTBEATPORT, WebSocketFactory(heartbeat_server),
@@ -176,10 +192,16 @@ def run(*args):
     else:
         reactor.listenTCP(HEARTBEATPORT, WebSocketFactory(heartbeat_server), interface=interface)
 
+    btcPrice = BtcPrice()
+    btcPrice.start()
+
     # key generation
     KeyChain(db, start_server, heartbeat_server)
 
     reactor.run()
+
+    btcPrice.closethread()
+    btcPrice.join(1)
 
 if __name__ == "__main__":
     # pylint: disable=anomalous-backslash-in-string
@@ -191,7 +213,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.1.0',
+                description='OpenBazaar-Server v0.2.0',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
@@ -220,7 +242,7 @@ commands:
             parser.add_argument('-l', '--loglevel', default="info",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
-            parser.add_argument('-a', '--allowip', default="127.0.0.1",
+            parser.add_argument('-a', '--allowip', default=["127.0.0.1"], action="append",
                                 help="only allow api connections from this ip")
             parser.add_argument('-r', '--restapiport', help="set the rest api port", default=18469)
             parser.add_argument('-w', '--websocketport', help="set the websocket api port", default=18466)
@@ -252,15 +274,9 @@ commands:
                 description="Shutdown the server and disconnect",
                 usage='''usage:
         python openbazaard.py stop''')
-            parser.add_argument('-r', '--restapiport', help="set the rest api port to shutdown cleanly",
-                                default=18469)
             args = parser.parse_args(sys.argv[2:])
             print "OpenBazaar server stopping..."
-            try:
-                request = urllib2.build_opener()
-                request.open('http://localhost:' + args.restapiport + '/api/v1/shutdown')
-            except Exception:
-                self.daemon.stop()
+            self.daemon.stop()
 
         def restart(self):
             # pylint: disable=W0612

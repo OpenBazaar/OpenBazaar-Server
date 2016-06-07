@@ -4,7 +4,6 @@ Copyright (c) 2015 OpenBazaar
 """
 
 import random
-
 from twisted.internet import reactor
 from zope.interface import implements
 import nacl.signing
@@ -32,6 +31,7 @@ class KademliaProtocol(RPCProtocol):
         self.signing_key = signing_key
         self.log = Logger(system=self)
         self.handled_commands = [PING, STUN, STORE, DELETE, FIND_NODE, FIND_VALUE, HOLE_PUNCH, INV, VALUES]
+        self.recent_transfers = set()
         RPCProtocol.__init__(self, sourceNode, self.router)
 
     def connect_multiplexer(self, multiplexer):
@@ -129,7 +129,7 @@ class KademliaProtocol(RPCProtocol):
 
     def rpc_values(self, sender, *serialized_values):
         self.addToRouter(sender)
-        for val in serialized_values:
+        for val in serialized_values[:100]:
             try:
                 v = objects.Value()
                 v.ParseFromString(val)
@@ -201,6 +201,7 @@ class KademliaProtocol(RPCProtocol):
 
         inv = []
         for keyword in self.storage.iterkeys():
+            keyword = keyword[0].decode("hex")
             keynode = Node(keyword)
             neighbors = self.router.findNeighbors(keynode, exclude=node)
             if len(neighbors) > 0:
@@ -215,8 +216,10 @@ class KademliaProtocol(RPCProtocol):
                     i.keyword = keyword
                     i.valueKey = k
                     inv.append(i.SerializeToString())
+        if len(inv) > 100:
+            random.shuffle(inv)
         if len(inv) > 0:
-            self.callInv(node, inv).addCallback(send_values)
+            self.callInv(node, inv[:100]).addCallback(send_values)
 
     def handleCallResponse(self, result, node):
         """
@@ -224,8 +227,12 @@ class KademliaProtocol(RPCProtocol):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            if self.isNewConnection(node):
-                self.log.debug("Call response from new node, transferring key/values")
+            if self.isNewConnection(node) and node.id not in self.recent_transfers:
+                # pylint: disable=W0612
+                for i in range(len(self.recent_transfers) - 10):
+                    self.recent_transfers.pop()
+                self.recent_transfers.add(node.id)
+                self.log.debug("call response from new node, transferring key/values")
                 reactor.callLater(1, self.transferKeyValues, node)
             self.router.addContact(node)
         else:
@@ -239,8 +246,12 @@ class KademliaProtocol(RPCProtocol):
         We add the node to our router and transfer our stored values
         if they are new and within our neighborhood.
         """
-        if self.isNewConnection(node):
-            self.log.debug("Found a new node, transferring key/values")
+        if self.isNewConnection(node) and node.id not in self.recent_transfers:
+            # pylint: disable=W0612
+            for i in range(len(self.recent_transfers) - 10):
+                self.recent_transfers.pop()
+            self.recent_transfers.add(node.id)
+            self.log.debug("found a new node, transferring key/values")
             reactor.callLater(1, self.transferKeyValues, node)
         self.router.addContact(node)
 

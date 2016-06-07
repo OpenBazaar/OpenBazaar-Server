@@ -48,11 +48,13 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         self.db = Database(filepath="test.db")
         self.protocol = KademliaProtocol(self.node, self.storage, 20, self.db, self.signing_key)
 
+
         self.wire_protocol = OpenBazaarProtocol(self.db, self.own_addr, FULL_CONE)
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None,
+                                                      self.wire_protocol.ban_score)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
@@ -83,9 +85,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
         spider.find()
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
     def test_nodesFound(self):
         self._connecting_to_connected()
@@ -105,9 +107,9 @@ class ValueSpiderCrawlTest(unittest.TestCase):
                            self.node3.getProto().SerializeToString()))
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         # test all been contacted
         spider = ValueSpiderCrawl(self.protocol, node, nearest, 20, 3)
@@ -168,7 +170,7 @@ class ValueSpiderCrawlTest(unittest.TestCase):
         # test store value at nearest without value
         spider.nearestWithoutValue.push(self.node1)
         spider._handleFoundValues(found_values)
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
         self.assertTrue(len(self.proto_mock.send_datagram.call_args_list) > 1)
         self.proto_mock.send_datagram.call_args_list = []
@@ -232,7 +234,8 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         self.wire_protocol.register_processor(self.protocol)
 
         self.protocol.connect_multiplexer(self.wire_protocol)
-        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None)
+        self.handler = self.wire_protocol.ConnHandler([self.protocol], self.wire_protocol, None,
+                                                      self.wire_protocol.ban_score)
 
         transport = mock.Mock(spec_set=udp.Port)
         ret_val = address.IPv4Address('UDP', self.public_ip, self.port)
@@ -263,9 +266,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         spider = NodeSpiderCrawl(self.protocol, node, nearest, 20, 3)
         spider.find()
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
     def test_nodesFound(self):
         self._connecting_to_connected()
@@ -285,9 +288,9 @@ class NodeSpiderCrawlTest(unittest.TestCase):
         responses = {self.node1.id: response}
         spider._nodesFound(responses)
 
-        self.clock.advance(100 * constants.PACKET_TIMEOUT)
+        self.clock.advance(constants.PACKET_TIMEOUT)
         connection.REACTOR.runUntilCurrent()
-        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 7)
+        self.assertEqual(len(self.proto_mock.send_datagram.call_args_list), 4)
 
         response = (True, (self.node1.getProto().SerializeToString(), self.node2.getProto().SerializeToString(),
                            self.node3.getProto().SerializeToString()))

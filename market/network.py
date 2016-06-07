@@ -11,6 +11,7 @@ import nacl.encoding
 import nacl.utils
 import obelisk
 import os.path
+import pickle
 import time
 from binascii import unhexlify
 from collections import OrderedDict
@@ -44,10 +45,7 @@ class Server(object):
         self.db = database
         self.log = Logger(system=self)
         self.protocol = MarketProtocol(kserver.node, self.router, signing_key, database)
-
-        # TODO: we need a loop here that republishes keywords when they are about to expire
-
-        # TODO: we also need a loop here to delete expiring contract (if they are set to expire)
+        task.LoopingCall(self.update_listings).start(3600, now=True)
 
     def querySeed(self, list_seed_pubkey):
         """
@@ -138,6 +136,7 @@ class Server(object):
                             self.get_image(node_to_ask, unhexlify(image_hash))
                     return contract
                 else:
+                    self.log.warning("Fetched an invalid contract from %s" % node_to_ask.id.encode("hex"))
                     return None
             except Exception:
                 return None
@@ -192,11 +191,11 @@ class Server(object):
                     if not gpg.verify(p.pgp_key.signature) or \
                                     node_to_ask.id.encode('hex') not in p.pgp_key.signature:
                         p.ClearField("pgp_key")
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.avatar_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', p.avatar_hash.encode("hex"))):
                     self.get_image(node_to_ask, p.avatar_hash)
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + p.header_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', p.header_hash.encode("hex"))):
                     self.get_image(node_to_ask, p.header_hash)
-                self.cache(result[1][0], node_to_ask.id.encode("hex"))
+                self.cache(result[1][0], node_to_ask.id.encode("hex") + ".profile")
                 return p
             except Exception:
                 return None
@@ -221,7 +220,7 @@ class Server(object):
                 verify_key.verify(result[1][0], result[1][1])
                 m = objects.Metadata()
                 m.ParseFromString(result[1][0])
-                if not os.path.isfile(DATA_FOLDER + 'cache/' + m.avatar_hash.encode("hex")):
+                if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', m.avatar_hash.encode("hex"))):
                     self.get_image(node_to_ask, m.avatar_hash)
                 return m
             except Exception:
@@ -270,7 +269,7 @@ class Server(object):
                 l = objects.Listings().ListingMetadata()
                 l.ParseFromString(result[1][0])
                 if l.thumbnail_hash != "":
-                    if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                    if not os.path.isfile(os.path.join(DATA_FOLDER, 'cache', l.thumbnail_hash.encode("hex"))):
                         self.get_image(node_to_ask, l.thumbnail_hash)
                 return l
             except Exception:
@@ -374,7 +373,7 @@ class Server(object):
         self.log.info("sending unfollow request to %s" % node_to_unfollow)
         return d.addCallback(save_to_db)
 
-    def get_followers(self, node_to_ask):
+    def get_followers(self, node_to_ask, start=0):
         """
         Query the given node for a list if its followers. The response will be a
         `Followers` protobuf object. We will verify the signature for each follower
@@ -389,8 +388,11 @@ class Server(object):
                 verify_key.verify(response[1][0], response[1][1])
                 f.ParseFromString(response[1][0])
             except Exception:
-                return None
+                return (None, None)
             # Verify the signature and guid of each follower.
+            count = None
+            if len(response[1]) > 2:
+                count = response[1][2]
             for follower in f.followers:
                 try:
                     v_key = nacl.signing.VerifyKey(follower.pubkey)
@@ -405,9 +407,14 @@ class Server(object):
                         raise Exception('Invalid follower')
                 except Exception:
                     f.followers.remove(follower)
-            return f
+            return (f, count)
 
-        d = self.protocol.callGetFollowers(node_to_ask)
+        peer = (node_to_ask.ip, node_to_ask.port)
+        if peer in self.protocol.multiplexer and \
+                        self.protocol.multiplexer[peer].handler.remote_node_version > 1:
+            d = self.protocol.callGetFollowers(node_to_ask, start=start)
+        else:
+            d = self.protocol.callGetFollowers(node_to_ask)
         self.log.info("fetching followers from %s" % node_to_ask)
         return d.addCallback(get_response)
 
@@ -577,7 +584,7 @@ class Server(object):
                         self.kserver.delete(self.kserver.node.id, value.valueKey, signature)
                     except Exception:
                         pass
-        self.kserver.get(self.kserver.node.id).addCallback(parse_messages)
+        self.kserver.get(self.kserver.node.id, False).addCallback(parse_messages)
 
     def purchase(self, node_to_ask, contract):
         """
@@ -638,7 +645,7 @@ class Server(object):
                                       store_only=True)
                     return True
                 else:
-                    return False
+                    return response[1][0]
 
             if node_to_ask:
                 public_key = nacl.signing.VerifyKey(
@@ -682,7 +689,7 @@ class Server(object):
                                       store_only=True)
                     return True
                 else:
-                    return False
+                    return response[1][0]
 
             if node_to_ask:
                 public_key = nacl.signing.VerifyKey(
@@ -707,7 +714,7 @@ class Server(object):
         it in the DHT for them.
         """
         try:
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             with open(file_path, 'r') as filename:
                 contract = json.load(filename, object_pairs_hook=OrderedDict)
                 guid = contract["vendor_offer"]["listing"]["id"]["guid"]
@@ -718,7 +725,7 @@ class Server(object):
                 proof_sig = self.db.purchases.get_proof_sig(order_id)
         except Exception:
             try:
-                file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+                file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
                 with open(file_path, 'r') as filename:
                     contract = json.load(filename, object_pairs_hook=OrderedDict)
                     guid = contract["buyer_order"]["order"]["id"]["guid"]
@@ -729,31 +736,36 @@ class Server(object):
                     proof_sig = None
             except Exception:
                 return False
-        keychain = KeyChain(self.db)
-        contract["dispute"] = {}
-        contract["dispute"]["info"] = {}
-        contract["dispute"]["info"]["claim"] = claim
-        contract["dispute"]["info"]["guid"] = keychain.guid.encode("hex")
-        contract["dispute"]["info"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
-        if proof_sig:
-            contract["dispute"]["info"]["proof_sig"] = base64.b64encode(proof_sig)
-        info = json.dumps(contract["dispute"]["info"], indent=4)
-        contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(info)[:64])
+
+        if "dispute" not in contract:
+            keychain = KeyChain(self.db)
+            contract["dispute"] = {}
+            contract["dispute"]["info"] = {}
+            contract["dispute"]["info"]["claim"] = claim
+            contract["dispute"]["info"]["guid"] = keychain.guid.encode("hex")
+            contract["dispute"]["info"]["avatar_hash"] = Profile(self.db).get().avatar_hash.encode("hex")
+            if proof_sig:
+                contract["dispute"]["info"]["proof_sig"] = base64.b64encode(proof_sig)
+            info = json.dumps(contract["dispute"]["info"], indent=4)
+            contract["dispute"]["signature"] = base64.b64encode(keychain.signing_key.sign(info)[:64])
+            with open(file_path, 'wb') as outfile:
+                outfile.write(json.dumps(contract, indent=4))
+
+            if self.db.purchases.get_purchase(order_id) is not None:
+                self.db.purchases.update_status(order_id, 4)
+
+            elif self.db.sales.get_sale(order_id) is not None:
+                self.db.sales.update_status(order_id, 4)
+
+            avatar_hash = Profile(self.db).get().avatar_hash
+
+            self.db.messages.save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
+                                          claim, time.time(), avatar_hash, "", True)
+
         mod_guid = contract["buyer_order"]["order"]["moderator"]
         for mod in contract["vendor_offer"]["listing"]["moderators"]:
             if mod["guid"] == mod_guid:
                 mod_key = mod["pubkeys"]["guid"]
-
-        if self.db.purchases.get_purchase(order_id) is not None:
-            self.db.purchases.update_status(order_id, 4)
-
-        elif self.db.sales.get_sale(order_id) is not None:
-            self.db.sales.update_status(order_id, 4)
-
-        avatar_hash = Profile(self.db).get().avatar_hash
-
-        self.db.messages.save_message(guid, handle, "", order_id, "DISPUTE_OPEN",
-                                      claim, time.time(), avatar_hash, "", True)
 
         def get_node(node_to_ask, recipient_guid, public_key):
             def parse_response(response):
@@ -789,15 +801,25 @@ class Server(object):
         Called when a moderator closes a dispute. It will create a payout transactions refunding both
         parties and send it to them in a dispute_close message.
         """
+        if float(vendor_percentage) < 0 or float(moderator_percentage) < 0 or float(buyer_percentage) < 0:
+            raise Exception("Payouts percentages must be positive")
+        if float(vendor_percentage) + float(buyer_percentage) > 1:
+            raise Exception("Payout exceeds 100% of value")
         if not self.protocol.multiplexer.blockchain.connected:
             raise Exception("Libbitcoin server not online")
-        with open(DATA_FOLDER + "cases/" + order_id + ".json", "r") as filename:
-            contract = json.load(filename, object_pairs_hook=OrderedDict)
+        if not self.protocol.multiplexer.testnet and \
+                not (moderator_address[:1] == "1" or moderator_address[:1] == "3"):
+            raise Exception("Bitcoin address is not a mainnet address")
+        elif self.protocol.multiplexer.testnet and not \
+                (moderator_address[:1] == "n" or moderator_address[:1] == "m" or moderator_address[:1] == "2"):
+            raise Exception("Bitcoin address is not a testnet address")
+        try:
+            bitcointools.b58check_to_hex(moderator_address)
+        except AssertionError:
+            raise Exception("Invalid Bitcoin address")
 
-        if "vendor_order_confirmation" in contract and float(vendor_percentage) > 0:
-            vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-        elif "vendor_order_confirmation" not in contract and float(vendor_percentage) > 0:
-            raise Exception("Cannot refund seller before order confirmation is sent")
+        with open(os.path.join(DATA_FOLDER, "cases", order_id + ".json"), "r") as filename:
+            contract = json.load(filename, object_pairs_hook=OrderedDict)
 
         buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
@@ -833,77 +855,97 @@ class Server(object):
                         if o not in outpoints:
                             outpoints.append(o)
 
-                satoshis -= TRANSACTION_FEE
-                moderator_fee = int(float(moderator_percentage) * satoshis)
-                satoshis -= moderator_fee
+                if satoshis <= 0:
+                    d.callback(False)
+                else:
+                    satoshis -= TRANSACTION_FEE
+                    moderator_fee = int(float(moderator_percentage) * satoshis)
+                    satoshis -= moderator_fee
 
-                outputs.append({'value': moderator_fee, 'address': moderator_address})
-                dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
-                dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
-                    round(moderator_fee / float(100000000), 8)
-                dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
-                    round(TRANSACTION_FEE / float(100000000), 8)
-                if float(buyer_percentage) > 0:
-                    amt = int(float(buyer_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
-                        round(amt / float(100000000), 8)
-                    outputs.append({'value': amt,
-                                    'address': buyer_address})
-                if float(vendor_percentage) > 0:
-                    amt = int(float(vendor_percentage) * satoshis)
-                    dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
-                        round(amt / float(100000000), 8)
-                    outputs.append({'value': amt,
-                                    'address': vendor_address})
+                    if moderator_fee > 0:
+                        outputs.append({'value': moderator_fee, 'address': moderator_address})
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_address"] = moderator_address
+                    dispute_json["dispute_resolution"]["resolution"]["moderator_fee"] = \
+                        round(moderator_fee / float(100000000), 8)
+                    dispute_json["dispute_resolution"]["resolution"]["transaction_fee"] = \
+                        round(TRANSACTION_FEE / float(100000000), 8)
+                    if float(buyer_percentage) > 0:
+                        amt = int(float(buyer_percentage) * satoshis)
+                        dispute_json["dispute_resolution"]["resolution"]["buyer_payout"] = \
+                            round(amt / float(100000000), 8)
+                        outputs.append({'value': amt,
+                                        'address': buyer_address})
+                    if float(vendor_percentage) > 0:
+                        amt = int(float(vendor_percentage) * satoshis)
+                        dispute_json["dispute_resolution"]["resolution"]["vendor_payout"] = \
+                            round(amt / float(100000000), 8)
+                        outputs.append({'value': amt,
+                                        'address': vendor_address})
 
-                tx = BitcoinTransaction.make_unsigned(outpoints, outputs,
-                                                      testnet=self.protocol.multiplexer.testnet)
-                chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
-                redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
-                masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-                moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
+                    tx = BitcoinTransaction.make_unsigned(outpoints, outputs,
+                                                          testnet=self.protocol.multiplexer.testnet)
+                    chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+                    redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
+                    masterkey_m = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+                    moderator_priv = derive_childkey(masterkey_m, chaincode, bitcointools.MAINNET_PRIVATE)
 
-                signatures = tx.create_signature(moderator_priv, redeem_script)
-                dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
-                dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
-                dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.cases.get_claim(order_id)
-                dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
-                dispute_json["dispute_resolution"]["signature"] = \
-                    base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
-                        dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
+                    signatures = tx.create_signature(moderator_priv, redeem_script)
+                    dispute_json["dispute_resolution"]["resolution"]["order_id"] = order_id
+                    dispute_json["dispute_resolution"]["resolution"]["tx_signatures"] = signatures
+                    dispute_json["dispute_resolution"]["resolution"]["claim"] = self.db.cases.get_claim(order_id)
+                    dispute_json["dispute_resolution"]["resolution"]["decision"] = resolution
+                    dispute_json["dispute_resolution"]["signature"] = \
+                        base64.b64encode(KeyChain(self.db).signing_key.sign(json.dumps(
+                            dispute_json["dispute_resolution"]["resolution"], indent=4))[:64])
 
-                def get_node(node_to_ask, recipient_guid, public_key):
-                    def parse_response(response):
-                        if not response[0]:
-                            self.send_message(Node(unhexlify(recipient_guid)),
-                                              public_key.encode(),
-                                              objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
-                                              dispute_json,
-                                              order_id,
-                                              store_only=True)
+                    contract["dispute_resolution"] = dispute_json["dispute_resolution"]
+                    with open(DATA_FOLDER + "cases/" + order_id + ".json", 'wb') as outfile:
+                        outfile.write(json.dumps(contract, indent=4))
 
-                    if node_to_ask:
-                        skephem = PrivateKey.generate()
-                        pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
-                        box = Box(skephem, public_key)
-                        nonce = nacl.utils.random(Box.NONCE_SIZE)
-                        ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
-                        self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
-                    else:
-                        parse_response([False])
+                    send(dispute_json)
 
-                self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
-                self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
-                self.db.cases.update_status(order_id, 1)
-                d.callback(True)
+        def send(dispute_json):
+            def get_node(node_to_ask, recipient_guid, public_key):
+                def parse_response(response):
+                    if not response[0]:
+                        self.send_message(Node(unhexlify(recipient_guid)),
+                                          public_key.encode(),
+                                          objects.PlaintextMessage.Type.Value("DISPUTE_CLOSE"),
+                                          dispute_json,
+                                          order_id,
+                                          store_only=True)
+
+                if node_to_ask:
+                    skephem = PrivateKey.generate()
+                    pkephem = skephem.public_key.encode(nacl.encoding.RawEncoder)
+                    box = Box(skephem, public_key)
+                    nonce = nacl.utils.random(Box.NONCE_SIZE)
+                    ciphertext = box.encrypt(json.dumps(dispute_json, indent=4), nonce)
+                    self.protocol.callDisputeClose(node_to_ask, pkephem, ciphertext).addCallback(parse_response)
+                else:
+                    parse_response([False])
+
+            self.kserver.resolve(unhexlify(vendor_guid)).addCallback(get_node, vendor_guid, vendor_enc_key)
+            self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node, buyer_guid, buyer_enc_key)
+            self.db.cases.update_status(order_id, 1)
+            d.callback(True)
 
         d = defer.Deferred()
 
-        def libbitcoin_timeout():
-            d.callback("timed out")
+        if "dispute_resolution" not in contract:
+            if "vendor_order_confirmation" in contract and float(vendor_percentage) > 0:
+                vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
+            elif "vendor_order_confirmation" not in contract and float(vendor_percentage) > 0:
+                raise Exception("Cannot refund seller before order confirmation is sent")
 
-        timeout = reactor.callLater(5, libbitcoin_timeout)
-        self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
+            def libbitcoin_timeout():
+                d.callback("timed out")
+
+            timeout = reactor.callLater(5, libbitcoin_timeout)
+            self.protocol.multiplexer.blockchain.fetch_history2(payment_address, history_fetched)
+        else:
+            dispute_json = {"dispute_resolution": contract["dispute_resolution"]}
+            send(dispute_json)
         return d
 
     def release_funds(self, order_id):
@@ -911,11 +953,11 @@ class Server(object):
         This function should be called to release funds from a disputed contract after
         the moderator has resolved the dispute and provided his signature.
         """
-        if os.path.exists(DATA_FOLDER + "purchases/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "purchases/in progress/" + order_id + ".json"
+        if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
-        elif os.path.exists(DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"):
-            file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
@@ -923,20 +965,22 @@ class Server(object):
 
         outputs = []
 
-        outputs.append({'value': int(float(contract["dispute_resolution"]
-                                           ["resolution"]["moderator_fee"]) * 100000000),
-                        'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
+        moderator_fee = int(round(float(contract["dispute_resolution"]
+                                        ["resolution"]["moderator_fee"]) * 100000000))
+        if moderator_fee > 0:
+            outputs.append({'value': moderator_fee,
+                            'address': contract["dispute_resolution"]["resolution"]["moderator_address"]})
 
         if "buyer_payout" in contract["dispute_resolution"]["resolution"]:
             buyer_address = contract["buyer_order"]["order"]["refund_address"]
-            outputs.append({'value': int(float(contract["dispute_resolution"]
-                                               ["resolution"]["buyer_payout"]) * 100000000),
+            outputs.append({'value': int(round(float(contract["dispute_resolution"]
+                                                     ["resolution"]["buyer_payout"]) * 100000000)),
                             'address': buyer_address})
 
         if "vendor_payout" in contract["dispute_resolution"]["resolution"]:
             vendor_address = contract["vendor_order_confirmation"]["invoice"]["payout"]["address"]
-            outputs.append({'value': int(float(contract["dispute_resolution"]
-                                               ["resolution"]["vendor_payout"]) * 100000000),
+            outputs.append({'value': int(round(float(contract["dispute_resolution"]
+                                                     ["resolution"]["vendor_payout"]) * 100000000)),
                             'address': vendor_address})
 
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
@@ -960,6 +1004,7 @@ class Server(object):
 
         tx.multisign(signatures, redeem_script)
         tx.broadcast(self.protocol.multiplexer.blockchain)
+        self.db.transactions.add_transaction(tx.to_raw_tx())
         self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
         if self.db.purchases.get_purchase(order_id) is not None:
@@ -993,6 +1038,16 @@ class Server(object):
                         if not valid:
                             raise Exception("Bitcoin signature not valid")
 
+                        if "buyer_guid" in rating["tx_summary"] or "buyer_guid_key" in rating["tx_summary"]:
+                            buyer_key_bin = unhexlify(rating["tx_summary"]["buyer_guid_key"])
+                            buyer_key = nacl.signing.VerifyKey(buyer_key_bin)
+                            buyer_key.verify(json.dumps(rating["tx_summary"], indent=4),
+                                             base64.b64decode(rating["guid_signature"]))
+                            h = nacl.hash.sha512(buyer_key_bin)
+                            pow_hash = h[40:]
+                            if int(pow_hash[:6], 16) >= 50 or rating["tx_summary"]["buyer_guid"] != h[:40]:
+                                raise Exception('Invalid GUID')
+
                         ret.append(rating)
                     except Exception:
                         pass
@@ -1013,7 +1068,9 @@ class Server(object):
         immediately broadcast to the Bitcoin network otherwise the refund message sent
         to the buyer with contain the signature.
         """
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
+        file_path = os.path.join(DATA_FOLDER + "store", "contracts", "in progress", order_id + ".json")
+        if not os.path.exists(file_path):
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
         outpoints = json.loads(self.db.sales.get_outpoint(order_id))
 
         with open(file_path, 'r') as filename:
@@ -1023,44 +1080,50 @@ class Server(object):
         buyer_enc_key = nacl.signing.VerifyKey(
             contract["buyer_order"]["order"]["id"]["pubkeys"]["guid"],
             encoder=nacl.encoding.HexEncoder).to_curve25519_public_key()
-        refund_address = contract["buyer_order"]["order"]["refund_address"]
-        chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
-        masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
-        vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
-
-        refund_json = {"refund": {}}
-        refund_json["refund"]["order_id"] = order_id
-        if "moderator" in contract["buyer_order"]["order"]:
-            in_value = 0
-            for outpoint in outpoints:
-                in_value += outpoint["value"]
-            out_value = in_value - long(contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
-            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
-                                                  testnet=self.protocol.multiplexer.testnet,
-                                                  out_value=out_value)
-            redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
-            sigs = tx.create_signature(vendor_priv, redeem_script)
-            refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
-            refund_json["refund"]["signature(s)"] = sigs
+        if "refund" in contract:
+            refund_json = {"refund": contract["refund"]}
         else:
-            tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
-                                                  testnet=self.protocol.multiplexer.testnet)
-            tx.sign(vendor_priv)
-            tx.broadcast(self.protocol.multiplexer.blockchain)
-            self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
-            refund_json["refund"]["txid"] = tx.get_hash()
+            refund_address = contract["buyer_order"]["order"]["refund_address"]
+            chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
+            masterkey_v = bitcointools.bip32_extract_key(KeyChain(self.db).bitcoin_master_privkey)
+            vendor_priv = derive_childkey(masterkey_v, chaincode, bitcointools.MAINNET_PRIVATE)
 
-        contract["refund"] = refund_json["refund"]
-        self.db.sales.update_status(order_id, 7)
-        file_path = DATA_FOLDER + "store/contracts/trade receipts/" + order_id + ".json"
-        with open(file_path, 'w') as outfile:
-            outfile.write(json.dumps(contract, indent=4))
-        file_path = DATA_FOLDER + "store/contracts/in progress/" + order_id + ".json"
-        if os.path.exists(file_path):
-            os.remove(file_path)
+            refund_json = {"refund": {}}
+            refund_json["refund"]["order_id"] = order_id
+            if "moderator" in contract["buyer_order"]["order"]:
+                in_value = 0
+                for outpoint in outpoints:
+                    in_value += outpoint["value"]
+                out_value = in_value - long(contract["buyer_order"]["order"]["payment"]["refund_tx_fee"])
+                tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                      testnet=self.protocol.multiplexer.testnet,
+                                                      out_value=out_value)
+                redeem_script = contract["buyer_order"]["order"]["payment"]["redeem_script"]
+                sigs = tx.create_signature(vendor_priv, redeem_script)
+                refund_json["refund"]["value"] = round(tx.get_out_value() / float(100000000), 8)
+                refund_json["refund"]["signature(s)"] = sigs
+            else:
+                tx = BitcoinTransaction.make_unsigned(outpoints, refund_address,
+                                                      testnet=self.protocol.multiplexer.testnet)
+                tx.sign(vendor_priv)
+                tx.broadcast(self.protocol.multiplexer.blockchain)
+                self.db.transactions.add_transaction(tx.to_raw_tx())
+                self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
+                refund_json["refund"]["txid"] = tx.get_hash()
+
+            contract["refund"] = refund_json["refund"]
+            self.db.sales.update_status(order_id, 7)
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
+            with open(file_path, 'w') as outfile:
+                outfile.write(json.dumps(contract, indent=4))
+            file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", order_id + ".json")
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
         def get_node(node_to_ask):
             def parse_response(response):
+                if response[0] and response[1][0] == "True":
+                    return True
                 if not response[0]:
                     self.send_message(Node(unhexlify(buyer_guid)),
                                       buyer_enc_key.encode(),
@@ -1068,6 +1131,9 @@ class Server(object):
                                       refund_json,
                                       order_id,
                                       store_only=True)
+                    return True
+                else:
+                    return response[1][0]
 
             if node_to_ask:
                 skephem = PrivateKey.generate()
@@ -1083,10 +1149,115 @@ class Server(object):
         self.log.info("sending refund message to %s" % buyer_guid)
         return self.kserver.resolve(unhexlify(buyer_guid)).addCallback(get_node)
 
+    def update_listings(self):
+        try:
+            if self.protocol.multiplexer is None:
+                return reactor.callLater(1, self.update_listings)
+            fname = os.path.join(DATA_FOLDER, "store", "listings.pickle")
+            if os.path.exists(fname):
+                with open(fname, 'r') as f:
+                    data = pickle.load(f)
+            else:
+                data = {}
+
+            l = objects.Listings()
+            l.ParseFromString(self.db.listings.get_proto())
+            for listing in l.listing:
+                contract_hash = listing.contract_hash
+                c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
+                if contract_hash not in data or time.time() - data[contract_hash] > 500000:
+                    for keyword in c.contract["vendor_offer"]["listing"]["item"]["keywords"]:
+                        self.kserver.set(digest(keyword.lower()), unhexlify(c.get_contract_id()),
+                                         self.kserver.node.getProto().SerializeToString())
+                    data[contract_hash] = time.time()
+                if c.check_expired():
+                    c.delete(True)
+                    if contract_hash in data:
+                        del data[contract_hash]
+            guid = KeyChain(self.db).guid
+            moderator = Profile(self.db).get().moderator
+            if (guid not in data or time.time() - data[guid] > 500000) and moderator:
+                self.make_moderator()
+                data[guid] = time.time()
+            with open(fname, 'w') as f:
+                pickle.dump(data, f)
+        except Exception:
+            pass
+
+    def update_moderators_on_listings(self, moderator_list):
+        try:
+            l = objects.Listings()
+            l.ParseFromString(self.db.listings.get_proto())
+        except Exception:
+            return
+        keychain = KeyChain(self.db)
+        for listing in l.listing:
+            try:
+                contract_hash = listing.contract_hash
+                c = Contract(self.db, hash_value=contract_hash, testnet=self.protocol.multiplexer.testnet)
+                contract_moderators = []
+                if "moderators" in c.contract["vendor_offer"]["listing"]:
+                    for m in c.contract["vendor_offer"]["listing"]["moderators"]:
+                        contract_moderators.append(m["guid"])
+                mods_to_remove = list(set(contract_moderators) - set(moderator_list))
+                mods_to_add = list(set(moderator_list) - set(contract_moderators))
+                for mod in mods_to_add:
+                    mod_info = self.db.moderators.get_moderator(mod)
+                    if mod_info is not None:
+                        moderator_json = {
+                            "guid": mod,
+                            "name": mod_info[5],
+                            "avatar": mod_info[7].encode("hex"),
+                            "short_description": mod_info[6],
+                            "fee": str(mod_info[8]) + "%",
+                            "blockchain_id": mod_info[4],
+                            "pubkeys": {
+                                "guid": mod_info[1].encode("hex"),
+                                "bitcoin": {
+                                    "key": mod_info[2].encode("hex"),
+                                    "signature": base64.b64encode(mod_info[3])
+                                }
+                            }
+                        }
+                        if "moderators" not in c.contract["vendor_offer"]["listing"]:
+                            c.contract["vendor_offer"]["listing"]["moderators"] = []
+                        c.contract["vendor_offer"]["listing"]["moderators"].append(moderator_json)
+                for mod in mods_to_remove:
+                    for rem in c.contract["vendor_offer"]["listing"]["moderators"]:
+                        if rem["guid"] == mod:
+                            c.contract["vendor_offer"]["listing"]["moderators"].remove(rem)
+                if "moderators" in c.contract["vendor_offer"]["listing"] and \
+                                len(c.contract["vendor_offer"]["listing"]["moderators"]) == 0:
+                    del c.contract["vendor_offer"]["listing"]["moderators"]
+
+                listing = json.dumps(c.contract["vendor_offer"]["listing"], indent=4)
+                c.contract["vendor_offer"]["signatures"] = {}
+                c.contract["vendor_offer"]["signatures"]["guid"] = \
+                    base64.b64encode(keychain.signing_key.sign(listing)[:64])
+                c.contract["vendor_offer"]["signatures"]["bitcoin"] = \
+                    bitcointools.encode_sig(*bitcointools.ecdsa_raw_sign(
+                        listing, bitcointools.bip32_extract_key(keychain.bitcoin_master_privkey)))
+                c.previous_title = None
+                c.save()
+            except Exception:
+                pass
+
     @staticmethod
     def cache(file_to_save, filename):
         """
         Saves the file to a cache folder override previous versions if any.
         """
-        with open(DATA_FOLDER + "cache/" + filename, 'wb') as outfile:
+        with open(os.path.join(DATA_FOLDER, "cache", filename), 'wb') as outfile:
             outfile.write(file_to_save)
+
+    @staticmethod
+    def load_from_cache(filename):
+        """
+        Loads a file from cache
+        """
+        filepath = DATA_FOLDER + "cache/" + filename
+        if not os.path.exists(filepath):
+            return None
+        with open(filepath, "r") as filename:
+            f = filename.read()
+        return f

@@ -1,0 +1,21 @@
+version: "2"
+
+services:
+  openbazaard:
+    build: "."
+    network_mode: "host"
+    ports:
+      - "18467:18467"
+      - "18469:18469/udp"
+      - "18466:18466"
+      - "18470:18470"
+    volumes:
+      - "./data:/root/.openbazaar"
+      - "./ssl:/ssl"
+    environment:
+        # Should be changed to more secure values
+      - "OB_USERNAME=username"
+      - "OB_PASSWORD=password"
+      - "OB_SSL=false"
+      - "OB_SSL_CERT=/ssl/server.crt"
+      - "OB_SSL_KEY=/ssl/server.key"

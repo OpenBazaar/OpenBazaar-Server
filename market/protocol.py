@@ -13,6 +13,7 @@ from log import Logger
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
+from market.smtpnotification import SMTPNotification
 from nacl.public import PublicKey, Box
 from net.rpcudp import RPCProtocol
 from protos.message import GET_CONTRACT, GET_IMAGE, GET_PROFILE, GET_LISTINGS, GET_USER_METADATA,\
@@ -143,7 +144,7 @@ class MarketProtocol(RPCProtocol):
             if f.following != self.node.id:
                 raise Exception('Following wrong node')
             f.signature = signature
-            self.db.follow.set_follower(f)
+            self.db.follow.set_follower(f.SerializeToString())
             proto = Profile(self.db).get(False)
             m = Metadata()
             m.name = proto.name
@@ -157,6 +158,14 @@ class MarketProtocol(RPCProtocol):
                     listener.notify(sender.id, f.metadata.handle, "follow", "", "", f.metadata.avatar_hash)
                 except DoesNotImplement:
                     pass
+
+            # Send SMTP notification
+            notification = SMTPNotification(self.db)
+            notification.send("[OpenBazaar] %s is now following you!" % f.metadata.name,
+                              "You have a new follower:<br><br>Name: %s<br>GUID: <a href=\"ob://%s\">%s</a><br>"
+                              "Handle: %s" %
+                              (f.metadata.name, f.guid.encode('hex'), f.guid.encode('hex'), f.metadata.handle))
+
             return ["True", m.SerializeToString(), self.signing_key.sign(m.SerializeToString())[:64]]
         except Exception:
             self.log.warning("failed to validate follower")
@@ -175,14 +184,14 @@ class MarketProtocol(RPCProtocol):
             self.log.warning("failed to validate signature on unfollow request")
             return ["False"]
 
-    def rpc_get_followers(self, sender):
+    def rpc_get_followers(self, sender, start=None):
         self.log.info("serving followers list to %s" % sender)
         self.router.addContact(sender)
-        ser = self.db.follow.get_followers()
-        if ser is None:
-            return None
+        if start is not None:
+            ser = self.db.follow.get_followers(int(start))
         else:
-            return [ser, self.signing_key.sign(ser)[:64]]
+            ser = self.db.follow.get_followers()
+        return [ser[0], self.signing_key.sign(ser[0])[:64], ser[1]]
 
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
@@ -246,7 +255,8 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            if c.verify(sender.pubkey):
+            v = c.verify(sender.pubkey)
+            if v is True:
                 self.router.addContact(sender)
                 self.log.info("received an order from %s, waiting for payment..." % sender)
                 payment_address = c.contract["buyer_order"]["order"]["payment"]["address"]
@@ -260,10 +270,10 @@ class MarketProtocol(RPCProtocol):
                 c.await_funding(self.get_notification_listener(), self.multiplexer.blockchain, signature, False)
                 return [signature]
             else:
-                self.log.warning("received invalid order from %s" % sender)
+                self.log.warning("received invalid order from %s reason %s" % (sender, v))
                 return ["False"]
-        except Exception:
-            self.log.error("unable to decrypt order from %s" % sender)
+        except Exception, e:
+            self.log.error("Exception (%s) occurred processing order from %s" % (e.message, sender))
             return ["False"]
 
     def rpc_order_confirmation(self, sender, pubkey, encrypted):
@@ -272,34 +282,37 @@ class MarketProtocol(RPCProtocol):
             order = box.decrypt(encrypted)
             c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
                          testnet=self.multiplexer.testnet)
-            contract_id = c.accept_order_confirmation(self.get_notification_listener())
-            if contract_id:
+            valid = c.accept_order_confirmation(self.get_notification_listener())
+            if valid is True:
                 self.router.addContact(sender)
-                self.log.info("received confirmation for order %s" % contract_id)
+                self.log.info("received confirmation for order %s" % c.get_order_id())
                 return ["True"]
             else:
                 self.log.warning("received invalid order confirmation from %s" % sender)
-                return ["False"]
-        except Exception:
+                return [valid]
+        except Exception, e:
             self.log.error("unable to decrypt order confirmation from %s" % sender)
-            return ["False"]
+            return [str(e.message)]
 
     def rpc_complete_order(self, sender, pubkey, encrypted):
         try:
             box = Box(self.signing_key.to_curve25519_private_key(), PublicKey(pubkey))
             order = box.decrypt(encrypted)
-            c = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+            json.loads(order, object_pairs_hook=OrderedDict)
+            temp = Contract(self.db, contract=json.loads(order, object_pairs_hook=OrderedDict),
+                            testnet=self.multiplexer.testnet)
+            c = Contract(self.db, hash_value=unhexlify(temp.get_order_id()),
                          testnet=self.multiplexer.testnet)
 
-            contract_id = c.accept_receipt(self.get_notification_listener(), self.multiplexer.blockchain)
+            contract_id = c.accept_receipt(self.get_notification_listener(),
+                                           self.multiplexer.blockchain,
+                                           receipt_json=json.dumps(temp.contract["buyer_receipt"], indent=4))
             self.router.addContact(sender)
             self.log.info("received receipt for order %s" % contract_id)
             return ["True"]
-        except Exception:
-            import traceback
-            traceback.print_exc()
+        except Exception, e:
             self.log.error("unable to parse receipt from %s" % sender)
-            return ["False"]
+            return [e.message]
 
     def rpc_dispute_open(self, sender, pubkey, encrypted):
         try:
@@ -311,8 +324,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("Contract dispute opened by %s" % sender)
             return ["True"]
-        except Exception:
+        except Exception as e:
             self.log.error("unable to parse disputed contract from %s" % sender)
+            self.log.error("Exception: %s" % e.message)
             return ["False"]
 
     def rpc_dispute_close(self, sender, pubkey, encrypted):
@@ -358,9 +372,9 @@ class MarketProtocol(RPCProtocol):
             self.router.addContact(sender)
             self.log.info("order %s refunded by vendor" % refund_json["refund"]["order_id"])
             return ["True"]
-        except Exception:
+        except Exception, e:
             self.log.error("unable to parse refund message from %s" % sender)
-            return ["False"]
+            return [e.message]
 
     def callGetContract(self, nodeToAsk, contract_hash):
         d = self.get_contract(nodeToAsk, contract_hash)
@@ -394,8 +408,11 @@ class MarketProtocol(RPCProtocol):
         d = self.unfollow(nodeToAsk, signature)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
-    def callGetFollowers(self, nodeToAsk):
-        d = self.get_followers(nodeToAsk)
+    def callGetFollowers(self, nodeToAsk, start=None):
+        if start is None:
+            d = self.get_followers(nodeToAsk)
+        else:
+            d = self.get_followers(nodeToAsk, start)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
     def callGetFollowing(self, nodeToAsk):

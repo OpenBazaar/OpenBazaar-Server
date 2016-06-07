@@ -2,6 +2,7 @@ __author__ = 'chris'
 
 import os
 import sqlite3 as lite
+from api.utils import sanitize_html
 from collections import Counter
 from config import DATA_FOLDER
 from dht.node import Node
@@ -9,13 +10,14 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
+from db.migrations import migration1, migration2, migration3, migration4, migration5
 
 
 class Database(object):
 
     __slots__ = ['PATH', 'filemap', 'profile', 'listings', 'keys', 'follow', 'messages',
                  'notifications', 'broadcasts', 'vendors', 'moderators', 'purchases', 'sales',
-                 'cases', 'ratings', 'settings']
+                 'cases', 'ratings', 'transactions', 'settings']
 
     def __init__(self, testnet=False, filepath=None):
         object.__setattr__(self, 'PATH', self._database_path(testnet, filepath))
@@ -33,6 +35,7 @@ class Database(object):
         object.__setattr__(self, 'sales', Sales(self.PATH))
         object.__setattr__(self, 'cases', Cases(self.PATH))
         object.__setattr__(self, 'ratings', Ratings(self.PATH))
+        object.__setattr__(self, 'transactions', Transactions(self.PATH))
         object.__setattr__(self, 'settings', Settings(self.PATH))
 
         self._initialize_datafolder_tree()
@@ -53,6 +56,8 @@ class Database(object):
             cache = join(DATA_FOLDER, "cache.pickle")
             if os.path.exists(cache):
                 os.remove(cache)
+
+        self._run_migrations()
 
     @staticmethod
     def _database_path(testnet, filepath):
@@ -104,14 +109,14 @@ class Database(object):
             for directory in sub_tree:
                 path = join(path, directory)
             if not os.path.exists(path):
-                os.makedirs(path)
+                os.makedirs(path, mode=0o750)
 
     @staticmethod
     def _create_database(database_path):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 0''')
+        cursor.execute('''PRAGMA user_version = 5''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -120,7 +125,8 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE keys(type TEXT PRIMARY KEY, privkey BLOB, pubkey BLOB)''')
 
-        cursor.execute('''CREATE TABLE followers(id INTEGER PRIMARY KEY, serializedFollowers BLOB)''')
+        cursor.execute('''CREATE TABLE followers(guid TEXT UNIQUE, serializedFollower TEXT)''')
+        cursor.execute('''CREATE INDEX index_followers ON followers(serializedFollower);''')
 
         cursor.execute('''CREATE TABLE following(id INTEGER PRIMARY KEY, serializedFollowing BLOB)''')
 
@@ -130,9 +136,11 @@ class Database(object):
         cursor.execute('''CREATE INDEX index_guid ON messages(guid);''')
         cursor.execute('''CREATE INDEX index_subject ON messages(subject);''')
         cursor.execute('''CREATE INDEX index_messages_read ON messages(read);''')
+        cursor.execute('''CREATE INDEX index_timestamp ON messages(timestamp);''')
 
-        cursor.execute('''CREATE TABLE notifications(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, type TEXT,
+        cursor.execute('''CREATE TABLE notifications(notifID TEXT UNIQUE, guid BLOB, handle TEXT, type TEXT,
     orderId TEXT, title TEXT, timestamp INTEGER, imageHash BLOB, read INTEGER)''')
+        cursor.execute('''CREATE INDEX index_notification_read ON notifications(read);''')
 
         cursor.execute('''CREATE TABLE broadcasts(id TEXT PRIMARY KEY, guid BLOB, handle TEXT, message TEXT,
     timestamp INTEGER, avatarHash BLOB)''')
@@ -144,14 +152,15 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-    proofSig BLOB, contractType TEXT)''')
+    proofSig BLOB, contractType TEXT, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
-    paymentTX TEXT, contractType TEXT)''')
+    paymentTX TEXT, contractType TEXT, unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
-    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER)''')
+    btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER,
+    unread INTEGER)''')
 
         cursor.execute('''CREATE TABLE ratings(listing TEXT, ratingID TEXT,  rating TEXT)''')
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
@@ -161,10 +170,40 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE settings(id INTEGER PRIMARY KEY, refundAddress TEXT, currencyCode TEXT,
     country TEXT, language TEXT, timeZone TEXT, notifications INTEGER, shippingAddresses BLOB, blocked BLOB,
-    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT)''')
+    termsConditions TEXT, refundPolicy TEXT, moderatorList BLOB, username TEXT, password TEXT,
+    smtpNotifications INTEGER, smtpServer TEXT, smtpSender TEXT, smtpRecipient TEXT, smtpUsername TEXT,
+    smtpPassword TEXT)''')
 
         conn.commit()
         conn.close()
+
+    def _run_migrations(self):
+        conn = self.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''PRAGMA user_version''')
+        version = cursor.fetchone()[0]
+        conn.close()
+
+        if version == 0:
+            migration1.migrate(self.PATH)
+            migration2.migrate(self.PATH)
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
+        elif version == 1:
+            migration2.migrate(self.PATH)
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
+        elif version == 2:
+            migration3.migrate(self.PATH)
+            migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
+        elif version == 3:
+            migration4.migrate(self.PATH)
+            migration5.migrate(self.PATH)
+        elif version == 4:
+            migration5.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -195,7 +234,7 @@ class HashMap(object):
         conn.close()
         if ret is None:
             return None
-        return ret[0]
+        return DATA_FOLDER + ret[0]
 
     def get_all(self):
         conn = Database.connect_database(self.PATH)
@@ -447,18 +486,12 @@ class FollowData(object):
 
     def set_follower(self, proto):
         conn = Database.connect_database(self.PATH)
+        p = Followers.Follower()
+        p.ParseFromString(proto)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == proto.guid:
-                        f.followers.remove(follower)
-            f.followers.extend([proto])
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''INSERT OR REPLACE INTO followers(guid, serializedFollower) VALUES (?,?)''',
+                           (p.guid.encode("hex"), proto.encode("hex")))
             conn.commit()
         conn.close()
 
@@ -466,28 +499,28 @@ class FollowData(object):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            f = Followers()
-            ser = self.get_followers()
-            if ser is not None:
-                f.ParseFromString(ser)
-                for follower in f.followers:
-                    if follower.guid == guid:
-                        f.followers.remove(follower)
-            cursor.execute('''INSERT OR REPLACE INTO followers(id, serializedFollowers) VALUES (?,?)''',
-                           (1, f.SerializeToString()))
+            cursor.execute('''DELETE FROM followers WHERE guid=?''', (guid.encode("hex"), ))
             conn.commit()
         conn.close()
 
-    def get_followers(self):
+    def get_followers(self, start=0):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT serializedFollowers FROM followers WHERE id=1''')
-        proto = cursor.fetchone()
-        conn.close()
-        if not proto:
-            return None
-        else:
-            return proto[0]
+
+        cursor.execute('''SELECT Count(*) FROM followers''')
+        count = cursor.fetchone()[0]
+
+        f = Followers()
+        if count > 0:
+            smt = '''select serializedFollower from followers order by rowid desc limit 30 offset ''' + str(start)
+            cursor.execute(smt)
+            serialized_followers = cursor.fetchall()
+            conn.close()
+            for proto in serialized_followers:
+                p = Followers.Follower()
+                p.ParseFromString(proto[0].decode("hex"))
+                f.followers.extend([p])
+        return (f.SerializeToString(), count)
 
 
 class MessageStore(object):
@@ -516,18 +549,23 @@ class MessageStore(object):
                                 message, timestamp, avatar_hash, signature, outgoing, 0))
                 conn.commit()
             conn.close()
+            return True
         except Exception:
-            pass
+            return False
 
-    def get_messages(self, guid, message_type):
+    def get_messages(self, guid, message_type, msgID=None, limit=20):
         """
         Return all messages matching guid and message_type.
         """
+        if msgID == None:
+            timestamp = 4294967295
+        else:
+            timestamp = self.get_timestamp(msgID)
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT guid, handle, pubkey, subject, messageType, message,
-timestamp, avatarHash, signature, outgoing, read FROM messages WHERE guid=? AND messageType=? ''',
-                       (guid, message_type))
+timestamp, avatarHash, signature, outgoing, read, msgID FROM messages
+WHERE guid=? AND messageType=? AND timestamp<? ORDER BY timestamp DESC LIMIT 20''', (guid, message_type, timestamp))
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -563,18 +601,23 @@ avatarHash, signature, outgoing, read FROM messages WHERE subject=? ''',
             cursor.execute('''SELECT avatarHash, message, max(timestamp), pubkey FROM messages
 WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             val = cursor.fetchone()
+            avatar_hash = None
+            handle = ""
             if val[0] is not None:
-                avatar_hash = None
-                handle = ""
                 try:
-                    with open(DATA_FOLDER + 'cache/' + g[0], "r") as filename:
+                    with open(join(DATA_FOLDER, 'cache', g[0] + ".profile"), "r") as filename:
                         profile = filename.read()
                     p = objects.Profile()
                     p.ParseFromString(profile)
                     avatar_hash = p.avatar_hash.encode("hex")
                     handle = p.handle
                 except Exception:
-                    pass
+                    cursor.execute('''SELECT avatarHash FROM messages
+WHERE guid=? and messageType=? and avatarHash NOT NULL''', (g[0], "CHAT"))
+                    avi = cursor.fetchone()
+                    if avi[0] is not None:
+                        avatar_hash = avi[0].encode("hex")
+
                 ret.append({"guid": g[0],
                             "avatar_hash": avatar_hash,
                             "handle": handle,
@@ -583,7 +626,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
                             "public_key": val[3].encode("hex"),
                             "unread": 0 if g[0] not in unread else unread[g[0]]})
         conn.close()
-        return ret
+        return sanitize_html(ret)
 
     def get_unread(self):
         """
@@ -591,13 +634,23 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
         """
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0''',)
+        cursor.execute('''SELECT guid FROM messages WHERE read=0 and outgoing=0 and subject=""''',)
         ret = []
         guids = cursor.fetchall()
         for g in guids:
             ret.append(g[0])
         conn.close()
         return Counter(ret)
+
+    def get_timestamp(self, msgID):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT timestamp FROM messages WHERE msgID=? and messageType=?''', (msgID, "CHAT"))
+        ts = cursor.fetchone()[0]
+        if ts is None:
+            ts = 0
+        conn.close()
+        return ts
 
     def mark_as_read(self, guid):
         """
@@ -610,7 +663,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             conn.commit()
         conn.close()
 
-    def delete_message(self, guid):
+    def delete_messages(self, guid):
         """
         Delete all messages of type 'CHAT' for guid.
         """
@@ -619,6 +672,7 @@ WHERE guid=? and messageType=?''', (g[0], "CHAT"))
             cursor = conn.cursor()
             cursor.execute('''DELETE FROM messages WHERE guid=? AND messageType="CHAT"''', (guid, ))
         conn.commit()
+        conn.close()
 
 
 class NotificationStore(object):
@@ -633,34 +687,55 @@ class NotificationStore(object):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''INSERT INTO notifications(id, guid, handle, type, orderId, title, timestamp,
+            cursor.execute('''INSERT INTO notifications(notifID, guid, handle, type, orderId, title, timestamp,
 imageHash, read) VALUES (?,?,?,?,?,?,?,?,?)''', (notif_id, guid, handle, notif_type, order_id, title, timestamp,
                                                  image_hash, 0))
             conn.commit()
         conn.close()
 
-    def get_notifications(self):
+    def get_notifications(self, notif_id, limit):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id, guid, handle, type, orderId, title, timestamp,
-imageHash, read FROM notifications''')
+        start = self.get_row(notif_id)
+        cursor.execute('''SELECT notifID, guid, handle, type, orderId, title, timestamp,
+imageHash, read FROM notifications WHERE rowid <=? AND rowid > ?''', (start, start-limit))
         ret = cursor.fetchall()
         conn.close()
         return ret
+
+    def get_row(self, notif_id):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT MAX(rowid) FROM notifications''')
+        max_row = cursor.fetchone()[0]
+        if max_row is None:
+            max_row = 0
+        cursor.execute('''SELECT rowid FROM notifications WHERE notifID=?''', (notif_id, ))
+        ret = cursor.fetchone()
+        conn.close()
+        return max_row if not ret else ret[0]
 
     def mark_as_read(self, notif_id):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''UPDATE notifications SET read=? WHERE id=?;''', (1, notif_id))
+            cursor.execute('''UPDATE notifications SET read=? WHERE notifID=?;''', (1, notif_id))
             conn.commit()
         conn.close()
+
+    def get_unread_count(self):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT notifID FROM notifications WHERE read=?''', (0, ))
+        ret = cursor.fetchall()
+        conn.close()
+        return len(ret)
 
     def delete_notification(self, notif_id):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''DELETE FROM notifications WHERE id=?''', (notif_id,))
+            cursor.execute('''DELETE FROM notifications WHERE notifID=?''', (notif_id,))
             conn.commit()
         conn.close()
 
@@ -792,12 +867,16 @@ bitcoinSignature, handle, name, description, avatar, fee)
             conn.commit()
         conn.close()
 
-    def clear_all(self):
+    def clear_all(self, except_guids=None):
+        if except_guids is None:
+            except_guids = []
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
-            cursor.execute('''DELETE FROM moderators''')
+            cursor.execute('''DELETE FROM moderators WHERE guid NOT IN ({seq})'''.format(
+                seq=','.join(['?']*len(except_guids))), except_guids)
             conn.commit()
+
         conn.close()
 
 
@@ -816,9 +895,9 @@ class Purchases(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO purchases(id, title, description, timestamp, btc,
-address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+address, status, thumbnail, vendor, proofSig, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address,
-                                status, thumbnail, vendor, proofSig, contract_type))
+                                status, thumbnail, vendor, proofSig, contract_type, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -828,7 +907,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
- thumbnail, vendor, contractType, proofSig FROM purchases WHERE id=?''', (order_id,))
+ thumbnail, vendor, contractType, proofSig, unread FROM purchases WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -848,7 +927,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
- thumbnail, vendor, contractType FROM purchases ''')
+ thumbnail, vendor, contractType, unread FROM purchases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -856,7 +935,7 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
     def get_unfunded(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
-        cursor.execute('''SELECT id, timestamp FROM purchases WHERE status=0''')
+        cursor.execute('''SELECT id, timestamp FROM purchases WHERE status=0 OR status=2''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -879,6 +958,17 @@ address, status, thumbnail, vendor, proofSig, contractType) VALUES (?,?,?,?,?,?,
             return None
         else:
             return ret[0]
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE purchases SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE purchases SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def update_outpoint(self, order_id, outpoint):
         conn = Database.connect_database(self.PATH)
@@ -926,9 +1016,9 @@ class Sales(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO sales(id, title, description, timestamp, btc, address,
-status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+status, thumbnail, buyer, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, description, timestamp, btc, address, status,
-                                thumbnail, buyer, contract_type))
+                                thumbnail, buyer, contract_type, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -938,7 +1028,7 @@ status, thumbnail, buyer, contractType) VALUES (?,?,?,?,?,?,?,?,?,?)''',
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-thumbnail, buyer, contractType FROM sales WHERE id=?''', (order_id,))
+thumbnail, buyer, contractType, unread FROM sales WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -958,7 +1048,7 @@ thumbnail, buyer, contractType FROM sales WHERE id=?''', (order_id,))
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
-thumbnail, buyer, contractType FROM sales ''')
+thumbnail, buyer, contractType, unread FROM sales ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -989,6 +1079,17 @@ thumbnail, buyer, contractType FROM sales ''')
             return None
         else:
             return ret[0]
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE sales SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE sales SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def update_outpoint(self, order_id, outpoint):
         conn = Database.connect_database(self.PATH)
@@ -1033,9 +1134,9 @@ class Cases(object):
             cursor = conn.cursor()
             try:
                 cursor.execute('''INSERT OR REPLACE INTO cases(id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+buyer, vendor, validation, claim, status, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                                (order_id, title, timestamp, order_date, btc,
-                                thumbnail, buyer, vendor, validation, claim, 0))
+                                thumbnail, buyer, vendor, validation, claim, 0, 0))
             except Exception as e:
                 print e.message
             conn.commit()
@@ -1053,10 +1154,21 @@ buyer, vendor, validation, claim, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim, status FROM cases ''')
+buyer, vendor, validation, claim, status, unread FROM cases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
+
+    def update_unread(self, order_id, reset=False):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            if reset is False:
+                cursor.execute('''UPDATE cases SET unread = unread + 1 WHERE id=?;''', (order_id,))
+            else:
+                cursor.execute('''UPDATE cases SET unread=0 WHERE id=?;''', (order_id,))
+            conn.commit()
+        conn.close()
 
     def get_claim(self, order_id):
         conn = Database.connect_database(self.PATH)
@@ -1138,6 +1250,40 @@ class Ratings(object):
                 return ret
 
 
+class Transactions(object):
+    """
+    Store transactions that we broadcast to the network but have yet to confirm.
+    The transactions should be periodically rebroadcast to ensure they make it in the chain.
+    """
+
+    def __init__(self, database_path):
+        self.PATH = database_path
+
+    def add_transaction(self, tx):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''INSERT INTO transactions(tx) VALUES (?)''', (tx,))
+            conn.commit()
+        conn.close()
+
+    def delete_transaction(self, tx):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''DELETE FROM transactions WHERE tx=?''', (tx,))
+            conn.commit()
+        conn.close()
+
+    def get_transactions(self):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT tx FROM transactions''')
+        ret = cursor.fetchall()
+        conn.close()
+        return ret
+
+
 class Settings(object):
     """
     Stores the UI settings.
@@ -1147,16 +1293,19 @@ class Settings(object):
         self.PATH = database_path
 
     def update(self, refundAddress, currencyCode, country, language, timeZone, notifications,
-               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list):
+               shipping_addresses, blocked, terms_conditions, refund_policy, moderator_list, smtp_notifications,
+               smtp_server, smtp_sender, smtp_recipient, smtp_username, smtp_password):
         conn = Database.connect_database(self.PATH)
         with conn:
             cursor = conn.cursor()
             cursor.execute('''INSERT OR REPLACE INTO settings(id, refundAddress, currencyCode, country,
 language, timeZone, notifications, shippingAddresses, blocked, termsConditions,
-refundPolicy, moderatorList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+refundPolicy, moderatorList, smtpNotifications, smtpServer, smtpSender,
+smtpRecipient, smtpUsername, smtpPassword) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                            (1, refundAddress, currencyCode, country, language, timeZone,
                             notifications, shipping_addresses, blocked, terms_conditions,
-                            refund_policy, moderator_list))
+                            refund_policy, moderator_list, smtp_notifications, smtp_server,
+                            smtp_sender, smtp_recipient, smtp_username, smtp_password))
             conn.commit()
         conn.close()
 

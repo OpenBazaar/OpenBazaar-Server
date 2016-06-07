@@ -1,23 +1,44 @@
-FROM ubuntu:14.04
+FROM ubuntu:15.04
+MAINTAINER eiabea <developer@eiabea.com>
 
-MAINTAINER Joshua Sindy <josh@root.bz>
-# Examples
-# docker build -t observer .
-# docker run --rm -it -e flags="--help" observer
-# docker run -d --name observer -e flags="--testnet" observer
-# docker logs observer
+# Install required Debian packages
+RUN set -ex \
+  && echo "deb http://us.archive.ubuntu.com/ubuntu vivid main universe" | tee -a /etc/apt/sources.list \
+  && apt-get update -q \
+  && apt-get install -q -y build-essential libssl-dev libffi-dev python-dev openssl python-pip libzmq3-dev libsodium-dev autoconf automake pkg-config libtool git \
+  && apt-get clean autoclean -q -y \
+  && apt-get autoremove -q -y \
+  && rm -rf /var/lib/apt/lists/* /var/lib/apt/lists/partial/* /tmp/* /var/tmp/*
 
-RUN apt-get update
-RUN apt-get install -y python-dev python-pip build-essential git libffi-dev libssl-dev
-RUN pip install pyopenssl ndg-httpsclient pyasn1
-RUN pip install --upgrade pip virtualenv
-RUN pip install mock coverage nose pylint
+# Install libzmq from github
+RUN git clone https://github.com/zeromq/libzmq
+WORKDIR /libzmq
+RUN ./autogen.sh
+RUN ./configure
+RUN make
+RUN make install
+RUN ldconfig
+
+# Install cryptography
+WORKDIR /
+RUN pip install cryptography
+
+# Install Openbazaar-Server from github
 RUN git clone https://github.com/OpenBazaar/OpenBazaar-Server.git
 WORKDIR /OpenBazaar-Server/
-RUN pip install -r requirements.txt && pip install -r test_requirements.txt
+RUN pip install -r requirements.txt -r test_requirements.txt
 RUN make
+
+# Copy entrypoint script and mark it executable
+COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Create Openbazaar user and set correct permissions
 RUN adduser --disabled-password --gecos \"\" openbazaar
 RUN chown -R openbazaar:openbazaar /OpenBazaar-Server
 
-USER openbazaar
-CMD python openbazaard.py start $flags
+VOLUME /root/.openbazaar
+VOLUME /ssl
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["python", "openbazaard.py", "start"]

@@ -6,7 +6,7 @@ TESTPATH=./dht/tests ./db/tests ./market/tests
 all: check unittest
 
 unittest:
-	nosetests -vs --with-coverage --cover-package=dht --cover-package=db --cover-package=market --cover-inclusive $(TESTPATH)
+	nosetests -vs --with-doctest --with-coverage --cover-package=dht --cover-package=db --cover-package=market --cover-inclusive $(TESTPATH)
 
 check: pycheck
 

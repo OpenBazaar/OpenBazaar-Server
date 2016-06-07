@@ -1,18 +1,14 @@
 __author__ = 'chris'
 
-import bleach
 import json
 import time
 import random
 from log import Logger
+from api.utils import sanitize_html
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
 from dht.utils import digest
-
-ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
-                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
-
 
 class MessageListenerImpl(object):
     implements(MessageListener)
@@ -24,30 +20,35 @@ class MessageListenerImpl(object):
 
     def notify(self, plaintext, signature):
         try:
-            self.db.messages.save_message(plaintext.sender_guid.encode("hex"), plaintext.handle, plaintext.pubkey,
-                                          plaintext.subject, PlaintextMessage.Type.Name(plaintext.type),
-                                          plaintext.message, plaintext.timestamp, plaintext.avatar_hash,
-                                          signature, False)
+            success = self.db.messages.save_message(plaintext.sender_guid.encode("hex"),
+                                                    plaintext.handle, plaintext.pubkey,
+                                                    plaintext.subject, PlaintextMessage.Type.Name(plaintext.type),
+                                                    plaintext.message, plaintext.timestamp, plaintext.avatar_hash,
+                                                    signature, False)
 
-            # TODO: should probably resolve the handle and make sure it matches the guid
+            if plaintext.subject != "":
+                self.db.purchases.update_unread(plaintext.subject)
+                self.db.sales.update_unread(plaintext.subject)
+                self.db.cases.update_unread(plaintext.subject)
 
-            message_json = {
-                "message": {
-                    "sender": plaintext.sender_guid.encode("hex"),
-                    "subject": plaintext.subject,
-                    "message_type": PlaintextMessage.Type.Name(plaintext.type),
-                    "message": plaintext.message,
-                    "timestamp": plaintext.timestamp,
-                    "avatar_hash": plaintext.avatar_hash.encode("hex"),
-                    "public_key": plaintext.pubkey.encode("hex")
+            if success:
+                message_json = {
+                    "message": {
+                        "sender": plaintext.sender_guid.encode("hex"),
+                        "subject": plaintext.subject,
+                        "message_type": PlaintextMessage.Type.Name(plaintext.type),
+                        "message": plaintext.message,
+                        "timestamp": plaintext.timestamp,
+                        "avatar_hash": plaintext.avatar_hash.encode("hex"),
+                        "public_key": plaintext.pubkey.encode("hex")
+                    }
                 }
-            }
             if plaintext.handle:
                 message_json["message"]["handle"] = plaintext.handle
-            self.ws.push(str(bleach.clean(json.dumps(message_json, indent=4), tags=ALLOWED_TAGS)))
+            self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
         except Exception as e:
             self.log.error('Market.Listener.notify Exception: %s' % e)
-
+            pass
 
 class BroadcastListenerImpl(object):
     implements(BroadcastListener)
@@ -80,7 +81,7 @@ class BroadcastListenerImpl(object):
                 "avatar_hash": avatar_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(broadcast_json, indent=4), tags=ALLOWED_TAGS)))
+        self.ws.push(json.dumps(sanitize_html(broadcast_json), indent=4))
 
 
 class NotificationListenerImpl(object):
@@ -107,4 +108,7 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(str(bleach.clean(json.dumps(notification_json, indent=4), tags=ALLOWED_TAGS)))
+        self.ws.push(json.dumps(sanitize_html(notification_json), indent=4))
+
+    def push_ws(self, json_obj):
+        self.ws.push(json.dumps(sanitize_html(json_obj), indent=4))

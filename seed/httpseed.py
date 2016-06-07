@@ -38,13 +38,16 @@ def run(*args):
 
     def start_server(keychain, first_startup=False):
         # logging
-        logFile = logfile.LogFile.fromFullPath(DATA_FOLDER + "debug.log", rotateLength=15000000, maxRotatedFiles=1)
+        logFile = logfile.LogFile.fromFullPath(
+            os.path.join(DATA_FOLDER, "debug.log"),
+            rotateLength=15000000,
+            maxRotatedFiles=1)
         log.addObserver(FileLogObserver(logFile, level="debug").emit)
         log.addObserver(FileLogObserver(level="debug").emit)
         logger = Logger(system="Httpseed")
 
-        if os.path.isfile(DATA_FOLDER + 'keys.pickle'):
-            keys = pickle.load(open(DATA_FOLDER + "keys.pickle", "r"))
+        if os.path.isfile(os.path.join(DATA_FOLDER, 'keys.pickle')):
+            keys = pickle.load(open(os.path.join(DATA_FOLDER, "keys.pickle"), "r"))
             signing_key_hex = keys["signing_privkey"]
             signing_key = nacl.signing.SigningKey(signing_key_hex, encoder=nacl.encoding.HexEncoder)
         else:
@@ -53,7 +56,7 @@ def run(*args):
                 'signing_privkey': signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 'signing_pubkey': signing_key.verify_key.encode(encoder=nacl.encoding.HexEncoder)
             }
-            pickle.dump(keys, open(DATA_FOLDER + "keys.pickle", "wb"))
+            pickle.dump(keys, open(os.path.join(DATA_FOLDER, "keys.pickle"), "wb"))
 
         # Stun
         port = 18467 if not TESTNET else 28467
@@ -89,7 +92,7 @@ def run(*args):
                         self.nodes[(node.ip, node.port)] = node
                 self.nodes[(this_node.ip, this_node.port)] = this_node
                 loopingCall = task.LoopingCall(self.crawl)
-                loopingCall.start(180, True)
+                loopingCall.start(900, True)
 
             def crawl(self):
                 def gather_results(result):

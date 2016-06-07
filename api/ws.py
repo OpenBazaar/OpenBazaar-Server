@@ -1,26 +1,29 @@
 __author__ = 'chris'
 
 import ast
-import bleach
 import json
 import os
 import time
-import nacl.signing
-import nacl.encoding
-from config import DATA_FOLDER
-from market.profile import Profile
-from keys.keychain import KeyChain
-from random import shuffle
-from protos.countries import CountryCode
-from protos.objects import PlaintextMessage, Value, Listings
-from protos import objects
 from binascii import unhexlify
-from dht.node import Node
+from random import shuffle
+
+import nacl.encoding
+import nacl.signing
 from twisted.internet.protocol import Protocol, Factory, connectionDone
 from txws import WebSocketProtocol, WebSocketFactory
 
+from api.utils import smart_unicode, sanitize_html
+from config import DATA_FOLDER, str_to_bool
+from dht.node import Node
+from keys.keychain import KeyChain
+from log import Logger
+from market.profile import Profile
+from protos import objects
+from protos.countries import CountryCode
+from protos.objects import PlaintextMessage, Value, Listings
+
 ALLOWED_TAGS = ('h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'u', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong',
-                'em', 'strike', 'hr', 'br', 'img', 'blockquote')
+                'em', 'strike', 'hr', 'br', 'img', 'blockquote', 'span')
 
 
 # pylint: disable=W0232
@@ -28,6 +31,9 @@ class WSProtocol(Protocol):
     """
     Handles new incoming requests coming from a websocket.
     """
+
+    def __init__(self):
+        self.log = Logger(system=self)
 
     def connectionMade(self):
         self.factory.register(self)
@@ -66,12 +72,13 @@ class WSProtocol(Protocol):
                             "nsfw": metadata.nsfw
                         }
                 }
-                self.transport.write(str(bleach.clean(json.dumps(vendor, indent=4), tags=ALLOWED_TAGS)))
+                self.transport.write(json.dumps(sanitize_html(vendor), indent=4))
                 queried.append(node.id)
                 return True
             else:
                 if node.id in self.factory.mserver.protocol.multiplexer.vendors:
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
+                self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
                 return False
 
         for node in to_query[:30]:
@@ -81,7 +88,8 @@ class WSProtocol(Protocol):
 
         def parse_response(moderators):
             if moderators is not None:
-                self.factory.db.moderators.clear_all()
+                current_mods = json.loads(self.factory.db.settings.get()[11])
+                self.factory.db.moderators.clear_all(except_guids=current_mods)
 
                 def parse_profile(profile, node):
                     if profile is not None:
@@ -104,7 +112,7 @@ class WSProtocol(Protocol):
                                     "fee": profile.moderation_fee
                                 }
                         }
-                        self.transport.write(str(bleach.clean(json.dumps(moderator, indent=4), tags=ALLOWED_TAGS)))
+                        self.transport.write(json.dumps(sanitize_html(moderator), indent=4))
                     else:
                         self.factory.db.moderators.delete_moderator(node.id)
                 for mod in moderators:
@@ -126,13 +134,27 @@ class WSProtocol(Protocol):
                         pass
         self.factory.kserver.get("moderators").addCallback(parse_response)
 
-    def get_homepage_listings(self, message_id):
+    def get_homepage_listings(self, message_id, only_following=False):
         if message_id not in self.factory.outstanding_listings:
             self.factory.outstanding_listings = {}
             self.factory.outstanding_listings[message_id] = []
 
-        vendors = self.factory.mserver.protocol.multiplexer.vendors.values()
-        shuffle(vendors)
+        vendors = dict(self.factory.mserver.protocol.multiplexer.vendors)
+        self.log.info("Fetching listings from %s vendors" % len(vendors))
+
+        def get_following_from_vendors(vendors):
+            follow_data = self.factory.mserver.db.follow.get_following()
+            following_guids = []
+            if follow_data is not None:
+                f = objects.Following()
+                f.ParseFromString(follow_data)
+                for user in f.users:
+                    following_guids.append(user.guid)
+            vendor_list = []
+            for k, v in vendors.items():
+                if k in following_guids:
+                    vendor_list.append(v)
+            return vendor_list
 
         def handle_response(listings, node):
             count = 0
@@ -158,27 +180,46 @@ class WSProtocol(Protocol):
                                         "ships_to": []
                                     }
                             }
+                            if l.contract_type != 0:
+                                listing_json["contract_type"] = str(Listings.ContractType.Name(l.contract_type))
                             for country in l.ships_to:
                                 listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + l.thumbnail_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', l.thumbnail_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, l.thumbnail_hash)
-                            if not os.path.isfile(DATA_FOLDER + 'cache/' + listings.avatar_hash.encode("hex")):
+                            if not os.path.isfile(os.path.join( \
+                                    DATA_FOLDER, 'cache', listings.avatar_hash.encode("hex"))):
                                 self.factory.mserver.get_image(node, listings.avatar_hash)
-                            self.transport.write(str(bleach.clean(
-                                json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))
+                            self.transport.write(json.dumps(sanitize_html(listing_json), indent=4))
                             count += 1
                             self.factory.outstanding_listings[message_id].append(l.contract_hash)
                             if count == 3:
                                 break
                     except Exception:
                         pass
-                vendors.remove(node)
+                if node.id in vendors:
+                    del vendors[node.id]
             else:
-                vendors.remove(node)
+                if node.id in vendors:
+                    del vendors[node.id]
                 if node.id in self.factory.mserver.protocol.multiplexer.vendors:
                     del self.factory.mserver.protocol.multiplexer.vendors[node.id]
-
-        for vendor in vendors[:15]:
+                    self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
+                if only_following:
+                    vendor_list = get_following_from_vendors(vendors)
+                else:
+                    vendor_list = vendors.values()
+                if len(vendor_list) > 0:
+                    shuffle(vendor_list)
+                    node_to_ask = vendor_list[0]
+                    if node_to_ask is not None:
+                        self.factory.mserver.get_listings(node_to_ask).addCallback(handle_response, node_to_ask)
+        if only_following:
+            vendor_list = get_following_from_vendors(vendors)
+        else:
+            vendor_list = vendors.values()
+        shuffle(vendor_list)
+        for vendor in vendor_list[:15]:
             self.factory.mserver.get_listings(vendor).addCallback(handle_response, vendor)
 
     def send_message(self, message_id, guid, handle, message, subject, message_type, recipient_key):
@@ -220,7 +261,7 @@ class WSProtocol(Protocol):
                 }
                 for country in l.ships_to:
                     listing_json["listing"]["ships_to"].append(str(CountryCode.Name(country)))
-                self.transport.write(str(bleach.clean(json.dumps(listing_json, indent=4), tags=ALLOWED_TAGS)))
+                    self.transport.write(json.dumps(sanitize_html(listing_json), indent=4))
 
         def parse_results(values):
             if values is not None:
@@ -264,7 +305,9 @@ class WSProtocol(Protocol):
                 self.get_moderators(message_id)
 
             elif request_json["request"]["command"] == "get_homepage_listings":
-                self.get_homepage_listings(message_id)
+                self.get_homepage_listings(message_id,
+                                           str_to_bool(request_json["request"]["only_following"])
+                                           if "only_following" in request_json["request"] else False)
 
             elif request_json["request"]["command"] == "search":
                 self.search(message_id, request_json["request"]["keyword"].lower())
@@ -272,7 +315,7 @@ class WSProtocol(Protocol):
             elif request_json["request"]["command"] == "send_message":
                 self.send_message(message_id, request_json["request"]["guid"],
                                   request_json["request"]["handle"],
-                                  request_json["request"]["message"].decode("utf8"),
+                                  smart_unicode(request_json["request"]["message"]),
                                   request_json["request"]["subject"],
                                   request_json["request"]["message_type"],
                                   request_json["request"]["public_key"])
@@ -283,7 +326,9 @@ class WSProtocol(Protocol):
 
 class WSFactory(Factory):
 
-    def __init__(self, mserver, kserver, only_ip="127.0.0.1"):
+    def __init__(self, mserver, kserver, only_ip=None):
+        if only_ip == None:
+            only_ip = ["127.0.0.1"]
         self.mserver = mserver
         self.kserver = kserver
         self.db = mserver.db
@@ -294,7 +339,7 @@ class WSFactory(Factory):
         self.clients = []
 
     def buildProtocol(self, addr):
-        if addr.host != self.only_ip and self.only_ip != "0.0.0.0":
+        if addr.host not in self.only_ip and "0.0.0.0" not in self.only_ip:
             return
         return Factory.buildProtocol(self, addr)
 

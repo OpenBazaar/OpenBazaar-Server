@@ -25,7 +25,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, sourceNode, router, waitTimeout=15):
+    def __init__(self, sourceNode, router, waitTimeout=30):
         """
         Args:
             sourceNode: A protobuf `Node` object containing info about this node.
@@ -43,20 +43,15 @@ class RPCProtocol:
         self._outstanding = {}
         self.log = Logger(system=self)
 
-    def receive_message(self, message, sender, connection):
+    def receive_message(self, message, sender, connection, ban_score):
         if message.testnet != self.multiplexer.testnet:
             self.log.warning("received message from %s with incorrect network parameters." %
                              str(connection.dest_addr))
             connection.shutdown()
             return False
 
-        if message.protoVer < PROTOCOL_VERSION:
-            self.log.warning("received message from %s with incompatible protocol version." %
-                             str(connection.dest_addr))
-            connection.shutdown()
-            return False
-
-        self.multiplexer.vendors[sender.id] = sender
+        if sender.vendor:
+            self.multiplexer.vendors[sender.id] = sender
 
         msgID = message.messageID
         if message.command == NOT_FOUND:
@@ -66,7 +61,9 @@ class RPCProtocol:
         if msgID in self._outstanding:
             self._acceptResponse(msgID, data, sender)
         elif message.command != NOT_FOUND:
+            #ban_score.process_message(connection.dest_addr, message)
             self._acceptRequest(msgID, str(Command.Name(message.command)).lower(), data, sender, connection)
+        #else: ban_score.process_message(connection.dest_addr, message)
 
     def _acceptResponse(self, msgID, data, sender):
         if data is not None:
@@ -157,6 +154,8 @@ class RPCProtocol:
             pass
 
         def func(node, *args):
+            address = (node.ip, node.port)
+
             msgID = sha1(str(random.getrandbits(255))).digest()
             m = Message()
             m.messageID = msgID
@@ -169,7 +168,6 @@ class RPCProtocol:
             m.signature = self.signing_key.sign(m.SerializeToString())[:64]
             data = m.SerializeToString()
 
-            address = (node.ip, node.port)
             relay_addr = None
             if node.nat_type == SYMMETRIC or \
                     (node.nat_type == RESTRICTED and self.sourceNode.nat_type == SYMMETRIC):
@@ -185,7 +183,8 @@ class RPCProtocol:
 
             if self.multiplexer[address].state != State.CONNECTED and \
                             node.nat_type == RESTRICTED and \
-                            self.sourceNode.nat_type != SYMMETRIC:
+                            self.sourceNode.nat_type != SYMMETRIC and \
+                            node.relay_node is not None:
                 self.hole_punch(Node(digest("null"), node.relay_node[0], node.relay_node[1], nat_type=FULL_CONE),
                                 address[0], address[1], "True")
                 self.log.debug("sending hole punch message to %s" % address[0] + ":" + str(address[1]))
