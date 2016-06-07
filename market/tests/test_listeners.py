@@ -1,8 +1,9 @@
 from twisted.trial import unittest
 from twisted.python import log
 from mock import MagicMock
+import mock
 
-from market.listeners import MessageListenerImpl
+from market.listeners import MessageListenerImpl, BroadcastListenerImpl
 from protos.objects import PlaintextMessage
 
 class MarketListenersTest(unittest.TestCase):
@@ -47,6 +48,7 @@ class MarketListenersTest(unittest.TestCase):
         return message
 
     def test_MarketListeners_notify_without_handle_success(self):
+        '''MessageListenerImpl correctly notify without handle.'''
         p = self._create_valid_plaintext_message('')
         signature = 'test_signature'
         l = MessageListenerImpl(self.ws, self.db)
@@ -61,6 +63,7 @@ class MarketListenersTest(unittest.TestCase):
         self.ws.push.assert_called_with(self._create_valid_message_json(''))
 
     def test_MarketListeners_notify_with_handle_success(self):
+        '''MessageListenerImpl correctly notify with handle.'''
         p = self._create_valid_plaintext_message('test_handle')
         signature = 'test_signature'
         l = MessageListenerImpl(self.ws, self.db)
@@ -82,3 +85,13 @@ class MarketListenersTest(unittest.TestCase):
         self.db.messages.save_message.side_effect = Exception("test_exception")
         l.notify(p, signature)
         self.assertEqual('[ERROR] Market.Listener.notify Exception: test_exception', self.catcher[0]['message'][0])
+
+    def test_MarketListeners_broadcast_notify_success(self):
+        '''BroadcastListenerImpl correctly notifies.'''
+        b = BroadcastListenerImpl(self.ws, self.db)
+        b.notify('123', 'test_message')
+        self.db.broadcasts.save_broadcast.assert_called_once_with(mock.ANY,
+                                                                  '313233', '',
+                                                                  'test_message',
+                                                                  mock.ANY, '')
+        self.ws.push.assert_called_once_with(mock.ANY)

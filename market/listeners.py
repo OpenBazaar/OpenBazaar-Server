@@ -48,7 +48,6 @@ class MessageListenerImpl(object):
             self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
         except Exception as e:
             self.log.error('Market.Listener.notify Exception: %s' % e)
-            pass
 
 class BroadcastListenerImpl(object):
     implements(BroadcastListener)
@@ -61,6 +60,8 @@ class BroadcastListenerImpl(object):
         # pull the metadata for this node from the db
         f = Following()
         ser = self.db.follow.get_following()
+        handle = ""
+        avatar_hash = ""
         if ser is not None:
             f.ParseFromString(ser)
             for user in f.users:
