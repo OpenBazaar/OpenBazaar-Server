@@ -3,12 +3,12 @@ __author__ = 'chris'
 import json
 import time
 import random
+from log import Logger
 from api.utils import sanitize_html
 from interfaces import MessageListener, BroadcastListener, NotificationListener
 from zope.interface import implements
 from protos.objects import PlaintextMessage, Following
 from dht.utils import digest
-
 
 class MessageListenerImpl(object):
     implements(MessageListener)
@@ -16,6 +16,7 @@ class MessageListenerImpl(object):
     def __init__(self, web_socket_factory, database):
         self.ws = web_socket_factory
         self.db = database
+        self.log = Logger(system=self)
 
     def notify(self, plaintext, signature):
         try:
@@ -45,9 +46,8 @@ class MessageListenerImpl(object):
                 if plaintext.handle:
                     message_json["message"]["handle"] = plaintext.handle
                 self.ws.push(json.dumps(sanitize_html(message_json), indent=4))
-        except Exception:
-            pass
-
+        except Exception as e:
+            self.log.error('Market.Listener.notify Exception: %s' % e)
 
 class BroadcastListenerImpl(object):
     implements(BroadcastListener)
@@ -60,6 +60,8 @@ class BroadcastListenerImpl(object):
         # pull the metadata for this node from the db
         f = Following()
         ser = self.db.follow.get_following()
+        handle = ""
+        avatar_hash = ""
         if ser is not None:
             f.ParseFromString(ser)
             for user in f.users:
