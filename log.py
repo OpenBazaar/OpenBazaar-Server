@@ -6,12 +6,12 @@ import sys
 from twisted.python import log
 
 DEBUG = 5
-WARNING = 4
-INFO = 3
+INFO = 4
+WARNING = 3
 ERROR = 2
 CRITICAL = 1
 
-levels = {"debug": 5, "warning": 4, "info": 3, "error": 2, "critical": 1}
+levels = {"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1}
 
 class FileLogObserver(log.FileLogObserver):
     def __init__(self, f=None, level="info", default=DEBUG):
