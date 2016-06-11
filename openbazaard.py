@@ -172,7 +172,7 @@ def run(*args):
         logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
         def shutdown():
-            logger.info("shutting down server")
+            print "OpenBazaar Server v0.1 shutting down..."
             for vendor in protocol.vendors.values():
                 db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
             PortMapper().clean_my_mappings(PORT)
@@ -249,7 +249,7 @@ commands:
             parser.add_argument('-d', '--daemon', action='store_true',
                                 help="run the server in the background as a daemon")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
-            parser.add_argument('-l', '--loglevel', default="info",
+            parser.add_argument('-l', '--loglevel', default="warning",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
             parser.add_argument('-a', '--allowip', default=["127.0.0.1"], action="append",
