@@ -3,7 +3,7 @@ from twisted.python import log
 from mock import MagicMock
 import mock
 
-from market.listeners import MessageListenerImpl, BroadcastListenerImpl
+from market.listeners import MessageListenerImpl, BroadcastListenerImpl, NotificationListenerImpl
 from protos.objects import PlaintextMessage
 
 class MarketListenersTest(unittest.TestCase):
@@ -95,3 +95,22 @@ class MarketListenersTest(unittest.TestCase):
                                                                   'test_message',
                                                                   mock.ANY, '')
         self.ws.push.assert_called_once_with(mock.ANY)
+
+    def test_MarketListeners_notifiation_notify_success(self):
+        n = NotificationListenerImpl(self.ws, self.db)
+        n.notify('1231', 'test_handle', 'test_notify_type', 'test_order_id',
+                 'test_title', 'test_image_hash')
+        self.db.notifications.save_notification.assert_called_once_with(mock.ANY, '31323331', 'test_handle',
+                                                                        'test_notify_type', 'test_order_id',
+                                                                        'test_title', mock.ANY, 'test_image_hash')
+        self.ws.push.assert_called_once_with(mock.ANY)
+
+    def test_MarketListeners_notifiation_push_success(self):
+        notification_json = {
+            "notification": {
+                "guid": "guid"
+            }
+        }
+        n = NotificationListenerImpl(self.ws, self.db)
+        n.push_ws(notification_json)
+        self.ws.push.assert_called_once_with('{\n    "notification": {\n        "guid": "guid"\n    }\n}')
