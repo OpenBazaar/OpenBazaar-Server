@@ -2,6 +2,7 @@ from twisted.trial import unittest
 from twisted.python import log
 from mock import patch, MagicMock
 import mock
+from smtplib import SMTPAuthenticationError
 
 from market.smtpnotification import SMTPNotification
 
@@ -52,3 +53,25 @@ class MarketSMTPTest(unittest.TestCase):
         assert mock_smtp.call_count == 0
         assert instance.login.call_count == 0
         assert instance.sendmail.call_count == 0
+
+    @patch("smtplib.SMTP")
+    def test_MarketSmtp_send_throw_smtpexception(self, mock_smtp):
+        '''Email sent when enabled'''
+        catcher = self.catcher
+        mock_smtp.side_effect = SMTPAuthenticationError(50, 'Test error thrown')
+        s = SMTPNotification(self.db)
+        s.send('test_subject', 'test_body')
+        mock_smtp.assert_called_once_with('test_server')
+        catch_exception = catcher.pop()
+        self.assertEquals(catch_exception["message"][0], "[ERROR] Authentication Error: (50, 'Test error thrown')")
+
+    @patch("smtplib.SMTP")
+    def test_MarketSmtp_send_throw_exception(self, mock_smtp):
+        '''Email sent when enabled'''
+        catcher = self.catcher
+        mock_smtp.side_effect = Exception('Test exception thrown')
+        s = SMTPNotification(self.db)
+        s.send('test_subject', 'test_body')
+        mock_smtp.assert_called_once_with('test_server')
+        catch_exception = catcher.pop()
+        self.assertEquals(catch_exception["message"][0], "[ERROR] Test exception thrown")
