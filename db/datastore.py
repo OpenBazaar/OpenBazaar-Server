@@ -10,7 +10,7 @@ from dht.utils import digest
 from protos import objects
 from protos.objects import Listings, Followers, Following
 from os.path import join
-from db.migrations import migration1, migration2, migration3, migration4, migration5
+from db.migrations import migration1, migration2, migration3, migration4, migration5, migration6
 
 
 class Database(object):
@@ -116,7 +116,7 @@ class Database(object):
         conn = lite.connect(database_path)
         cursor = conn.cursor()
 
-        cursor.execute('''PRAGMA user_version = 5''')
+        cursor.execute('''PRAGMA user_version = 6''')
         cursor.execute('''CREATE TABLE hashmap(hash TEXT PRIMARY KEY, filepath TEXT)''')
 
         cursor.execute('''CREATE TABLE profile(id INTEGER PRIMARY KEY, serializedUserInfo BLOB, tempHandle TEXT)''')
@@ -152,15 +152,15 @@ class Database(object):
 
         cursor.execute('''CREATE TABLE purchases(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc FLOAT, address TEXT, status INTEGER, outpoint BLOB, thumbnail BLOB, vendor TEXT,
-    proofSig BLOB, contractType TEXT, unread INTEGER)''')
+    proofSig BLOB, contractType TEXT, unread INTEGER, statusChanged INTEGER)''')
 
         cursor.execute('''CREATE TABLE sales(id TEXT PRIMARY KEY, title TEXT, description TEXT,
     timestamp INTEGER, btc REAL, address TEXT, status INTEGER, thumbnail BLOB, outpoint BLOB, buyer TEXT,
-    paymentTX TEXT, contractType TEXT, unread INTEGER)''')
+    paymentTX TEXT, contractType TEXT, unread INTEGER, statusChanged INTEGER)''')
 
         cursor.execute('''CREATE TABLE cases(id TEXT PRIMARY KEY, title TEXT, timestamp INTEGER, orderDate TEXT,
     btc REAL, thumbnail BLOB, buyer TEXT, vendor TEXT, validation TEXT, claim TEXT, status INTEGER,
-    unread INTEGER)''')
+    unread INTEGER, statusChanged INTEGER)''')
 
         cursor.execute('''CREATE TABLE ratings(listing TEXT, ratingID TEXT,  rating TEXT)''')
         cursor.execute('''CREATE INDEX index_listing ON ratings(listing);''')
@@ -204,6 +204,9 @@ class Database(object):
             migration5.migrate(self.PATH)
         elif version == 4:
             migration5.migrate(self.PATH)
+            migration6.migrate(self.PATH)
+        elif version == 5:
+            migration6.migrate(self.PATH)
 
 
 class HashMap(object):
@@ -927,7 +930,7 @@ address, status, thumbnail, vendor, proofSig, contractType, unread) VALUES (?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
- thumbnail, vendor, contractType, unread FROM purchases ''')
+ thumbnail, vendor, contractType, unread, statusChanged FROM purchases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -945,6 +948,14 @@ address, status, thumbnail, vendor, proofSig, contractType, unread) VALUES (?,?,
         with conn:
             cursor = conn.cursor()
             cursor.execute('''UPDATE purchases SET status=? WHERE id=?;''', (status, order_id))
+            conn.commit()
+        conn.close()
+
+    def status_changed(self, order_id, status):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''UPDATE purchases SET statusChanged=? WHERE id=?;''', (status, order_id))
             conn.commit()
         conn.close()
 
@@ -1028,7 +1039,7 @@ status, thumbnail, buyer, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?)''
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-thumbnail, buyer, contractType, unread FROM sales WHERE id=?''', (order_id,))
+thumbnail, buyer, contractType, unread, statusChanged FROM sales WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -1066,6 +1077,14 @@ thumbnail, buyer, contractType, unread FROM sales ''')
         with conn:
             cursor = conn.cursor()
             cursor.execute('''UPDATE sales SET status=? WHERE id=?;''', (status, order_id))
+            conn.commit()
+        conn.close()
+
+    def status_changed(self, order_id, status):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''UPDATE sales SET statusChanged=? WHERE id=?;''', (status, order_id))
             conn.commit()
         conn.close()
 
@@ -1154,7 +1173,7 @@ buyer, vendor, validation, claim, status, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?,
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, timestamp, orderDate, btc, thumbnail,
-buyer, vendor, validation, claim, status, unread FROM cases ''')
+buyer, vendor, validation, claim, status, unread, statusChanged FROM cases ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
@@ -1186,6 +1205,14 @@ buyer, vendor, validation, claim, status, unread FROM cases ''')
         with conn:
             cursor = conn.cursor()
             cursor.execute('''UPDATE cases SET status=? WHERE id=?;''', (status, order_id))
+            conn.commit()
+        conn.close()
+
+    def status_changed(self, order_id, status):
+        conn = Database.connect_database(self.PATH)
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('''UPDATE cases SET statusChanged=? WHERE id=?;''', (status, order_id))
             conn.commit()
         conn.close()
 

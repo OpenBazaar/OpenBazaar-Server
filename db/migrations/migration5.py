@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def migrate(database_path):
     print "migrating to db version 5"
     conn = sqlite3.connect(database_path)

@@ -78,9 +78,11 @@ def process_dispute(contract, db, message_listener, notification_listener, testn
     p.avatar_hash = unhexlify(str(contract["dispute"]["info"]["avatar_hash"]))
 
     if db.purchases.get_purchase(order_id) is not None:
+        db.purchases.status_changed(order_id, 1)
         db.purchases.update_status(order_id, 4)
 
     elif db.sales.get_sale(order_id) is not None:
+        db.sales.status_changed(order_id, 1)
         db.sales.update_status(order_id, 4)
 
     elif "moderators" in contract["vendor_offer"]["listing"]:
@@ -175,9 +177,11 @@ def close_dispute(resolution_json, db, message_listener, notification_listener, 
     contract["dispute_resolution"] = resolution_json["dispute_resolution"]
 
     if db.purchases.get_purchase(order_id) is not None:
+        db.purchases.status_changed(order_id, 1)
         db.purchases.update_status(order_id, 5)
 
     elif db.sales.get_sale(order_id) is not None:
+        db.sales.status_changed(order_id, 1)
         db.sales.update_status(order_id, 5)
 
     with open(file_path, 'wb') as outfile:
