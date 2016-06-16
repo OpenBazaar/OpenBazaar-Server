@@ -14,14 +14,7 @@ class SMTPNotification(object):
 
     def __init__(self, db):
         self.db = db
-        self.server = 'localhost:25'
-        self.sender = 'OpenBazaar'
-        self.recipient = ''
-        self.username = None
-        self.password = None
-
         self.log = Logger(system=self)
-
         self.get_smtp_settings()
 
     def get_smtp_settings(self):
