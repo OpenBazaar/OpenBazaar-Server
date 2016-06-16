@@ -109,7 +109,7 @@ class NotificationListenerImpl(object):
                 "image_hash": image_hash.encode("hex")
             }
         }
-        self.ws.push(json.dumps(sanitize_html(notification_json), indent=4))
+        self.push_ws(notification_json)
 
     def push_ws(self, json_obj):
         self.ws.push(json.dumps(sanitize_html(json_obj), indent=4))
