@@ -1039,7 +1039,7 @@ status, thumbnail, buyer, contractType, unread) VALUES (?,?,?,?,?,?,?,?,?,?,?)''
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, address, status,
-thumbnail, buyer, contractType, unread, statusChanged FROM sales WHERE id=?''', (order_id,))
+thumbnail, buyer, contractType, unread FROM sales WHERE id=?''', (order_id,))
         ret = cursor.fetchall()
         conn.close()
         if not ret:
@@ -1059,7 +1059,7 @@ thumbnail, buyer, contractType, unread, statusChanged FROM sales WHERE id=?''', 
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
         cursor.execute('''SELECT id, title, description, timestamp, btc, status,
-thumbnail, buyer, contractType, unread FROM sales ''')
+thumbnail, buyer, contractType, unread, statusChanged FROM sales ''')
         ret = cursor.fetchall()
         conn.close()
         return ret
