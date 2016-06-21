@@ -13,7 +13,9 @@ import obelisk
 import os.path
 import pickle
 import time
+import struct
 from binascii import unhexlify
+from bitcoin.core import b2lx
 from collections import OrderedDict
 from config import DATA_FOLDER, TRANSACTION_FEE
 from dht.node import Node
@@ -953,6 +955,7 @@ class Server(object):
         This function should be called to release funds from a disputed contract after
         the moderator has resolved the dispute and provided his signature.
         """
+
         if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")):
             file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", order_id + ".json")
             outpoints = json.loads(self.db.purchases.get_outpoint(order_id))
@@ -983,6 +986,16 @@ class Server(object):
                                                      ["resolution"]["vendor_payout"]) * 100000000)),
                             'address': vendor_address})
 
+        # version 0.2.1 and above ensure same sort order as moderator.
+        o = []
+        for s in contract["dispute_resolution"]["resolution"]["tx_signatures"]:
+            if "outpoint" in s:
+                for outpoint in outpoints:
+                    ser = outpoint["txid"] + b2lx(struct.pack(b"<I", outpoint["vout"]))
+                    if ser == s["outpoint"]:
+                        o.append(outpoint)
+        if len(o) != 0:
+            outpoints = o
         tx = BitcoinTransaction.make_unsigned(outpoints, outputs, testnet=self.protocol.multiplexer.testnet)
         chaincode = contract["buyer_order"]["order"]["payment"]["chaincode"]
         redeem_script = str(contract["buyer_order"]["order"]["payment"]["redeem_script"])
