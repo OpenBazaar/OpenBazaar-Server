@@ -925,7 +925,7 @@ class OpenBazaarAPI(APIResource):
                 "blocked_guids": json.loads(settings[8]),
                 "libbitcoin_server": get_value(
                     "LIBBITCOIN_SERVERS_TESTNET", "testnet_server_custom")if self.protocol.testnet else get_value(
-                        "LIBBITCOIN_SERVERS", "server_custom"),
+                        "LIBBITCOIN_SERVERS", "mainnet_server_custom"),
                 "seed": KeyChain(self.db).signing_key.encode(encoder=nacl.encoding.HexEncoder),
                 "terms_conditions": "" if settings[9] is None else settings[9],
                 "refund_policy": "" if settings[10] is None else settings[10],
@@ -1123,7 +1123,8 @@ class OpenBazaarAPI(APIResource):
                 "thumbnail_hash": sale[6],
                 "buyer": sale[7],
                 "contract_type": sale[8],
-                "unread": sale[9]
+                "unread": sale[9],
+                "status_changed": False if sale[10] == 0 else True
             }
             sales_list.append(sale_json)
         request.setHeader('content-type', "application/json")
@@ -1147,7 +1148,8 @@ class OpenBazaarAPI(APIResource):
                 "thumbnail_hash": purchase[6],
                 "vendor": purchase[7],
                 "contract_type": purchase[8],
-                "unread": purchase[9]
+                "unread": purchase[9],
+                "status_changed": False if purchase[10] == 0 else True
             }
             purchases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")
@@ -1185,23 +1187,30 @@ class OpenBazaarAPI(APIResource):
         if os.path.exists(os.path.join(DATA_FOLDER, "purchases", "unfunded", filename)):
             file_path = os.path.join(DATA_FOLDER, "purchases", "unfunded", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
+            self.db.purchases.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "in progress", filename)):
             file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
+            self.db.purchases.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "purchases", "trade receipts", filename)):
             file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", filename)
             status = self.db.purchases.get_status(request.args["order_id"][0])
+            self.db.purchases.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", filename)):
             file_path = os.path.join(DATA_FOLDER, "store", "contracts", "unfunded", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
+            self.db.sales.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "in progress", filename)):
             file_path = os.path.join(DATA_FOLDER, "store", "contracts", "in progress", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
+            self.db.sales.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", filename)):
             file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", filename)
             status = self.db.sales.get_status(request.args["order_id"][0])
+            self.db.sales.status_changed(request.args["order_id"][0], 0)
         elif os.path.exists(os.path.join(DATA_FOLDER, "cases", filename)):
             file_path = os.path.join(DATA_FOLDER, "cases", filename)
+            self.db.cases.status_changed(request.args["order_id"][0], 0)
             status = 4
         else:
             request.write(json.dumps({}, indent=4))
@@ -1329,7 +1338,8 @@ class OpenBazaarAPI(APIResource):
                 "vendor": case[7],
                 "validation": json.loads(case[8]),
                 "status": "closed" if case[10] == 1 else "open",
-                "unread": case[11]
+                "unread": case[11],
+                "status_changed": False if case[12] == 0 else True
             }
             cases_list.append(purchase_json)
         request.setHeader('content-type', "application/json")

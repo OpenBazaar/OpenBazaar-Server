@@ -7,16 +7,13 @@ def migrate(database_path):
     conn.text_factory = str
     cursor = conn.cursor()
 
-    # create new table
-    cursor.execute('''CREATE TABLE IF NOT EXISTS audit_shopping (
-      audit_shopping_id integer PRIMARY KEY NOT NULL,
-      shopper_guid text NOT NULL,
-      contract_hash text,
-      "timestamp" integer NOT NULL,
-      action_id integer NOT NULL
-    );''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS shopper_guid_index ON audit_shopping (audit_shopping_id ASC);''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS action_id_index ON audit_shopping (audit_shopping_id ASC);''')
+    cursor.execute('''ALTER TABLE sales ADD COLUMN "statusChanged" INTEGER''')
+    cursor.execute('''ALTER TABLE purchases ADD COLUMN "statusChanged" INTEGER''')
+    cursor.execute('''ALTER TABLE cases ADD COLUMN "statusChanged" INTEGER''')
+
+    cursor.execute('''UPDATE purchases SET statusChanged = 0;''')
+    cursor.execute('''UPDATE purchases SET statusChanged = 0;''')
+    cursor.execute('''UPDATE purchases SET statusChanged = 0;''')
 
     # update version
     cursor.execute('''PRAGMA user_version = 6''')

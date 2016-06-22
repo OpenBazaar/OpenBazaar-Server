@@ -516,6 +516,7 @@ class Contract(object):
 
             # update the order status in the db
             self.db.purchases.update_status(contract_hash, 2)
+            self.db.purchases.status_changed(contract_hash, 1)
             file_path = os.path.join(DATA_FOLDER, "purchases", "in progress", contract_hash + ".json")
 
             # update the contract in the file system
@@ -770,6 +771,7 @@ class Contract(object):
                                        json.dumps(self.contract["buyer_receipt"]["receipt"]["rating"], indent=4))
 
         if status == 2:
+            self.db.sales.status_changed(order_id, 1)
             self.db.sales.update_status(order_id, 3)
         file_path = os.path.join(DATA_FOLDER, "store", "contracts", "trade receipts", order_id + ".json")
         with open(file_path, 'w') as outfile:
@@ -934,6 +936,7 @@ class Contract(object):
                               % order_id)
 
             self.db.sales.update_status(order_id, 1)
+            self.db.sales.status_changed(order_id, 1)
             self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
             self.log.info("Received new order %s" % order_id)
 
@@ -1105,6 +1108,7 @@ class Contract(object):
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
         self.db.purchases.update_status(order_id, 7)
+        self.db.purchases.status_changed(order_id, 1)
         file_path = os.path.join(DATA_FOLDER, "purchases", "trade receipts", order_id + ".json")
         with open(file_path, 'w') as outfile:
             outfile.write(json.dumps(self.contract, indent=4))
