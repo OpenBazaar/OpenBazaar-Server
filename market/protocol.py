@@ -10,6 +10,7 @@ from collections import OrderedDict
 from interfaces import MessageProcessor, BroadcastListener, MessageListener, NotificationListener
 from keys.bip32utils import derive_childkey
 from log import Logger
+from market.audit import Audit
 from market.contracts import Contract
 from market.moderation import process_dispute, close_dispute
 from market.profile import Profile
@@ -33,6 +34,7 @@ class MarketProtocol(RPCProtocol):
         self.node = node
         RPCProtocol.__init__(self, node, router)
         self.log = Logger(system=self)
+        self.audit = Audit(db=database)
         self.multiplexer = None
         self.db = database
         self.signing_key = signing_key
@@ -50,6 +52,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_get_contract(self, sender, contract_hash):
         self.log.info("serving contract %s to %s" % (contract_hash.encode('hex'), sender))
+        self.audit.record(sender.id.encode("hex"), "GET_CONTRACT", contract_hash.encode('hex'))
         self.router.addContact(sender)
         try:
             with open(self.db.filemap.get_file(contract_hash.encode("hex")), "r") as filename:
@@ -75,6 +78,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_get_profile(self, sender):
         self.log.info("serving profile to %s" % sender)
+        self.audit.record(sender.id.encode("hex"), "GET_PROFILE")
         self.router.addContact(sender)
         try:
             proto = Profile(self.db).get(True)
@@ -101,6 +105,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_get_listings(self, sender):
         self.log.info("serving store listings to %s" % sender)
+        self.audit.record(sender.id.encode("hex"), "GET_LISTINGS")
         self.router.addContact(sender)
         try:
             p = Profile(self.db).get()
@@ -186,6 +191,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_get_followers(self, sender, start=None):
         self.log.info("serving followers list to %s" % sender)
+        self.audit.record(sender.id.encode("hex"), "GET_FOLLOWERS")
         self.router.addContact(sender)
         if start is not None:
             ser = self.db.follow.get_followers(int(start))
@@ -195,6 +201,7 @@ class MarketProtocol(RPCProtocol):
 
     def rpc_get_following(self, sender):
         self.log.info("serving following list to %s" % sender)
+        self.audit.record(sender.id.encode("hex"), "GET_FOLLOWING")
         self.router.addContact(sender)
         ser = self.db.follow.get_following()
         if ser is None:
@@ -346,6 +353,7 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_ratings(self, sender, listing_hash=None):
         a = "ALL" if listing_hash is None else listing_hash.encode("hex")
         self.log.info("serving ratings for contract %s to %s" % (a, sender))
+        self.audit.record(sender.id.encode("hex"), "GET_RATINGS", listing_hash.encode("hex"))
         self.router.addContact(sender)
         try:
             ratings = []

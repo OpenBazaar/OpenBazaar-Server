@@ -74,6 +74,7 @@ message Profile {
     PublicKey pgp_key             = 21; // pgp signature covers guid
     bytes avatar_hash             = 22;
     bytes header_hash             = 23;
+    uint64 last_modified          = 24;
 
     // Social media account for the profile
     message SocialAccount {
@@ -121,6 +122,7 @@ message Listings {
         bytes avatar_hash             = 10;
         string handle                 = 11;
         ContractType contract_type    = 12;
+        uint64 last_modified          = 13;
     }
 
     enum ContractType {

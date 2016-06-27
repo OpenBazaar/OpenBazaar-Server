@@ -4,6 +4,7 @@ import json
 import os
 import obelisk
 import nacl.encoding
+import time
 from binascii import unhexlify
 from collections import OrderedDict
 from functools import wraps
@@ -172,7 +173,8 @@ class OpenBazaarAPI(APIResource):
                         "pgp_key": profile.pgp_key.public_key,
                         "avatar_hash": profile.avatar_hash.encode("hex"),
                         "header_hash": profile.header_hash.encode("hex"),
-                        "social_accounts": {}
+                        "social_accounts": {},
+                        "last_modified": profile.last_modified
                     }
                 }
                 if temp_handle:
@@ -230,7 +232,8 @@ class OpenBazaarAPI(APIResource):
                         "currency_code": l.currency_code,
                         "nsfw": l.nsfw,
                         "origin": str(CountryCode.Name(l.origin)),
-                        "ships_to": []
+                        "ships_to": [],
+                        "last_modified": l.last_modified
                     }
                     if l.contract_type != 0:
                         listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
@@ -445,6 +448,7 @@ class OpenBazaarAPI(APIResource):
                 key.public_key = self.keychain.verify_key.encode()
                 key.signature = self.keychain.signing_key.sign(key.public_key)[:64]
                 u.guid_key.MergeFrom(key)
+            u.last_modified = int(time.time())
             p.update(u)
             request.write(json.dumps({"success": True}))
             request.finish()
