@@ -1084,6 +1084,16 @@ thumbnail, buyer, contractType, unread, statusChanged FROM sales ''')
         conn.close()
         return ret
 
+    def get_by_status(self, status):
+        conn = Database.connect_database(self.PATH)
+        cursor = conn.cursor()
+        cursor.execute('''SELECT id, title, description, timestamp, btc, status,
+thumbnail, buyer, contractType, unread, statusChanged FROM sales WHERE
+status=?''', (status,))
+        ret = cursor.fetchall()
+        conn.close()
+        return ret
+
     def get_unfunded(self):
         conn = Database.connect_database(self.PATH)
         cursor = conn.cursor()
