@@ -163,7 +163,7 @@ class OpenBazaarAPI(APIResource):
                         "moderation_fee": round(profile.moderation_fee, 2),
                         "handle": profile.handle,
                         "about": profile.about,
-                        "short_description": profile.short_description,
+                        "short_description": profile.short_description[0:160],
                         "website": profile.website,
                         "email": profile.email,
                         "primary_color": profile.primary_color,
@@ -277,7 +277,7 @@ class OpenBazaarAPI(APIResource):
                         "handle": f.metadata.handle,
                         "name": f.metadata.name,
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": f.metadata.short_description,
+                        "short_description": f.metadata.short_description[0:160],
                         "nsfw": f.metadata.nsfw
                     }
                     response["followers"].append(follower_json)
@@ -322,7 +322,7 @@ class OpenBazaarAPI(APIResource):
                         "handle": f.metadata.handle,
                         "name": f.metadata.name,
                         "avatar_hash": f.metadata.avatar_hash.encode("hex"),
-                        "short_description": f.metadata.short_description,
+                        "short_description": f.metadata.short_description[0:160],
                         "nsfw": f.metadata.nsfw
                     }
                     response["following"].append(user_json)
@@ -415,7 +415,7 @@ class OpenBazaarAPI(APIResource):
             if "about" in request.args:
                 u.about = request.args["about"][0].decode("utf8")
             if "short_description" in request.args:
-                u.short_description = request.args["short_description"][0].decode("utf8")
+                u.short_description = request.args["short_description"][0].decode("utf8")[0:160]
             if "nsfw" in request.args:
                 p.profile.nsfw = str_to_bool(request.args["nsfw"][0])
             if "vendor" in request.args:
@@ -949,7 +949,7 @@ class OpenBazaarAPI(APIResource):
                             "handle": info[4],
                             "name": info[5],
                             "avatar_hash": info[7].encode("hex"),
-                            "short_description": info[6],
+                            "short_description": info[6][0:160],
                             "fee": info[8]
                         }
                         mods.append(m)
