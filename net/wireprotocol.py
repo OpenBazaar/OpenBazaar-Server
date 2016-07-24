@@ -77,12 +77,10 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             if self.connection.state == State.CONNECTED:
                 self.addr = str(self.connection.dest_addr[0]) + ":" + str(self.connection.dest_addr[1])
                 self.log.info("connected to %s" % self.addr)
-            #self.ban_score.process_message(self.connection.dest_addr, 100)
 
         def receive_message(self, datagram):
             if len(datagram) < 166:
                 self.log.warning("received datagram too small from %s, ignoring" % self.addr)
-                #self.ban_score.process_message(self.connection.dest_addr, 110)
                 return False
             try:
                 m = Message()
@@ -109,7 +107,6 @@ class OpenBazaarProtocol(ConnectionMultiplexer):
             except Exception:
                 # If message isn't formatted property then ignore
                 self.log.warning("received an invalid message from %s, ignoring" % self.addr)
-                #self.ban_score.process_message(self.connection.dest_addr, 110)
                 return False
 
         def handle_shutdown(self):
