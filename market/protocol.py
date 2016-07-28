@@ -353,7 +353,7 @@ class MarketProtocol(RPCProtocol):
     def rpc_get_ratings(self, sender, listing_hash=None):
         a = "ALL" if listing_hash is None else listing_hash.encode("hex")
         self.log.info("serving ratings for contract %s to %s" % (a, sender))
-        self.audit.record(sender.id.encode("hex"), "GET_RATINGS", listing_hash.encode("hex"))
+        self.audit.record(sender.id.encode("hex"), "GET_RATINGS", a)
         self.router.addContact(sender)
         try:
             ratings = []
