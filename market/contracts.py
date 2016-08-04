@@ -476,6 +476,8 @@ class Contract(object):
             self.db.transactions.add_transaction(tx.to_raw_tx())
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
+            self.blockchain.unsubscribe_address(
+                self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
 
         confirmation = json.dumps(conf_json["vendor_order_confirmation"]["invoice"], indent=4)
         conf_json["vendor_order_confirmation"]["signature"] = \
@@ -644,6 +646,8 @@ class Contract(object):
             tx.multisign(signatures, redeem_script)
             tx.broadcast(self.blockchain)
             self.db.transactions.add_transaction(tx.to_raw_tx())
+            self.blockchain.unsubscribe_address(
+                self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
 
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
             receipt_json["buyer_receipt"]["receipt"]["payout"]["txid"] = tx.get_hash()
@@ -751,6 +755,8 @@ class Contract(object):
             tx.multisign(signatures, redeem_script)
             tx.broadcast(self.blockchain)
             self.db.transactions.add_transaction(tx.to_raw_tx())
+            self.blockchain.unsubscribe_address(
+                self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
             self.log.info("broadcasting payout tx %s to network" % tx.get_hash())
 
             self.db.sales.update_payment_tx(order_id, tx.get_hash())
@@ -889,8 +895,6 @@ class Contract(object):
             self.log.critical("Error processing bitcoin transaction: %s" % e.message)
 
     def payment_received(self):
-        self.blockchain.unsubscribe_address(
-            self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
         order_id = digest(json.dumps(self.contract, indent=4)).encode("hex")
         title = self.contract["vendor_offer"]["listing"]["item"]["title"]
         if "image_hashes" in self.contract["vendor_offer"]["listing"]["item"]:
@@ -1105,6 +1109,8 @@ class Contract(object):
             tx.multisign(signatures, redeem_script)
             tx.broadcast(blockchain)
             self.db.transactions.add_transaction(tx.to_raw_tx())
+            self.blockchain.unsubscribe_address(
+                self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
             self.log.info("broadcasting refund tx %s to network" % tx.get_hash())
 
         self.db.purchases.update_status(order_id, 7)
