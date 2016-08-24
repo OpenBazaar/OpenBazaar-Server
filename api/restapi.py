@@ -1110,7 +1110,10 @@ class OpenBazaarAPI(APIResource):
     @GET('^/api/v1/get_sales')
     @authenticated
     def get_sales(self, request):
-        sales = self.db.sales.get_all()
+        if "status" in request.args:
+            sales = self.db.sales.get_by_status(request.args["status"][0])
+        else:
+            sales = self.db.sales.get_all()
         sales_list = []
         for sale in sales:
             sale_json = {
