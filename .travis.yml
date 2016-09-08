@@ -9,7 +9,6 @@ install:
     - pip install -r test_requirements.txt
 
 script:
-    - make -s
     - ./build.sh
 
 after_success:
