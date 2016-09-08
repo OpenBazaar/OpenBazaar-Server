@@ -20,7 +20,7 @@ case "$TRAVIS_OS_NAME" in
     . env/bin/activate
 
     echo "Install Python dependencies"
-    pip install -r ../requirements.txt
+    pip install -r ../../requirements.txt
     pip install pyinstaller==3.1
     pip install cryptography
     pyinstaller -D -F -n openbazaard-linux32
