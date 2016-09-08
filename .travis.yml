@@ -1,5 +1,5 @@
 language: python
-
+sudo: true
 python:
     - "2.7"
 
@@ -10,6 +10,13 @@ install:
 
 script:
     - make -s
+    - ./build.sh
 
 after_success:
     - coveralls
+deploy:
+  provider: releases
+  api_key: "$GITHUB_TOKEN"
+  file:
+    - "dist/linux32/openbazaard-linux32"
+  skip_cleanup: true
