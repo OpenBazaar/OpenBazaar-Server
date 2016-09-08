@@ -27,6 +27,8 @@ case "$TRAVIS_OS_NAME" in
     pip install cryptography
     pyinstaller -D -F ../../.travis/openbazaard.linux32.spec
 
+    cd ../../
+
     echo "64-bit"
 
     mkdir dist/linux64
