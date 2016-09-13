@@ -4,8 +4,9 @@ OS="${1}"
 
 mkdir dist
 
-case "$TRAVIS_OS_NAME" in
-  "linux")
+
+# case "$TRAVIS_OS_NAME" in
+#   "linux")
 
     echo "Building Linux Binaries...."
 
@@ -48,9 +49,9 @@ case "$TRAVIS_OS_NAME" in
     # echo "Install Python dependencies"
     # pyinstaller -D -F ../../.travis/openbazaard.linux64.spec
 
-    ;;
-
-  "osx")
-
-    ;;
-esac
+#     ;;
+#
+#   "osx")
+#
+#     ;;
+# esac
