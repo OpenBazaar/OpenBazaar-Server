@@ -288,7 +288,8 @@ class Contract(object):
                           postal_code=None,
                           country=None,
                           moderator=None,
-                          options=None):
+                          options=None,
+                          alternate_contact=None):
         """
         Update the contract with the buyer's purchase information.
         """
@@ -322,7 +323,8 @@ class Contract(object):
                         }
                     },
                     "payment": {},
-                    "refund_address": refund_address
+                    "refund_address": refund_address,
+                    "alternate_contact": alternate_contact if alternate_contact is not None else ""
                 }
             }
         }

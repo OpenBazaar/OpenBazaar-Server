@@ -710,7 +710,10 @@ class OpenBazaarAPI(APIResource):
                                   request.args["country"][0].decode("utf8")
                                   if "country" in request.args else None,
                                   request.args["moderator"][0] if "moderator" in request.args else None,
-                                  options)
+                                  options,
+                                  request.args["alternate_contact"][0].decode("utf8")
+                                  if "alternate_contact" in request.args else None,
+                                  )
 
             def get_node(node):
                 if node is not None:
