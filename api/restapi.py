@@ -233,7 +233,8 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": l.nsfw,
                         "origin": str(CountryCode.Name(l.origin)),
                         "ships_to": [],
-                        "last_modified": l.last_modified
+                        "last_modified": l.last_modified,
+                        "pinned": l.pinned
                     }
                     if l.contract_type != 0:
                         listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
@@ -549,6 +550,7 @@ class OpenBazaarAPI(APIResource):
             else:
                 c = Contract(self.db, testnet=self.protocol.testnet)
             c.create(
+                str_to_bool(request.args["pinned"][0]),
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
                 request.args["title"][0].decode("utf8"),

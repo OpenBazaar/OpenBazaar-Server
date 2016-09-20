@@ -94,6 +94,7 @@ class Contract(object):
         self.outpoints = []
 
     def create(self,
+               pinned,
                expiration_date,
                metadata_category,
                title,
@@ -150,7 +151,8 @@ class Contract(object):
                             "version": "1",
                             "category": metadata_category.lower(),
                             "category_sub": "fixed price",
-                            "last_modified": int(time.time())
+                            "last_modified": int(time.time()),
+                            "pinned": pinned
                         },
                         "id": {
                             "guid": self.keychain.guid.encode("hex"),
@@ -1065,6 +1067,7 @@ class Contract(object):
         elif self.contract["vendor_offer"]["listing"]["metadata"]["category"].lower() == "service":
             data.contract_type = listings.SERVICE
         data.last_modified = int(time.time())
+        data.pinned = self.contract["vendor_offer"]["listing"]["metadata"]["pinned"]
 
         # save the mapping of the contract file path and contract hash in the database
         self.db.filemap.insert(data.contract_hash.encode("hex"), file_path[len(DATA_FOLDER):])
