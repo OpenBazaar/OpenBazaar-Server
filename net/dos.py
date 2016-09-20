@@ -1,7 +1,7 @@
 __author__ = 'chris'
 
 from log import Logger
-from protos.message import Command, PING, STUN, STORE, INV, VALUES, GET_LISTINGS, FOLLOW, UNFOLLOW
+from protos.message import Command, FOLLOW, UNFOLLOW
 from twisted.internet import reactor, task
 
 RECONNECTIONS = 100
