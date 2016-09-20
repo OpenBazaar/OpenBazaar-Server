@@ -95,6 +95,7 @@ class Contract(object):
 
     def create(self,
                pinned,
+               max_quantity,
                expiration_date,
                metadata_category,
                title,
@@ -152,7 +153,8 @@ class Contract(object):
                             "category": metadata_category.lower(),
                             "category_sub": "fixed price",
                             "last_modified": int(time.time()),
-                            "pinned": pinned
+                            "pinned": pinned,
+                            "max_quantity": max_quantity
                         },
                         "id": {
                             "guid": self.keychain.guid.encode("hex"),
@@ -298,6 +300,10 @@ class Contract(object):
             bitcointools.b58check_to_hex(refund_address)
         except AssertionError:
             raise Exception("Invalid Bitcoin address")
+
+        if "max_quantity" in self.contract["vendor_offer"]["listing"]["metadata"]:
+            if quantity > int(self.contract["vendor_offer"]["listing"]["metadata"]["max_quantity"]):
+                raise Exception("Quantity exceeds max quantity in listing")
 
         profile = Profile(self.db).get()
         order_json = {
@@ -1182,8 +1188,13 @@ class Contract(object):
             if not valid:
                 raise Exception("Invalid Bitcoin signature")
 
-            # verify buyer included the correct bitcoin amount for payment
+            # verify the quantity does not exceed the max
             quantity = int(self.contract["buyer_order"]["order"]["quantity"])
+            if "max_quantity" in self.contract["vendor_offer"]["listing"]["metadata"]:
+                if quantity > int(self.contract["vendor_offer"]["listing"]["metadata"]["max_quantity"]):
+                    raise Exception("Buyer tried to purchase more than the max quantity")
+
+            # verify buyer included the correct bitcoin amount for payment
             price_json = self.contract["vendor_offer"]["listing"]["item"]["price_per_unit"]
             if "bitcoin" in price_json:
                 asking_price = float(price_json["bitcoin"]) * quantity
