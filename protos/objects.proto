@@ -124,6 +124,7 @@ message Listings {
         ContractType contract_type    = 12;
         uint64 last_modified          = 13;
         bool pinned                   = 14;
+        bool hidden                   = 15;
     }
 
     enum ContractType {

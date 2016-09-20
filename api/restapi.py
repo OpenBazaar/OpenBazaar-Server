@@ -234,7 +234,8 @@ class OpenBazaarAPI(APIResource):
                         "origin": str(CountryCode.Name(l.origin)),
                         "ships_to": [],
                         "last_modified": l.last_modified,
-                        "pinned": l.pinned
+                        "pinned": l.pinned,
+                        "hidden": l.hidden
                     }
                     if l.contract_type != 0:
                         listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
@@ -552,6 +553,7 @@ class OpenBazaarAPI(APIResource):
             c.create(
                 str_to_bool(request.args["pinned"][0]) if "pinned" in request.args else False,
                 int(request.args["max_quantity"][0]) if "max_quantity" in request.args else 999999,
+                str_to_bool(request.args["hidden"][0]) if "hidden" in request.args else False,
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
                 request.args["title"][0].decode("utf8"),

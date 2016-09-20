@@ -96,6 +96,7 @@ class Contract(object):
     def create(self,
                pinned,
                max_quantity,
+               hidden,
                expiration_date,
                metadata_category,
                title,
@@ -154,7 +155,8 @@ class Contract(object):
                             "category_sub": "fixed price",
                             "last_modified": int(time.time()),
                             "pinned": pinned,
-                            "max_quantity": max_quantity
+                            "max_quantity": max_quantity,
+                            "hidden": hidden
                         },
                         "id": {
                             "guid": self.keychain.guid.encode("hex"),
@@ -1074,6 +1076,7 @@ class Contract(object):
             data.contract_type = listings.SERVICE
         data.last_modified = int(time.time())
         data.pinned = self.contract["vendor_offer"]["listing"]["metadata"]["pinned"]
+        data.hidden = self.contract["vendor_offer"]["listing"]["metadata"]["hidden"]
 
         # save the mapping of the contract file path and contract hash in the database
         self.db.filemap.insert(data.contract_hash.encode("hex"), file_path[len(DATA_FOLDER):])
