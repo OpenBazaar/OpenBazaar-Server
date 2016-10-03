@@ -113,6 +113,9 @@ class MarketProtocol(RPCProtocol):
             l.ParseFromString(self.db.listings.get_proto())
             l.handle = p.handle
             l.avatar_hash = p.avatar_hash
+            for listing in l.listing:
+                if listing.hidden:
+                    l.listing.remove(listing)
             return [l.SerializeToString(), self.signing_key.sign(l.SerializeToString())[:64]]
         except Exception:
             self.log.warning("could not find any listings in the database")

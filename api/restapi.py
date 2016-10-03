@@ -233,7 +233,9 @@ class OpenBazaarAPI(APIResource):
                         "nsfw": l.nsfw,
                         "origin": str(CountryCode.Name(l.origin)),
                         "ships_to": [],
-                        "last_modified": l.last_modified
+                        "last_modified": l.last_modified,
+                        "pinned": l.pinned,
+                        "hidden": l.hidden
                     }
                     if l.contract_type != 0:
                         listing_json["contract_type"] = str(objects.Listings.ContractType.Name(l.contract_type))
@@ -549,6 +551,9 @@ class OpenBazaarAPI(APIResource):
             else:
                 c = Contract(self.db, testnet=self.protocol.testnet)
             c.create(
+                str_to_bool(request.args["pinned"][0]) if "pinned" in request.args else False,
+                int(request.args["max_quantity"][0]) if "max_quantity" in request.args else 999999,
+                str_to_bool(request.args["hidden"][0]) if "hidden" in request.args else False,
                 str(request.args["expiration_date"][0]),
                 request.args["metadata_category"][0],
                 request.args["title"][0].decode("utf8"),
@@ -705,7 +710,9 @@ class OpenBazaarAPI(APIResource):
                                   request.args["country"][0].decode("utf8")
                                   if "country" in request.args else None,
                                   request.args["moderator"][0] if "moderator" in request.args else None,
-                                  options)
+                                  options,
+                                  request.args["alternate_contact"][0].decode("utf8")
+                                  if "alternate_contact" in request.args else None)
 
             def get_node(node):
                 if node is not None:
