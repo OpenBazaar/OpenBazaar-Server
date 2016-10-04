@@ -37,7 +37,7 @@ mkdir dist
     pip install cryptography
     pip install setuptools==19.2
     cd ../..
-    pyinstaller -D -F ./.travis/openbazaard.linux32.spec
+    pyinstaller -D -F .travis/openbazaard.linux32.spec
 
     # echo "64-bit"
     #
