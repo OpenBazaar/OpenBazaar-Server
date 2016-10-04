@@ -11,7 +11,7 @@ install:
     - pip install -r test_requirements.txt
 
 script:
-  - "docker run -i -v \"${PWD}:/MyProgram\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /MyProgram/build.sh\""
+  - "docker run -i -v \"${PWD}:/OpenBazaar\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /OpenBazaar/build.sh\""
     # - ./build.sh
 
 after_success:
