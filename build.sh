@@ -14,7 +14,7 @@ mkdir dist
 
     wget https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tgz
     tar xzvf Python-2.7.11.tgz
-    apt-get install gcc-multilib g++-multilib
+    sudo apt-get -y install gcc-multilib g++-multilib
     CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=/opt/Python2.7-32bits
     make
     make install
@@ -23,7 +23,7 @@ mkdir dist
     cd dist/linux32
 
     echo "Installing APT packages"
-    sapt-get install npm python-pip python-virtualenv python-dev libffi-dev
+    sudo apt-get -y install npm python-pip python-virtualenv python-dev libffi-dev
 
     echo "Set up virtualenv"
     virtualenv env
