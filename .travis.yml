@@ -2,6 +2,8 @@ language: python
 sudo: true
 python:
     - "2.7"
+services:
+  - docker
 
 install:
     - pip install --upgrade pip
@@ -9,7 +11,8 @@ install:
     - pip install -r test_requirements.txt
 
 script:
-    - ./build.sh
+  - "docker run -i -v \"${PWD}:/MyProgram\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /MyProgram/build.sh\""
+    # - ./build.sh
 
 after_success:
     - coveralls
