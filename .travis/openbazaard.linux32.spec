@@ -4,10 +4,10 @@ block_cipher = None
 
 
 a = Analysis(['../openbazaard.py'],
-             pathex=['.'],
+             pathex=['../'],
              binaries=None,
              datas=None,
-             hiddenimports=['zmq', 'cryptography', 'cffi', 'packaging'],
+             hiddenimports=['pystun', 'zmq', 'cryptography', 'cffi', 'packaging'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -16,7 +16,7 @@ a = Analysis(['../openbazaard.py'],
              cipher=block_cipher)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
-a.datas += [('ob.cfg', 'ob.cfg', 'DATA'),('../bitcointools/english.txt','../dist/linux32/env/bitcointools/english.txt','DATA')]
+a.datas += [('../ob.cfg', 'ob.cfg', 'DATA'),('./bitcointools/english.txt','env/bitcointools/english.txt','DATA')]
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
