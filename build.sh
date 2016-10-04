@@ -7,6 +7,7 @@ mkdir dist
 
 # case "$TRAVIS_OS_NAME" in
 #   "linux")
+    cd OpenBazaar/
 
     echo "Building Linux Binaries...."
     sudo apt-get -y update
@@ -37,6 +38,8 @@ mkdir dist
     pip install cryptography
     pip install setuptools==19.2
     cd ../..
+    pwd
+    ls -alg
     pyinstaller -D -F .travis/openbazaard.linux32.spec
 
     # echo "64-bit"
