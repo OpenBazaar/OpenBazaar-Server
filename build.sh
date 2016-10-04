@@ -9,9 +9,9 @@ mkdir dist
 #   "linux")
 
     echo "Building Linux Binaries...."
-    sudo apt-get update
+    sudo apt-get -y update
     
-    sudo apt-get install wget
+    sudo apt-get install -y wget
     echo "32-bit..."
     
     wget https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tgz 
