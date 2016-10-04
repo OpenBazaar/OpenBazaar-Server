@@ -15,7 +15,7 @@ mkdir dist
     echo "32-bit..."
     
     wget https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tgz 
-    tar xzvf Python-2.7.11.tgz
+    tar xzf Python-2.7.11.tgz
     sudo apt-get -y install gcc-multilib g++-multilib
     CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=/opt/Python2.7-32bits
     make
