@@ -22,25 +22,22 @@ mkdir dist
     make
     make install
 
-    mkdir dist/linux32
-    cd dist/linux32
+ #   mkdir dist/linux32
+ #   cd dist/linux32
 
     echo "Installing APT packages"
     sudo apt-get -y install npm python-pip python-virtualenv python-dev libffi-dev
 
     echo "Set up virtualenv"
-    virtualenv env
-    . env/bin/activate
-
+    virtualenv virt 
+    . virt/bin/activate
+ls env/bin/
     echo "Install Python dependencies"
-    pip install -r ../../requirements.txt
-    pip install pyinstaller==3.1
-    pip install cryptography
-    pip install setuptools==19.2
-    cd ../..
-    pwd
-    ls -alg
-    pyinstaller -D -F .travis/openbazaard.linux32.spec
+    virt/bin/pip install -r requirements.txt
+    virt/bin/pip install pyinstaller==3.1
+    virt/bin/pip install cryptography
+    virt/bin/pip install setuptools==19.2
+    virt/bin/pyinstaller -D -F .travis/openbazaard.linux32.spec
 
     # echo "64-bit"
     #
