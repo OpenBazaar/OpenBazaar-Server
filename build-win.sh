@@ -1,6 +1,8 @@
 #!/bin/sh
 
 
+sudo apt-get install wine
+
 mkdir -p dist/windows32
 cd dist/windows32
 #wget -O python.msi "http://www.python.org/ftp/python/2.7.12/python-2.7.12.msi"
