@@ -4,9 +4,6 @@ python:
     - "2.7"
 services:
   - docker
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y wine1.6
 install:
     - pip install --upgrade pip
     - pip install -r requirements.txt
@@ -14,8 +11,8 @@ install:
 
 script:
   - "docker run -i -v \"${PWD}:/OpenBazaar\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /OpenBazaar/build.sh\""
-  - ./build-win.sh
-  - ./build-win64.sh
+  - sudo bash build-win.sh
+  - sudo bash build-win64.sh
 
 after_success:
     - coveralls

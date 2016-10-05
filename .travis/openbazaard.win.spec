@@ -32,7 +32,7 @@ a.zipfiles,
 a.datas,
           name='openbazaard',
           icon='..\\windows\\icon.ico',
-          debug=False,
+          debug=True,
           strip=False,
           upx=True,
           console=True )
