@@ -75,5 +75,4 @@ wget -N https://github.com/pyinstaller/pyinstaller/releases/download/v3.1/PyInst
 unzip -o PyInstaller-3.1.zip
 cd ../..
 wine C:/Python27/python.exe dist/windows32/PyInstaller-3.1/pyinstaller.py -F -n openbazaard.exe -i images/icon.ico .travis/openbazaard.win.spec --noconfirm
-wine cmd 
 
