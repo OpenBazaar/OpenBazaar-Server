@@ -1,7 +1,8 @@
 #!/bin/sh
 
-
-sudo apt-get install wine
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install -y wine1.6
 
 mkdir -p dist/windows32
 cd dist/windows32
