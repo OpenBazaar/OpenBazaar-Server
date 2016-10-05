@@ -1,5 +1,8 @@
 #!/bin/sh
 
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install -y wine1.6
 
 mkdir -p dist/windows32
 cd dist/windows32
@@ -69,7 +72,7 @@ wine c:/Python27/python -m pip install pystun
 wine c:/Python27/python -m pip install https://pypi.python.org/packages/7a/ec/47559abcfd6328c802036e8cf00a73885b5a71b4228e7f2dfb51f3ab2d69/pyzmq-15.3.0+fix-cp27-cp27m-win32.whl#md5=fdaa98a1dd2d201cb86229ad59baac17
 
 wget -N https://github.com/pyinstaller/pyinstaller/releases/download/v3.1/PyInstaller-3.1.zip
-unzip -o PyInstaller-3.1.zip
+unzip -q -o PyInstaller-3.1.zip
 cd ../..
 wine C:/Python27/python.exe dist/windows32/PyInstaller-3.1/pyinstaller.py -F -n openbazaard.exe -i images/icon.ico .travis/openbazaard.win.spec --noconfirm
 wine cmd 
