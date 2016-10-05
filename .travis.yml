@@ -12,7 +12,8 @@ install:
 
 script:
   - "docker run -i -v \"${PWD}:/OpenBazaar\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /OpenBazaar/build.sh\""
-    # - ./build.sh
+  - ./build-win.sh
+  - ./build-win64.sh
 
 after_success:
     - coveralls
