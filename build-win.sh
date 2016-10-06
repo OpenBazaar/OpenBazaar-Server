@@ -28,11 +28,11 @@ WINEPREFIX=${WINEPREFIX}
 
 # Install Python
 wget -N http://python.org/ftp/python/2.7.11/python-2.7.11.msi
-wine msiexec /i python-2.7.11.msi /qn
+wine msiexec /a python-2.7.11.msi /qn /quiet
 
 # Install MSVC
 wget -N https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
-wine msiexec /i VCForPython27.msi /qn
+wine msiexec /a VCForPython27.msi /qn /quiet
 wine cmd /c "c:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\vcvarsall.bat" x86
 
 #wget -N https://download.microsoft.com/download/1/1/1/1116b75a-9ec3-481a-a3c8-1777b5381140/vcredist_x86.exe
