@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-mkdir -p dist/windows64
+sudo mkdir -p dist/windows64
 cd dist/windows64
 
 
@@ -24,11 +24,11 @@ WINEPREFIX=${WINEPREFIX}
 
 # Install Python
 wget -N https://www.python.org/ftp/python/2.7.11/python-2.7.11.amd64.msi
-wine msiexec /i python-2.7.11.amd64.msi /quiet
+wine msiexec /i python-2.7.11.amd64.msi /qn
 
 # Install MSVC
 wget -N https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
-wine msiexec /i VCForPython27.msi /quiet
+wine msiexec /i VCForPython27.msi /qn
 wine cmd /c "c:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\vcvarsall.bat" amd64
 
 wine cmd /c "copy c:\\Windows\\System32\\msvcr90.dll ."

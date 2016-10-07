@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['openbazaard.py'],
-             pathex=['.'],
+a = Analysis(['..\\openbazaard.py'],
+             pathex=['..\\'],
              binaries=None,
              datas=None,
              hiddenimports=['cryptography', 'bitcoin','zmq.backend.cython' ,'zmq.backend.cffi'],
@@ -31,7 +31,7 @@ exe = EXE(pyz,
 a.zipfiles,
 a.datas,
           name='openbazaard',
-          icon='..\\windows\\icon.ico',
+          icon='windows\\icon.ico',
           debug=False,
           strip=False,
           upx=True,
