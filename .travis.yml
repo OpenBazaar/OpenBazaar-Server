@@ -20,5 +20,7 @@ deploy:
   provider: releases
   api_key: "$GITHUB_TOKEN"
   file:
-    - "dist/linux32/openbazaard-linux32"
+    - "dist/openbazaard-linux32"
+    - "dist/openbazaard.exe"
   skip_cleanup: true
+  all_branches: true
