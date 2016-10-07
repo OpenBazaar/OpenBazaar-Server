@@ -23,4 +23,5 @@ deploy:
     - "dist/openbazaard-linux32"
     - "dist/openbazaard.exe"
   skip_cleanup: true
-  all_branches: true
+  on:
+    all_branches: true
