@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['openbazaard.py'],
-             pathex=['.'],
+a = Analysis(['..\\openbazaard.py'],
+             pathex=['..\\'],
              binaries=None,
              datas=None,
              hiddenimports=['cryptography', 'bitcoin','zmq.backend.cython' ,'zmq.backend.cffi'],
@@ -14,12 +14,12 @@ a = Analysis(['openbazaard.py'],
              win_no_prefer_redirects=None,
              win_private_assemblies=None,
              cipher=block_cipher)
-a.binaries += [('ssleay32.dll', 'windows\\32\\ssleay32.dll', 'BINARY'),
-('libeay32.dll', 'windows\\32\\libeay32.dll', 'BINARY')]
+a.binaries += [('ssleay32.dll', '..\\windows\\32\\ssleay32.dll', 'BINARY'),
+('libeay32.dll', '..\\windows\\32\\libeay32.dll', 'BINARY')]
 a.datas += [
-('ob.cfg', 'ob.cfg', 'DATA'),
-('bitcointools\\english.txt', 'windows\\english.txt', 'DATA'),
-('msvcr120.dll', 'windows\\32\\msvcr120.dll', 'DATA'),
+('ob.cfg', '..\\ob.cfg', 'DATA'),
+('bitcointools\\english.txt', '..\\windows\\english.txt', 'DATA'),
+('msvcr120.dll', '..\\windows\\32\\msvcr120.dll', 'DATA'),
 ('msvcr90.dll', 'c:\\Python27\\msvcr90.dll', 'DATA'),
 ('msvcp90.dll', 'c:\\Python27\\msvcp90.dll', 'DATA')
 ]
