@@ -10,8 +10,12 @@ install:
     - pip install -r test_requirements.txt
 
 script:
+  - virtualenv virt64
+  - source virt64/bin/activate
+  - pip install -r requirements.txt
   - pip install -q pyinstaller==3.1
   - pip install -q setuptools==19.2
+  - pip install -q cryptography
   - pyinstaller -D -F .travis/openbazaard.linux64.spec
   - "docker run -i -v \"${PWD}:/OpenBazaar\" toopher/ubuntu-i386:14.04 /bin/bash -c \"linux32 --32bit i386 /OpenBazaar/build.sh\""
   - sudo bash build-win.sh
@@ -19,7 +23,6 @@ script:
   - sudo chmod 777 dist/openbazaard-linux32
   - sudo chmod a+x dist/openbazaard-linux32
   - sudo chmod a+x dist/openbazaard-linux64
-  - sudo chmod 777 dist/openbazaard-linux64
   - sudo chmod 777 dist/openbazaard.exe
 after_success:
     - coveralls
