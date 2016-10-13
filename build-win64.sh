@@ -68,5 +68,5 @@ wine cmd /c "copy c:\\Windows\\System32\\msvcm90.dll c:\\python27"
 wget -N https://github.com/pyinstaller/pyinstaller/releases/download/v3.1/PyInstaller-3.1.zip
 unzip -o PyInstaller-3.1.zip
 cd ../..
-wine C:/Python27/python.exe dist/windows64/PyInstaller-3.1/pyinstaller.py -F -n openbazaard.exe -i images/icon.ico .travis/openbazaard.win64.spec --noconfirm
+wine C:/Python27/python.exe dist/windows64/PyInstaller-3.1/pyinstaller.py -F -n openbazaard-windows64.exe -i images/icon.ico .travis/openbazaard.win64.spec --noconfirm
 

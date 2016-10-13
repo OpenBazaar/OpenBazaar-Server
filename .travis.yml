@@ -18,12 +18,23 @@ after_success:
 before_deploy:
   - export RELEASE_PKG_FILE=$(ls dist/openbazaard*)
 deploy:
-  provider: releases
-  api_key: "$GITHUB_TOKEN"
-  file_glob: true
-  file:
-    - "${RELEASE_PKG_FILE}"
-    - "ob.cfg"
-  skip_cleanup: true
-  on:
-    all_branches: true
+  - provider: releases
+    api_key: "$GITHUB_TOKEN"
+    file_glob: true
+    file:
+      - dist/openbazaard-linux32
+      - dist/openbazaard-linux64
+      - dist/openbazaard.exe
+    skip_cleanup: true
+    on:
+      all_branches: true
+      condition: $TRAVIS_OS_NAME = linux
+  - provider: releases
+    api_key: "$GITHUB_TOKEN"
+    file_glob: true
+    file:
+      - dist/openbazaard-osx*
+    skip_cleanup: true
+    on:
+      all_branches: true
+      condition: $TRAVIS_OS_NAME = osx

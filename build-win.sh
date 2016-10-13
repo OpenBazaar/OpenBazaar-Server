@@ -74,6 +74,6 @@ wine c:/Python27/python -m pip install https://pypi.python.org/packages/7a/ec/47
 wget -N https://github.com/pyinstaller/pyinstaller/releases/download/v3.1/PyInstaller-3.1.zip
 unzip -o PyInstaller-3.1.zip
 cd ../..
-wine C:/Python27/python.exe dist/windows32/PyInstaller-3.1/pyinstaller.py -F -n openbazaard.exe -i images/icon.ico .travis/openbazaard.win.spec --noconfirm --log-level=DEBUG
+wine C:/Python27/python.exe dist/windows32/PyInstaller-3.1/pyinstaller.py -F -n openbazaard-windows32.exe -i images/icon.ico .travis/openbazaard.win.spec --noconfirm --log-level=DEBUG
 
 
