@@ -22,8 +22,8 @@ RUN ldconfig
 WORKDIR /
 RUN pip install cryptography
 
-# Install Openbazaar-Server from github
-RUN git clone https://github.com/OpenBazaar/OpenBazaar-Server.git
+# Install Openbazaar-Server from current directory
+COPY / /OpenBazaar-Server/
 WORKDIR /OpenBazaar-Server/
 RUN pip install -r requirements.txt -r test_requirements.txt
 RUN make
