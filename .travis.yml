@@ -31,6 +31,7 @@ deploy:
     on:
       all_branches: true
       condition: $TRAVIS_OS_NAME = linux
+      tags: true
   - provider: releases
     api_key: "$GITHUB_TOKEN"
     file_glob: true
@@ -40,3 +41,4 @@ deploy:
     on:
       all_branches: true
       condition: $TRAVIS_OS_NAME = osx
+      tags: true
