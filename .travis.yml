@@ -12,8 +12,8 @@ install:
   - pip install -r requirements.txt
   - pip install -r test_requirements.txt
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo bash travis-linux.sh; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then sudo bash travis-osx.sh; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ ! -z "$TRAVIS_TAG" ]; then sudo bash travis-linux.sh; fi
+  - if [ "$TRAVIS_OS_NAME" == "osx" ] && [ ! -z "$TRAVIS_TAG" ]; then sudo bash travis-osx.sh; fi
 after_success:
   - coveralls
 before_deploy:
