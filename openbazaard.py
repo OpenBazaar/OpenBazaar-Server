@@ -11,7 +11,7 @@ import time
 from api.ws import WSFactory, AuthenticatedWebSocketProtocol, AuthenticatedWebSocketFactory
 from api.restapi import RestAPI
 from config import DATA_FOLDER, KSIZE, ALPHA, LIBBITCOIN_SERVERS,\
-    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SEEDS_TESTNET, SSL
+    LIBBITCOIN_SERVERS_TESTNET, SSL_KEY, SSL_CERT, SEEDS, SEEDS_TESTNET, SSL, SERVER_VERSION
 from daemon import Daemon
 from db.datastore import Database
 from dht.network import Server
@@ -36,7 +36,6 @@ from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
 from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from txws import WebSocketFactory
-
 
 def run(*args):
     TESTNET = args[0]
@@ -303,6 +302,6 @@ commands:
             print "\_______  /   __/ \___  >___|  /" + OKBLUE + "______  /(____  /_____ \(____  (____  /__|" + ENDC
             print "        \/|__|        \/     \/  " + OKBLUE + "     \/      \/      \/     \/     \/" + ENDC
             print
-            print "OpenBazaar Server v0.2.1 starting..."
+            print "OpenBazaar Server " + SERVER_VERSION + " starting..."
 
     Parser(OpenBazaard('/tmp/openbazaard.pid'))

@@ -17,7 +17,8 @@ from twisted.web.server import Site
 from twisted.internet import defer, reactor, task
 from twisted.protocols.basic import FileSender
 
-from config import DATA_FOLDER, RESOLVER, delete_value, set_value, get_value, str_to_bool, TRANSACTION_FEE
+from config import DATA_FOLDER, RESOLVER, delete_value, set_value, get_value, str_to_bool, TRANSACTION_FEE, \
+    SERVER_VERSION
 from protos.countries import CountryCode
 from protos import objects
 from keys import blockchainid
@@ -945,6 +946,7 @@ class OpenBazaarAPI(APIResource):
                 "smtp_recipient": settings[17],
                 "smtp_username": settings[18],
                 "smtp_password": settings[19],
+                "version": SERVER_VERSION
             }
             mods = []
             try:
