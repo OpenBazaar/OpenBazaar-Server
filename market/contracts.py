@@ -1087,6 +1087,7 @@ class Contract(object):
         self.db.listings.add_listing(data)
 
     def process_refund(self, refund_json, blockchain, notification_listener):
+        self.blockchain = blockchain
         if "refund" in self.contract:
             raise Exception("Refund already processed for this order")
         self.contract["refund"] = refund_json["refund"]
@@ -1121,7 +1122,7 @@ class Contract(object):
                 signatures.append(signature_obj)
 
             tx.multisign(signatures, redeem_script)
-            tx.broadcast(blockchain)
+            tx.broadcast(self.blockchain)
             self.db.transactions.add_transaction(tx.to_raw_tx())
             self.blockchain.unsubscribe_address(
                 self.contract["buyer_order"]["order"]["payment"]["address"], self.on_tx_received)
