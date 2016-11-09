@@ -14,3 +14,4 @@ miniupnpc==1.9
 bleach==1.4.2
 html5lib==0.9999999
 service_identity
+certifi
