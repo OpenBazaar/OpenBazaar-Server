@@ -803,25 +803,27 @@ class Server(object):
         Called when a moderator closes a dispute. It will create a payout transactions refunding both
         parties and send it to them in a dispute_close message.
         """
-        if float(vendor_percentage) < 0 or float(moderator_percentage) < 0 or float(buyer_percentage) < 0:
-            raise Exception("Payouts percentages must be positive")
-        if float(vendor_percentage) + float(buyer_percentage) > 1:
-            raise Exception("Payout exceeds 100% of value")
-        if not self.protocol.multiplexer.blockchain.connected:
-            raise Exception("Libbitcoin server not online")
-        if not self.protocol.multiplexer.testnet and \
-                not (moderator_address[:1] == "1" or moderator_address[:1] == "3"):
-            raise Exception("Bitcoin address is not a mainnet address")
-        elif self.protocol.multiplexer.testnet and not \
-                (moderator_address[:1] == "n" or moderator_address[:1] == "m" or moderator_address[:1] == "2"):
-            raise Exception("Bitcoin address is not a testnet address")
-        try:
-            bitcointools.b58check_to_hex(moderator_address)
-        except AssertionError:
-            raise Exception("Invalid Bitcoin address")
 
         with open(os.path.join(DATA_FOLDER, "cases", order_id + ".json"), "r") as filename:
             contract = json.load(filename, object_pairs_hook=OrderedDict)
+
+        if "dispute_resolution" not in contract:
+            if float(vendor_percentage) < 0 or float(moderator_percentage) < 0 or float(buyer_percentage) < 0:
+                raise Exception("Payouts percentages must be positive")
+            if float(vendor_percentage) + float(buyer_percentage) > 1:
+                raise Exception("Payout exceeds 100% of value")
+            if not self.protocol.multiplexer.blockchain.connected:
+                raise Exception("Libbitcoin server not online")
+            if not self.protocol.multiplexer.testnet and \
+                    not (moderator_address[:1] == "1" or moderator_address[:1] == "3"):
+                raise Exception("Bitcoin address is not a mainnet address")
+            elif self.protocol.multiplexer.testnet and not \
+                    (moderator_address[:1] == "n" or moderator_address[:1] == "m" or moderator_address[:1] == "2"):
+                raise Exception("Bitcoin address is not a testnet address")
+            try:
+                bitcointools.b58check_to_hex(moderator_address)
+            except AssertionError:
+                raise Exception("Invalid Bitcoin address")
 
         buyer_address = contract["buyer_order"]["order"]["refund_address"]
 
