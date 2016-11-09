@@ -1,5 +1,6 @@
 __author__ = 'ddustin'
 
+import certifi
 import json
 from threading import Thread, Condition
 from urllib2 import Request, urlopen, URLError
@@ -82,7 +83,7 @@ class BtcPrice(Thread):
     @staticmethod
     def dictForUrl(url):
         request = Request(url)
-        result = urlopen(request, timeout=5).read()
+        result = urlopen(request, cafile=certifi.where(), timeout=5).read()
         return json.loads(result)
 
     def loadbitcoinaverage(self):
