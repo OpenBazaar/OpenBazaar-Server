@@ -944,17 +944,18 @@ class Contract(object):
                 handle = self.contract["buyer_order"]["order"]["id"]["blockchain_id"]
             else:
                 handle = ""
-            self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
+
+            self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
+            if self.db.sales.get_status(order_id) == 0:
+                self.db.sales.update_status(order_id, 1)
+                self.db.sales.status_changed(order_id, 1)
+                self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
                                               title, image_hash)
 
-            notification = SMTPNotification(self.db)
-            notification.send("[OpenBazaar] Payment for Order Received", "Payment was received for Order #%s."
-                              % order_id)
-
-            self.db.sales.update_status(order_id, 1)
-            self.db.sales.status_changed(order_id, 1)
-            self.db.sales.update_outpoint(order_id, json.dumps(self.outpoints))
-            self.log.info("Received new order %s" % order_id)
+                notification = SMTPNotification(self.db)
+                notification.send("[OpenBazaar] Payment for Order Received",
+                                  "Payment was received for Order #%s." % order_id)
+                self.log.info("Received new order %s" % order_id)
 
         os.rename(unfunded_path, in_progress_path)
 
