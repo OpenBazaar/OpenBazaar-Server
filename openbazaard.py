@@ -205,9 +205,7 @@ def run(*args):
 
 if __name__ == "__main__":
 
-    try:
-        eval("if sys.version_info < (2, 12)")
-    except Exception:
+    if sys.version_info < (2, 12):
         print "You must use python 2.9 or greater"
         sys.exit(0)
 
