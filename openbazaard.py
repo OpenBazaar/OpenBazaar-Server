@@ -45,6 +45,7 @@ def run(*args):
     RESTPORT = args[4]
     WSPORT = args[5]
     HEARTBEATPORT = args[6]
+    AUDIT = args[7]
 
     def start_server(keys, first_startup=False):
         # logging
@@ -109,7 +110,7 @@ def run(*args):
         protocol.register_processor(kserver.protocol)
 
         # market
-        mserver = network.Server(kserver, keys.signing_key, db)
+        mserver = network.Server(kserver, keys.signing_key, db, AUDIT)
         mserver.protocol.connect_multiplexer(protocol)
         protocol.register_processor(mserver.protocol)
 
@@ -247,6 +248,7 @@ commands:
             parser.add_argument('-r', '--restapiport', help="set the rest api port", default=18469)
             parser.add_argument('-w', '--websocketport', help="set the websocket api port", default=18466)
             parser.add_argument('-b', '--heartbeatport', help="set the heartbeat port", default=18470)
+            parser.add_argument('-u', '--disableaudit', action='store_true', help="disable event logging")
             parser.add_argument('--pidfile', help="name of the pid file", default="openbazaard.pid")
             args = parser.parse_args(sys.argv[2:])
 
@@ -262,11 +264,11 @@ commands:
                 self.daemon.pidfile = "/tmp/" + args.pidfile
                 self.daemon.start(args.testnet, args.loglevel, port, args.allowip,
                                   int(args.restapiport), int(args.websocketport),
-                                  int(args.heartbeatport), time.time())
+                                  int(args.heartbeatport), time.time(), args.disableaudit)
             else:
                 run(args.testnet, args.loglevel, port, args.allowip,
                     int(args.restapiport), int(args.websocketport),
-                    int(args.heartbeatport), time.time())
+                    int(args.heartbeatport), time.time(), args.disableaudit)
 
         def stop(self):
             # pylint: disable=W0612

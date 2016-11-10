@@ -8,8 +8,9 @@ class Audit(object):
     A class for handling audit information
     """
 
-    def __init__(self, db):
+    def __init__(self, db, enabled=True):
         self.db = db
+        self.enabled = enabled
 
         self.log = Logger(system=self)
 
@@ -23,6 +24,8 @@ class Audit(object):
         }
 
     def record(self, guid, action_id, contract_hash=None):
+        if self.enabled is not True:
+            return
         self.log.info("Recording Audit Event [%s]" % action_id)
 
         if action_id in self.action_ids:

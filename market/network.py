@@ -35,7 +35,7 @@ from twisted.internet import defer, reactor, task
 
 
 class Server(object):
-    def __init__(self, kserver, signing_key, database):
+    def __init__(self, kserver, signing_key, database, audit=True):
         """
         A high level class for sending direct, market messages to other nodes.
         A node will need one of these to participate in buying and selling.
@@ -46,7 +46,7 @@ class Server(object):
         self.router = kserver.protocol.router
         self.db = database
         self.log = Logger(system=self)
-        self.protocol = MarketProtocol(kserver.node, self.router, signing_key, database)
+        self.protocol = MarketProtocol(kserver.node, self.router, signing_key, database, audit)
         task.LoopingCall(self.update_listings).start(3600, now=True)
 
     def querySeed(self, list_seed_pubkey):
