@@ -949,8 +949,8 @@ class Contract(object):
             if self.db.sales.get_status(order_id) == 0:
                 self.db.sales.update_status(order_id, 1)
                 self.db.sales.status_changed(order_id, 1)
-                self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order", order_id,
-                                              title, image_hash)
+                self.notification_listener.notify(unhexlify(buyer_guid), handle, "new order",
+                                                  order_id, title, image_hash)
 
                 notification = SMTPNotification(self.db)
                 notification.send("[OpenBazaar] Payment for Order Received",

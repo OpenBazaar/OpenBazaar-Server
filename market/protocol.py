@@ -29,12 +29,12 @@ from zope.interface.verify import verifyObject
 class MarketProtocol(RPCProtocol):
     implements(MessageProcessor)
 
-    def __init__(self, node, router, signing_key, database):
+    def __init__(self, node, router, signing_key, database, audit=True):
         self.router = router
         self.node = node
         RPCProtocol.__init__(self, node, router)
         self.log = Logger(system=self)
-        self.audit = Audit(db=database)
+        self.audit = Audit(db=database, enabled=audit)
         self.multiplexer = None
         self.db = database
         self.signing_key = signing_key
