@@ -205,8 +205,8 @@ def run(*args):
 
 if __name__ == "__main__":
 
-    if sys.version_info < (2, 12):
-        print "You must use python 2.9 or greater"
+    if sys.version_info < (2, 7, 9):
+        print "You must use python 2.7.9 or greater"
         sys.exit(0)
 
     # pylint: disable=anomalous-backslash-in-string
