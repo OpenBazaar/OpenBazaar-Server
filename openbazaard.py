@@ -205,6 +205,11 @@ def run(*args):
     btcPrice.join(1)
 
 if __name__ == "__main__":
+
+    if sys.version_info < (2, 7, 9):
+        print "You must use python 2.7.9 or greater"
+        sys.exit(0)
+
     # pylint: disable=anomalous-backslash-in-string
     class OpenBazaard(Daemon):
         def run(self, *args):
@@ -214,7 +219,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.2.1',
+                description='OpenBazaar-Server v0.2.3',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
