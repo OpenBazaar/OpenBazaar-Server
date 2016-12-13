@@ -301,7 +301,7 @@ class WSProtocol(Protocol):
             message_id = str(request_json["request"]["id"])
 
             quantity = 30
-            if request_json["request"]["quantity"]:
+            if "quantity" in request_json["request"]:
                 quantity = int(request_json["request"]["quantity"])
 
             if request_json["request"]["command"] == "get_vendors":
