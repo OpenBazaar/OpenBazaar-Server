@@ -41,7 +41,9 @@ class WSProtocol(Protocol):
     def connectionLost(self, reason=connectionDone):
         self.factory.unregister(self)
 
-    def get_vendors(self, message_id):
+    def get_vendors(self, message_id, quantity):
+        if quantity == 0:
+            return
         if message_id in self.factory.outstanding_vendors:
             queried = self.factory.outstanding_vendors[message_id]
         else:
@@ -81,7 +83,7 @@ class WSProtocol(Protocol):
                 self.factory.db.vendors.delete_vendor(node.id.encode("hex"))
                 return False
 
-        for node in to_query[:30]:
+        for node in to_query[:quantity]:
             self.factory.mserver.get_user_metadata(node).addCallback(handle_response, node)
 
     def get_moderators(self, message_id):
@@ -298,8 +300,12 @@ class WSProtocol(Protocol):
 
             message_id = str(request_json["request"]["id"])
 
+            quantity = 30
+            if request_json["request"]["quantity"]:
+                quantity = int(request_json["request"]["quantity"])
+
             if request_json["request"]["command"] == "get_vendors":
-                self.get_vendors(message_id)
+                self.get_vendors(message_id, quantity)
 
             if request_json["request"]["command"] == "get_moderators":
                 self.get_moderators(message_id)
