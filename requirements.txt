@@ -13,5 +13,5 @@ pyopenssl==16.0.0
 miniupnpc==1.9
 bleach==1.4.3
 html5lib==0.9999999
-service_identity
-certifi
+service_identity==16.0.0
+certifi==2016.9.26
