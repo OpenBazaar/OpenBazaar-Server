@@ -172,7 +172,7 @@ def run(*args):
         logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
         def shutdown():
-            print "OpenBazaar Server v0.1 shutting down..."
+            print "OpenBazaar Server v0.2.4 shutting down..."
             for vendor in protocol.vendors.values():
                 db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
             PortMapper().clean_my_mappings(PORT)
