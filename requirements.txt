@@ -1,5 +1,5 @@
-protobuf==3.0.0b2
-Twisted==16.1.0
+protobuf==3.0.0
+Twisted==16.3.0
 txrudp==0.5.1
 pystun==0.1.0
 bitcointools==1.1.44
@@ -8,10 +8,10 @@ pynacl==1.0.1
 txrestapi==0.2
 txws==0.9.1
 python-libbitcoinclient==0.4.3
-python-bitcoinlib==0.5.0
-pyopenssl==0.15.1
+python-bitcoinlib==0.5.1
+pyopenssl==16.0.0
 miniupnpc==1.9
-bleach==1.4.2
+bleach==1.4.3
 html5lib==0.9999999
 service_identity
 certifi
