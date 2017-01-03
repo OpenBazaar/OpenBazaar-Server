@@ -6,6 +6,7 @@ from threading import Thread, Condition
 from urllib2 import Request, urlopen, URLError
 from datetime import datetime, timedelta
 
+BITCOIN_PRICE_ENDPOINT = "https://ticker.openbazaar.org/api"
 
 class BtcPrice(Thread):
     """
@@ -87,7 +88,7 @@ class BtcPrice(Thread):
         return json.loads(result)
 
     def loadbitcoinaverage(self):
-        for currency, info in self.dictForUrl('https://api.bitcoinaverage.com/ticker/global/all').iteritems():
+        for currency, info in self.dictForUrl(BITCOIN_PRICE_ENDPOINT).iteritems():
             if currency != "timestamp":
                 self.prices[currency] = info["last"]
 
