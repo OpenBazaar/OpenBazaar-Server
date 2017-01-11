@@ -120,6 +120,8 @@ def run(*args):
 
         # websockets api
         authenticated_sessions = []
+        if interface == "127.0.0.1":
+            authenticated_sessions.append("localhost")
         ws_api = WSFactory(mserver, kserver, only_ip=ALLOWIP)
         ws_factory = AuthenticatedWebSocketFactory(ws_api)
         ws_factory.authenticated_sessions = authenticated_sessions
