@@ -367,7 +367,9 @@ class AuthenticatedWebSocketProtocol(WebSocketProtocol):
     def validateHeaders(self):
         if "Cookie" in self.headers:
             for session in self.factory.authenticated_sessions:
-                if "TWISTED_SESSION=" + session.uid in self.headers["Cookie"]:
+                if session == "localhost":
+                    return WebSocketProtocol.validateHeaders(self)
+                elif "TWISTED_SESSION=" + session.uid in self.headers["Cookie"]:
                     return WebSocketProtocol.validateHeaders(self)
         return False
 
