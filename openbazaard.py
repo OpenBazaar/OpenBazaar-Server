@@ -37,6 +37,10 @@ from twisted.internet import reactor, task
 from twisted.python import log, logfile
 from txws import WebSocketFactory
 
+# pylint: disable=reload-builtin
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 def run(*args):
     TESTNET = args[0]
     LOGLEVEL = args[1]
@@ -170,7 +174,7 @@ def run(*args):
         logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
         def shutdown():
-            logger.info("shutting down server")
+            print "OpenBazaar Server v0.2.5 shutting down..."
             for vendor in protocol.vendors.values():
                 db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
             PortMapper().clean_my_mappings(PORT)
@@ -221,7 +225,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.2.4',
+                description='OpenBazaar-Server v0.2.5',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
@@ -247,7 +251,7 @@ commands:
             parser.add_argument('-d', '--daemon', action='store_true',
                                 help="run the server in the background as a daemon")
             parser.add_argument('-t', '--testnet', action='store_true', help="use the test network")
-            parser.add_argument('-l', '--loglevel', default="info",
+            parser.add_argument('-l', '--loglevel', default="warning",
                                 help="set the logging level [debug, info, warning, error, critical]")
             parser.add_argument('-p', '--port', help="set the network port")
             parser.add_argument('-a', '--allowip', default=["127.0.0.1"], action="append",

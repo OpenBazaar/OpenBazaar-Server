@@ -53,7 +53,8 @@ optional arguments:
 
 #### Set Username and Password
 ```bash
-nano ./docker-compose.yml
+cp .env.sample .env
+nano ./.env
 ```
 
 #### Build and run

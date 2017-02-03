@@ -12,7 +12,7 @@ from os.path import expanduser, join, isfile
 from ConfigParser import ConfigParser
 from urlparse import urlparse
 
-SERVER_VERSION = "0.2.4"
+SERVER_VERSION = "0.2.5"
 PROTOCOL_VERSION = 2
 CONFIG_FILE = join(os.getcwd(), 'ob.cfg')
 

@@ -1,9 +1,8 @@
-FROM ubuntu:15.04
+FROM ubuntu:16.04
 MAINTAINER eiabea <developer@eiabea.com>
 
 # Install required Debian packages
 RUN set -ex \
-  && echo "deb http://us.archive.ubuntu.com/ubuntu vivid main universe" | tee -a /etc/apt/sources.list \
   && apt-get update -q \
   && apt-get install -q -y build-essential libssl-dev libffi-dev python-dev openssl python-pip libzmq3-dev libsodium-dev autoconf automake pkg-config libtool git \
   && apt-get clean autoclean -q -y \
@@ -23,8 +22,8 @@ RUN ldconfig
 WORKDIR /
 RUN pip install cryptography
 
-# Install Openbazaar-Server from github
-RUN git clone https://github.com/OpenBazaar/OpenBazaar-Server.git
+# Install Openbazaar-Server from current directory
+COPY / /OpenBazaar-Server/
 WORKDIR /OpenBazaar-Server/
 RUN pip install -r requirements.txt -r test_requirements.txt
 RUN make
