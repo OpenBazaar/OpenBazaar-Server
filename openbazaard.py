@@ -174,7 +174,7 @@ def run(*args):
         logger.info("startup took %s seconds" % str(round(time.time() - args[7], 2)))
 
         def shutdown():
-            print "OpenBazaar Server v0.2.5 shutting down..."
+            print "OpenBazaar Server v0.2.6 shutting down..."
             for vendor in protocol.vendors.values():
                 db.vendors.save_vendor(vendor.id.encode("hex"), vendor.getProto().SerializeToString())
             PortMapper().clean_my_mappings(PORT)
@@ -225,7 +225,7 @@ if __name__ == "__main__":
         def __init__(self, daemon):
             self.daemon = daemon
             parser = argparse.ArgumentParser(
-                description='OpenBazaar-Server v0.2.5',
+                description='OpenBazaar-Server v0.2.6',
                 usage='''
     python openbazaard.py <command> [<args>]
     python openbazaard.py <command> --help
