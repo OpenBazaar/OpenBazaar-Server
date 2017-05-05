@@ -86,9 +86,9 @@ class OpenBazaarAPI(APIResource):
 
     @POST('^/api/v1/login')
     def login(self, request):
+        request.setHeader('content-type', "application/json")
         if "localhost" in self.authenticated_sessions:
             return json.dumps({"success": True})
-        request.setHeader('content-type', "application/json")
         if request.getHost().host in self.failed_login_attempts and \
                         self.failed_login_attempts[request.getHost().host] >= 7:
             return json.dumps({"success": False, "reason": "too many attempts"})
