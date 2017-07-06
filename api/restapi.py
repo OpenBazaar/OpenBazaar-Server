@@ -30,6 +30,7 @@ from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 from api.utils import sanitize_html
 from market.migration import migratev2
+from twisted.web import static
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -1468,16 +1469,25 @@ class OpenBazaarAPI(APIResource):
             request.finish()
             return server.NOT_DONE_YET
 
-    @POST('^/api/v1/migrate')
+    @GET('^/api/v1/export')
     def migrate(self, request):
         try:
-            migratev2(self.db, request.args["url"][0])
-            request.write(json.dumps({}))
+            path = migratev2(self.db)
+            request.setHeader('content-disposition', 'filename="listings.csv"')
+            request.setHeader('content-type', "text/csv")
+            f = open(path)
+            while 1:
+                d = f.read(2048)
+                if not d:
+                    break
+                request.write(d)
+            f.close()
             request.finish()
+            return server.NOT_DONE_YET
         except Exception, e:
-            self._failed_login(request.getHost().host)
-            return json.dumps({"success": False, "reason": e.message})
-        return server.NOT_DONE_YET
+            request.write(json.dumps({"success": False, "reason": e.message}))
+            request.finish()
+            return server.NOT_DONE_YET
 
 
 class RestAPI(Site):

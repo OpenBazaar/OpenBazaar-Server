@@ -9,7 +9,7 @@ import requests
 from protos.countries import CountryCode
 
 
-def migratev2(db, url):
+def migratev2(db):
     ser = db.listings.get_proto()
     if ser is not None:
         path = os.path.join(DATA_FOLDER, "listings.csv")
@@ -73,7 +73,6 @@ def migratev2(db, url):
                         encoded_string = base64.b64encode(image_file.read())
                     img64.append(encoded_string)
                 if len(img64) == 1:
-                    print img64[0]
                     row["image_urls"] = img64[0]
                 else:
                     img_csv = ''
@@ -148,8 +147,6 @@ def migratev2(db, url):
                                 "shipping"]["flat_fee"][cc]["price"]["domestic"]
 
                 writer.writerow(row)
-        with open(path, 'rb') as f:
-            r = requests.post(url, files={'file': f})
-            if r.status_code != 200:
-                resp = json.loads(r.text)
-                raise Exception(resp["reason"])
+        return path
+    else:
+        raise Exception("failed to deserialize listings")
