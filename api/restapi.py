@@ -29,6 +29,7 @@ from market.contracts import Contract, check_order_for_payment
 from market.btcprice import BtcPrice
 from net.upnp import PortMapper
 from api.utils import sanitize_html
+from market.migration import migratev2
 
 DEFAULT_RECORDS_COUNT = 20
 DEFAULT_RECORDS_OFFSET = 0
@@ -1466,6 +1467,17 @@ class OpenBazaarAPI(APIResource):
             request.write(json.dumps({"success": False, "reason": e.message}, indent=4))
             request.finish()
             return server.NOT_DONE_YET
+
+    @POST('^/api/v1/migrate')
+    def migrate(self, request):
+        try:
+            migratev2(self.db, request.args["url"][0])
+            request.write(json.dumps({}))
+            request.finish()
+        except Exception, e:
+            self._failed_login(request.getHost().host)
+            return json.dumps({"success": False, "reason": e.message})
+        return server.NOT_DONE_YET
 
 
 class RestAPI(Site):
