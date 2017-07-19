@@ -1,4 +1,5 @@
-protobuf==3.0.0
+protobuf==3.0.0b2
+requests==2.13.0
 Twisted==16.3.0
 txrudp==0.5.1
 pystun==0.1.0
