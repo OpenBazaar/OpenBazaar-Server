@@ -22,7 +22,7 @@ class BtcPrice(Thread):
         self.prices = {}
         self.condition = Condition()
         self.keepRunning = True
-        self.loadPriorities = ["loadbitcoinaverage", "loadbitpay", "loadblockchain", "loadbitcoincharts"]
+        self.loadPriorities = ["loadbitpay", "loadblockchain", "loadbitcoincharts"]
         BtcPrice.__instance = self
 
     def closethread(self):
