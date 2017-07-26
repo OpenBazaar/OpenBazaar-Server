@@ -11,7 +11,7 @@ from dht.node import Node
 from dht.utils import digest
 from hashlib import sha1
 from log import Logger
-from protos.message import Message, Command, NOT_FOUND, HOLE_PUNCH
+from protos.message import Message, Command, NOT_FOUND, HOLE_PUNCH, ORDER
 from protos.objects import FULL_CONE, RESTRICTED, SYMMETRIC
 from twisted.internet import defer, reactor
 from txrudp.connection import State
@@ -25,7 +25,7 @@ class RPCProtocol:
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, sourceNode, router, waitTimeout=30):
+    def __init__(self, sourceNode, router, waitTimeout=60):
         """
         Args:
             sourceNode: A protobuf `Node` object containing info about this node.
@@ -63,7 +63,6 @@ class RPCProtocol:
         elif message.command != NOT_FOUND:
             ban_score.process_message(connection.dest_addr, message)
             self._acceptRequest(msgID, str(Command.Name(message.command)).lower(), data, sender, connection)
-
 
     def _acceptResponse(self, msgID, data, sender):
         if data is not None:
