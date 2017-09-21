@@ -84,7 +84,7 @@ def migratev2(db):
                             img_csv += ","
                     row["image_urls"] = img_csv
                 if contract_type == "PHYSICAL_GOOD":
-                    if "free" in contract["vendor_offer"]["listing"]["shipping"]:
+                    if "free" in contract["vendor_offer"]["listing"]["shipping"] and contract["vendor_offer"]["listing"]["shipping"] is True:
                         row["shipping_option1_name"] = "Free Shipping"
                         countries = []
                         for country in listing.ships_to:
@@ -144,7 +144,7 @@ def migratev2(db):
                                 ed = "standard shipping time"
                             row["shipping_option2_service1_estimated_delivery"] = ed
                             row["shipping_option2_service1_estimated_price"] = contract["vendor_offer"]["listing"][
-                                "shipping"]["flat_fee"][cc]["price"]["domestic"]
+                                "shipping"]["flat_fee"][cc]["price"]["international"]
 
                 writer.writerow(row)
         return path
