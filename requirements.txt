@@ -9,7 +9,7 @@ txrestapi==0.2
 txws==0.9.1
 python-libbitcoinclient==0.4.3
 python-bitcoinlib==0.5.1
-pyopenssl==16.0.0
+pyopenssl==19.0.0
 miniupnpc==1.9
 bleach==1.4.3
 html5lib==0.9999999
